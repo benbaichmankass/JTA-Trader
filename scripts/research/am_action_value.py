@@ -83,7 +83,14 @@ ROWS_PER_FIT = 300000
 SEED = 20261124
 N_CONTROL = 100
 EXTRA_HEADS = ("reach_1", "reach_2")
-AV_FEATS = P.HEAD_FEATS + ["q50", "q90", "reach_1", "reach_2", "p_stop", "p_dip", "struct_gap_r", "tp_gap_r"]
+AV_EXTRA = ["q50", "q90", "reach_1", "reach_2", "p_stop", "p_dip", "struct_gap_r", "tp_gap_r"]
+AV_FEATS = P.HEAD_FEATS + AV_EXTRA
+AV_FEATS_RICH = P.RICH_HEAD_FEATS + AV_EXTRA     # rich heads (RQ-20261124-a9d2-01): the head feature block carries the 6 ctx columns too
+
+
+def av_feats_for(head_feats) -> list:
+    """The value models' feature list for a heads manifest's ``feats`` (base or rich)."""
+    return list(head_feats) + AV_EXTRA
 LGB = {"objective": "huber", "alpha": 1.0, "n_estimators": 200, "learning_rate": 0.05, "num_leaves": 31, "min_child_samples": 2000, "subsample": 0.7,
        "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": SEED, "deterministic": True, "force_row_wise": True,
        "n_jobs": 4, "verbose": -1}
@@ -153,7 +160,7 @@ def row_preds(pred: dict[str, Sequence[float]], i: int) -> dict:
 
 
 def av_features(ctx: dict, rows: Sequence[dict], pred: dict, base_X) -> Any:
-    """The value models' inputs: the 9 head features (``base_X``, already built), the six head outputs, and two level gaps. Point-in-time."""
+    """The value models' inputs: the head features (``base_X``, already built: 9, or 15 for rich heads), the six head outputs, and two level gaps."""
     import numpy as np
     tp0 = P._tp0_r(ctx)
     extra = []
@@ -183,7 +190,7 @@ def prepare_shard(shard: dict, chunks, jobs, heads: Heads5, keep, fetcher=None) 
         hz = lambda j: cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(j.get("strategy"))) else {})})["seconds"]  # noqa: E731
         try:
             sec = cf_bars.TF_SECONDS[tf]
-            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - P.PRE_BARS * sec
+            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - heads.pre_bars * sec
             hi = max(lrc._ts(jobs[k]["exit_time"]) + hz(jobs[k]) for k in chosen)
             bars = cf_bars.historical_bars(sym, tf, lo, hi, fetcher)
         except Exception as e:  # noqa: BLE001  # allow-silent: a failed fetch is a recorded state (no 'done' meta, so a re-run retries), never a halt
@@ -204,7 +211,7 @@ def prepare_shard(shard: dict, chunks, jobs, heads: Heads5, keep, fetcher=None) 
             continue
         sec = cf_bars.TF_SECONDS[tf]
         h = cf_core.resolve_horizon({"timeframe": tf}, {"timeframe": tf, **({"max_hold_bars": mb} if (mb := cf_bulk.timeout_bars_for(job.get("strategy"))) else {})})["seconds"]
-        ctx = P.make_ctx(job, store.window(t_row - P.PRE_BARS * sec, t_exit + h), tf)
+        ctx = P.attach_history(P.make_ctx(job, store.window(t_row - P.PRE_BARS * sec, t_exit + h), tf), store, heads)
         if ctx is None:
             reasons["no_replay_context"] += 1
             continue
@@ -267,7 +274,7 @@ def run_label_shard(shard, chunks, jobs, heads, out: Path, fetcher=None) -> dict
         ks.append(lab["k"])
     n_rows = int(sum(len(x) for x in Xs))
     if state == "done":
-        np.savez_compressed(ldir / f"{shard['shard_id']}.npz", X=np.vstack(Xs) if Xs else np.zeros((0, len(AV_FEATS)), "float32"),
+        np.savez_compressed(ldir / f"{shard['shard_id']}.npz", X=np.vstack(Xs) if Xs else np.zeros((0, len(av_feats_for(heads.feats))), "float32"),
                             Y=np.vstack(Ys) if Ys else np.zeros((0, len(ACTIONS)), "float32"), entry=np.array(ent, "float64"),
                             end=np.array(end, "float64"), fam=np.array(fam, "int8"), k=np.concatenate(ks) if ks else np.zeros(0, "int32"))
     meta = {**shard, "schema": SCHEMA, "stage": "label", "state": state, "error": err, "n_trades": len(items), "n_rows": n_rows,
@@ -290,7 +297,7 @@ def _day(s: str) -> float:
     return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
 
 
-def fit_one(X, y, seed_salt: str, min_rows: int = MIN_TRAIN_ROWS):
+def fit_one(X, y, seed_salt: str, min_rows: int = MIN_TRAIN_ROWS, feats=None):
     import lightgbm as lgb
     import numpy as np
     m = ~np.isnan(y)
@@ -301,7 +308,7 @@ def fit_one(X, y, seed_salt: str, min_rows: int = MIN_TRAIN_ROWS):
         sel = np.random.default_rng(int(hashlib.sha256(seed_salt.encode()).hexdigest()[:8], 16)).choice(len(ym), ROWS_PER_FIT, replace=False)
         Xm, ym = Xm[sel], ym[sel]
     model = lgb.LGBMRegressor(**LGB)
-    model.fit(Xm, ym, feature_name=list(AV_FEATS))
+    model.fit(Xm, ym, feature_name=list(feats or AV_FEATS))
     # provenance: predict -- the regressor's in-sample predicted net-R value on its own TRAINING rows, used only for the p75 action cut
     cut = max(EV_MARGIN_R, float(np.percentile(model.booster_.predict(Xm), EV_CUT_PCT)))
     return model.booster_, len(ym), (float(np.mean(ym)), cut)
@@ -311,6 +318,9 @@ def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS
     import numpy as np
     d = load_labels(labels)
     man = json.loads((Path(heads_dir) / "manifest.json").read_text())
+    feats = av_feats_for(man["feats"])
+    if d["X"].shape[1] != len(feats):
+        raise SystemExit(f"label width {d['X'].shape[1]} != {len(feats)} value features for heads feats {man['feats']}")
     out.mkdir(parents=True, exist_ok=True)
     folds = []
     for f in man["folds"]:
@@ -325,7 +335,7 @@ def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS
         for scope in ["all"] + [f"fam:{x}" for x in FAMILIES]:
             sel = tr if scope == "all" else tr[d["fam"][tr] == FAMILIES.index(scope.split(":")[1])]
             for ai, name in enumerate(ACTIONS):
-                bst, n, mu = fit_one(d["X"][sel], d["Y"][sel, ai], f"{f['fold_id']}|{scope}|{name}", min_rows)
+                bst, n, mu = fit_one(d["X"][sel], d["Y"][sel, ai], f"{f['fold_id']}|{scope}|{name}", min_rows, feats)
                 tag = f"{scope}|{name}"
                 rec["n_fit"][tag] = n
                 if bst is None:
@@ -340,7 +350,7 @@ def fit(labels: Path, heads_dir: Path, out: Path, min_rows: int = MIN_TRAIN_ROWS
         print(json.dumps({"fold": f["fold_id"], "n_train_rows": rec["n_train_rows"], "models": len(rec["files"])}), flush=True)
     labelled = {"n_rows": len(d["entry"]), "n_cells": {a: int((~np.isnan(d["Y"][:, i])).sum()) for i, a in enumerate(ACTIONS)},
                 "mean_delta": {a: (round(float(np.nanmean(d["Y"][:, i])), 6) if (~np.isnan(d["Y"][:, i])).any() else None) for i, a in enumerate(ACTIONS)}}
-    manifest = {"schema": "am_action_value_dump/1", "feats": AV_FEATS, "actions": list(ACTIONS), "families": list(FAMILIES), "lgb_params": LGB,
+    manifest = {"schema": "am_action_value_dump/1", "feats": feats, "actions": list(ACTIONS), "families": list(FAMILIES), "lgb_params": LGB,
                 "label_cap_r": LABEL_CAP_R, "embargo_days": EMBARGO_DAYS, "rows_per_fit": ROWS_PER_FIT, "folds": folds, "labels": labelled,
                 "provenance": "ESTIMATED"}
     (out / (f"manifest_{only_fold}.json" if only_fold else "manifest.json")).write_text(json.dumps(manifest, indent=1) + "\n")
@@ -363,7 +373,7 @@ class ValueModels:
         import lightgbm as lgb
         self.root = Path(root)
         self.man = json.loads((self.root / "manifest.json").read_text())
-        if self.man.get("schema") != "am_action_value_dump/1" or list(self.man["feats"]) != AV_FEATS:
+        if self.man.get("schema") != "am_action_value_dump/1" or list(self.man["feats"]) not in (AV_FEATS, AV_FEATS_RICH):
             raise ValueError("unexpected action-value manifest")
         self.boosters: dict[tuple, Any] = {}
         self.cuts: dict[tuple, float] = {}

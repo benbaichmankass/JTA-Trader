@@ -210,21 +210,22 @@ def test_cf_core_loosen_stop_never_tightens_and_bank_at_banks_once():
 
 
 # ---- heads dump / load round trip ---------------------------------------------------------------------------------------
-def _dump_heads(tmp_path, strategies):
+def _dump_heads(tmp_path, strategies, rich=False):
     np = pytest.importorskip("numpy")
     pytest.importorskip("lightgbm")
     import am_heads_fit as H
+    feats = H.RICH_FEATS if rich else H.FEATS
     rng = np.random.default_rng(1)
     n = 12000
-    arr = {k: rng.normal(size=n).astype("float32") for k in H.FEATS}
+    arr = {k: rng.normal(size=n).astype("float32") for k in feats}
     arr["strat"] = rng.integers(0, 3, n).astype("float32")
     arr["side"] = np.where(rng.random(n) > 0.5, 1.0, -1.0).astype("float32")
     arr["fwd_mfe_r"] = np.abs(arr["open_r"] + rng.normal(size=n)).astype("float32")
     for h in H.BIN_HEADS:
         arr[h] = (arr["open_r"] + rng.normal(size=n) > 0.3).astype("float32")
     tidx = np.arange(n, dtype="int32") // 10
-    rec = H.dump_fold(arr, tidx, np.arange(0, n // 10), 20000, np.random.default_rng(2), "2024-01-01", tmp_path)
-    man = {"schema": "am_heads_dump/1", "feats": H.FEATS, "heads": list(H.DUMP_HEADS), "strategies": strategies,
+    rec = H.dump_fold(arr, tidx, np.arange(0, n // 10), 20000, np.random.default_rng(2), "2024-01-01", tmp_path, feats)
+    man = {"schema": "am_heads_dump/1", "feats": feats, "heads": list(H.DUMP_HEADS), "strategies": strategies,
            "folds": [{**rec, "kind": "dev", "test_start": "2024-01-01", "test_end": "2024-07-01"}]}
     (tmp_path / "manifest.json").write_text(json.dumps(man))
     return arr, rec, H
@@ -287,6 +288,69 @@ def test_run_shard_end_to_end_on_synthetic_bars(tmp_path):
     assert m2["n_replayed"] == 0 and m2["could_not_replay"] == {"entry_before_first_fold": 1}
     m3 = P.run_shard({**shard, "shard_id": "n"}, {"n": ["z"]}, {"z": early}, heads, tmp_path / "o3", ["target"], n_control=1, fetcher=lambda *a: [])
     assert m3["could_not_replay"] == {"no_bars": 1}
+
+
+# ---- rich heads (RQ-20261124-a9d2-01): the ctx block in the replay ----------------------------------------------------------
+def _walk(n, seed=7, t_start=None):
+    rng = random.Random(seed)
+    px, t, out = 100.0, (T0 - 150 * SEC) if t_start is None else t_start, []
+    for _ in range(n):
+        o = px
+        px = max(90.0, o + rng.uniform(-1.2, 1.3))
+        out.append({"time": t, "open": o, "high": max(o, px) + rng.uniform(0, 0.8), "low": min(o, px) - rng.uniform(0, 0.8), "close": px, "dur": SEC})
+        t += SEC
+    return out
+
+
+def test_rich_rows_match_the_label_build_and_leave_the_replay_unchanged():
+    """attach_history + decision_rows give each row the ctx block cf_bar_labels_run --context built for the labels (bars < t_fill, last CTX_LOOKBACK);
+    the 9 base features, the row set and HOLD are byte-identical to a base run."""
+    import cf_bulk
+    import cf_bar_labels as L
+    bars = _walk(260)
+    store = cf_bulk.BarStore(bars)
+    job = make_job(tp=106.0, exit_after=30, reason="timeout")
+    t_row, t_exit = T0, T0 + 30 * SEC
+    window = store.window(t_row - P.PRE_BARS * SEC, t_exit + 48 * SEC)
+    base = P.make_ctx(job, window, "1h")
+    rich = P.attach_history(P.make_ctx(job, window, "1h"), store, type("H", (), {"rich": True})())
+    assert len(rich["hist_pre"]) == L.CTX_LOOKBACK and all(b["time"] < rich["t_fill"] for b in rich["hist_pre"])
+    rb, rr = P.decision_rows(base), P.decision_rows(rich)
+    assert [r["features"] for r in rb] == [r["features"] for r in rr] and all("ctx" in r for r in rr) and not any("ctx" in r for r in rb)
+    exit_idx = next((k for k, b in enumerate(rich["post"], start=1) if b["time"] + SEC >= t_exit), None)
+    lab = L.build_rows(side="long", entry=100.0, sl=98.0, bars=bars, entry_time=t_row, bar_seconds=SEC, exit_idx=exit_idx, with_labels=False, context=True)
+    assert [r["ctx"] for r in lab] == [r["ctx"] for r in rr]
+    assert any(v is not None for r in rr for v in r["ctx"].values())
+    Xb, Xr = P.feature_matrix(base, rb, 1), P.feature_matrix(rich, rr, 1)
+    assert Xb.shape == (len(rb), len(P.HEAD_FEATS)) and Xr.shape == (len(rr), len(P.RICH_HEAD_FEATS))
+    import numpy as np
+    assert np.array_equal(Xb, Xr[:, :len(P.HEAD_FEATS)], equal_nan=True)
+    assert P.run_arm(base) == P.run_arm(rich)
+    assert P.attach_history(P.make_ctx(job, window, "1h"), store, type("H", (), {"rich": False})()).get("hist_pre") is None
+
+
+def test_rich_heads_load_and_run_shard(tmp_path):
+    hd = tmp_path / "heads"
+    hd.mkdir()
+    _dump_heads(hd, {"0": "trend_donchian_t", "1": "x", "2": "y"}, rich=True)
+    heads = P.Heads(hd)
+    import cf_bar_labels as L
+    assert heads.rich and heads.feats == P.RICH_HEAD_FEATS and heads.pre_bars == L.CTX_LOOKBACK + 1
+    allrows = _walk(600)
+    jobs = {}
+    for i in range(10):
+        t0 = T0 + i * 6 * SEC
+        jobs[f"k{i}"] = {**make_job(tp=106.0, exit_after=20, reason="timeout"), "entry_time": iso(t0), "exit_time": iso(t0 + 20 * SEC)}
+    shard = {"shard_id": "BTCUSDT_1h_rich", "symbol": "BTCUSDT", "timeframe": "1h", "n_jobs": 10}
+    asked = []
+    meta = P.run_shard(shard, {"BTCUSDT_1h_rich": list(jobs)}, jobs, heads, tmp_path, ["target"], n_control=2,
+                       fetcher=lambda sym, tf, a, b: (asked.append(a), [{k: v for k, v in x.items() if k != "dur"} for x in allrows])[1])
+    assert meta["state"] == "done" and meta["n_replayed"] == 10 and meta["n_decision_rows"] > 10
+    assert asked and asked[0] <= T0 - (L.CTX_LOOKBACK + 1) * SEC
+    recs, _ = P.read_shards(tmp_path)
+    for rr in recs:
+        ctx = P.make_ctx(dict(jobs[rr["k"]], trade_key=rr["k"]), allrows, "1h")
+        assert rr["b"][0] == round(P.run_arm(ctx)["net_r"], 6)
 
 
 # ---- reduce / grade ------------------------------------------------------------------------------------------------------
