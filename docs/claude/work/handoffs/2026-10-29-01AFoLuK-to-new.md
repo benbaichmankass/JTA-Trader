@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-29: session_01AFoLuKwNMzjtn2CH2kVd86 (Manager Session 2026-10-29c) → new (2026-10-29d)
 
-> **Doc status:** `unknown` · category `unknown` · written 2026-10-29 ~21:50Z by the outgoing manager. The reason for the rotation is context: 725k of 1M tokens, past the ~650k rule.
+> **Doc status:** `historical` · category `history` · written 2026-10-29 ~21:50Z by the outgoing manager. The reason for the rotation is context: 725k of 1M tokens, past the ~650k rule.
 
 ## 1. Capacity
 - **Weekly usage:** 35% at 21:37Z. It resets Wed 2026-11-04 18:00Z. The reading was recorded with spend_meter in PR #21412, which has automerge armed.

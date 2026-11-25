@@ -1,6 +1,6 @@
 # Manager handoff — 2026-11-15 ~06:00Z (Manager Session 2026-11-14a → next)
 
-> **Doc status:** `unknown` · category `history` · last verified `2026-11-15`
+> **Doc status:** `historical` · category `history` · last verified `2026-11-15`
 
 Outgoing: `Manager Session 2026-11-14a` (session_01AFoLuHypACDvKhJgBWYZKV), context ~741k of 1M, past the ~650k rotation point.
 It sits at lineage depth 0, so it created the new manager directly (new = depth 1, the shallowest possible). That deviates from the
