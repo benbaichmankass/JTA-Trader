@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "per-account fill delay over the newest 7 days is re-measured with the rerun command and tradeify_1 p90 is within 10 min, or the phone-path cause is recorded with its fix row",
+    "kind": "observation"
+  },
+  "id": "PI-20261124-VEANGDN1-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PROP-ALERT-NOISE 2026-11-24 (session_01AFoLuJUHv1coqivEANgDN1)",
+    "rerun": "GET https://ict-bot.duckdns.org/api/bot/prop/fills?limit=1000 and /api/bot/prop/tickets?limit=1000; join fills.ticket_id to tickets.ticket_id; delay = (opened_at or reported_at) - signal_time per account, status open/filled, last 7 days"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "state": "queued",
+  "tier": 2,
+  "what": "tradeify_1 (phone path) fills signals late and sometimes not at all; velotrade_1 (REST) does not. MEASURED 2026-11-24 over prop_fills open/filled rows of the last 7 days joined to prop_tickets on ticket_id (signal_time -> fill opened_at/reported_at); population = linked fills only (tickets endpoint holds the newest 500 package rows): tradeify_1 n=6: median 14.6 min, p90 25.0, max 55.8, 4 of 6 later than 10 min (ETH ml_entry 55.8, SOL ml_entry 25.0, ETH ml_entry 17.7, SOL trend_donchian_sol_4h 11.6); velotrade_1 n=10: median 5.1, max 9.8, 0 later than 10 min. Case 2026-11-24 12:00Z ml_entry: signals 12:02:33 (ETH) / 12:02:49 (SOL) on both accounts; velotrade_1 filled ETH 12:03:18 and SOL 12:08:29; tradeify_1 ETH 'placed' 12:53:42, open 12:58:31 (51/56 min after signal); SOL journaled 'skipped: not submitted: expired awaiting resting price (valid_until 13:02:57Z passed)' at 13:03:27 (fill 360) - so SOL did not vanish: the phone executor had not submitted it before the ticket's 1h validity ended. Root cause NOT yet read: candidates are the phone executor poll cadence / app foreground state (PHONE-* rows, phone heartbeat) and serial intake. Relevant to the ML-ENTRY-REVIEW lane (session_01AFoLuL8XqcgVmRK9WCEeZn). After the 2026-11-24 routing change a >10 min fill and a machine ticket that expires unfilled each raise ONE prop_alert, so recurrences are visible."
+}

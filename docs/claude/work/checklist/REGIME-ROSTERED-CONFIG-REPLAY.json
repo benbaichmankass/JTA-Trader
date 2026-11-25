@@ -1,0 +1,23 @@
+{
+  "id": "REGIME-ROSTERED-CONFIG-REPLAY",
+  "title": "Regime program: re-run harness_stage0 per ROSTERED leg (declared configs) so R2/R4 book-performance routing/sizing is graded on the configs we actually trade",
+  "state": "done",
+  "owner": "ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV)",
+  "lane": "session_01AFoLuLpCY5gABbqk3EBUeV",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28696
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-04",
+  "note": "[2026-11-25T00:35Z lane ML-PRIMARY, manager-requested] Child of REGIME-PROGRAM, after R3 (f1a0-20). Why: R2 (f1a0-16/-18) and R4 (f1a0-19) graded book self-momentum on the cf_bulk sweep corpus, where variants are averaged (corpus mean -0.043 R/trade) and generic strategy names (trend_donchian, htf_pullback_trend_2h) are shared with sweeps, so a rostered-config filter is impossible; comms/strategy_evidence holds only 1,635 trades, mostly 2025+. Build: for every rostered crypto leg in config/strategies.yaml, run scripts/research/harness_stage0.py with its DECLARED params over 2020-09..2026-10 (runner matrix), emit trades with net_r (full cost stack); then re-run regime_r2_family_router.py (--mode route/tilt/state) with books = rostered legs. Done = per-leg trade files landed + a registered unit graded on them. Signal to beat: R4 +0.0098 R/trade, t 1.27, permutation share 0.00, decaying 2025-26. [2026-11-25T01:45Z] BUILT: scripts/research/rostered_leg_replay.py (rostered crypto trend/pullback/fade/squeeze legs replayed with declared params via exit_lever_ablation.fetch_candles/build_arm_argv; grade = advol/hmm2/no-state tilts on leg x direction books). Unit RQ-20261125-f1a0-24 (RULE-REGIME-R3-CONFIRM-ROSTERED-20261125) dispatched run 45525451835, PR #28696 (HOLD). It is the confirmation of the f1a0-20 R3 PASS (hmm2 +0.0247 t 3.87; advol +0.0134 t 2.02); f1a0-23 decomposition (state vs no-state) run 45524763589 PR #28695. [2026-11-25T01:55Z] RAN: f1a0-24 run 45525451835 INDETERMINATE (not confirmed; see REGIME-PROGRAM note). Replay of 21/21 rostered legs succeeded; per-leg trade files in the run artifact (lands via the collector under comms/research/RQ-20261125-f1a0-24/). Row outcome: the build is done; the confirmation read is negative.",
+  "phase": "research",
+  "updated_at": "2026-11-25T01:51:01Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

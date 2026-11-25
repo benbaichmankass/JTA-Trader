@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261124-RQFAILS-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-24 status check 19:07Z",
+    "rerun": "ls research/results | grep -E \"e1a7|bd30|b5a1\"; read comms/research/RQ-20261124-e1a7-02/*/verdict_top1.json; pytest -q tests/test_research_queue.py"
+  },
+  "state": "queued",
+  "what": "Four research-pipeline defects seen 2026-11-24 (measured): (1) RQ-20261124-e1a7-02 (ml_entry one-bet-per-bar) landed as producer_failed 'no verdict.json' although the run DID grade itself: comms/research/RQ-20261124-e1a7-02/<run>/verdict_top1.json says INDETERMINATE (n 6706, delta top1-base +0.0042R, t 0.26, vs random1 +0.0115 t 1.16, folds_better 3/8, years_positive 2/4; yearly 2022 +0.026, 2023 -0.013, 2024 +0.022, 2025 -0.036). The result landing looks for verdict.json, the lever-arms harness writes verdict_<arm>.json: fix the name contract and re-land the record as indeterminate. Same file shows the registered recipe's dev-fold LONG side net -0.0063R/trade (n 25,793) vs SHORT +0.0082 (n 45,541), and 11.8 entries per bar on average: feed both to ML-ENTRY-BAR-RISK-SPLIT / ML-ENTRY-BOOK-FEATURES. (2) RQ-20261124-bd30-04 (xrp_pullback_2h pre-dev 2018-06..2019-12) failed: the data source starts 2020-01-06, so exit_lever_ablation.fold_edges raised 'empty window'; re-author on a window with data (or a source with pre-2020 XRP) or kill it with that reason. (3) RQ-20261124-e1a7-01 declares power design 'paired_folds', which the power calc rejects (allowed one_sample/two_sample/paired), so tests/test_research_queue.py::test_every_committed_job_is_both_powered_and_routable fails on main since #28589. (4) Four AM Stage B result PRs (#28558 + siblings) stranded on an append conflict in comms/research/holdout_reads.jsonl (append-only file, parallel landers): landed by hand in PR #28613; the lander should rebase/union append-only files instead of failing."
+}

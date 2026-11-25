@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-BOOK-FEATURES",
+  "title": "ml_entry next-iteration builds: (a) book-state history read on the dev folds, (b) book/recency input arm, (c) regime-CONDITIONED heads; each as a lever-arms arm + registered unit",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-08",
+  "note": "Filed 2026-11-24 by lane ML-ENTRY-REVIEW-20261124 (docs/research/ml-entry-review-2026-11-24.md). VERIFIED: ml_entry is book-blind (20 market-state FEATURES; only one-open-per-(strategy,symbol), the 300 s sized_qty=0 cooldown and the account DD/daily-loss checks see the book). Live sample n=26 bybit_2: same-side already open n6 +0.07R vs none n20 -0.31R; same-side stop in prior 24h n9 -0.22R vs n17 -0.22R (no measured value for a cooldown/exposure rule; any such rule is a gate needing operator permission). (a) The dev-fold version (about 80k decisions, scratch script scratchpad/book_state.py copied into the harness) did NOT complete in-session (90-min background limit); run it on the runner. (b) Book/recency inputs (open same-side exposure, own-trade R 24h, stop count 24h) need sequential feature construction inside the policy loop. (c) Regime as raw input columns failed its partial read (RQ-20261124-e1a7-01, 6/8 folds: -0.0246 vs base -0.0005, placebo -0.020), so the next form is conditioning: separate long/short heads per BTC-trend state (btc_dist_sma1200 sign) or regime re-weighted training rows. Each becomes a lever-arms --arm with a rule fixed before its run (LEVER_RULE thresholds). CORRECTION (same lane, close-out): the dev-fold book-state script is committed as scripts/research/ml_entry_book_state.py on PR #28589 (it was NOT in the lever-arms harness as the note above said). Run: python3 scripts/research/ml_entry_book_state.py <klines_cache> <out.json> (needs the ml_entry_retrain klines cache; ~60-90 min on 4 cores alone). Retrain arm registered and RUNNING: RQ-20261124-f1a0-04 (book_feats: 5 point-in-time recency columns at t-24h vs timestamp-shuffled placebo), run 45484691348 dispatched 2026-11-24 20:48Z by lane ML-PRIMARY. Regime-conditioned heads: RQ-20261124-f1a0-03, run 45484686349.",
+  "phase": "research",
+  "updated_at": "2026-11-24T20:49:37Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}
