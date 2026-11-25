@@ -1,0 +1,53 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 244,
+ "population": "18 index_capitulation_1x tickers probed 2026-11-25T20:19:01Z (paper pair); feed agreement over 18 tickers, consolidated signals 244, sessions = those the live IEX path serves (2022-12-01 start where IEX has no bars)",
+ "measurement": {
+  "checks": {
+   "sip_closed_ok_all": true,
+   "sip_only_zero": true,
+   "consolidated_only_le_2pct": true
+  },
+  "entitlement": {
+   "tickers": 18,
+   "sip_closed_ok": 18,
+   "sip_now_refused": 18,
+   "iex_closed_ok": 18,
+   "sip_closed_last_bar_dates": [
+    "2026-11-25T05:00:00Z"
+   ],
+   "entitled": true
+  },
+  "feed_agreement_sip": {
+   "tickers_read": 18,
+   "signals_live": 244,
+   "signals_consolidated": 244,
+   "matching": 244,
+   "live_only": 0,
+   "consolidated_only": 0,
+   "net_r_live": 69.4572,
+   "net_r_consolidated": 69.3451,
+   "live_only_trades_n": 0,
+   "live_only_trades_net_r": 0,
+   "consolidated_only_trades_n": 0,
+   "consolidated_only_trades_net_r": 0,
+   "matched_trades_net_r_live": 69.4572,
+   "matched_trades_net_r_consolidated": 69.3451,
+   "tickers_unreadable": []
+  },
+  "hybrid_sip_signal_iex_open": {
+   "tickers_read": 12,
+   "signals_live": 148,
+   "signals_consolidated": 148,
+   "matching": 148,
+   "live_only": 0,
+   "consolidated_only": 0,
+   "matched_trades_net_r_live": 44.518,
+   "matched_trades_net_r_consolidated": 48.974,
+   "net_r_live": 44.518,
+   "net_r_consolidated": 47.8598
+  }
+ },
+ "note": "sip_closed_ok 18/18, sip_now refused 18/18 (negative control); SIP signals 244 vs consolidated 244, matching 244, SIP-only 0, consolidated-only 0"
+}
