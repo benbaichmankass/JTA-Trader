@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-05
 title: 'ml_entry SL PLACEMENT: on the same predictions, does a SL 3 / TP 4.5 ATR14 bracket (same 1.5 reward:risk, 24 h stop) beat SL 2 / TP 3
   by +0.0068 net R per decision (each in its own R) on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -127,3 +127,16 @@ related:
 - docs/research/ml-entry-review-2026-11-24.md
 - research/queue/RQ-20261124-e1a7-02.yaml
 last_dispatched_at: '2026-11-24T21:58:57+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-05/45484696103.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
