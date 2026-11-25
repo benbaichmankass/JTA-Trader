@@ -1,0 +1,92 @@
+{
+ "schema": "regime_r2_family_router/1",
+ "unit": "RQ-20261125-f1a0-19",
+ "verdict": "indeterminate",
+ "why": "tilt: indeterminate delta +0.0098 t 1.273 random share 0.0 trade share 1.0",
+ "rule": {
+  "id": "RULE-REGIME-R4-BOOK-TILT-20261125",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "population": "backtest trade corpus (cf_bulk.TRADE_GLOBS, 7375 files, 510883 distinct jobs) -> 395186 unique crypto trades of ['trend_donchian', 'htf_pullback', 'fade_breakout', 'squeeze_breakout'] with entries 2020-09-01..2026-10-26 (variants averaged), 210 family x symbol x direction books, weekly; test weeks 2022-01-03..2026-10-26 (251); harness net_r (fee + slippage + funding)",
+ "data_window": {
+  "data_start": "2020-09-01",
+  "data_end": "2026-10-26",
+  "test_start": "2022-01-03",
+  "corpus_sha256": "32483d60814c4980d7ea341d7d021f57845451db7ccf42bc13c71d593c04cd55",
+  "n_unique_trades": 395186,
+  "n_files": 7375
+ },
+ "load_counts": {
+  "rows": 2394088,
+  "rows_not_replayable": 14642,
+  "files_nonempty": 7360,
+  "rows_replayable": 2379446,
+  "symbol_from_sidecar": 189267,
+  "files_empty": 15,
+  "strategy_from_sidecar": 766,
+  "files": 7375,
+  "distinct_jobs": 510883
+ },
+ "measurement": {
+  "arms": {
+   "tilt": {
+    "n_weeks": 251,
+    "trades": 323016,
+    "money_arm": -0.03305,
+    "money_base": -0.04286,
+    "delta": 0.00982,
+    "se_week_boot": 0.00771,
+    "t": 1.273,
+    "random": {
+     "draws": 200,
+     "kind": "weights permuted across books within each week",
+     "mean": -0.04321,
+     "p95": -0.03903,
+     "share_ge_arm": 0.0
+    },
+    "yearly_delta": {
+     "2022": 0.0035,
+     "2023": 0.0124,
+     "2024": 0.0328,
+     "2025": -0.0012,
+     "2026": -0.0015
+    },
+    "share_book_weeks_up": 0.4109,
+    "trade_share": 1.0,
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": true,
+     "years_positive": false
+    },
+    "verdict": "indeterminate"
+   }
+  },
+  "verdict": "indeterminate",
+  "books": {
+   "n_books": 210,
+   "trades": 395186,
+   "sum_r": -15255.45
+  },
+  "n_test_weeks": 251,
+  "level": "symbol",
+  "mode": "tilt",
+  "rule": {
+   "id": "RULE-REGIME-R4-BOOK-TILT-20261125",
+   "min_delta_r": 0.01,
+   "min_t": 2.0,
+   "max_random_share": 0.05,
+   "min_years_positive": 4,
+   "n_test_years": 5,
+   "fail_random_share": 0.5
+  }
+ },
+ "git_sha": "53867d424b544f7a34442ae8f914192101b8fb1a",
+ "elapsed_s": 26,
+ "read_state": "measured"
+}
