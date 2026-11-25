@@ -104,3 +104,20 @@ def test_report_runs_on_diag_output(tmp_path):
     p.write_text(json.dumps(rec) + "\n")
     r = R.report(str(p))
     assert r["bank"]["n_fired"] == 1 and r["single_action_ex_post"]["close_half"]["mean_delta"] == 0.4
+
+
+def test_rich_heads_widen_the_value_features_and_fit_refuses_a_width_mismatch(tmp_path):
+    """Rich heads (RQ-20261124-a9d2-01): the value models' features are the 15 head features + the 8 extras; fit() refuses labels built for the other width."""
+    assert V.av_feats_for(P.HEAD_FEATS) == V.AV_FEATS and V.av_feats_for(P.RICH_HEAD_FEATS) == V.AV_FEATS_RICH
+    assert len(V.AV_FEATS_RICH) == len(V.AV_FEATS) + len(P.CTX_HEAD_FEATS)
+    ld, hd = tmp_path / "labels", tmp_path / "heads"
+    ld.mkdir()
+    hd.mkdir()
+    n = 10
+    np.savez_compressed(ld / "s.npz", X=np.zeros((n, len(V.AV_FEATS)), "float32"), Y=np.zeros((n, len(V.ACTIONS)), "float32"),
+                        entry=np.zeros(n), end=np.zeros(n), fam=np.zeros(n, "int8"), k=np.ones(n, "int32"))
+    (hd / "manifest.json").write_text(json.dumps({"feats": P.RICH_HEAD_FEATS, "folds": []}))
+    with pytest.raises(SystemExit):
+        V.fit(ld, hd, tmp_path / "m")
+    (hd / "manifest.json").write_text(json.dumps({"feats": P.HEAD_FEATS, "folds": []}))
+    assert V.fit(ld, hd, tmp_path / "m")["feats"] == V.AV_FEATS
