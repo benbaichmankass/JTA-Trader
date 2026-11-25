@@ -86,7 +86,7 @@ def run(out: Path, cache: Path | None) -> Dict[str, Any]:
                           "n_total": len(gt["trades"]),
                           "price_oos_net_r": round(sum(x["net_r"] for x in trades if b and x["entry_date"] > b), 4),
                           "total_oos_net_r": round(sum(x["net_r"] for x in gt["trades"] if b and x["entry_date"] > b), 4)}
-        except Exception as e:  # noqa: BLE001 - a read, reported as could-not-look, never a zero
+        except Exception as e:  # noqa: BLE001  # allow-silent: the total-return read is recorded per ticker as read_state could_not_look with the reason, never a zero
             tr_read[t] = {"read_state": "could_not_look", "reason": f"{type(e).__name__}: {e}"[:200]}
     spec = {"leg": "index_capitulation_1x", "row": "INDEX-CAPIT-1X-LEG", "evidence": {u: str(p.relative_to(REPO)) for u, p in VERDICTS.items()},
             "population": sorted(ks), "execution": "long only, 1x: the index ETF itself (signal and execution on the same ticker)",
