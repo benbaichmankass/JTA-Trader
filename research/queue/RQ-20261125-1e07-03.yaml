@@ -1,0 +1,105 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (operator request via manager 06:28Z; builds allowed per manager 12:03Z). Rule registered BEFORE any run;
+# no local read of these bars. Gates this adds or changes: none (a research unit; changes no config or order path).
+id: RQ-20261125-1e07-03
+title: 'SHORTER-TIMEFRAME capitulation (1h, crypto majors): the INDEX-CAPIT daily spec kept in 1h bars, not re-tuned, graded POOLED'
+status: done
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 2
+roadmap:
+- L-LADDER
+question: On 2020-01-01..2026-10-22, does the unfiltered 1.5-ATR capitulation trigger with the daily leg's spec kept in 1h BARS (flush vs 5-bar mean and
+  20-bar low, first up-close within 5 bars, next-bar-open entry, flush-to-signal low stop, K* TP on the first 60%, 10-bar hold) on 6 crypto majors (BTCUSDT,
+  ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, ADAUSDT), Binance Vision USDT-M klines earn positive pooled net R net of the full cost stack, stay positive at 2x
+  slippage, beat >= 95% of 200 re-timed draws, carry a strict majority of symbols, and stay positive in the chronologically latest 40% of trades?
+why_this_matters: 'Operator request 2026-11-25 06:28Z (via manager): test the capitulation leg on 1h and 4h for the 18 ETFs (US session) and the crypto
+  majors, each pre-registered per timeframe, k/N/M scaled from the daily spec and not re-tuned. The daily leg is approved for real money on 1e06-06 / 1e06-08;
+  a shorter-timeframe pass would multiply its trade count and reach crypto, a fail bounds it to daily.'
+power:
+  expected_n: 800
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the daily trigger fired ~1,100 pooled trades on these 18 ETFs over 16 years (1e06-06 + 1e06-08); a 1h grid has ~7x (ETF) or ~24x (crypto)
+    more bars per day over a shorter window, so n is expected in the hundreds-to-thousands, far above the floor 25. No local read of these bars.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-hand window; nothing accrues.
+evidence_class:
+  holdout: in_sample
+  claim: edge
+decision_rule:
+  id: RULE-RQ-20261125-1e07-03
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'capit_intraday_harness.py --unit RQ-20261125-1e07-03: family capitulation_wide (index_signal_etf_harness.signals_capitulation_wide, unchanged)
+    on 1h bars; per-symbol K* (calibrate_tp, first 60%); costs src/runtime/execution_costs.roundtrip_cost_r on every trade (fee 11 bps RT + slippage 3 bps
+    RT + funding 1 bp per 8h window, resolve_cost_policy / resolve_fee_bps_roundtrip); 2x re-read doubles the slippage term; timing control = 200 draws,
+    signals moved 40-400 bars either way, same stop geometry, K* and cost.'
+  rule: 'UNFILTERED capitulation trigger (daily spec kept in 1h BARS, not re-tuned) on 6 crypto majors (Binance USDT-M), graded POOLED: PASS IFF pooled
+    n>=25 AND pooled net_r>0 AND pooled net_r>0 at 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual
+    <= 0.05) AND >= 4 of 6 symbols net_r>0 (strict majority) AND the chronologically latest 40% of pooled trades net_r>0; INDETERMINATE if pooled n<25;
+    FAIL otherwise'
+  pass_action: A FRESH-POPULATION confirmation on 1h before any proposal (the next crypto tier (e.g. DOGE/LINK/LTC/DOT/AVAX/ATOM)), then a Tier-3 proposal
+    input for a shorter-timeframe capitulation leg.
+  fail_action: Record the capitulation edge as daily-only on this population/timeframe; diagnose by symbol, cost share and K* state, and author the next
+    iteration only if the diagnosis names a lever (e.g. a wall-clock-scaled variant as its own disclosed unit), never a re-tune of this spec.
+  proposal_mapping: pass -> fresh-population confirmation, then Tier-3 proposal input; fail or indeterminate -> diagnosis + next iteration or close.
+  what_it_does_not_do: Changes no config, roster or order path. No local read of these bars preceded the registration (a fetch-only smoke of one crypto
+    month, no signals or grading).
+  baseline: Flat (the execution is the instrument itself).
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'stand-in: the operator-asked two-direction coverage for the equity books; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  why_runner: Keyless Binance Vision klines plus a harness pass; runner compute, never the VM.
+  basis: ESTIMATE, not measured; set when the harness exists.
+run:
+  command:
+  - python3
+  - scripts/research/capit_intraday_harness.py
+  - --unit
+  - RQ-20261125-1e07-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261125-1e07-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-1e06-06
+- RQ-20261124-1e06-08
+- RQ-20261125-1e06-12
+- INDEX-CAPIT-1X-LEG
+- scripts/research/capit_intraday_harness.py
+practice_precedent: 'R5 + M10 (docs/reference/trading-and-model-practice-principles.md): rule registered before the run, net of cost.'
+iteration:
+  subject: index-etf-capitulation
+  subject_kind: strategy
+  from_result: RQ-20261124-1e06-08/45509974875
+  verdict_read: pass
+  diagnosis: The daily capitulation trigger passed on two fresh populations (1e06-06, 1e06-08) and is approved for real money. The operator asked whether
+    it carries to 1h/4h. The spec is kept in bars (not wall-clock) and frozen; the only new choices are the bar source, the session bucketing and the venue
+    cost stack, all fixed here before any run.
+  search: 'none new: the same trigger, TP calibration, hold cap and grading clauses, plus two clauses the operator named (symbol majority, latest-40% split).'
+  levers:
+  - timing
+  attempt: 10
+  due_by: '2026-12-01'
+intervention_controls:
+  not_applicable: an entry-signal test, not an active in-trade intervention; its control is the 200-draw re-timing null (signals shifted 40-400 sessions,
+    same stop geometry, TP and cost), which is a rule clause here
+not_before: '2026-11-25T15:30:00+00:00'
