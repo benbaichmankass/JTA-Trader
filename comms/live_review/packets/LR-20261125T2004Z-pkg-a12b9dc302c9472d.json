@@ -1,0 +1,680 @@
+{
+ "account_bounds": [
+  {
+   "account_class": "paper",
+   "account_id": "alpaca_paper",
+   "apply_paths": [
+    "close",
+    "move_tp",
+    "tighten"
+   ],
+   "evidence": "alpaca_orders: SL 725.6 / TP 651.14, position True, matched by qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
+   "mechanics": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   },
+   "own_position": true,
+   "read": null,
+   "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
+   "read_if_amend": "would_apply"
+  }
+ ],
+ "assembled_by": "generator scripts/ops/live_review_packet.py",
+ "context": {
+  "calendar": {
+   "events_next_24h": [],
+   "state": "no_event_classes_for_symbol"
+  },
+  "correlated_open_packages": [
+   {
+    "direction": "short",
+    "order_package_id": "pkg-a1ff4836ce1f4806",
+    "symbol": "QQQ"
+   }
+  ],
+  "direction": "short",
+  "funding": {
+   "state": "not_applicable"
+  },
+  "news": {
+   "adjustment": 0.001115,
+   "decision": "neutral",
+   "ts": "2026-11-25T18:05:16.216903+00:00",
+   "veto": false
+  },
+  "previous_review": {
+   "action": "tighten_sl",
+   "forecast": {
+    "direction": "with_trade",
+    "evidence": [
+     "chart.swings: highs 720.89 / 725.145, low 711.64",
+     "chart.bars_ohlc: 3 closes up to 715.77",
+     "chart.htf: 4h trending adx 25.87",
+     "regime: 1h chop adx 18.4",
+     "exit_plan: sl_now 734.376 far from price"
+    ],
+    "horizon_bars": 8,
+    "invalidation_px": 725.145,
+    "p_target": 0.4,
+    "target_px": 711.64,
+    "thesis": "Bounce is a retest of the 720.89/725.145 lower-high zone inside a still-down 4h structure; I expect it to fail and price to roll back toward the 711.64 swing low before 725.145 breaks.",
+    "timeframe": "1h"
+   },
+   "reason": "No previous review to grade. Table is not evidence (hold n=8 < floor 20, every cell null). Three closed 1h bars up (701.71, 710.90, 715.77) took price from the 695.54 low back toward the 720.89 swing high; giveback 1.76R of a 2.31R peak while the stop still rests 1.55R away at 734.38 (full -1R risk on a +0.55R trade). Stop to 725.60, just above the 725.145 swing high and 1.5 ATR from price: a bre\u2026",
+   "review_id": "LR-20261125T1902Z-pkg-a12b9dc302c9472d",
+   "reviewed_at": "2026-11-25T19:06:00Z",
+   "route": null
+  },
+  "symbol": "SPY"
+ },
+ "context_v3": {
+  "book": [
+   [
+    "BTCUSDT",
+    "long",
+    "trend_donchian_1h",
+    -0.117
+   ],
+   [
+    "TLT",
+    "long",
+    "tlt_pullback_1d",
+    1.49
+   ],
+   [
+    "BTCUSDT",
+    "long",
+    "htf_pullback_trend_2h",
+    -0.145
+   ],
+   [
+    "QQQ",
+    "short",
+    "qqq_pullback_1h",
+    0.582
+   ],
+   [
+    "ETHUSDT",
+    "long",
+    "e4_oi_shock_1h",
+    1.22
+   ],
+   [
+    "IEF",
+    "long",
+    "ief_pullback_1d",
+    1.38
+   ]
+  ],
+  "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
+  "chart": {
+   "atr": 6.22679,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1795525200,
+     716.17,
+     716.17,
+     711.64,
+     713.21
+    ],
+    [
+     1795528800,
+     714.65,
+     720.31,
+     712.165,
+     719.85
+    ],
+    [
+     1795532400,
+     720.02,
+     720.89,
+     712.995,
+     714.565
+    ],
+    [
+     1795536000,
+     714.56,
+     716.44,
+     712.57,
+     714.08
+    ],
+    [
+     1795539600,
+     714.12,
+     720.57,
+     713.85,
+     719.35
+    ],
+    [
+     1795543200,
+     719.31,
+     719.95,
+     717.02,
+     717.04
+    ],
+    [
+     1795546800,
+     717.02,
+     719.25,
+     715.97,
+     716.12
+    ],
+    [
+     1795550400,
+     716.13,
+     719.53,
+     715.25,
+     718.91
+    ],
+    [
+     1795554000,
+     717.95,
+     717.95,
+     717.59,
+     717.59
+    ],
+    [
+     1795611600,
+     704.92,
+     705.85,
+     703.61,
+     703.61
+    ],
+    [
+     1795615200,
+     704.12,
+     704.12,
+     695.54,
+     703.57
+    ],
+    [
+     1795618800,
+     703.4,
+     704.83,
+     697.84,
+     699.38
+    ],
+    [
+     1795622400,
+     699.11,
+     701.905,
+     697.44,
+     701.71
+    ],
+    [
+     1795626000,
+     701.61,
+     712.9,
+     701.06,
+     710.9
+    ],
+    [
+     1795629600,
+     710.86,
+     718.09,
+     710.43,
+     715.77
+    ],
+    [
+     1795633200,
+     715.47,
+     718.39,
+     715.025,
+     715.845
+    ]
+   ],
+   "last_close": 715.845,
+   "since_entry": {
+    "bars": 21,
+    "high": 725.145,
+    "high_dist_atr": 1.49,
+    "low": 695.54,
+    "low_dist_atr": -3.26
+   },
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 13,
+      "dist_atr": 0.81,
+      "px": 720.89
+     },
+     {
+      "bars_ago": 17,
+      "dist_atr": 1.49,
+      "px": 725.145
+     },
+     {
+      "bars_ago": 22,
+      "dist_atr": 1.95,
+      "px": 727.975
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 5,
+      "dist_atr": -3.26,
+      "px": 695.54
+     },
+     {
+      "bars_ago": 15,
+      "dist_atr": -0.68,
+      "px": 711.64
+     },
+     {
+      "bars_ago": 26,
+      "dist_atr": -4.67,
+      "px": 686.75
+     }
+    ]
+   },
+   "timeframe": "1h"
+  },
+  "exit_plan": {
+   "declared": {
+    "atr": 7.7942857142857225,
+    "atr_period": 14,
+    "atr_stop_mult": 1.5,
+    "timeframe": "1h",
+    "tp_r": 50.0,
+    "trail_mult": 5.0
+   },
+   "entry": 722.685,
+   "exit_plan_state": {
+    "final_trailing": null,
+    "residual_qty": 0.0,
+    "stop": {
+     "price": 734.37642857,
+     "qty": 1.0
+    },
+    "targets": [
+     {
+      "kind": "final",
+      "price": 664.2278571499995,
+      "qty": 1.0,
+      "qty_pct": 1.0,
+      "reach_r": 5.0
+     }
+    ],
+    "time_decay_minutes": null,
+    "trailing_stop": null
+   },
+   "exit_plan_state_note": "entry-time snapshot, not updated when the stop moves; trust sl_now",
+   "sl_initial": null,
+   "sl_now": 725.6,
+   "tp_now": 651.139
+  },
+  "htf": {
+   "adx_now": 25.2,
+   "atr": 13.8993,
+   "bars_note": "[epoch_s, open, high, low, close], closed bars only, oldest first",
+   "bars_ohlc": [
+    [
+     1795435200,
+     707.17,
+     727.975,
+     706.77,
+     724.31
+    ],
+    [
+     1795449600,
+     724.3,
+     725.44,
+     719.0,
+     722.45
+    ],
+    [
+     1795464000,
+     722.57,
+     725.145,
+     721.32,
+     723.44
+    ],
+    [
+     1795521600,
+     716.17,
+     720.89,
+     711.64,
+     714.565
+    ],
+    [
+     1795536000,
+     714.56,
+     720.57,
+     712.57,
+     716.12
+    ],
+    [
+     1795550400,
+     716.13,
+     719.53,
+     715.25,
+     717.59
+    ],
+    [
+     1795608000,
+     704.92,
+     705.85,
+     695.54,
+     699.38
+    ],
+    [
+     1795622400,
+     699.11,
+     718.39,
+     697.44,
+     715.845
+    ]
+   ],
+   "last_close": 715.845,
+   "swings": {
+    "highs": [
+     {
+      "bars_ago": 7,
+      "dist_atr": 0.87,
+      "px": 727.975
+     },
+     {
+      "bars_ago": 13,
+      "dist_atr": 1.72,
+      "px": 739.77
+     },
+     {
+      "bars_ago": 16,
+      "dist_atr": 1.38,
+      "px": 735.01
+     }
+    ],
+    "lows": [
+     {
+      "bars_ago": 4,
+      "dist_atr": -0.3,
+      "px": 711.64
+     },
+     {
+      "bars_ago": 8,
+      "dist_atr": -2.09,
+      "px": 686.75
+     },
+     {
+      "bars_ago": 19,
+      "dist_atr": 0.8,
+      "px": 727.02
+     }
+    ]
+   },
+   "timeframe": "4h",
+   "trend_now": "trending"
+  },
+  "live_vs_backtest": {
+   "read_state": "read",
+   "rows": [
+    {
+     "backtest_expectancy_r": -0.11404666666666671,
+     "backtest_n": 75,
+     "book": "realMoney",
+     "closed": 0,
+     "live_r": null,
+     "r_trades": 0,
+     "verdict": "NO_LIVE_TRADES",
+     "why": "no closed trade with an R basis on this book"
+    },
+    {
+     "backtest_expectancy_r": -0.11404666666666671,
+     "backtest_n": 75,
+     "book": "mirror",
+     "closed": 8,
+     "live_percentile": 46.3,
+     "live_r": -3.1856,
+     "p5": -8.6131,
+     "p50": -2.7188,
+     "p95": 13.2492,
+     "r_trades": 8,
+     "verdict": "CONSISTENT",
+     "why": null
+    }
+   ]
+  }
+ },
+ "cost": {
+  "basis": "evidence-record net_r per trade (fee + slippage + funding, execution_costs.resolve_cost_policy)"
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.7989,
+  "bars_since_peak": 5,
+  "giveback_r": 1.7768,
+  "open_r": 0.536,
+  "peak_r": 2.3128,
+  "r_to_stop": 0.7873,
+  "r_to_target": 5.5643
+ },
+ "generator": {
+  "head": "3ab16955d2",
+  "state": "current"
+ },
+ "info_cutoff_at": "2026-11-25T20:04:01Z",
+ "leg": "spy_pullback_1h",
+ "mechanics": {
+  "evidence": "package sl 725.6 / tp 651.139185 agree with every readable account",
+  "per_account": {
+   "alpaca_paper": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   }
+  },
+  "verdict": "match"
+ },
+ "missing_inputs": [
+  {
+   "field": "regime.vol_now",
+   "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
+  },
+  {
+   "field": "regime.cell_entry",
+   "reason": "entry meta regime='trending' vol_regime='unknown': not both known"
+  }
+ ],
+ "order_package_id": "pkg-a12b9dc302c9472d",
+ "packet_health": {
+  "defects": [
+   {
+    "count": 3,
+    "denominator": 3,
+    "field": "priced_options.options",
+    "reason": "all_options_unpriced:insufficient_n"
+   }
+  ],
+  "inapplicable_options": {
+   "count": 3,
+   "denominator": 6,
+   "reason": "stop_level_not_below_price"
+  },
+  "status": "degraded"
+ },
+ "packet_version": 3,
+ "priced_options": {
+  "biases": [
+   "stop fills at the stop price (a gap fills at the open): flatters every tighten, so the real cost of tightening is, if anything, larger",
+   "the original trail path is not recorded: on the recorded exit bar a touched tightened stop is taken as hit (SL-first)",
+   "live peak_r is a lower bound on true MFE",
+   "one leg, one window, i.i.d. trades; parameter selection on the window is not undone"
+  ],
+  "candles": "/data/bot-data/data/ltr_candles/SPY_1h.csv",
+  "corpus": "comms/strategy_evidence/runs/2026-09-29/spy_pullback_1h__trades.jsonl",
+  "corpus_source": "evidence_source_run",
+  "corpus_trades": 75,
+  "n_floor": 20,
+  "options": [
+   {
+    "action": "hold",
+    "mean_r": null,
+    "n": 8,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "state": "insufficient_n",
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "stop_level_not_below_price",
+    "sd_r": null,
+    "spec": "atr:1.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 1.6461,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "stop_level_not_below_price",
+    "sd_r": null,
+    "spec": "atr:1.5",
+    "state": "invalid_level",
+    "stop_at_r_now": 1.3128,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "reason": "stop_level_not_below_price",
+    "sd_r": null,
+    "spec": "atr:2.0",
+    "state": "invalid_level",
+    "stop_at_r_now": 0.9795,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:0",
+    "state": "insufficient_n",
+    "stop_at_r_now": 0.0,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "tighten",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "r:0.27",
+    "state": "insufficient_n",
+    "stop_at_r_now": 0.27,
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   },
+   {
+    "action": "close",
+    "ev_cost_r": null,
+    "ev_cost_se_r": null,
+    "mean_r": null,
+    "n": 8,
+    "n_floor": 20,
+    "p05_r": null,
+    "p_giveback_gt_half": null,
+    "sd_r": null,
+    "spec": "close",
+    "state": "insufficient_n",
+    "within_auto_bound": null,
+    "within_shadow_bound": null,
+    "worst_case_gain_r": null,
+    "worst_r": null
+   }
+  ],
+  "population": {
+   "beyond_bars_slack": 0,
+   "comparable": 8,
+   "corpus_trades": 75,
+   "mfe_replay_mismatch": 0,
+   "never_reached_peak": 19,
+   "no_candles": 0,
+   "no_pullback_after_peak": 0,
+   "side_excluded": 48,
+   "side_filter": "short",
+   "symbol_excluded": 0,
+   "symbol_filter": null,
+   "symbols": [
+    "SPY"
+   ]
+  },
+  "read_state": "insufficient_n",
+  "source": "comms/live_review/tables/LR-20261125T2004Z-pkg-a12b9dc302c9472d.json"
+ },
+ "priced_options_state": "priced",
+ "regime": {
+  "adx_now": 17.3538,
+  "atr_now_over_entry": 0.7989,
+  "cell_entry": null,
+  "cell_now": null,
+  "timeframe": "1h",
+  "timeframe_source": "meta",
+  "trend_now": "chop"
+ },
+ "review_id": "LR-20261125T2004Z-pkg-a12b9dc302c9472d",
+ "state": {
+  "atr_now_over_entry": 0.7989,
+  "bars_held": 22,
+  "giveback_r": 1.7768,
+  "open_r": 0.536,
+  "peak_provenance": "estimated",
+  "peak_r": 2.3128,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 725.6,
+  "tp": 651.139185
+ },
+ "trades": [
+  {
+   "account_id": "alpaca_paper",
+   "status": "open",
+   "trade_id": 8453
+  }
+ ]
+}
