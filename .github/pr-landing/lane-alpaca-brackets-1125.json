@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Tier-2 order-path change (src/units/accounts/alpaca_amend.py, the Alpaca stop-amend read-back used by the monitor trail and the live-trade-review apply path). The manager (Manager Session 2026-11-25a, operator authority) merges and deploys (trader restart); lane ALPACA-PAPER-BRACKETS-GONE-1116 verifies on the next Alpaca trail amend. Revert: git revert.",
+  "why": "QQQ trade 8454 (alpaca_paper, 2026-11-25 15:00Z): Alpaca applied the stop amend (order 9ceb80e9 replaced by 44e7d717 at 660.44), but the nested open-orders listing kept showing the old leg for 30 s or more, so the read-back reported apply_failed and the re-PATCH got 422 'already replaced'. The read-back now reads the returned order by id, and on a 422 'already replaced' it follows replaced_by. A resting successor at the requested level counts as applied. Every other failure is still apply_failed."
+}
