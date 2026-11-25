@@ -26,6 +26,8 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Mapping, Optional
 
 import yaml
 
+from src.core import placement_backoff as _placement_backoff
+
 
 if TYPE_CHECKING:
     from typing import Sequence
@@ -1520,6 +1522,38 @@ class Coordinator:
                 # without a category and fall back to is_demo only.
                 "account_class": getattr(account, "account_class", "real_money"),
             }
+
+            # IB-MGC-INACTIVE-1125: per-leg backoff after repeated exchange
+            # rejections. A leg the venue keeps refusing is retried on an
+            # exponential schedule instead of every tick (never stopped --
+            # Prime Directive rule 7). No journal row per skipped tick: the
+            # failures that DID reach the venue are journaled below.
+            _bo_key = _placement_backoff.key_for(
+                account.name, pkg.strategy, pkg.symbol, pkg.direction,
+            )
+            _bo_left = _placement_backoff.remaining_s(_bo_key)
+            if _bo_left is not None:
+                _bo_msg = (
+                    f"placement_backoff: {_placement_backoff.failures(_bo_key)} "
+                    f"consecutive exchange rejections for {pkg.strategy} "
+                    f"{pkg.direction} {pkg.symbol}; next attempt in "
+                    f"{_bo_left:.0f}s"
+                )
+                logger.info("multi_account_execute: %s skips — %s", account.name, _bo_msg)
+                # Sized-to-zero, like the sub-min-lot skip: an EMPTY sizing map
+                # would trip the empty-sizing brake, which refuses this signal
+                # for as long as it re-presents -- a de-facto halt of the very
+                # retry this backoff schedules.
+                sized_qty_by_account[account.name] = 0.0
+                results.append({
+                    "name": account.name,
+                    "exchange": account.exchange,
+                    "account_type": account.account_type,
+                    "trade_id": None,
+                    "sized_qty": 0.0,
+                    "error": _bo_msg,
+                })
+                continue
 
             # MIRROR-QTY-DIVERGE (Stage 2 = IDENTICAL trades): a mirror places
             # this package only if its primary placed it in this call. Without
@@ -3353,6 +3387,7 @@ class Coordinator:
                     "leg_trade_ids": leg_trade_ids if len(leg_trade_ids) > 1 else None,
                 })
                 _EXCHANGE_REJECTION_COUNTS.pop(account.name, None)
+                _placement_backoff.clear(_bo_key)
                 # NOTE: the demo-account "*DEMO TRADER* SUBMITTED" ping was
                 # removed 2026-07-09 (operator ask — no double trade-open
                 # message). The single "🟢 TRADE OPENED" ping from
@@ -3470,9 +3505,43 @@ class Coordinator:
                     "sized_qty": sized_qty,
                     "error": f"{type(exc).__name__}: {exc}",
                 })
+                _bo_n, _bo_delay, _bo_flag = _placement_backoff.record_failure(
+                    _bo_key, f"{type(exc).__name__}: {exc}",
+                )
+                if _bo_delay > 0:
+                    logger.warning(
+                        "multi_account_execute: %s %s/%s %s — %d consecutive "
+                        "rejections; backing off %.0fs before the next attempt "
+                        "(retries continue, no halt)",
+                        account.name, pkg.strategy, pkg.symbol, pkg.direction,
+                        _bo_n, _bo_delay,
+                    )
+                if _bo_flag:
+                    try:
+                        self.push_alert(
+                            f"{account.name} {pkg.strategy} {pkg.direction} "
+                            f"{pkg.symbol}: {_bo_n} consecutive exchange "
+                            f"rejections (last: {type(exc).__name__}: "
+                            f"{str(exc)[:160]}). Retrying with backoff up to "
+                            f"{_placement_backoff.MAX_DELAY_S / 60:.0f} min; "
+                            f"this is the only alert for this streak.",
+                            source="accounts",
+                            level="error",
+                            account=account.name,
+                            strategy=pkg.strategy,
+                            symbol=pkg.symbol,
+                            consecutive_rejections=_bo_n,
+                        )
+                    except Exception as alert_exc:  # noqa: BLE001
+                        logger.warning(
+                            "multi_account_execute: leg backoff alert on %s "
+                            "raised: %s", account.name, alert_exc,
+                        )
                 _count = _EXCHANGE_REJECTION_COUNTS.get(account.name, 0) + 1
                 _EXCHANGE_REJECTION_COUNTS[account.name] = _count
-                if _count >= _EXCHANGE_REJECTION_ALERT_THRESHOLD:
+                # Once per streak (IB-MGC-INACTIVE-1125): the streak's count
+                # keeps climbing but only the threshold crossing alerts.
+                if _count == _EXCHANGE_REJECTION_ALERT_THRESHOLD:
                     try:
                         self.push_alert(
                             f"Account '{account.name}' has seen {_count} "
@@ -3543,6 +3612,9 @@ class Coordinator:
                 # 2026-11-15: "I don't need to keep getting these alerts for
                 # this reason"). The rejection is still journalled.
                 or "slice_budget_exhausted" in err
+                # A leg in per-item backoff after repeated venue rejections
+                # (IB-MGC-INACTIVE-1125). Its streak already raised ONE flag.
+                or err.startswith("placement_backoff:")
             )
 
         # MIRROR-QTY-DIVERGE: the direction the mirror gate cannot prevent —

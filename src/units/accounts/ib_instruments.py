@@ -26,7 +26,8 @@ than silently misrouted.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from datetime import date, timedelta
+from typing import Iterable, Optional, Tuple
 
 # Back-compat default — used only when a symbol has no `ib:` block in
 # config/instruments.yaml (e.g. a minimal/legacy instruments.yaml fixture
@@ -45,6 +46,13 @@ class IBInstrumentSpec:
     exchange: str  # e.g. "CME" / "COMEX" (futures) or "SMART" (equities)
     primary_exchange: Optional[str] = None  # equities only — qualifyContracts hint
     currency: str = "USD"
+    # Physically delivered futures only (IB-MGC-INACTIVE-1125). IBKR refuses
+    # OPENING orders in a contract inside its delivery window (Error 201,
+    # MEASURED 2026-11-25 on MGCZ6). When set, an opening order skips any
+    # contract whose month starts within this many calendar days and goes to
+    # the next contract in ``active_months``. None = no roll (MES: cash-settled).
+    roll_days_before_month: Optional[int] = None
+    active_months: Optional[Tuple[int, ...]] = None
 
 
 _SPEC_CACHE: Optional[dict] = None
@@ -80,6 +88,14 @@ def _load_specs() -> dict:
                 exchange=str(ib_block.get("exchange") or "SMART"),
                 primary_exchange=ib_block.get("primary_exchange"),
                 currency=str(ib_block.get("currency") or "USD"),
+                roll_days_before_month=(
+                    int(ib_block["roll_days_before_month"])
+                    if ib_block.get("roll_days_before_month") is not None else None
+                ),
+                active_months=(
+                    tuple(int(m) for m in ib_block["active_months"])
+                    if ib_block.get("active_months") else None
+                ),
             )
     except Exception:  # noqa: BLE001 — never block a lookup on a config read
         specs = {}
@@ -135,3 +151,47 @@ def ib_order_market_type(symbol: Optional[str], default: str) -> str:
     this resolver doesn't recognize.
     """
     return "equity" if is_ib_equity_symbol(symbol) else default
+
+
+def contract_month_of(contract_or_month) -> Optional[str]:
+    """``YYYYMM`` for a qualified IB future (or a ``YYYYMM[DD]`` string).
+
+    Reads ``lastTradeDateOrContractMonth``. For the COMEX metals this applies
+    to (MGC, MHG) the last trade date falls inside the contract month, so its
+    first six digits ARE the contract month. Returns None when unreadable.
+    """
+    raw = contract_or_month
+    if not isinstance(raw, str):
+        raw = getattr(contract_or_month, "lastTradeDateOrContractMonth", None)
+    raw = str(raw or "").strip()
+    if len(raw) >= 6 and raw[:6].isdigit():
+        return raw[:6]
+    return None
+
+
+def in_roll_window(month: Optional[str], spec: IBInstrumentSpec, today: date) -> bool:
+    """True when an OPENING order in contract *month* (``YYYYMM``) must roll.
+
+    Only for a spec with ``roll_days_before_month``; an unreadable month is
+    False (we could not look, so the resolved contract is used unchanged and
+    the venue's own answer decides).
+    """
+    if spec.roll_days_before_month is None or not month:
+        return False
+    try:
+        start = date(int(month[:4]), int(month[4:6]), 1)
+    except ValueError:
+        return False
+    return today >= start - timedelta(days=int(spec.roll_days_before_month))
+
+
+def select_open_month(months: Iterable[str], spec: IBInstrumentSpec, today: date) -> Optional[str]:
+    """Earliest listed ``YYYYMM`` an opening order may use: in ``active_months``
+    (when declared) and outside the roll window. None when nothing qualifies."""
+    for m in sorted({str(x)[:6] for x in months if contract_month_of(str(x))}):
+        if spec.active_months and int(m[4:6]) not in spec.active_months:
+            continue
+        if in_roll_window(m, spec, today):
+            continue
+        return m
+    return None
