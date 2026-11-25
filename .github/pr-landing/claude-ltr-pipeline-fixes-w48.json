@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "runtime_change",
+  "hold_text": "Live-review pipeline fixes (LTR-PIPELINE-FIXES-W48). Runtime: (1) the wake poster/Actions poller also lands main's REVIEWER-BRIEF.md + AMENDMENTS.md on live-review/rows (best effort, fast-forward); (2) the VM wake poster rebuilds a could_not_look (restart-blind) packet twice 15 s apart, then defers the entry up to 3 passes instead of committing + posting it; (3) venue_protection_snapshot grades a netted package's OWN stop leg by trades.sl_order_id (own_leg_absent -> could_not_look, never a sibling's price); (4) the packet builder runs its ~11 independent reads concurrently, times them, and a build timeout names the reads in flight; (5) packets omit suppressed prop tickets from accounts/account_bounds and list them as suppressed_accounts. No order path touched; the snapshot is observe-only. Revert: git revert.",
+  "why": "Fix the five live-review pipeline defects now that reviews run on every account."
+}

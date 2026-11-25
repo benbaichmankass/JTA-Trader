@@ -124,3 +124,21 @@ def test_prop_package_carries_all_its_accounts_and_the_prop_label():
     p = lrw.plan(due(d), [], CFG, NOW)
     assert p["kind"] == "wake" and p["entries"][0]["accounts"] == ["tradeify_1", "velotrade_1"]  # breakout_2 on ice 2026-11-12 (#25306)
     assert wt.ltr_label(p["entries"]) == "prop"
+
+
+def test_a_build_timeout_names_the_reads_still_in_flight(monkeypatch):
+    """LTR-PACKET-BUILD-TIMEOUT: could_not_build used to record only 'TimeoutExpired'."""
+    import subprocess as sp
+    import json as _j
+    import sys as _s
+    from pathlib import Path as _P
+    _s.path.insert(0, str(_P(__file__).resolve().parents[1] / "scripts" / "ops"))
+    import live_review_wake as wake
+
+    def fake_run(cmd, **kw):
+        _P(kw["env"]["LTR_STAGE_FILE"]).write_text(_j.dumps(["bybit_open_orders", "prop_status:tradeify_1"]))
+        raise sp.TimeoutExpired(cmd, 180)
+    monkeypatch.setattr(wake.subprocess, "run", fake_run)
+    b = wake.build_bundle("pkg-1")
+    assert b["state"] == "could_not_build" and "TimeoutExpired after 180s" in b["reason"]
+    assert "bybit_open_orders" in b["reason"] and "prop_status:tradeify_1" in b["reason"]

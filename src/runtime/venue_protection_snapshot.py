@@ -122,6 +122,8 @@ def build_snapshot_row(*, order_package_id: Any, account_id: Any, symbol: Any = 
                        position_size: Any = None,
                        ref_sl: Any = None, ref_tp: Any = None,
                        unreadable: Optional[str] = None,
+                       stop_legs: Optional[Iterable[Any]] = None,
+                       own_sl_order_id: Any = None,
                        now: Optional[datetime] = None) -> Optional[Dict[str, Any]]:
     """The snapshot row for one venue read. Pure; never raises.
 
@@ -154,6 +156,18 @@ def build_snapshot_row(*, order_package_id: Any, account_id: Any, symbol: Any = 
                 state, reason = "none_resting", "no_stop_leg"
             else:
                 v_sl, why = nearest(stops, sl_ref)
+                # LTR-VENUE-SL-NETTED-SIBLING-FALSE-DIVERGE: on a netted book the resting stops are SEVERAL packages'
+                # legs. When the read carries each leg's order id and the journal row names this package's own stop
+                # order, grade THAT leg; if it is not resting, say so (could_not_look / own_leg_absent) and never
+                # compare against another package's leg price (a filled own stop beside a live sibling's did that).
+                own = None if own_sl_order_id in (None, "") else str(own_sl_order_id)
+                legs = None if stop_legs is None else [l for l in stop_legs if isinstance(l, dict)]
+                if own and legs is not None:
+                    mine = [_f(l.get("price")) for l in legs if str(l.get("id")) == own and _f(l.get("price")) is not None]
+                    if mine:
+                        v_sl, why = mine[0], None
+                    else:
+                        v_sl, why = None, "own_leg_absent"
                 if v_sl is None:
                     reason = why
                 else:
@@ -195,6 +209,15 @@ def prune(conn: sqlite3.Connection, *, now: Optional[datetime] = None,
           retention_days: int = RETENTION_DAYS) -> int:
     cutoff = ((now or datetime.now(timezone.utc)) - timedelta(days=retention_days)).isoformat()
     return conn.execute(f"DELETE FROM {TABLE} WHERE read_at < ?", (cutoff,)).rowcount or 0
+
+
+def _own_sl_order_id(conn: sqlite3.Connection, trade_id: Any) -> Optional[str]:
+    """The journal row's own stop order id (``trades.sl_order_id``), best-effort, else None."""
+    try:
+        r = conn.execute("SELECT sl_order_id FROM trades WHERE id = ?", (int(trade_id),)).fetchone()
+    except (sqlite3.Error, TypeError, ValueError):
+        return None  # allow-silent: enrichment only; without it the nearest-to-package-stop pick stands
+    return str(r[0]) if r and r[0] else None
 
 
 def _package_for_trade(conn: sqlite3.Connection, trade_id: Any) -> Tuple[Optional[str], Optional[float], Optional[float]]:
@@ -291,7 +314,8 @@ def batch(db_path: Optional[str] = None):
 
 def _record_read_batched(b: _Batch, *, account_id: Any, trade_id: Any, symbol: Any, direction: Any, venue: Any,
                          stop_prices: Any, target_prices: Any, position_size: Any, unreadable: Optional[str],
-                         order_package_id: Any, db_path: Optional[str], now: Optional[datetime]) -> bool:
+                         order_package_id: Any, db_path: Optional[str], now: Optional[datetime],
+                         stop_legs: Any = None) -> bool:
     from src.utils.paths import trade_journal_db_path
     path = db_path or str(trade_journal_db_path())
     if b.path is None:
@@ -304,7 +328,8 @@ def _record_read_batched(b: _Batch, *, account_id: Any, trade_id: Any, symbol: A
         symbol=symbol, direction=direction, trade_id=trade_id, venue=venue,
         stop_prices=stop_prices, target_prices=target_prices,
         position_size=position_size, ref_sl=sl, ref_tp=tp,
-        unreadable=unreadable, now=now)
+        unreadable=unreadable, stop_legs=stop_legs,
+        own_sl_order_id=_own_sl_order_id(b.ro, trade_id) if stop_legs is not None else None, now=now)
     if row is None:
         return False
     b.rows.append(row)
@@ -315,7 +340,8 @@ def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction
                 venue: Any = None, stop_prices: Optional[Iterable[Any]] = None,
                 target_prices: Optional[Iterable[Any]] = None, position_size: Any = None,
                 unreadable: Optional[str] = None, order_package_id: Any = None,
-                db_path: Optional[str] = None, now: Optional[datetime] = None) -> bool:
+                db_path: Optional[str] = None, now: Optional[datetime] = None,
+                stop_legs: Optional[Iterable[Any]] = None) -> bool:
     """Persist one venue read for the package behind *trade_id*. Never raises.
 
     Timed into the tick's hook split. Returns whether a row landed; ``False`` is
@@ -334,7 +360,8 @@ def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction
                 return _record_read_batched(
                     b, account_id=account_id, trade_id=trade_id, symbol=symbol, direction=direction, venue=venue,
                     stop_prices=stop_prices, target_prices=target_prices, position_size=position_size,
-                    unreadable=unreadable, order_package_id=order_package_id, db_path=db_path, now=now)
+                    unreadable=unreadable, order_package_id=order_package_id, db_path=db_path, now=now,
+                    stop_legs=stop_legs)
             from src.utils.paths import trade_journal_db_path
             path = db_path or str(trade_journal_db_path())
             with sqlite3.connect(path, timeout=_write_busy_timeout(5.0)) as conn:
@@ -344,7 +371,8 @@ def record_read(*, account_id: Any, trade_id: Any, symbol: Any = None, direction
                     symbol=symbol, direction=direction, trade_id=trade_id, venue=venue,
                     stop_prices=stop_prices, target_prices=target_prices,
                     position_size=position_size, ref_sl=sl, ref_tp=tp,
-                    unreadable=unreadable, now=now)
+                    unreadable=unreadable, stop_legs=stop_legs,
+                    own_sl_order_id=_own_sl_order_id(conn, trade_id) if stop_legs is not None else None, now=now)
                 if row is None:
                     return False
                 conn.execute(_UPSERT, row)

@@ -370,6 +370,52 @@ def conflict_alert(doc: Dict[str, Any], send: Optional[Callable[[str], bool]] = 
         return {"state": "error", "error": f"{type(exc).__name__}: {exc}"}
 
 
+#: LTR-PACKET-DURING-RESTART (2026-11-25): a packet built while the web-api restarts (a deploy) comes back with every
+#: state field null and ``packet_health.status == could_not_look``. Rebuild it a couple of times a few seconds
+#: apart; if it is still blind, DEFER the entry (no evidence commit, no marker, no reviewer: the next pass
+#: re-plans it) for up to BLIND_DEFER_PASSES passes, then wake anyway, because a package that stays blind for a
+#: real reason must still be reviewed (the reviewer reports it as a packet defect).
+BLIND_RETRIES = 2
+BLIND_RETRY_SLEEP_S = 15
+BLIND_DEFER_PASSES = 3
+_blind_deferrals: Dict[str, int] = {}
+
+
+def packet_is_blind(b: Dict[str, Any]) -> bool:
+    return (b.get("state") == "built"
+            and ((b.get("packet") or {}).get("packet_health") or {}).get("status") == "could_not_look")
+
+
+def _retrying_build(build: Callable[[str], Dict[str, Any]]) -> Callable[[str], Dict[str, Any]]:
+    def _build(pkg: str) -> Dict[str, Any]:
+        b = build(pkg)
+        for _ in range(BLIND_RETRIES):
+            if not packet_is_blind(b):
+                break
+            time.sleep(BLIND_RETRY_SLEEP_S)
+            b = build(pkg)
+        return b
+    return _build
+
+
+def defer_blind(sub: Dict[str, Any], bundles: Dict[str, Dict[str, Any]]) -> List[str]:
+    """Drop the entries of still-blind packages from ``sub`` (and their bundles) while their deferral budget lasts;
+    returns the deferred package ids. A package that builds healthy resets its count."""
+    deferred: List[str] = []
+    for pkg, b in list(bundles.items()):
+        if not packet_is_blind(b):
+            _blind_deferrals.pop(pkg, None)
+            continue
+        n = _blind_deferrals.get(pkg, 0)
+        if n < BLIND_DEFER_PASSES:
+            _blind_deferrals[pkg] = n + 1
+            deferred.append(pkg)
+            del bundles[pkg]
+    if deferred:
+        sub["entries"] = [e for e in sub["entries"] if e.get("order_package_id") not in deferred]
+    return deferred
+
+
 def run_once(due_fn: Optional[Callable[[], Any]] = None,
              auth_fn: Callable[[], Optional[str]] = read_auth_header,
              http: Http = _http,
@@ -448,7 +494,13 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
         pre = "" if first_group else "then_"
         first_group = False
         # LTR C2: the decision packet rides the comment (built on the VM, read-only).
-        bundles = wake.attach_packets(sub, build=build_bundle) if build_bundle else wake.attach_packets(sub)
+        bundles = wake.attach_packets(sub, build=_retrying_build(build_bundle or wake.build_bundle))
+        blind = defer_blind(sub, bundles)
+        if blind:
+            rec.setdefault("deferred_blind_packets", []).extend(blind)
+            if not sub["entries"]:
+                outcomes.append("deferred_blind_packet")
+                continue
         # LTR-PACKET-ECHO: the packet + table land on live-review/rows by machine, byte-exact, BEFORE the wake
         # is posted, so the reviewer only writes its row. A failed commit posts nothing from here: the Actions
         # poller (same markers, its own token) posts within ~5 min and lands the evidence itself, and this
@@ -501,7 +553,9 @@ def run_once(due_fn: Optional[Callable[[], Any]] = None,
             outcomes.append("could_not_post")
             rec.setdefault("reason", "comment_post_failed")
     rec["state"] = ("posted" if "posted" in outcomes else
-                    "could_not_post" if "could_not_post" in outcomes else "suppressed_by_wake_toggle")
+                    "could_not_post" if "could_not_post" in outcomes else
+                    "deferred_blind_packet" if outcomes and set(outcomes) == {"deferred_blind_packet"} else
+                    "suppressed_by_wake_toggle")
     if rec["state"] == "posted":
         rec.pop("reason", None)
         rec["http_code"] = 201

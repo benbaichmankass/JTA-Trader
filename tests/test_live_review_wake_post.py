@@ -457,3 +457,75 @@ def test_earlier_suppressed_mirror_entries_do_not_count_as_already_handled(tmp_p
                         "events": [{"event": "judgement_cadence", "level": "2026-11-16T16:00:00+00:00", "why": "x"}]}]}
     p = wake.plan(due_doc, post._suppressed_markers, wake.load_cfg(), NOW)
     assert p["kind"] == "wake" and p["entries"][0]["order_package_id"] == "pkg-a5ebf7ae"
+
+
+@_pytest_wt.fixture(autouse=True)
+def _no_brief_sync_by_default(monkeypatch):
+    """The brief sync adds its own commit; its tests below turn it back on."""
+    wake = post.wake_module()
+    monkeypatch.setattr(wake, "REVIEWER_DOCS", ())
+    wake._docs_synced.clear()
+
+
+def test_the_reviewer_brief_lands_on_the_rows_branch_once(monkeypatch):
+    """LTR-ROWS-BRANCH-MISSING-BRIEF: the machine that lands evidence also lands main's brief on the branch."""
+    wake = post.wake_module()
+    rel = ".claude/skills/live-trade-review/REVIEWER-BRIEF.md"
+    monkeypatch.setattr(wake, "REVIEWER_DOCS", (rel,))
+    http = FakeHttp()
+    r = wake.sync_reviewer_docs("token x", http)
+    assert r["state"] == "synced" and http.branch[rel] == (wake.ROOT / rel).read_bytes()
+    n = len(http.calls)
+    assert wake.sync_reviewer_docs("token x", http)["state"] == "current" and len(http.calls) == n  # cached
+    wake._docs_synced.clear()
+    assert wake.sync_reviewer_docs("token x", http)["state"] == "current"  # same bytes on the branch: no commit
+
+
+def test_a_stale_brief_on_the_branch_is_updated_and_a_failure_never_blocks_packets(monkeypatch):
+    wake = post.wake_module()
+    rel = ".claude/skills/live-trade-review/REVIEWER-BRIEF.md"
+    monkeypatch.setattr(wake, "REVIEWER_DOCS", (rel,))
+    http = FakeHttp(branch={rel: b"old"})
+    assert wake.sync_reviewer_docs("token x", http)["state"] == "synced" and http.branch[rel] != b"old"
+    wake._docs_synced.clear()
+    bad = FakeHttp(patch_code=500)
+    assert wake.sync_reviewer_docs("token x", bad)["state"] == "could_not_sync"
+    p = wake.plan(due(), [], wake.load_cfg(), NOW)
+    ev = wake.land_evidence(p, {"pkg-1": built("pkg-1")}, "token x", FakeHttp(patch_code=500))
+    assert ev["pkg-1"]["state"] == "could_not_commit"  # the packet path is unchanged by the brief path
+
+
+def _blind(pkg):
+    b = built(pkg)
+    pk = dict(b["packet"], packet_health={"status": "could_not_look", "defects": []})
+    return dict(b, packet=pk)
+
+
+def test_a_blind_packet_is_retried_then_deferred_never_posted(tmp_path, monkeypatch):
+    """LTR-PACKET-DURING-RESTART: an empty packet from a restart window wakes nobody; the next pass re-plans it."""
+    monkeypatch.setattr(post.time, "sleep", lambda s: None)
+    post._blind_deferrals.clear()
+    calls = []
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http, build=lambda pkg: calls.append(pkg) or _blind(pkg))
+    assert len(calls) == 1 + post.BLIND_RETRIES  # rebuilt after the restart window
+    assert rec["state"] == "deferred_blind_packet" and rec["deferred_blind_packets"] == ["pkg-1"]
+    assert http.posts == [] and not [c for c in http.calls if c[0] == "PATCH"]  # no evidence, no marker, no reviewer
+
+
+def test_a_packet_that_heals_on_retry_is_posted(tmp_path, monkeypatch):
+    monkeypatch.setattr(post.time, "sleep", lambda s: None)
+    post._blind_deferrals.clear()
+    seq = iter([_blind("pkg-1"), built("pkg-1")])
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http, build=lambda pkg: next(seq))
+    assert rec["state"] == "posted" and len(http.posts) == 1
+
+
+def test_a_package_blind_past_its_deferral_budget_is_woken_anyway(tmp_path, monkeypatch):
+    monkeypatch.setattr(post.time, "sleep", lambda s: None)
+    post._blind_deferrals.clear()
+    post._blind_deferrals["pkg-1"] = post.BLIND_DEFER_PASSES
+    http = FakeHttp()
+    rec = run(tmp_path, due(), http, build=_blind)
+    assert rec["state"] == "posted" and len(http.posts) == 1
