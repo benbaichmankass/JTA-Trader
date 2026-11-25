@@ -1,0 +1,120 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (REGIME-PROGRAM R4, regime-conditioned SIZING) from the f1a0-18 read. Rule fixed before any run.
+# DISCLOSURE: f1a0-18's routing result on the same 210 books was read; no tilt / sizing read exists. Gates this adds or changes: none.
+id: RQ-20261125-f1a0-19
+title: 'REGIME-PROGRAM R4: does tilting risk 2.0 / 0.5 by each family x symbol x direction book''s trailing 13-week sign (every trade kept,
+  same total risk) beat equal risk by +0.01 R/trade and beat the same weights permuted across books?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-18/45513198865
+  verdict_read: indeterminate
+  diagnosis: 'f1a0-18 (run 45513198865), 210 family x symbol x direction books, 251 test weeks: routing to books with trailing 13-week mean > 0 beat ALL 200 same-count random routings (share 0.00) but gained only +0.018 R/trade (t 1.14, 3 of 5 years) while dropping 61% of trades; f1a0-16 at 8 books was +0.021 (t 0.76). The signal is real against chance but small against week-to-week variance, and a drop gate throws away the trades it is wrong about. The manager plan''s R4 is regime-conditioned SIZING, not drops: keep every trade and move risk toward the books that are earning.'
+  search: one fixed tilt (2.0 / 0.5 by the trailing 13-week sign, 1.0 without history), per-week renormalised; no grid.
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 4
+  due_by: '2026-12-01'
+question: On the same corpus and books as f1a0-18, does weighting each book-week 2.0 when its trailing 13-week mean net R per trade > 0 and 0.5
+  otherwise (1.0 without history), renormalised so each week''s total risk is unchanged, raise net R per trade over equal weights by >= +0.01
+  (week-bootstrap t >= 2), beat >= 95% of 200 within-week permutations of the same weights, and hold in >= 4 of 5 test years?
+why_this_matters: 'REGIME-PROGRAM R4: sizing is how a regime signal reaches money without becoming a gate. A pass is the first regime lever that keeps
+  every trade; it would go to a fresh-window confirmation, then a Tier-3 sizing proposal. A fail moves the program to R3 (state classifiers).'
+power:
+  expected_n: 251
+  min_detectable_effect: 0.01
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: 251 test weeks (the cluster); f1a0-18 measured se 0.016 R/trade for routing on these books; a tilt keeps every trade so its
+    se should be lower, but a +0.01 effect may still be INDETERMINATE, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: weekly risk sizing across strategy books (R4)
+  legs:
+  - trend_donchian
+  - htf_pullback
+  - fade_breakout
+  - squeeze_breakout
+  book: money
+baseline:
+  definition: Equal risk per trade on every book every week (weight 1), on the same trades; and 200 within-week permutations of the tilt weights.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/regime_r2_family_router.py
+  - --unit
+  - '{unit}'
+  - --books
+  - symbol
+  - --mode
+  - tilt
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-19
+decision_rule:
+  id: RULE-REGIME-R4-BOOK-TILT-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: equal risk per trade (weight 1); the same weights permuted across books within each week (200 draws)
+  statistic: 'scripts/research/regime_r2_family_router.py --books symbol --mode tilt (grade_tilt, tilt_weights, tilt_verdict): delta = weighted
+    net R per trade - unweighted over test weeks 2022-01-03..2026-10-26; se from 1,000 week-bootstrap draws; control share = share of 200 within-week
+    permutations of the raw weights whose weighted R per trade >= the arm''s; yearly delta 2022..2026.'
+  rule: 'PASS iff delta >= +0.01 R/trade AND delta/se >= 2 AND permutation share <= 0.05 AND delta > 0 in >= 4 of 5 test years. FAIL iff delta <=
+    0 or permutation share >= 0.5. INDETERMINATE otherwise.'
+  pass_action: Fresh-window confirmation (held-out families or a later corpus slice), then a Tier-3 sizing proposal to the manager with this evidence
+    record (sizing, never a drop gate).
+  fail_action: Record that trailing book performance does not route; author R3 (HMM / change-point / ADX-vol / LGBM state classifiers head-to-head
+    on the same money metric and random-routing control).
+  proposal_mapping: pass -> fresh-window confirmation -> Tier-3 sizing proposal; fail/indeterminate -> R3 (state classifiers head-to-head on money).
+  what_it_does_not_do: Changes no config, sizing or order path; adds no gate (every trade is kept in the simulation). No sizing read preceded
+    registration (f1a0-18's routing read is disclosed in the header).
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: the same raw weights permuted across books within each test week (renormalised); the arm must beat >= 95% of draws
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 30
+  why_runner: Reads the in-repo trade corpus; numpy only.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est.
+    under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/regime_r2_family_router.py
+- research/queue/RQ-20261124-f1a0-18.yaml
+- REGIME-PROGRAM
