@@ -307,6 +307,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  trail_decay_stall_bars: int = 0,
                  trail_decay_tight_mult: float = 0.0,
                  confirm_bars: int = 0,
+                 entry_at: str = "close",
                  skip_hours: str = "",
                  vol_skip_above_pctl: float = 0.0,
                  vol_skip_below_pctl: float = 0.0,
@@ -728,9 +729,23 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 i += 1
                 continue
             c = float(df["close"].iloc[i])
-        entry = c
-        sl = entry - atr_stop_mult * atr if direction == "long" else entry + atr_stop_mult * atr
-        risk = abs(entry - sl)
+        # EXECUTION CONVENTION (``entry_at``, default "close" = byte-identical, the trigger bar's close fill): "next_open" fills
+        # at the NEXT bar's open (t+1). As live does (the order package carries SL/TP computed from the SIGNAL price and the
+        # venue fills a market order), the stop/risk anchor stays the signal close and the ATR the signal bar's, so the
+        # fill-vs-signal gap shows up as R; a fill already through the stop is refused, as the venue does. The trade loop
+        # still starts at the bar after ``i``, so the fill bar's own range is tested from its open; ``entry_time`` stays the
+        # SIGNAL bar. Research-harness only (row HARNESS-ENTRY-NEXT-OPEN); mirrors scripts/backtest_trend.py.
+        _fill_px: Optional[float] = None
+        if entry_at == "next_open":
+            if i + 1 >= n:
+                break
+            _fill_px = float(df["open"].iloc[i + 1])
+        elif entry_at != "close":
+            raise ValueError(f"entry_at must be 'close' or 'next_open', got {entry_at!r}")
+        entry = c if _fill_px is None else _fill_px
+        _anc = entry if _fill_px is None else c
+        sl = _anc - atr_stop_mult * atr if direction == "long" else _anc + atr_stop_mult * atr
+        risk = abs(_anc - sl)
         _sx = None
         if _sx_levels is not None:
             _sx = _StructureExit.start(_sx_levels, i, entry, direction == "long", atr, risk,
@@ -740,7 +755,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 _sx_fallback += 1          # no confirmed adverse swing: declared ATR stop, no TP
             else:
                 sl, risk = _sx.sl, _sx.risk
-        if risk <= 0:
+        if risk <= 0 or (_fill_px is not None and ((direction == "long" and entry <= sl) or (direction == "short" and entry >= sl))):
             i += 1
             continue
         # LIVE-PARITY TAKE-PROFIT. Tracking id on its own line, never wrapped:
@@ -1185,6 +1200,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                               "min_confidence": min_confidence}
     if confirm_bars > 0:
         params["confirm_bars"] = confirm_bars
+    if entry_at != "close":
+        params["entry_at"] = entry_at
     if skip_hour_set:
         params["skip_hours"] = ",".join(str(h) for h in sorted(skip_hour_set))
     if vol_skip_above_pctl > 0.0 or vol_skip_below_pctl > 0.0:
@@ -1596,6 +1613,9 @@ def main(argv: List[str]) -> int:
     p.add_argument("--trail-decay-tight-mult", type=float, default=0.0,
                    help="The tightened trail mult once armed (0 disables the lever, "
                         "byte-identical).")
+    p.add_argument("--entry-at", choices=("close", "next_open"), default="close",
+                   help="execution convention: 'close' (default) fills at the trigger bar's close; 'next_open' fills at the NEXT bar's "
+                        "open with the stop/risk anchored to the signal close (row HARNESS-ENTRY-NEXT-OPEN).")
     p.add_argument("--confirm-bars", type=int, default=0,
                    help="M21 E-2 entry lever (0=off): the next N closes must "
                         "each hold beyond the trigger close before entering.")
@@ -1953,6 +1973,7 @@ def main(argv: List[str]) -> int:
                        trail_decay_stall_bars=args.trail_decay_stall_bars,
                        trail_decay_tight_mult=args.trail_decay_tight_mult,
                        confirm_bars=args.confirm_bars,
+                       entry_at=args.entry_at,
                        skip_hours=args.skip_hours,
                        vol_skip_above_pctl=args.vol_skip_above_pctl,
                        vol_skip_below_pctl=args.vol_skip_below_pctl,
