@@ -152,6 +152,10 @@ You are one wake of the Claude trading desk (a proposal on a desk-leg symbol tra
 - A skill or brief text edit changes `skill_sha`: record it; it does not re-run Stage 0. A model-family change re-runs a D-S0 confirm set (n ≥ 200) before the changed desk trades (design § 8.1).
 - Edit the brief and `tests/test_trading_desk_brief.py` together; the test fails if the brief's embedded schema drifts from `comms/schema/desk_decision.schema.json` or its example row stops validating.
 
+## 7b. The macro daily brief (PROTOTYPE, advice-only; row `DESK-MACRO-DAILY`)
+
+Spec: `docs/research/desk-macro-daily-SPEC-2026-11-25.md`. Once a day (13:00Z, the desk's existing `claude_desk.symbols`; a wider universe needs its own population test) a desk session drafts ONE `desk_macro_brief/1` JSON: regime + tilts + calendar + unscheduled events (each citing its `sources[]`, every `retrieved_at` ≤ `judged_at`), shadow `trades[]` as desk proposal objects (TP doctrine, no size), `informs[]` tags for existing legs, and `no_trade_reason` when there is no trade. It writes it with `python3 scripts/ops/desk_macro_write.py write BRIEF.json`, which REFUSES a rule-breaking brief and never overwrites one (a correction is a new brief with `supersedes`). Nothing here reaches a venue: the trades are graded like desk proposals, and the judgements are teacher labels (train-eligible only after the model's knowledge cutoff). No trigger or schedule is wired yet (that is the manager's routine to add); until then a session runs it on request.
+
 ## 8. Composes with
 
 `live-trade-review` (the in-trade role) · `manager` (spawns the wake on the `desk-wake` marker, reads the reports) · `backtesting` / `research-ops` (DESK-18's D-S0 units) · `ml-review` (DESK-19 students, step 9) · `performance-review` (DESK-9 "Desk" section) · `close-out`.
