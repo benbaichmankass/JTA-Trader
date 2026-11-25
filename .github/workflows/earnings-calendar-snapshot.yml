@@ -1,0 +1,61 @@
+name: earnings-calendar-snapshot
+
+# Row DESK-MACRO-DAILY (spec docs/research/desk-macro-daily-SPEC-2026-11-25.md section 4): the earnings-calendar gap. The keyless
+# Nasdaq calendar (probed 2026-11-25; fixture comms/macro/earnings_calendar_probe_20261125/) is snapshotted DAILY into the
+# append-only, point-in-time comms/macro/earnings_calendar_snapshots.jsonl (observed_at on every line; a changed consensus is a new
+# line, never an edit; an unchanged row is not re-appended). Runs BEFORE the 13:00Z desk macro brief so the brief reads today's view.
+# History from this source is not used as point-in-time consensus (unverified); the forward snapshots are.
+#
+# Tier 1: observability producer, off-VM (ICT_OFFVM_BUILD_HOST), no order path, no live-VM mutation, no secret beyond the PAT
+# commit-to-main needs. Lands through ./.github/actions/commit-to-main (PAT-authored auto-merge PR), verify-merged on.
+# Gates this adds or changes: none.
+
+on:
+  schedule:
+    - cron: "17 12 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: earnings-calendar-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95  # the shared commit-to-main bounded wait is ~80 min
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: python -m pip install --upgrade pip requests
+
+      - name: Snapshot the next 7 days of earnings (keyless Nasdaq calendar)
+        env:
+          ICT_OFFVM_BUILD_HOST: "1"
+        run: |
+          set -euo pipefail
+          python scripts/macro/earnings_calendar_snapshot.py --days 7
+
+      - name: Land the PIT snapshot on main (auto-merge PR)
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/macro/earnings_calendar_snapshots.jsonl
+          message: "chore(macro): earnings-calendar PIT snapshot"
+          pr-title: "chore(macro): earnings-calendar PIT snapshot (auto)"
+          pr-body: "Point-in-time earnings-calendar snapshot (earnings-calendar-snapshot.yml; row DESK-MACRO-DAILY). Data-only; auto-merge."
+          branch-prefix: automation/earnings-calendar
+          verify-merged: "true"
