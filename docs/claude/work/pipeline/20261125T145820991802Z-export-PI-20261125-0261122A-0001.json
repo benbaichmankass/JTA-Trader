@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261125-0261122A-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, post-deploy check of #28624, 2026-11-25 00:01Z",
+    "rerun": "scripts/ops/diag_fetch.sh 'log_file?name=package_leg_coverage' and compare each leg's account against /api/bot positions / the restart report broker counts"
+  },
+  "state": "queued",
+  "what": "package_leg_coverage latch holds 25 STALE entries (read 2026-11-25 00:01Z via diag log_file?name=package_leg_coverage, last_check 23:11Z): 21 'stranded' (package closed, journal still shows 1-2 OPEN legs) dated 2026-08-18..09-26 on bybit_portfolio/bybit_1/bybit_2/alpaca_portfolio, 1 'divergent' (pkg-1c66870763c34f10 qqq_pullback_1h, alpaca_paper 716.115 vs alpaca_portfolio 704.3275, since 08-18), 3 linked_unresolvable (incl. one 'open trade carries no order_package_id' on alpaca_paper since 11-24 13:04Z). The 23:59Z restart report shows bybit_portfolio, bybit_2 and alpaca_portfolio at 0 broker positions, so these are most likely JOURNAL GHOST open rows (never closed), not live exposure: the latch never clears them, which buries any NEW divergence (the signal RORTRAIL's observation depends on). Fix: reconcile each listed trade_id against broker state (journal-close ghosts with provenance via the existing reconciler / system-action), and make the latch age out entries whose legs are broker-flat; investigate the 11-24 alpaca_paper open trade with no order_package_id. Tier 2 (DB writeback)."
+}

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261125-LRP-B0C1CC08",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:control:ml_controls",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: the parity run — control_ml_controls_failed (REAL-MONEY roster) in window 2026-11-18T07:00:00+00:00..2026-11-25T07:00:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-25.json. Examples: {\"state\": \"fail\", \"plants\": [{\"plant\": \"ml_feature_nudged\", \"leg\": \"ml_entry\", \"bar\": \"2026-11-23T11:00:00+00:00\", \"symbol\": \"BTCUSDT\", \"flagged\": true}, {\"plant\": \"ml_none_flipped_to_package\", \"leg\": \"ml_entry\", \"bar\": \"2026-11-23T11:00:00+00:00\", \"symbol\": \"BTCUSDT\", \"flagged\": true}, {\"plant\": \"ml_live_package_invented\", \"leg\": \"ml_entry_eq_struct\", \"bar\": \"2026-11-18T16:00:00+00:00\", \"symbol\": \"FB\", \"flagged\": true}], \"clean\": [{\"clean\": \"ml_entry_roundtrip\", \"leg\": \"ml_entry\", \"state\": \"checked\", \"records\": 210, \"divergences\": 0, \"passed\": true}, {\"clean\": \"ml_eq_roundtrip\", \"leg\": \"ml_entry_eq_struct\", \"state\": \"could_not_check\", \"records\": 0, \"divergences\": null, \"passed\": false}]}"
+}
