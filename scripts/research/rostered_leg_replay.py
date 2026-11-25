@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -60,6 +61,11 @@ MS_FEATS = ["own_sma50", "own_sma200", "own_ret20", "own_ret5", "own_rv_ratio", 
 MS_LGB = {"n_estimators": 200, "learning_rate": 0.03, "num_leaves": 15, "min_child_samples": 50, "subsample": 0.8, "subsample_freq": 1,
           "colsample_bytree": 0.8, "reg_lambda": 1.0, "random_state": 20261125, "deterministic": True, "force_row_wise": True, "verbose": -1, "n_jobs": 2}
 MS_CLIP_R = 3.0
+#: FRESH POPULATION (RQ-20261125-f1a0-28): the rostered leg configs replayed on liquid USDT perps NONE of them trades (fixed before any run), so the
+#: metastate recipe is confirmed on trades it has never seen, with no re-tune. Leg key = "<leg>@<symbol>".
+FRESH_SYMBOLS = ("BNBUSDT", "DOGEUSDT", "LINKUSDT", "LTCUSDT")
+RULE_MS_FRESH = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH-20261125")
+_FETCHED: Dict[Tuple[str, str], str] = {}
 MS_MIN_TRAIN = 300
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
@@ -86,12 +92,30 @@ def rostered_legs(root: Path = REPO) -> Dict[str, Dict[str, Any]]:
     return out
 
 
+def fresh_legs(cfgs: Dict[str, Dict[str, Any]], symbols=FRESH_SYMBOLS) -> Dict[str, Dict[str, Any]]:
+    """Every rostered leg config re-pointed at each FRESH symbol it does not already trade: {"<leg>@<sym>": {cfg, book, harness, base_leg}}."""
+    out = {}
+    for leg, v in cfgs.items():
+        own = v["cfg"]["symbols"][0]
+        for sym in symbols:
+            if sym != own:
+                out[f"{leg}@{sym}"] = {"cfg": dict(v["cfg"], symbols=[sym]), "book": v["book"], "harness": v["harness"], "base_leg": leg}
+    return out
+
+
 def replay_leg(leg: str, cfg: Dict[str, Any], work: Path) -> Dict[str, Any]:
     import exit_lever_ablation as ela
+    import regime_debt_matrix as rdm
     work.mkdir(parents=True, exist_ok=True)
     csv, emit, jout, log = (str(work / f"{leg}{x}") for x in (".csv", "__trades.jsonl", "__bt.json", ".log"))
+    key = (str(cfg["symbols"][0]), str(cfg.get("timeframe")))
     try:
-        feed = ela.fetch_candles(leg, cfg, FETCH_DAYS, csv)
+        if key in _FETCHED and Path(_FETCHED[key]).is_file():      # the same symbol x timeframe already fetched this run: reuse the bytes
+            shutil.copyfile(_FETCHED[key], csv)
+            feed = rdm.resolve_feed(*key)
+        else:
+            feed = ela.fetch_candles(leg, cfg, FETCH_DAYS, csv)
+            _FETCHED[key] = csv
     except (subprocess.CalledProcessError, ValueError, OSError) as e:
         return {"state": "fetch_failed", "why": f"{type(e).__name__}: {e}"[:300]}
     argv, omitted = ela.build_arm_argv(leg, cfg, csv, str(feed["resample"]), emit, jout, [], WINDOW[0], WINDOW[1])
@@ -148,6 +172,18 @@ def symbol_cell(close: pd.Series, when: pd.Series) -> pd.Series:
         else:
             out.append(f"{'up' if st.up.iloc[i] else 'dn'}_{'hv' if st.hv.iloc[i] else 'lv'}")
     return pd.Series(out, index=when.index)
+
+
+def fetch_btc_closes(btc_cfg: Dict[str, Any], work: Path) -> Optional[pd.Series]:
+    """BTC daily closes for the state features when the population has no BTCUSDT leg; None (BTC features NaN, recorded) if the fetch fails."""
+    import exit_lever_ablation as ela
+    csv = work / "_btc_state.csv"
+    try:
+        ela.fetch_candles("btc_state", btc_cfg, FETCH_DAYS, str(csv))
+        return daily_closes(csv)
+    except (subprocess.CalledProcessError, ValueError, OSError) as e:  # allow-silent: grade_metastate records btc_state "absent (NaN features)" in the measurement
+        print(json.dumps({"btc_state_fetch": "failed", "why": f"{type(e).__name__}: {e}"[:200]}), flush=True)
+        return None
 
 
 def state_features(close: pd.Series, when: pd.Series, prefix: str) -> pd.DataFrame:
@@ -323,6 +359,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
     ap.add_argument("--mode", choices=["book", "tradestate", "metastate"], default="book")
+    ap.add_argument("--population", choices=["rostered", "fresh"], default="rostered",
+                    help="fresh: the rostered configs on FRESH_SYMBOLS (metastate only; RULE_MS_FRESH)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -332,6 +370,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     work = Path(a.work) if a.work else out / "work"
     cfgs = rostered_legs()
+    btc_cfg = next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
+    if a.population == "fresh":
+        if a.mode != "metastate":
+            ap.error("--population fresh is defined for --mode metastate only")
+        cfgs = fresh_legs(cfgs)
     if a.legs:
         cfgs = {k: v for k, v in cfgs.items() if k in set(a.legs.split(","))}
     per = {}
@@ -353,18 +396,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif a.mode == "metastate":
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == "BTCUSDT"), None)
+        btc = closes.get(btc_leg)
+        if btc is None and btc_cfg is not None:                    # fresh population: no BTC leg in it, so fetch BTC on the rostered BTC leg's timeframe
+            btc = fetch_btc_closes(btc_cfg, work)
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
-        m = grade_metastate(tr, closes, closes.get(btc_leg)) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
-        rule_used = RULE_MS
+        m = grade_metastate(tr, closes, btc) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_MS_FRESH if a.population == "fresh" else RULE_MS
     else:
         m = grade(tr) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE
     legs_report = {k: {x: v[x] for x in v if x != "trades"} | {"book": cfgs[k]["book"], "harness": cfgs[k]["harness"]} for k, v in per.items()}
-    pop = (f"{sum(1 for v in per.values() if v.get('state') == 'measured')} of {len(per)} rostered crypto legs ({'/'.join(FAMILIES)} harnesses) "
+    what = (f"rostered crypto leg configs on the FRESH symbols {'/'.join(FRESH_SYMBOLS)} (leg@symbol)" if a.population == "fresh"
+            else "rostered crypto legs")
+    pop = (f"{sum(1 for v in per.values() if v.get('state') == 'measured')} of {len(per)} {what} ({'/'.join(FAMILIES)} harnesses) "
            f"replayed with DECLARED params over {WINDOW[0]}..{WINDOW[1]} ({len(tr)} trades, harness net_r full cost stack); books = leg x direction; "
            f"test weeks {RR.TEST_START}..{WINDOW[1]}")
     why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']} share {g['random']['share_ge_arm']}" for k, g in (m.get("arms") or {}).items())
-    summ = {"schema": "rostered_leg_replay/1", "unit": a.unit, "mode": a.mode, "verdict": m["verdict"], "why": why, "rule": rule_used, "population": pop,
+    summ = {"schema": "rostered_leg_replay/1", "unit": a.unit, "mode": a.mode, "population_kind": a.population, "verdict": m["verdict"], "why": why, "rule": rule_used, "population": pop,
             "window": WINDOW, "legs": legs_report, "measurement": m, "git_sha": RR._git_sha(), "elapsed_s": round(time.time() - t0), "read_state": "measured"}
     (out / "summary.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": m["verdict"], "read_state": "measured", "n": int(len(tr)), "note": why, "population": pop,
@@ -427,6 +475,12 @@ def _self_test() -> int:
     d0 = trm.ts.iloc[0].floor("D")
     exp = sym[sym.index < d0].iloc[-1] / sym[sym.index < d0].iloc[-50:].mean() - 1
     check("metastate: own_sma50 is the last close strictly before the entry day", abs(X.own_sma50.iloc[0] - exp) < 1e-9)
+    fl = fresh_legs({"L1": {"cfg": {"symbols": ["BNBUSDT"], "timeframe": "4h"}, "book": "money", "harness": "trend"},
+                     "L2": {"cfg": {"symbols": ["ETHUSDT"], "timeframe": "1h"}, "book": "demo_floor", "harness": "fade"}})
+    check("fresh: every leg on every FRESH symbol it does not already trade, own symbol skipped",
+          sorted(fl) == sorted([f"L1@{x}" for x in FRESH_SYMBOLS if x != "BNBUSDT"] + [f"L2@{x}" for x in FRESH_SYMBOLS])
+          and fl["L2@DOGEUSDT"]["cfg"] == {"symbols": ["DOGEUSDT"], "timeframe": "1h"} and fl["L1@LTCUSDT"]["harness"] == "trend")
+    check("fresh: no FRESH symbol is traded by a rostered leg", not ({v["cfg"]["symbols"][0] for v in legs.values()} & set(FRESH_SYMBOLS)))
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
