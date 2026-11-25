@@ -23,6 +23,11 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
   book_feats    BOOK / RECENCY INPUTS, policy-independent and point-in-time: the symbol's own long / short bracket outcome of the
                 decision 24 h earlier (closed by bar t's close), and across the universe at t-24 h the mean long net R and the
                 long / short stop-out shares. Placebo: the same 5 columns with their timestamps shuffled (seeded).
+  fund_feats    FUNDING INPUTS (new information; every bracket / entry-order arm landed within +-0.007 R of its comparator, f1a0-14/17/21/22/27):
+                the symbol's last funding rate, its 9-print (3 d) mean and 90-print z-score, and the universe-mean funding, all as-of bar t's
+                CLOSE (Binance Vision monthly fundingRate, the prop_ml_leg.f1_features convention). Placebo: the same 4 columns with their
+                timestamps shuffled (seeded, shuffle_ts). Graded vs the registered recipe on the same rows (rows lacking funding history dropped
+                from BOTH sides before any fit).
   sl_wide       SL PLACEMENT. Same predictions; the bracket is SL 3 / TP 4.5 ATR14 (same 1.5 reward:risk, 24 h stop) instead of
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
@@ -103,7 +108,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -113,6 +118,7 @@ LIMC_PARAMS = {"n_estimators": 200, "learning_rate": 0.03, "num_leaves": 15, "mi
 DRAWS = 100                           # matched-random draws (research-queue-design-fields-guard minimum)
 TAU = 0.10
 SEED = 20261124
+FUND_FEATURES = ["fund", "fund_ma3d", "fund_z", "xs_fund_mean"]
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
 SL_WIDE, TP_WIDE = 3.0, 4.5
 SL_XWIDE, TP_XWIDE = 4.0, 6.0          # sl_xwide_retrain: cost per R ~ half of SL 2 at the same 1.5 reward:risk
@@ -238,6 +244,39 @@ def book_columns(tab: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame({"own_prev_net_long": own["net_long"].to_numpy(), "own_prev_net_short": own["net_short"].to_numpy()})
     x = xs.reindex(pd.to_datetime(tab["ts"], utc=True)).reset_index(drop=True)
     return pd.concat([out, x], axis=1)[BOOK_FEATURES]
+
+
+def fund_asof(fund: pd.DataFrame, close_ts: pd.Series) -> pd.DataFrame:
+    """fund / fund_ma3d / fund_z as-of each ``close_ts`` (last print stamped <= close_ts); NaN before the first print."""
+    out = pd.DataFrame(index=range(len(close_ts)), columns=["fund", "fund_ma3d", "fund_z"], dtype=float)
+    if not len(fund):
+        return out
+    f = fund.set_index("ts")["last_funding_rate"].astype(float).sort_index()
+    f = f[~f.index.duplicated(keep="last")]
+    cols = {"fund": f, "fund_ma3d": f.rolling(9).mean(), "fund_z": (f - f.rolling(90).mean()) / f.rolling(90).std()}
+    idx = f.index.searchsorted(pd.DatetimeIndex(close_ts), side="right") - 1
+    for k, ser in cols.items():
+        v = ser.to_numpy()[np.clip(idx, 0, None)]
+        out[k] = np.where(idx >= 0, v, np.nan)
+    return out
+
+
+def fund_columns(cache: Path, syms: list[str], tab: pd.DataFrame) -> pd.DataFrame:
+    """FUND_FEATURES per decision row, as-of bar t's CLOSE (ts + 1 h): own funding (fund_asof) and the universe-mean last funding at that close."""
+    import concurrent.futures as cfu
+    import prop_ml_leg as P
+    with cfu.ThreadPoolExecutor(8) as ex:
+        fund = dict(zip(syms, ex.map(lambda s: P.fetch_funding(cache, [s])[s], syms)))
+    close_ts = pd.to_datetime(tab["ts"], utc=True) + pd.Timedelta(hours=1)
+    out = pd.DataFrame(index=tab.index, columns=FUND_FEATURES, dtype=float)
+    for sym, g in tab.groupby("symbol"):
+        out.loc[g.index, ["fund", "fund_ma3d", "fund_z"]] = fund_asof(fund.get(sym, pd.DataFrame()), close_ts.loc[g.index]).to_numpy()
+    uniq = pd.DatetimeIndex(np.sort(close_ts.unique()))
+    per = np.vstack([fund_asof(fund[s], pd.Series(uniq))["fund"].to_numpy() for s in syms if s in fund]) if fund else np.full((1, len(uniq)), np.nan)
+    with np.errstate(all="ignore"):
+        xs = pd.Series(np.nanmean(per, axis=0), index=uniq)
+    out["xs_fund_mean"] = xs.reindex(pd.DatetimeIndex(close_ts)).to_numpy()
+    return out[FUND_FEATURES]
 
 
 def shuffle_ts(tab: pd.DataFrame, cols: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
@@ -533,8 +572,9 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 arms_p[name] = (ql, qs)
                 tk[name] = seq.run(ql, qs)
             info |= {"train_up_share": share, "test_up_share": float(up_te.mean())}
-        elif arm == "book_feats":
-            for name, cols in {"arm": BOOK_FEATURES, "control": [f"pb_{c}" for c in BOOK_FEATURES]}.items():
+        elif arm in ("book_feats", "fund_feats"):
+            fcols = BOOK_FEATURES if arm == "book_feats" else FUND_FEATURES
+            for name, cols in {"arm": fcols, "control": [f"pb_{c}" for c in fcols]}.items():
                 ql, qs = M.fit_predict(train, test, M.FEATURES + cols, n_jobs)
                 tk[name] = seq.run(ql, qs)
         elif arm == "sl_wide":
@@ -751,6 +791,12 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     if arm in ("long_mute", "regime_heads"):
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=["btc_ret168", "btc_vol_pct90d"]).reset_index(drop=True)
+    if arm == "fund_feats":
+        tab = tab.reset_index(drop=True)
+        fc = fund_columns(cache, syms, tab)
+        ok = fc[["fund", "fund_ma3d", "fund_z"]].notna().all(axis=1).to_numpy()
+        tab, fc = tab[ok].reset_index(drop=True), fc[ok].reset_index(drop=True)
+        tab = pd.concat([tab, fc, shuffle_ts(tab, fc).add_prefix("pb_")], axis=1)
     if arm == "book_feats":
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
@@ -927,6 +973,13 @@ def _self_test() -> None:
     li_ = pd.DataFrame({"net_r": [5.0, 6.0], "gross_r": [5.0, 6.0], "cost_r": [0.0, 0.0], "reason": [0, -1]})
     out_ = choose_rows(mk_, li_, np.array([True, False]))
     assert out_.net_r.tolist() == [5.0, 2.0] and out_.reason.tolist() == [0, 1]
+    # fund_feats: as-of join is causal (a print stamped AFTER the close is not seen; one AT the close is), and the rolling windows are the documented ones
+    fts = pd.date_range("2024-01-01", periods=120, freq="8h", tz="UTC")
+    fdf = pd.DataFrame({"ts": fts, "last_funding_rate": np.arange(120, dtype=float) * 1e-5})
+    q = fund_asof(fdf, pd.Series([fts[100] - pd.Timedelta(minutes=1), fts[100], fts[0] - pd.Timedelta(hours=1)]))
+    assert abs(q.fund.iloc[0] - 99e-5) < 1e-12 and abs(q.fund.iloc[1] - 100e-5) < 1e-12 and np.isnan(q.fund.iloc[2])
+    assert abs(q.fund_ma3d.iloc[1] - np.mean(np.arange(92, 101)) * 1e-5) < 1e-12 and np.isfinite(q.fund_z.iloc[1])
+    assert fund_asof(pd.DataFrame(), pd.Series(fts[:2])).isna().all().all()
     print("self-test ok")
 
 
