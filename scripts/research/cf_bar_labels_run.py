@@ -31,7 +31,8 @@ import cf_bulk  # noqa: E402
 import live_review_counterfactual as lrc  # noqa: E402
 
 
-def label_job(job: dict, bars: List[dict], tf: str, *, max_fwd_bars: int = 48) -> Optional[List[dict]]:
+def label_job(job: dict, bars: List[dict], tf: str, *, max_fwd_bars: int = 48, context: bool = False,
+              times: Optional[List[float]] = None) -> Optional[List[dict]]:
     """Per-bar rows for one cf_bulk job over ``bars`` (ascending, bar dicts with time/open/high/low/close), or None when the job has no usable
     geometry. ``exit_idx`` = the first bar after the fill whose close is at or after the job's exit_time."""
     sec = float(cf_bars.TF_SECONDS[tf])
@@ -40,13 +41,23 @@ def label_job(job: dict, bars: List[dict], tf: str, *, max_fwd_bars: int = 48) -
     side = {"long": "long", "buy": "long", "short": "short", "sell": "short"}.get(str(job.get("direction")).lower())
     if None in (t_entry, t_exit, entry, sl) or side is None:
         return None
+    if context:
+        # AM-V2-RICHER-FEATURES: the trade's window plus CTX_LOOKBACK bars of history (bars ascending; a slice, so the rows are what the full list gives)
+        import bisect
+        tt = times if times is not None else [b["time"] for b in bars]
+        i0 = max(bisect.bisect_left(tt, t_entry + sec) - L.CTX_LOOKBACK, 0)
+        bars = bars[i0:]
     after = [b for b in bars if b["time"] >= t_entry + sec]
     exit_idx = next((k for k, b in enumerate(after, start=1) if b["time"] + sec >= t_exit), None)
+    if context:
+        return L.build_rows(side=side, entry=entry, sl=sl, bars=bars, entry_time=t_entry, bar_seconds=sec, max_fwd_bars=max_fwd_bars,
+                            exit_idx=exit_idx, context=True)
     return L.build_rows(side=side, entry=entry, sl=sl, bars=bars, entry_time=t_entry, bar_seconds=sec, max_fwd_bars=max_fwd_bars,
                         exit_idx=exit_idx)
 
 
-def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, fetcher=None, max_fwd_bars: int = 48) -> dict:
+def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], out: Path, *, fetcher=None, max_fwd_bars: int = 48,
+              context: bool = False) -> dict:
     sdir = out / "bar_labels"
     sdir.mkdir(parents=True, exist_ok=True)
     tf, sym = shard["timeframe"], shard["symbol"]
@@ -59,16 +70,17 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
         reasons["no_bar_source"] = len(chosen)
     else:
         try:
-            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen)
+            lo = min(lrc._ts(jobs[k]["entry_time"]) for k in chosen) - (L.CTX_LOOKBACK + 1) * cf_bars.TF_SECONDS[tf] * (1 if context else 0)
             hi = max(lrc._ts(jobs[k]["exit_time"]) for k in chosen) + max_fwd_bars * cf_bars.TF_SECONDS[tf]
             bars = cf_bars.historical_bars(sym, tf, lo, hi, fetcher)
         except Exception as e:   # allow-silent: a failed fetch is a recorded state (no 'done' meta, so a re-run retries), never a halt
             state, err = "fetch_failed", f"{type(e).__name__}: {e}"[:300]
     per_trade: Dict[str, List[dict]] = {}
     tmp = sdir / f"{shard['shard_id']}.jsonl.gz.tmp"
+    times = [b["time"] for b in bars] if context else None
     with gzip.open(tmp, "wt", encoding="utf-8") as fh:
         for k in chosen if (bars and state == "done") else []:
-            rows = label_job(jobs[k], bars, tf, max_fwd_bars=max_fwd_bars)
+            rows = label_job(jobs[k], bars, tf, max_fwd_bars=max_fwd_bars, context=context, times=times)
             if rows is None:
                 reasons["row_incomplete"] += 1
                 continue
@@ -78,7 +90,7 @@ def run_shard(shard: dict, chunks: Dict[str, List[str]], jobs: Dict[str, dict], 
     tmp.replace(sdir / f"{shard['shard_id']}.jsonl.gz")
     meta = {**shard, "schema": L.SCHEMA, "state": state, "error": err, "n_jobs": len(chosen), "n_labelled_trades": len(per_trade),
             "could_not_label": dict(reasons), "census": L.census(per_trade), "bars": len(bars), "seconds": round(time.time() - t0, 2),
-            "max_fwd_bars": max_fwd_bars, "provenance": "ESTIMATED"}
+            "max_fwd_bars": max_fwd_bars, "context": context, "provenance": "ESTIMATED"}
     if state == "done":
         (sdir / f"{shard['shard_id']}.meta.json").write_text(json.dumps(meta, indent=1, default=str) + "\n")
     return meta
@@ -115,6 +127,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     s.add_argument("--run-id", default="cf-bar-labels")
     s.add_argument("--max-jobs", type=int, default=cf_bulk.DEFAULT_MAX_JOBS)
     s.add_argument("--max-fwd-bars", type=int, default=48)
+    s.add_argument("--context", action="store_true", help="AM-V2-RICHER-FEATURES: add the ctx block (fetches CTX_LOOKBACK bars of history)")
     c = sub.add_parser("census")
     c.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -128,7 +141,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     plan, jobs, chunks = cf_bulk.build_plan(a.run_id, a.max_jobs)
     rc = 0
     for i in a.index:
-        meta = run_shard(plan["shards"][i], chunks, jobs, out, max_fwd_bars=a.max_fwd_bars)
+        meta = run_shard(plan["shards"][i], chunks, jobs, out, max_fwd_bars=a.max_fwd_bars, context=a.context)
         print(json.dumps({k: meta[k] for k in ("shard_id", "state", "n_jobs", "n_labelled_trades")}), flush=True)
         rc = rc or (0 if meta["state"] == "done" else 1)
     return rc

@@ -1,0 +1,126 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (the standing ML lane, Manager Session 2026-11-22a; operator queue item 2, AM v2), Tier 1 research.
+# Row AM-V2-RICHER-FEATURES. Decision rule registered BEFORE any run; no fit on the ctx features has been run anywhere. Gates this adds or changes: none.
+id: RQ-20261124-a9d2-01
+title: 'AM v2 RICHER FEATURES: do market-structure and vol-regime features (ctx block, bars <= k incl. pre-entry history) raise the TARGET and INVALIDATION
+  heads'' skill over the SAME state baseline by >= 1% loss vs the 9-feature heads, on the same rows (>= 6 of 8 dev folds, positive on the claimed holdout)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261123-a9d1-01/local-20261123T2011Z
+  verdict_read: pass
+  diagnosis: 'Stage A (RQ-20261123-a9d1-01) PASSED on 9 point-in-time features (6 path features + side/tf/strategy), but the incremental skill over the
+    (strategy x open_r decile x bar-age) lookup is small (+0.01..0.035 loss; AUC .747 vs .724), and Stage B''s five classes FAILED (RQ-20261124-b5a1-01..05).
+    The heads cannot see WHERE the trade sits in the market: distance to the recent extremes, range position, local trend, the vol regime, how wide the
+    stop is in current volatility. Row AM-V2-RICHER-FEATURES names exactly these. This unit measures whether they add skill before any policy uses them.'
+  search: 'one fixed feature block (6 ctx features, windows 48 / 24 / 14 / 100 bars, no search), same LightGBM params, seed, folds, purge, row cap and state
+    baseline as Stage A; BASE and RICH fit on identical sampled rows per fold.'
+  levers:
+  - features
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  attempt: 2
+  due_by: '2026-12-04'
+question: 'On purged half-year folds of trade-entry time (2022-01..2026-01) and a claimed 2026 holdout, does adding the 6 ctx features to the 9 Stage A features
+  raise each graded head''s skill vs the state-conditioned baseline (1 - loss_model / loss_state) by >= 0.01 on average over the 8 dev folds, with the
+  increment > 0 in >= 6 of 8 dev folds and > 0 on the holdout, for >= 1 TARGET head and >= 1 INVALIDATION head?'
+why_this_matters: 'Operator priority (AM v2). Richer inputs are the lever the Stage A fail_action named for the heads and the input every next policy (the
+  c7e3 action-value classes included) would consume. A pass re-dumps the heads with the ctx block for the next Stage B / action-value iteration; a fail
+  closes these 6 features and moves the lever to cross-asset state (BTC / index return since entry, breadth, funding).'
+power:
+  expected_n: 400
+  min_detectable_effect: 0.01
+  effect_units: loss_ratio_skill
+  sd: 0.05
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, same basis as RQ-20261123-a9d1-01: the independent unit is the entry week (~400 weeks); the comparison is PAIRED (same rows, same
+    seed, only the feature set differs), so its se is below Stage A''s across-fold se of 0.003-0.014.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed trade corpus + keyless Binance Vision bars; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: .claude/skills/live-trade-review/SKILL.md
+  decision: 'target, invalidation and banking levels a live-review packet states and may move (advice-only until a class passes RULE-AM-RISK-ADJUSTED-V1)'
+  legs: [ml_entry]
+  book: money
+baseline:
+  definition: 'The SAME heads on the 9 Stage A features (BASE), fit on the identical sampled rows of each fold; both graded against the training fold''s
+    state-conditioned empirical rate / quantile per (strategy, open_r decile, bar-age bin). The statistic is the increment RICH minus BASE.'
+  net_of_cost: false
+run:
+  workflow: cf-bar-labels.yml
+  timeout_minutes: 360
+  inputs:
+    run_id: cfbl-ctx-a9d2-01
+    context: 'true'
+    fit_rich_unit: RQ-20261124-a9d2-01
+decision_rule:
+  id: RULE-AM-HEADS-RICHER-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the 9-feature heads on the same rows (same state baseline)
+  statistic: 'scripts/research/am_heads_fit.py run --feats rich (run_rich, richer_head_verdict, richer_verdict) on labels from cf_bar_labels_run.py shard
+    --context (corpus pinned at cf-bar-labels.yml''s default corpus_sha, the run-w job set). Per graded head (TARGET q0.5, q0.9, reach_2; INVALIDATION
+    stop_first, dip_recovers): delta = skill_vs_state(RICH) - skill_vs_state(BASE) per dev fold on identical rows (per-fold seed), dev mean, folds positive,
+    and the holdout fold''s delta (ledger claim family AM-HEADS, model AM-HEADS-richer, read before it is scored).'
+  rule: 'Per head PASS iff dev mean delta >= +0.01 AND delta > 0 in >= 6 of 8 dev folds AND holdout delta > 0. FAIL iff dev mean delta <= 0. INDETERMINATE
+    otherwise. UNIT: PASS iff >= 1 TARGET head AND >= 1 INVALIDATION head pass; FAIL iff all five graded heads fail; else INDETERMINATE. Features, windows,
+    params, seed, folds, purge and the 400,000-row cap are fixed now.'
+  pass_action: 'Re-dump the heads with the ctx block (am_heads_fit dump, rich feature list) and author the next action-value / Stage B iteration on them;
+    nothing graduates on skill.'
+  fail_action: 'Record the 6 ctx features closed on research/levers/ml-brackets.yaml; next feature lever: cross-asset state (BTC / index return since entry,
+    breadth, funding).'
+  proposal_mapping: 'pass -> rich heads feed the next policy unit; fail/indeterminate -> the next feature iteration authored from the per-head deltas.'
+  what_it_does_not_do: 'Applies no head to a bracket, claims no P&L (skill is a loss ratio), changes no config or order; the ml_entry / ml_entry_eq decisions
+    are not in this corpus (rule-strategy backtest trades only).'
+  min_n: 100000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 500
+  confidence: 0.15
+  basis: 'ESTIMATE: operator-named priority (predictive two-way brackets); the value is in the policy units this unit feeds.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no intervention is applied; the control is the 9-feature heads on identical rows, both against the state-conditioned lookup'
+  matched_random:
+    draws: 200
+    note: 'declared, NOT computed here (no policy is applied); the matched random-intervention control belongs to the policy unit under RULE-AM-RISK-ADJUSTED-V1 (R4).'
+  best_static:
+    grid:
+    - strategy x open_r decile x bar-age bin lookup (state baseline)
+    - the 9-feature heads (BASE)
+    excludes_test_folds: true
+    note: both fit on the training fold only
+  bootstrap_group: week
+practice_precedent: 'one-factor feature-block increment on identical rows against the same baseline (principles M6, M13); docs/research/ml-am-heads-design-2026-11-23.md.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 300
+  why_runner: 'Re-labels the run-w corpus with --context on the cf-bar-labels matrix (keyless Binance Vision bars), then one fit job (CPU LightGBM, 2 x 8
+    heads x 9 folds on <= 400k rows each) on the merged label artifacts.'
+  basis: 'ESTIMATE: the run-w label build and the a9d1-01 Stage A fit each completed; the fit runs twice here.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/am_heads_fit.py
+- scripts/research/cf_bar_labels.py
+- scripts/research/cf_bar_labels_run.py
+- .github/workflows/cf-bar-labels.yml
+- AM-V2-RICHER-FEATURES
