@@ -529,3 +529,19 @@ def test_a_package_blind_past_its_deferral_budget_is_woken_anyway(tmp_path, monk
     http = FakeHttp()
     rec = run(tmp_path, due(), http, build=_blind)
     assert rec["state"] == "posted" and len(http.posts) == 1
+
+
+def test_a_403_on_the_evidence_commit_names_its_step_and_cause():
+    wake = post.wake_module()
+
+    class Http403(FakeHttp):
+        def __call__(self, method, url, body, auth):
+            if url.endswith("/git/blobs"):
+                return 403, {"_error": {"message": "Resource not accessible by integration",
+                                        "x-accepted-github-permissions": "contents=write"}}
+            return super().__call__(method, url, body, auth)
+    p = wake.plan(due(), [], wake.load_cfg(), NOW)
+    ev = wake.land_evidence(p, {"pkg-1": built("pkg-1")}, "token x", Http403())
+    r = ev["pkg-1"]
+    assert r["state"] == "could_not_commit" and r["http_code"] == 403
+    assert "post_blob" in r["reason"] and "Resource not accessible" in r["reason"] and "contents=write" in r["reason"]

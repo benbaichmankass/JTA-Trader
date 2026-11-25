@@ -69,6 +69,8 @@ MAX_BODY_CHARS = 60000
 #: byte-exact, before the wake comment is posted, so a reviewer never re-types them (a reviewer's re-typed
 #: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
 ROWS_BRANCH = "live-review/rows"
+#: the last commit_files failure {step, http_code, message?, retry-after?, ...}; named in could_not_commit reasons.
+LAST_COMMIT_FAILURE: Dict[str, Any] = {}
 PACKETS_DIR = "comms/live_review/packets"
 REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 API = "https://api.github.com"
@@ -241,7 +243,8 @@ def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[
             raw = resp.read()
             return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as exc:
-        return exc.code, None
+        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
+        return exc.code, _error_doc(exc)
     except Exception:  # noqa: BLE001 — a network failure is a state, never a raise
         return None, None
 
@@ -268,33 +271,41 @@ def commit_files(files: List[Tuple[str, bytes]], message: str, auth: str,
     no git credential on the VM). (commit sha, None) or (None, http code of the step that failed)."""
     base = f"{API}/repos/{REPO}/git"
     code: Optional[int] = None
+    global LAST_COMMIT_FAILURE
+    LAST_COMMIT_FAILURE = {}
+
+    def fail(step: str, c: Optional[int], doc: Any) -> Tuple[None, Optional[int]]:
+        global LAST_COMMIT_FAILURE
+        LAST_COMMIT_FAILURE = {"step": step, "http_code": c, **((doc or {}).get("_error") or {} if isinstance(doc, dict) else {})}
+        return None, c
+
     for _ in range(4):
         code, ref = http("GET", f"{base}/ref/heads/{ROWS_BRANCH}", None, auth)
         if code != 200 or not isinstance(ref, dict):
-            return None, code
+            return fail("get_ref", code, ref)
         head = ref["object"]["sha"]
         code, cm = http("GET", f"{base}/commits/{head}", None, auth)
         if code != 200 or not isinstance(cm, dict):
-            return None, code
+            return fail("get_commit", code, cm)
         entries = []
         for rel, data in files:
             code, blob = http("POST", f"{base}/blobs", json.dumps(
                 {"content": base64.b64encode(data).decode(), "encoding": "base64"}).encode(), auth)
             if code != 201 or not isinstance(blob, dict):
-                return None, code
+                return fail("post_blob", code, blob)
             entries.append({"path": rel, "mode": "100644", "type": "blob", "sha": blob["sha"]})
         code, tree = http("POST", f"{base}/trees", json.dumps({"base_tree": cm["tree"]["sha"], "tree": entries}).encode(), auth)
         if code != 201 or not isinstance(tree, dict):
-            return None, code
+            return fail("post_tree", code, tree)
         code, new = http("POST", f"{base}/commits", json.dumps(
             {"message": message, "tree": tree["sha"], "parents": [head]}).encode(), auth)
         if code != 201 or not isinstance(new, dict):
-            return None, code
-        code, _ = http("PATCH", f"{base}/refs/heads/{ROWS_BRANCH}", json.dumps({"sha": new["sha"], "force": False}).encode(), auth)
+            return fail("post_commit", code, new)
+        code, pdoc = http("PATCH", f"{base}/refs/heads/{ROWS_BRANCH}", json.dumps({"sha": new["sha"], "force": False}).encode(), auth)
         if code == 200:
             return new["sha"], None
         if code != 422:  # 422 = not a fast-forward: someone appended first; re-read the tip and retry
-            return None, code
+            return fail("patch_ref", code, pdoc)
     return None, code
 
 
@@ -376,7 +387,8 @@ def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: s
         sha, code = commit_files(need, f"live-review: evidence {ids} (machine, byte-exact)", auth, http)
         for k in need_pkgs:
             out[k] = ({"state": "committed", "commit": sha} if sha else
-                      {"state": "could_not_commit", "http_code": code, "reason": "git data API commit failed"})
+                      {"state": "could_not_commit", "http_code": code,
+                                    "reason": "git data API commit failed: " + json.dumps(LAST_COMMIT_FAILURE, sort_keys=True)[:260]})
     for pkg, st in out.items():
         if st["state"] not in ("committed", "exists"):
             bundles[pkg] = dict(bundles[pkg], state=st["state"], reason=st.get("reason"))

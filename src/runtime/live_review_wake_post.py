@@ -226,6 +226,19 @@ def read_auth_header() -> Optional[str]:
 Http = Callable[[str, str, Optional[bytes], str], Tuple[Optional[int], Any]]
 
 
+def _error_doc(exc: Any) -> Dict[str, Any]:
+    """The GitHub error body + the headers that explain a 403 (message, rate-limit, accepted permissions), as a small
+    dict. Callers only read a body on a 200/201, so this never changes a success path (2026-11-25 incident: a 403 on
+    the rows-branch commit named no step and no cause)."""
+    try:
+        msg = json.loads(exc.read() or b"{}").get("message")
+    except Exception:  # noqa: BLE001
+        msg = None
+    h = getattr(exc, "headers", None)
+    pick = {k: h.get(k) for k in ("x-ratelimit-remaining", "retry-after", "x-accepted-github-permissions") if h and h.get(k)}
+    return {"_error": {"message": str(msg or "")[:160], **pick}}
+
+
 def _http(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[Optional[int], Any]:
     """(status, parsed JSON or None). Never raises; status None = no response."""
     req = urllib.request.Request(url, data=body, method=method, headers={
@@ -236,7 +249,7 @@ def _http(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[Opti
             raw = resp.read()
             return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as exc:
-        return exc.code, None
+        return exc.code, _error_doc(exc)
     except Exception:  # noqa: BLE001 — network failure is a receipt, never a raise
         return None, None
 
