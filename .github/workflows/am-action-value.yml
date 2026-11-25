@@ -10,6 +10,11 @@ run-name: am-action-value ${{ inputs.research_unit || inputs.classes }}
 # artifact and UPLOADS artifacts; only the last job writes (the shared research-result / commit-to-main actions). No trade path, no config, no VM.
 # Gates this adds or changes: none. Code: scripts/research/am_action_value.py. Diagnosis: docs/research/am-v2-stage-b-diagnosis-2026-11-24.md.
 #
+# RICH HEADS (unit RQ-20261124-a9d2-01 PASS, row AM-V2-RICHER-FEATURES): with `labels_run_id` set, a `heads` job fits and dumps the heads HERE from that
+# cf-bar-labels run's label artifacts (`am_heads_fit.py dump --feats <head_feats>`; rich = the 9 features + the ctx block, so its labels must come from a
+# `--context` labels run) and every later job uses am-heads-<this run id>; the drivers read the manifest's feats and build the ctx block over CTX_LOOKBACK
+# bars of pre-fill history. Empty `labels_run_id` = the original behaviour (download am-heads-<heads_run_id>).
+#
 # The heads are REUSED from am-policy-arm run 45384292963 (artifact am-heads-45384292963, kept to 2026-12-24). The label + fit stages are deterministic
 # (fixed seeds, deterministic LightGBM), so a later class may pass the first run's id as `av_run_id` to reuse its am-av-models artifact and skip ~1 h.
 
@@ -34,6 +39,15 @@ on:
       heads_run_id:
         description: "am-policy-arm run whose am-heads-<id> artifact supplies the Stage-B heads"
         default: "45384292963"
+      labels_run_id:
+        description: "Fit + dump the heads HERE from this cf-bar-labels run's label artifacts (overrides heads_run_id); empty = download am-heads-<heads_run_id>"
+        default: ""
+      labels_prefix:
+        description: "run_id prefix of those label artifacts (<prefix>-labels-<n>), e.g. cfbl-ctx-a9d2-01"
+        default: ""
+      head_feats:
+        description: "base | rich (rich needs a --context labels run): the feature set the heads job dumps"
+        default: "base"
       av_run_id:
         description: "Reuse the am-av-models-<id> artifact of this earlier am-action-value run instead of labelling + fitting again; empty = build here"
         default: ""
@@ -88,9 +102,53 @@ jobs:
       - id: m
         run: echo "matrix=$(python3 -c "import json;print(json.dumps({'include':[{'batch':b['batch'],'index':' '.join(map(str,b['index']))} for b in json.load(open('out/batches.json'))]}))")" >> "$GITHUB_OUTPUT"
 
-  label:
+  heads:
     needs: plan
-    if: ${{ inputs.av_run_id == '' }}
+    if: ${{ inputs.labels_run_id != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
+      - name: Check the feature set
+        env:
+          FEATS: ${{ inputs.head_feats }}
+        run: |
+          case "$FEATS" in base|rich) ;; *) echo "head_feats must be base|rich, got '$FEATS'"; exit 2;; esac
+      - name: Pin the trade corpus to corpus_sha
+        if: ${{ inputs.corpus_sha != '' }}
+        env:
+          CORPUS_SHA: ${{ inputs.corpus_sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
+          rm -rf comms/research comms/strategy_evidence
+          git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.labels_prefix }}-labels-*
+          path: labels
+          merge-multiple: true
+          run-id: ${{ inputs.labels_run_id }}
+          github-token: ${{ github.token }}
+      - name: Fit and dump the heads (the Stage-A recipe, per purged fold; scores no test row, claims no holdout)
+        env:
+          FEATS: ${{ inputs.head_feats }}
+        run: python3 scripts/research/am_heads_fit.py dump --labels labels --corpus . --out heads --rows-per-fold 400000 --feats "$FEATS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: am-heads-${{ github.run_id }}
+          path: heads
+          retention-days: 30
+
+  label:
+    needs: [plan, heads]
+    if: ${{ always() && inputs.av_run_id == '' && needs.plan.result == 'success' && (needs.heads.result == 'success' || needs.heads.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
@@ -116,9 +174,9 @@ jobs:
           git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
       - uses: actions/download-artifact@v4
         with:
-          name: am-heads-${{ inputs.heads_run_id }}
+          name: am-heads-${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           path: heads
-          run-id: ${{ inputs.heads_run_id }}
+          run-id: ${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           github-token: ${{ github.token }}
       - name: Label this batch's shards (every menu action replayed alone at up to 8 sampled rows per dev trade)
         env:
@@ -153,9 +211,9 @@ jobs:
       - run: pip install numpy pandas pyyaml requests lightgbm==4.6.0 scikit-learn==1.7.2
       - uses: actions/download-artifact@v4
         with:
-          name: am-heads-${{ inputs.heads_run_id }}
+          name: am-heads-${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           path: heads
-          run-id: ${{ inputs.heads_run_id }}
+          run-id: ${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
@@ -200,8 +258,10 @@ jobs:
           retention-days: 30
 
   shard:
-    needs: [plan, fit_merge]
-    if: ${{ always() && needs.plan.result == 'success' && (needs.fit_merge.result == 'success' || needs.fit_merge.result == 'skipped') }}
+    needs: [plan, heads, fit_merge]
+    # runs whenever the plan did: a failed heads / fit stage makes the model download fail here, so reduce fails and the record lands producer_failed
+    # ("we looked and it broke") instead of the whole chain skipping silently
+    if: ${{ always() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
@@ -227,9 +287,9 @@ jobs:
           git checkout "$CORPUS_SHA" -- comms/research comms/strategy_evidence
       - uses: actions/download-artifact@v4
         with:
-          name: am-heads-${{ inputs.heads_run_id }}
+          name: am-heads-${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           path: heads
-          run-id: ${{ inputs.heads_run_id }}
+          run-id: ${{ inputs.labels_run_id != '' && github.run_id || inputs.heads_run_id }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
