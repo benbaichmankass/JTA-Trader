@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-10
 title: 'ml_entry COST LEVER, iteration 3: does the recipe REFIT on SL 4 / TP 6 ATR14 labels and traded under that bracket beat the SL-2 recipe
   by +0.0068 net R per decision (each in its own R) on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -126,3 +126,17 @@ related:
 - docs/research/ml-entry-review-2026-11-24.md
 - research/queue/RQ-20261124-e1a7-02.yaml
 last_dispatched_at: '2026-11-24T23:18:30+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-10/45498384564.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

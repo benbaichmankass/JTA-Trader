@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-17
 title: 'ml_entry PULLBACK LIMIT ENTRY: does entering the SL 4 / TP 6 refit''s own decisions by a post-only limit 0.5 ATR better (4 h, maker
   fee) beat the same decisions at market by +0.0068 R/decision, and beat random thinning to the same fill rate?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -132,3 +132,17 @@ related:
 - research/queue/RQ-20261124-e1a7-02.yaml
 not_before: '2026-11-25T02:30:00+00:00'
 last_dispatched_at: '2026-11-25T00:47:46+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-17/45512130236.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
