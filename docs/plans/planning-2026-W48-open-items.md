@@ -149,7 +149,9 @@ Queue runway: about 18:30Z today without a refill. The research-ops pass is re-d
    - the split CF-fidelity rule
    - running the Tradeify sim
 7. **Daily email digest routine:** which inbox, and should it keep running while the operator is active? Its prompt still says "away until 11-22".
-8. **Backlog triage (§0):** approve the bulk-close rules (obsolete soak items, archived-owner rows, stale due dates).
+8. **Backlog triage (§0):** **approved** at the 18:00Z popup and executed; the output is §7; approve the bulk-close rules (obsolete soak items, archived-owner rows, stale due dates).
+9. **MGC row 4773 (Tier 3):** does the estimated-P&L ib_paper MGC row 4773 (+$249k, an ESTIMATE, not a venue-measured number; relayed by the manager from the weekly audit, not re-measured by this lane) stay in the paper corpus that feeds the scoreboard and Stage-0 evidence? Options: keep it labelled `ESTIMATED` and out of any promotion or demotion read, or exclude it from the corpus. Recommendation: exclude it from every promotion/demotion read and keep it visible with its provenance label, because one estimated row of that size dominates a paper book.
+10. **Scoreboard headline:** adopt `net_usd_measured` (venue-measured net P&L) as the scoreboard headline instead of the blended figure. Recommendation: yes, with the estimated and unmeasured parts shown beside it as separate, labelled lines (provenance rule: ESTIMATED is never folded into MEASURED).
 
 ---
 
@@ -434,3 +436,27 @@ The holdout unit for `trend_donchian_eth_prop` is the resolver's data task (`man
 | # | id | state | class | due_by | title |
 |---|---|---|---|---|---|
 | 1 | `P3-STRATEGY-PROGRAMME` | landed_unproven | live-money/order-path | 2026-11-30 | 03-STRATEGY-IMPROVEMENT programme plan + first 2 weeks of pre-registered units ( |
+
+---
+
+## 8. Housekeeping lane: the 13 audit rows re-dated to 11-26 need a live owner or a kill
+
+Source: row `AUD-20261125-HANDOFF-TO-DYING-LANE` (weekly audit 11-25: 0 of the rows released on 11-18 changed state in 7 days; their lane, AM-OPS-7, was archived 11-19). The lane named here is the standing HOUSEKEEPING + REVIEWS lane (manager, 11-25 19:33Z). **These are proposals for the Thursday dialogue, not dispositions**: every owner and date below is the planning decision. Kill reasons are given only where this lane can state data; otherwise the row stays and gets a lane.
+
+| Row | Tier | Last evidence (from the row's own audit notes) | Proposed disposition | Proposed due |
+|---|---|---|---|---|
+| `AUD-20261104-PIPELINE-DOC-PATH` | 1 | `PIPELINE.jsonl` named in CLAUDE.md (1) and CLAUDE-RULES-CANONICAL.md (5); the store is the `docs/claude/work/pipeline/` directory | housekeeping lane: doc-only fix | 11-28 |
+| `AUD-20261104-PRODUCER-OK-OVER-CNL` | 1 | reproduced in 4 consecutive audits: prints OK for 5 fresh ledgers while `news_decisions` reads could_not_look | housekeeping lane: small script fix, collapsed-state rule | 11-28 |
+| `AUD-20261111-PREDICATE-FALLBACK-DRIFT` | 1 | `build_research_panel.py` fallback predicate defines a different population from `_clean_trades.py` | housekeeping lane: delete the fallbacks or fail loudly | 12-02 |
+| `AUD-20261111-RELAY-INVARIANTS-BRIDGE` | 1 | 11 of 12 invariants NOT-MEASURED on 11-11 (DIAG token 401, truncated relay) | housekeeping lane: relay-to-payload extractor; first re-test whether the 401 still holds | 12-02 |
+| `AUD-20261028-HEALTH-CLOSE-LIST-MISS` | 1 | the 10-24 health review missed reconciler close 6470 | housekeeping lane: fix in the health-review skill/script before Saturday's run | 12-02 |
+| `AUD-20261118-LANES-ON-DEAD-SESSIONS` | 1 | 271 of 855 open rows laned to dead sessions on 11-18; this triage re-owned the dead-owner in_flight rows and the dead-owner queued rows to `manager` | housekeeping lane: build the report-only dead-lane list, then re-measure; likely closes | 12-02 |
+| `AUD-20261104-ITERATION-ORPHANS` | 1 | MOVING: citing parent/map 18.8% to 43.4%, leg orphans 36 to 8, LTR orphans 5 of 7 unchanged | research-ops / programme-review owns it (the iteration loop); housekeeping re-measures | 12-02 |
+| `AUD-20261104-AMENDMENTS-UNLOGGED` | 1 | 28 to 29 unlogged SKILL/BRIEF versions; its owning pipeline item was killed | operator question: one backfill pass, or retire the AMENDMENTS.md ritual? Recommend one backfill pass by the housekeeping lane | 12-04 |
+| `AUD-20261104-TICK-SIZE-OWNERS` | 1 (touches `ib_client.py`) | tick constants still defined in 4+ places | build lane; config/instruments.yaml as the single owner; review before it touches the order path | 12-04 |
+| `AUD-20261111-SIZE-UP-AT-CALLERS` | 1 to investigate, Tier 3 to change | 2 of 6 `legalize_qty` callers do not pass `size_up` | build lane investigates; any behaviour change goes to the operator | 12-04 |
+| `AUD-20261028-DEMO-FLOOR-NO-EVAL` | 1 | 7 demo-floor legs emit no eval line | build lane (trader logging) | 12-04 |
+| `AUD-20261028-HOLD-VS-CLOSE-CONFLICT` | 1 | live grader: close beat hold 26 of 27 (n=27, dR -0.80, close side charged no cost); S0 lifecycle: holds +0.142 R (n=938) | live-review / desk lane: this is a research question; the live sample is selection-biased (SL-dominated window) | 12-02 |
+| `AUD-20261104-FLATTEN-LABEL` | 2 (M39) | 2 operator-flatten closes labelled `reconciler_filled`; journal payload not captured | live-ops lane: confirm trade 4935 then census | 12-02 |
+
+Items 1 and 2 of the housekeeping lane's first batch are in flight: the research-ops cadence fix is PR #28887 (`AUD-20261125-RESEARCH-OPS-CADENCE-CONTRADICTION`) and this section is `AUD-20261125-HANDOFF-TO-DYING-LANE`'s list. Re-measure at the 12-02 audit: 0 of 13 untouched.
