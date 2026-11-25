@@ -82,17 +82,18 @@ def _self_test() -> int:
     with tempfile.TemporaryDirectory() as td:
         db = Path(td) / "j.db"
         c = sqlite3.connect(db)
+        # data-wiring: self-test fixture only, a throwaway sqlite file in a TemporaryDirectory; the truth is the canonical trade_journal.db, read mode=ro
         c.execute("CREATE TABLE trades (id INTEGER, status TEXT, is_backtest INT, entry_price REAL, account_class TEXT, "
                   "is_demo INT, account_id TEXT, strategy_name TEXT, timestamp TEXT, order_package_id TEXT)")
-        c.execute("CREATE TABLE order_packages (order_package_id TEXT, linked_trade_id INT, entry REAL)")
+        c.execute("CREATE TABLE order_packages (order_package_id TEXT, linked_trade_id INT, entry REAL)")  # data-wiring: self-test fixture (temp dir)
         rows = [(1, "closed", 0, 10.0, "real_money", 0, "bybit_2", "a", "2026-11-01", "p1"),   # counted (linked)
                 (2, "closed", 0, 10.0, "real_money", 0, "bybit_2", "a", "2026-11-02", "p2"),   # counted (package id)
                 (3, "rejected", 0, 10.0, "real_money", 0, "alpaca_live", "b", "2026-11-03", "p3"),  # not closed
                 (4, "closed", 0, 10.0, "paper", 0, "bybit_1", "a", "2026-11-04", "p4"),        # paper: context only
                 (5, "closed", 1, 10.0, "real_money", 0, "bybit_2", "a", "2026-11-05", "p5"),   # backtest
                 (6, "closed", 0, 10.0, "real_money", 0, "bybit_2", "a", "2026-11-06", "p6")]   # op.entry 0
-        c.executemany("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
-        c.executemany("INSERT INTO order_packages VALUES (?,?,?)",
+        c.executemany("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?)", rows)  # writer-conformance: allow self-test fixture in a temp dir, never the journal
+        c.executemany("INSERT INTO order_packages VALUES (?,?,?)",  # writer-conformance: allow self-test fixture in a temp dir, never the journal
                       [("p1", 1, 9.9), ("p2", None, 9.9), ("p3", 3, 9.9), ("p4", 4, 9.9), ("p5", 5, 9.9), ("p6", 6, 0.0)])
         c.commit()
         c.close()
