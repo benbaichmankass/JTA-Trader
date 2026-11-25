@@ -152,6 +152,61 @@ def run_ticker(t: str, k: float, fixture: Dict[str, Any], etf_full: pd.DataFrame
     return out
 
 
+def _live_feed_bars(ticker: str, api: str) -> pd.DataFrame:
+    """The LIVE trader's own daily bars (``GET /api/bot/candles``: the signal builders' fetch path, Alpaca IEX), up to 1000 sessions."""
+    import urllib.request
+    with urllib.request.urlopen(f"{api}/api/bot/candles?symbol={ticker}&interval=1d&limit=1000", timeout=60) as r:
+        body = json.loads(r.read().decode())
+    if body.get("error") or not body.get("candles"):
+        raise RuntimeError(f"live candles for {ticker}: {body.get('error') or 'empty'} (source {body.get('source')})")
+    df = pd.DataFrame(body["candles"])
+    df.index = pd.to_datetime(df["time"], unit="s", utc=True).dt.tz_convert(None).dt.normalize()
+    return df[["open", "high", "low", "close", "volume"]].sort_index()
+
+
+def feed_compare(t: str, k: float, live: pd.DataFrame, cons: pd.DataFrame, warmup: int = 30) -> Dict[str, Any]:
+    """Signals + trades of the live leg on the live feed vs on the consolidated (harness) bars, over their common sessions.
+    Both frames start on the same date (state machines start together); signals in the first ``warmup`` sessions are not compared."""
+    common = live.index.intersection(cons.index)
+    common = common[common <= pd.Timestamp(H.WINDOW_END)]
+    out: Dict[str, Any] = {"sessions": int(len(common)), "from": str(common[0].date()) if len(common) else None,
+                           "to": str(common[-1].date()) if len(common) else None}
+    res = {}
+    for name, f in (("live", live), ("consolidated", cons)):
+        g = f.loc[common, ["open", "high", "low", "close"]]
+        fr = H.build_frame(g, g)
+        sigs = [s for s in H.index_signals(fr, "capitulation_wide") if s["i"] >= warmup]
+        sim = H.simulate(fr, sigs, 1.0, H.HOLD_CAP["capitulation_wide"], H.SLIP_BPS_SIDE, k)
+        res[name] = {"signals": {str(fr.index[s["i"]].date()): s["stop_idx"] for s in sigs},
+                     "trades": {tr["signal_date"]: tr for tr in sim["trades"]}}
+    a, b = res["live"]["signals"], res["consolidated"]["signals"]
+    both = sorted(set(a) & set(b))
+    out.update({"n_signals_live": len(a), "n_signals_consolidated": len(b), "n_matching": len(both),
+                "live_only": sorted(set(a) - set(b)), "consolidated_only": sorted(set(b) - set(a))})
+    ta, tb = res["live"]["trades"], res["consolidated"]["trades"]
+    out["n_trades_live"], out["n_trades_consolidated"] = len(ta), len(tb)
+    out["net_r_live"] = round(sum(x["net_r"] for x in ta.values()), 4)
+    out["net_r_consolidated"] = round(sum(x["net_r"] for x in tb.values()), 4)
+    gaps = []
+    for d in sorted(set(ta) & set(tb)):
+        gaps.append({"signal_date": d, "entry_gap_bps": round((ta[d]["entry"] / tb[d]["entry"] - 1) * 1e4, 2),
+                     "stop_gap_bps": round((a[d] / b[d] - 1) * 1e4, 2), "net_r_live": ta[d]["net_r"], "net_r_consolidated": tb[d]["net_r"]})
+    out["matched_trades"] = gaps
+    lo = [ta[d] for d in sorted(set(ta) - set(tb))]
+    co = [tb[d] for d in sorted(set(tb) - set(ta))]
+    out["live_only_trades"] = {"n": len(lo), "net_r": round(sum(x["net_r"] for x in lo), 4),
+                               "by_exit": {w: sum(1 for x in lo if x["why"] == w) for w in ("stop", "take_profit", "timeout")}}
+    out["consolidated_only_trades"] = {"n": len(co), "net_r": round(sum(x["net_r"] for x in co), 4)}
+    out["matched_trades_net_r"] = {"live": round(sum(x["net_r_live"] for x in gaps), 4),
+                                   "consolidated": round(sum(x["net_r_consolidated"] for x in gaps), 4)}
+    if gaps:
+        eg = sorted(abs(x["entry_gap_bps"]) for x in gaps)
+        out["entry_gap_bps_abs_median"], out["entry_gap_bps_abs_max"] = eg[len(eg) // 2], eg[-1]
+    vr = (live.loc[common, "volume"].median() / cons.loc[common, "volume"].median()) if "volume" in cons else None
+    out["volume_ratio_live_over_consolidated"] = round(float(vr), 4) if vr is not None else None
+    return out
+
+
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default=str(LEG_DIR / "live_parity.json"))
@@ -159,7 +214,12 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--cache", default=None, help="yfinance cache dir")
     ap.add_argument("--window", type=int, default=200)
     ap.add_argument("--tickers", default=None)
+    ap.add_argument("--feed-compare", action="store_true",
+                    help="compare the live trader's daily bars (/api/bot/candles, Alpaca IEX) with the consolidated harness bars")
+    ap.add_argument("--api", default="https://ict-bot.duckdns.org")
     a = ap.parse_args(argv)
+    if a.feed_compare:
+        return run_feed_compare(a)
     spec = json.loads((LEG_DIR / "spec.json").read_text())
     fx = json.loads((LEG_DIR / "parity_fixture.json").read_text())
     tickers = a.tickers.split(",") if a.tickers else spec["population"]
@@ -193,6 +253,53 @@ def main(argv: List[str] | None = None) -> int:
                       "in_position_emits": sum(v["in_position_emits"] for v in rows),
                       "hold_cap_ok": sum(v["hold_cap_ok"] for v in rows), "pass": rc == 0}
     Path(a.out).write_text(json.dumps(res, indent=1, default=str) + "\n")
+    print(json.dumps(res["summary"]))
+    return rc
+
+
+
+def run_feed_compare(a: Any) -> int:
+    import yfinance as yf
+    spec = json.loads((LEG_DIR / "spec.json").read_text())
+    tickers = a.tickers.split(",") if a.tickers else spec["population"]
+    out_path = a.out if a.out != str(LEG_DIR / "live_parity.json") else str(LEG_DIR / "feed_agreement.json")
+    res: Dict[str, Any] = {"schema": "index_capit_feed_agreement/1", "leg": L.NAME,
+                           "live_feed": f"{a.api}/api/bot/candles interval=1d limit=1000 (the signal builders' fetch path)",
+                           "consolidated_feed": "yfinance daily auto_adjust=False (the harness feed)", "tickers": {}}
+    rc = 0
+    for t in tickers:
+        try:
+            live = _live_feed_bars(t, a.api)
+            raw = yf.download(t, start=str(live.index[0].date()), end=H.WINDOW_END, interval="1d", auto_adjust=False,
+                              progress=False, threads=False)
+            if isinstance(raw.columns, pd.MultiIndex):
+                raw.columns = raw.columns.get_level_values(0)
+            cons = raw.rename(columns=str.lower)[["open", "high", "low", "close", "volume"]]
+            cons.index = pd.DatetimeIndex(cons.index).tz_localize(None).normalize()
+        except Exception as exc:  # noqa: BLE001  # allow-silent: recorded per ticker as could_not_read and the exit code becomes 2
+            res["tickers"][t] = {"read_state": "could_not_read", "error": str(exc)}
+            rc = 2
+            continue
+        r = feed_compare(t, float(spec["k_star"][t]), live, cons)
+        res["tickers"][t] = r
+        print(f"{t}: sessions {r['sessions']} signals live {r['n_signals_live']} cons {r['n_signals_consolidated']} match {r['n_matching']} "
+              f"live_only {r['live_only']} cons_only {r['consolidated_only']} net_r live {r['net_r_live']} cons {r['net_r_consolidated']} "
+              f"entry_gap_med {r.get('entry_gap_bps_abs_median')} vol_ratio {r['volume_ratio_live_over_consolidated']}")
+    rows = [v for v in res["tickers"].values() if "sessions" in v]
+    res["summary"] = {"tickers_read": len(rows), "signals_live": sum(v["n_signals_live"] for v in rows),
+                      "signals_consolidated": sum(v["n_signals_consolidated"] for v in rows),
+                      "matching": sum(v["n_matching"] for v in rows), "live_only": sum(len(v["live_only"]) for v in rows),
+                      "consolidated_only": sum(len(v["consolidated_only"]) for v in rows),
+                      "net_r_live": round(sum(v["net_r_live"] for v in rows), 4),
+                      "net_r_consolidated": round(sum(v["net_r_consolidated"] for v in rows), 4),
+                      "live_only_trades_n": sum(v["live_only_trades"]["n"] for v in rows),
+                      "live_only_trades_net_r": round(sum(v["live_only_trades"]["net_r"] for v in rows), 4),
+                      "consolidated_only_trades_n": sum(v["consolidated_only_trades"]["n"] for v in rows),
+                      "consolidated_only_trades_net_r": round(sum(v["consolidated_only_trades"]["net_r"] for v in rows), 4),
+                      "matched_trades_net_r_live": round(sum(v["matched_trades_net_r"]["live"] for v in rows), 4),
+                      "matched_trades_net_r_consolidated": round(sum(v["matched_trades_net_r"]["consolidated"] for v in rows), 4),
+                      "tickers_unreadable": sorted(t for t, v in res["tickers"].items() if "sessions" not in v)}
+    Path(out_path).write_text(json.dumps(res, indent=1, default=str) + "\n")
     print(json.dumps(res["summary"]))
     return rc
 
