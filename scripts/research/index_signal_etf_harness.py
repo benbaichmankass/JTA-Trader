@@ -106,6 +106,11 @@ POOLED_MIN_POSITIVE = {"RQ-20261124-1e06-06": 4, "RQ-20261124-1e06-07": 4}
 #: 1e06-07 population: 8 more 1x index ETFs used in NO earlier read (no fossil-fuel instruments)
 PAIRS["capitulation_bull"] = [(t, t, 1.0) for t in ("KBE", "SMH", "EWZ", "FXI", "EWG", "EWU", "VGK", "IJR")]
 POOLED_MIN_POSITIVE_PAIRS = 3
+#: 1e06-08 CONFIRMATION of the 1e06-06 pass (lane ML-PRIMARY 2026-11-24): the same 1x timing-gated trigger on 10 country index ETFs used in NO
+#: earlier read (no fossil-fuel instruments). A fresh POPULATION, not a fresh time window: the daily window ends 2026-10-22 in every unit.
+PAIRS["capitulation_1x_confirm"] = [(t, t, 1.0) for t in ("EWC", "EWA", "EWT", "EWY", "EWW", "EWH", "EWS", "EWL", "EWQ", "EWP")]
+TIMING_GATED["RQ-20261124-1e06-08"] = 0.05
+POOLED_MIN_POSITIVE["RQ-20261124-1e06-08"] = 5
 #: the own-chart trend twin per execution ETF (rule baseline of 1e04-01): unit id
 TWIN_UNIT = {"SQQQ": "RQ-20261123-1e01-01", "SPXU": "RQ-20261123-1e01-02", "SDOW": "RQ-20261123-1e01-03",
              "TZA": "RQ-20261123-1e01-04", "SH": "RQ-20261123-1e01-05", "PSQ": "RQ-20261123-1e01-06"}
@@ -511,7 +516,9 @@ PAIRS_KEY = {"RQ-20261124-1e06-04": ("capitulation_holdout", "capitulation_holdo
              "RQ-20261124-1e06-05": ("capitulation_fresh", "capitulation_fresh_1x"),
              "RQ-20261124-1e06-06": ("capitulation_1x_fresh", "capitulation_1x_fresh"),
              "RQ-20261124-1e06-07": ("capitulation_bull", "capitulation_bull")}
-POOLED = {"RQ-20261124-1e06-04", "RQ-20261124-1e06-05", "RQ-20261124-1e06-06", "RQ-20261124-1e06-07"}
+POOLED = {"RQ-20261124-1e06-04", "RQ-20261124-1e06-05", "RQ-20261124-1e06-06", "RQ-20261124-1e06-07", "RQ-20261124-1e06-08"}
+PAIRS_KEY["RQ-20261124-1e06-08"] = ("capitulation_1x_confirm", "capitulation_1x_confirm")
+BASELINE["RQ-20261124-1e06-08"] = "flat"
 RULES["RQ-20261124-1e06-01"] = ("RULE-RQ-20261124-1e06-01", "breakdown_bear",
                                 "PASS IFF n>=25 AND net_r>0 AND net_r>1e04-01 net_r on the same pair (or 1e04-01 INDETERMINATE) AND >=3 of 4 folds>0 AND net_r>0 under 2x slippage; INDETERMINATE if n<25; FAIL otherwise (a pass is per pair)")
 RULES["RQ-20261124-1e06-02"] = ("RULE-RQ-20261124-1e06-02", "breakdown_bounce",
@@ -522,6 +529,8 @@ RULES["RQ-20261124-1e06-07"] = ("RULE-RQ-20261124-1e06-07", "capitulation_bull",
                                 "REGIME ARM, TIMING-GATED: the 1.5-ATR capitulation trigger kept only when the index closes above its SMA200, executed in 1x index ETFs on 8 FRESH indexes (KBE, SMH, EWZ, FXI, EWG, EWU, VGK, IJR), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws; INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-06"] = ("RULE-RQ-20261124-1e06-06", "capitulation_wide",
                                 "TIMING-GATED capitulation trigger executed in 1x index ETFs on 8 FRESH indexes (XLB, XLP, ITB, XME, EFA, EWJ, IYT, IWN), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=4 of 8 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
+RULES["RQ-20261124-1e06-08"] = ("RULE-RQ-20261124-1e06-08", "capitulation_wide",
+                                "CONFIRMATION of the 1e06-06 pass: the TIMING-GATED capitulation trigger executed in 1x index ETFs on 10 FRESH country indexes (EWC, EWA, EWT, EWY, EWW, EWH, EWS, EWL, EWQ, EWP), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r>0 AND >=5 of 10 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-05"] = ("RULE-RQ-20261124-1e06-05", "capitulation_wide",
                                 "TIMING-GATED test of the 1e06-03/-04 capitulation 3x buy on 6 FRESH 3x ETFs (XBI/LABU, KRE/DPST, EEM/EDC, XLI/DUSL, XLU/UTSL, XLY/WANT), graded POOLED: PASS IFF pooled n>=25 AND pooled net_r(3x)>0 AND pooled net_r(3x)>pooled net_r(1x same trigger) AND >=3 of 6 pairs net_r>0 AND pooled net_r>0 under 2x slippage AND the pooled actual net_r beats >= 95% of 200 re-timed draws (share_of_draws_ge_actual <= 0.05); INDETERMINATE if pooled n<25; FAIL otherwise")
 RULES["RQ-20261124-1e06-03"] = ("RULE-RQ-20261124-1e06-03", "capitulation_wide",
