@@ -16,6 +16,11 @@ before it is scored). A training trade is dropped when its label window [entry, 
 open_r, peak_r, mae_r, bars_since_peak, bars_open, range_atr_k, plus side, timeframe and the strategy code. Richer features (structure, market state)
 are NOT built here and are recorded as a limitation.
 
+RICH FEATURES (``--feats rich``, row AM-V2-RICHER-FEATURES, unit RQ-20261124-a9d2-01): labels built with ``cf_bar_labels_run.py shard --context`` carry a
+``ctx`` block (market structure + vol regime from bars at or before bar k, incl. pre-entry history). ``run --feats rich`` fits every head TWICE per
+fold on the SAME sampled rows (per-fold seed): BASE = FEATS, RICH = FEATS + CTX_FEATS, and grades the INCREMENT under RICHER_RULE (rich
+skill_vs_state minus base skill_vs_state, same state baseline). A labels row without ``ctx`` gives NaN rich features (LightGBM's missing branch).
+
   python3 scripts/research/am_heads_fit.py run --labels DIR [DIR...] --corpus ROOT --out DIR [--max-trades N] [--rows-per-fold N]
   python3 scripts/research/am_heads_fit.py dump --labels DIR [DIR...] --corpus ROOT --out DIR [--rows-per-fold 400000]
   python3 scripts/research/am_heads_fit.py --self-test
@@ -52,6 +57,8 @@ DEV_FOLDS = ["2022-01-01", "2022-07-01", "2023-01-01", "2023-07-01", "2024-01-01
 HOLDOUT_START = "2026-01-01"
 FEATS = ["open_r", "peak_r", "mae_r", "bars_since_peak", "bars_open", "range_atr_k", "side", "tf_log_sec", "strat"]
 BIN_HEADS = ("reach_1", "reach_2", "stop_first", "dip_recovers")
+CTX_FEATS = ["ctx_fav_ext_r", "ctx_adv_ext_r", "ctx_range_pos", "ctx_trend_atr", "ctx_atr_ratio", "ctx_r0_atr"]   # cf_bar_labels.CTX_KEYS, prefixed
+RICH_FEATS = FEATS + CTX_FEATS
 SEED = 20261123
 LGB = {"n_estimators": 200, "learning_rate": 0.05, "num_leaves": 31, "min_child_samples": 2000, "subsample": 0.7, "subsample_freq": 1,
        "colsample_bytree": 0.8, "reg_lambda": 5.0, "random_state": SEED, "verbose": -1, "n_jobs": 4}
@@ -90,10 +97,12 @@ def skill(loss_model: float, loss_base: float):
     return None if not loss_base else round(1.0 - loss_model / loss_base, 5)
 
 
-def load(label_dirs, jobs, tf_sec, max_trades=None, seed=SEED):
-    """Per-row arrays + per-row trade index; trade table with entry / label_end (epoch s). Censored rows are dropped (counted)."""
+def load(label_dirs, jobs, tf_sec, max_trades=None, seed=SEED, rich=False):
+    """Per-row arrays + per-row trade index; trade table with entry / label_end (epoch s). Censored rows are dropped (counted).
+    ``rich``: also the CTX_FEATS columns from each row's ``ctx`` block (NaN when absent or None)."""
     import lightgbm  # noqa: F401  (fail early, before the long read)
-    cols = {k: array("f") for k in FEATS + ["fwd_mfe_r"] + list(BIN_HEADS)}
+    cols = {k: array("f") for k in (RICH_FEATS if rich else FEATS) + ["fwd_mfe_r"] + list(BIN_HEADS)}
+    n_ctx_rows = 0
     tidx = array("i")
     trade_entry, trade_end, strat_ids = [], [], {}
     rng = np.random.default_rng(seed)
@@ -136,10 +145,16 @@ def load(label_dirs, jobs, tf_sec, max_trades=None, seed=SEED):
                     cols["fwd_mfe_r"].append(min(max(lab["fwd_mfe_r"], 0.0), MFE_CAP))
                     for h in BIN_HEADS:
                         cols[h].append(float(lab[h]))
+                    if rich:
+                        cx = x.get("ctx") or {}
+                        n_ctx_rows += bool(cx)
+                        for c in CTX_FEATS:
+                            v = cx.get(c[4:])
+                            cols[c].append(np.nan if v is None else float(v))
                     tidx.append(ti)
     arr = {k: np.frombuffer(v, dtype=np.float32) for k, v in cols.items()}
     meta = {"n_files": len(files), "n_trades": n_trades, "n_rows": int(len(tidx)), "n_censored_dropped": n_cens, "n_trades_without_job": n_nojob,
-            "strategies": {v: k for k, v in strat_ids.items()}}
+            "strategies": {v: k for k, v in strat_ids.items()}, **({"n_rows_with_ctx": n_ctx_rows} if rich else {})}
     return arr, np.frombuffer(tidx, dtype=np.int32), np.array(trade_entry), np.array(trade_end), meta
 
 
@@ -150,7 +165,8 @@ def split(trade_entry, trade_end, test_a, test_b, embargo_s):
     return train, test
 
 
-def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
+def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng, feats=None):
+    feats = feats or FEATS
     import lightgbm as lgb
     from sklearn.metrics import roc_auc_score
     tr_mask = np.isin(tidx, train_trades)
@@ -163,7 +179,7 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
         te = rng.choice(te, rows_per_fold, replace=False)
     if len(tr) < 5000 or len(te) < 1000:
         return {"skipped": f"train rows {len(tr)}, test rows {len(te)}"}
-    X = np.column_stack([arr[k] for k in FEATS])
+    X = np.column_stack([arr[k] for k in feats])
     strat = arr["strat"].astype(np.int32)
     out = {"n_train_rows": int(len(tr)), "n_test_rows": int(len(te)), "n_train_trades": int(len(train_trades)), "n_test_trades": int(len(test_trades)),
            "heads": {}}
@@ -201,7 +217,7 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
     y_tr, y_te = arr["fwd_mfe_r"][tr], arr["fwd_mfe_r"][te]
     for a in QUANTILES:
         m = lgb.LGBMRegressor(objective="quantile", alpha=a, **LGB)
-        m.fit(X[tr], y_tr, categorical_feature=[FEATS.index("strat")])
+        m.fit(X[tr], y_tr, categorical_feature=[feats.index("strat")])
         # provenance: predict -- LGBMRegressor.predict is the conditional a-quantile of fwd_mfe_r in R0, not a probability
         p = m.predict(X[te])
         b = base_q(y_tr, a)
@@ -218,7 +234,7 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
             out["heads"][h] = {"skipped": "one class"}
             continue
         m = lgb.LGBMClassifier(**LGB)
-        m.fit(X[tr], yb_tr, categorical_feature=[FEATS.index("strat")])
+        m.fit(X[tr], yb_tr, categorical_feature=[feats.index("strat")])
         # provenance: predict_proba -- the calibrated-by-fit P(label=1), a probability
         p = m.predict_proba(X[te])[:, 1]
         b = base_p(yb_tr)
@@ -233,6 +249,8 @@ def fit_eval(arr, tidx, train_trades, test_trades, rows_per_fold, rng):
 
 
 def run(a) -> int:
+    if getattr(a, "feats", "base") == "rich":
+        return run_rich(a)
     import pandas as pd
     import cf_bars
     import cf_bulk
@@ -300,6 +318,98 @@ def run(a) -> int:
         (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
         print(json.dumps({"verdict": v, "per_head": per}), flush=True)
     print(json.dumps(pooled), flush=True)
+    return 0
+
+
+RICHER_RULE = {"id": "RULE-AM-HEADS-RICHER-20261124", "min_dev_mean_delta_skill": 0.01, "min_dev_folds_delta_positive": 6, "n_dev_folds": 8,
+               "graded_heads": {"target": ["q0.5", "q0.9", "reach_2"], "invalidation": ["stop_first", "dip_recovers"]}}   # = STAGE_A_RULE graded heads
+
+
+def richer_head_verdict(deltas: list, holdout_delta, rule: dict = RICHER_RULE) -> str:
+    """Per head: PASS iff the dev mean of (rich - base) skill_vs_state >= the bar AND > 0 in >= min folds AND the holdout delta > 0;
+    FAIL iff the dev mean delta <= 0; else INDETERMINATE."""
+    if not deltas:
+        return "indeterminate"
+    m = float(np.mean(deltas))
+    if m <= 0:
+        return "fail"
+    if m >= rule["min_dev_mean_delta_skill"] and sum(1 for d in deltas if d > 0) >= rule["min_dev_folds_delta_positive"] \
+            and holdout_delta is not None and holdout_delta > 0:
+        return "pass"
+    return "indeterminate"
+
+
+def richer_verdict(per: dict, rule: dict = RICHER_RULE) -> str:
+    tgt = [per[h] for h in rule["graded_heads"]["target"]]
+    inv = [per[h] for h in rule["graded_heads"]["invalidation"]]
+    if "pass" in tgt and "pass" in inv:
+        return "pass"
+    if all(x == "fail" for x in tgt + inv):
+        return "fail"
+    return "indeterminate"
+
+
+def run_rich(a) -> int:
+    """BASE vs RICH on the same sampled rows per fold; graded by RICHER_RULE (the increment over the same state baseline)."""
+    import pandas as pd
+    import cf_bars
+    import cf_bulk
+    t0 = time.time()
+    root = Path(a.corpus)
+    jobs, counts = cf_bulk.load_jobs(cf_bulk.discover(root), root)
+    arr, tidx, te_, tend, meta = load(a.labels, jobs, cf_bars.TF_SECONDS, a.max_trades, rich=True)
+    print(json.dumps({k: v for k, v in meta.items() if k != "strategies"}), flush=True)
+    emb = EMBARGO_DAYS * 86400.0
+    ts = lambda s: pd.Timestamp(s, tz="UTC").timestamp()  # noqa: E731
+    bounds = [ts(x) for x in DEV_FOLDS] + [ts(HOLDOUT_START)]
+    folds = []
+    for i, (lo, hi) in enumerate(zip(bounds[:-1], bounds[1:])):
+        trn, tst = split(te_, tend, lo, hi, emb)
+        b = fit_eval(arr, tidx, trn, tst, a.rows_per_fold, np.random.default_rng(SEED + i), FEATS)
+        r = fit_eval(arr, tidx, trn, tst, a.rows_per_fold, np.random.default_rng(SEED + i), RICH_FEATS)
+        folds.append({"test_start": DEV_FOLDS[i], "kind": "dev", "base": b, "rich": r})
+        print(json.dumps({"fold": DEV_FOLDS[i], "rows": r.get("n_train_rows")}), flush=True)
+    claim = None
+    if not a.no_holdout:
+        import holdout_lock
+        end_day = pd.Timestamp(float(te_.max()), unit="s", tz="UTC").strftime("%Y-%m-%d")
+        claim = holdout_lock.claim_read("AM-HEADS-richer", HOLDOUT_START, end_day, a.unit or "am-heads-richer", a.reader,
+                                        Path(a.ledger) if a.ledger else holdout_lock.LEDGER, train_end="2025-12-01", family="AM-HEADS")
+        trn, tst = split(te_, tend, bounds[-1], float("inf"), emb)
+        k = len(DEV_FOLDS)
+        folds.append({"test_start": HOLDOUT_START, "kind": "holdout",
+                      "base": fit_eval(arr, tidx, trn, tst, a.rows_per_fold, np.random.default_rng(SEED + k), FEATS),
+                      "rich": fit_eval(arr, tidx, trn, tst, a.rows_per_fold, np.random.default_rng(SEED + k), RICH_FEATS)})
+
+    def sk(f, arm, h):
+        return ((f.get(arm) or {}).get("heads") or {}).get(h, {}).get("skill_vs_state")
+    heads = [f"q{x:g}" for x in QUANTILES] + list(BIN_HEADS)
+    pooled, per = {}, {}
+    ho = next((f for f in folds if f["kind"] == "holdout"), None)
+    for h in heads:
+        dl = [sk(f, "rich", h) - sk(f, "base", h) for f in folds if f["kind"] == "dev" and sk(f, "rich", h) is not None and sk(f, "base", h) is not None]
+        hd = (sk(ho, "rich", h) - sk(ho, "base", h)) if ho and sk(ho, "rich", h) is not None and sk(ho, "base", h) is not None else None
+        rs = [sk(f, "rich", h) for f in folds if f["kind"] == "dev" and sk(f, "rich", h) is not None]
+        pooled[h] = {"dev_deltas": [round(d, 5) for d in dl], "dev_mean_delta_skill_vs_state": round(float(np.mean(dl)), 5) if dl else None,
+                     "dev_folds_delta_positive": int(sum(1 for d in dl if d > 0)), "holdout_delta": None if hd is None else round(hd, 5),
+                     "dev_mean_rich_skill_vs_state": round(float(np.mean(rs)), 5) if rs else None}
+        per[h] = richer_head_verdict(dl, hd)
+    graded = {h: per[h] for g in RICHER_RULE["graded_heads"].values() for h in g}
+    v = richer_verdict(per) if not a.no_holdout else "indeterminate"
+    res = {"schema": SCHEMA, "unit": a.unit, "feats_base": FEATS, "feats_rich": RICH_FEATS, "folds": folds, "pooled_dev": pooled,
+           "per_head": per, "verdict": v, "rule": RICHER_RULE, "holdout_claim": claim, "meta": {k: x for k, x in meta.items() if k != "strategies"},
+           "corpus_jobs": counts.get("distinct_jobs"), "read_state": "measured", "provenance": "ESTIMATED", "elapsed_s": round(time.time() - t0)}
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    if not a.no_holdout:
+        vj = {"verdict": v, "read_state": "measured", "n": meta["n_rows"], "rule": RICHER_RULE, "per_head": graded,
+              "note": f"graded heads {graded}; increment of rich over base skill_vs_state on the same rows per fold",
+              "population": (f"{meta['n_trades']} labelled trades / {meta['n_rows']} uncensored per-bar rows ({meta.get('n_rows_with_ctx')} with ctx), "
+                             f"8 dev half-year folds 2022-01..2026-01 + claimed holdout {HOLDOUT_START}.., purged by trade, <= {a.rows_per_fold} rows per fold"),
+              "measurement": {"pooled_dev": pooled}}
+        (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(json.dumps({"verdict": v, "per_head": per}), flush=True)
     return 0
 
 
@@ -426,6 +536,12 @@ def _self_test() -> None:
     assert list(tr) == [0, 1] and list(tst) == [2, 3]        # trade 2's window (20..25) is in test; trade 1 ends 15 < 18; none leaks
     tr2, _ = split(te, tend, 20.0, 40.0, 6.0)
     assert list(tr2) == [0]                                  # a bigger embargo drops trade 1 (ends 15, needs < 14)
+    assert richer_head_verdict([0.02] * 7 + [-0.01], 0.01) == "pass"
+    assert richer_head_verdict([0.02] * 7 + [-0.01], -0.01) == "indeterminate"
+    assert richer_head_verdict([-0.01] * 8, 0.01) == "fail"
+    per = {"q0.5": "pass", "q0.9": "fail", "reach_2": "fail", "stop_first": "pass", "dip_recovers": "indeterminate"}
+    assert richer_verdict(per) == "pass" and richer_verdict({k: "fail" for k in per}) == "fail"
+    assert RICH_FEATS[:len(FEATS)] == FEATS and RICH_FEATS.index("strat") == FEATS.index("strat")
     print("am_heads_fit self-test ok")
 
 
@@ -441,6 +557,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-trades", type=int, default=0, help="subsample ~this many trades (dev smoke only; 0 = all)")
     ap.add_argument("--rows-per-fold", type=int, default=800_000)
     ap.add_argument("--no-holdout", action="store_true", help="dev smoke: do not claim or score the holdout")
+    ap.add_argument("--feats", choices=["base", "rich"], default="base", help="rich: base vs base+ctx on the same rows, RICHER_RULE (run only)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:

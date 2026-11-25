@@ -21,6 +21,17 @@ For each bar index k (k = 1 is the first bar after the fill; the row is built at
     censored    True if the forward window ends (data end) before the stop is touched AND fewer than ``max_fwd_bars`` bars remain: label
                 is "at least"; callers EXCLUDE censored rows from a fit and report the count (never fill).
 Rows stop at the bar of the replayed actual exit (``exit_idx``) or when the stop is touched, whichever is first.
+
+CONTEXT block (``context=True``, row AM-V2-RICHER-FEATURES; off by default so every existing caller's rows are byte-identical): each row also carries
+``ctx``, market-state features from the bars at or before bar k ONLY, INCLUDING the bars before the fill that the caller passes in ``bars`` (the driver
+fetches CTX_LOOKBACK bars of history). Signed by side so "favourable" means the trade's direction:
+  fav_ext_r    distance from bar k's close to the CTX_RANGE-bar extreme in the trade's favour (max high long / min low short), in R0, >= 0
+  adv_ext_r    distance from bar k's close to the CTX_RANGE-bar extreme against the trade, in R0, >= 0
+  range_pos    position of the close in the CTX_RANGE-bar range, 0 = the adverse end, 1 = the favourable end
+  trend_atr    side x (close_k - close_{k-CTX_TREND}) / ATR14 at k
+  atr_ratio    ATR14 at k / mean true range over CTX_LOOKBACK bars (the vol regime)
+  r0_atr       R0 / ATR14 at k (how wide the stop is in current volatility)
+A feature whose window needs more bars than exist at k is None (never filled).
 """
 from __future__ import annotations
 
@@ -32,10 +43,15 @@ TARGET_J = 2.0           # the target the invalidation labels are measured again
 DIP_FRAC = 0.5           # adverse excursion that counts as a dip: this fraction of the distance to the stop
 DIP_BARS = 6
 SCHEMA = "cf_bar_labels/1"
+CTX_LOOKBACK = 100       # bars of history for the vol-regime mean true range (the driver fetches this much before the earliest fill)
+CTX_RANGE = 48
+CTX_TREND = 24
+CTX_ATR = 14
+CTX_KEYS = ("fav_ext_r", "adv_ext_r", "range_pos", "trend_atr", "atr_ratio", "r0_atr")
 
 
 def build_rows(*, side: str, entry: float, sl: float, bars: Sequence[dict], entry_time: float, bar_seconds: float,
-               max_fwd_bars: int = 48, exit_idx: Optional[int] = None, with_labels: bool = True) -> List[Dict]:
+               max_fwd_bars: int = 48, exit_idx: Optional[int] = None, with_labels: bool = True, context: bool = False) -> List[Dict]:
     """``bars``: dicts with time/open/high/low/close (epoch seconds), ascending. Bars with ``time < entry_time + bar_seconds`` (the signal
     bar and anything earlier) are DROPPED. ``side`` is 'long' or 'short'. R0 = |entry - sl|.
     ``with_labels=False`` (AM-V2 Stage B replay, which needs only the point-in-time features): ``labels`` is None and the forward scan is skipped;
@@ -50,6 +66,7 @@ def build_rows(*, side: str, entry: float, sl: float, bars: Sequence[dict], entr
     b = [x for x in bars if x["time"] >= t_fill]
     n = len(b)
     rows: List[Dict] = []
+    ctx_fn = _context_fn([x for x in bars if x["time"] < t_fill][-CTX_LOOKBACK:], b, sgn, r0) if context else None
     peak, mae, peak_k, rng_sum = 0.0, 0.0, 0, 0.0
     for k in range(1, n + 1):
         bar = b[k - 1]
@@ -65,8 +82,48 @@ def build_rows(*, side: str, entry: float, sl: float, bars: Sequence[dict], entr
         close_r = sgn * (bar["close"] - entry) / r0
         feat = {"open_r": close_r, "peak_r": peak, "mae_r": mae, "bars_since_peak": k - peak_k, "bars_open": k,
                 "range_atr_k": ((bar["high"] - bar["low"]) / r0) / (rng_sum / k) if rng_sum > 0 else None}
-        rows.append({"k": k, "features": feat, "labels": _forward(b, k, sgn, entry, r0, close_r, max_fwd_bars) if with_labels else None})
+        row = {"k": k, "features": feat, "labels": _forward(b, k, sgn, entry, r0, close_r, max_fwd_bars) if with_labels else None}
+        if ctx_fn is not None:
+            row["ctx"] = ctx_fn(k)
+        rows.append(row)
     return rows
+
+
+def _context_fn(pre: Sequence[dict], b: Sequence[dict], sgn: float, r0: float):
+    """Returns k -> the ctx dict for bar k (1-based over ``b``), from ``pre`` + b[:k] only. Vectorised once per trade."""
+    import numpy as np
+    seq = list(pre) + list(b)
+    if not seq:
+        return lambda k: {key: None for key in CTX_KEYS}
+    h = np.array([x["high"] for x in seq], float)
+    lo = np.array([x["low"] for x in seq], float)
+    c = np.array([x["close"] for x in seq], float)
+    pc = np.r_[np.nan, c[:-1]]
+    tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
+    off = len(pre)
+
+    def mean_back(a, p, n):
+        return float(np.mean(a[p - n + 1:p + 1])) if p - n + 1 >= 0 else None
+
+    def at(k: int) -> Dict:
+        p = off + k - 1
+        out: Dict = {key: None for key in CTX_KEYS}
+        atr = mean_back(tr, p, CTX_ATR) if p >= CTX_ATR else None       # tr[0] has no previous close; start at p - 13 >= 1
+        if p - CTX_RANGE + 1 >= 0:
+            hi, lw = float(h[p - CTX_RANGE + 1:p + 1].max()), float(lo[p - CTX_RANGE + 1:p + 1].min())
+            fav, adv = (hi, lw) if sgn > 0 else (lw, hi)
+            out["fav_ext_r"] = float(sgn * (fav - c[p]) / r0)
+            out["adv_ext_r"] = float(sgn * (c[p] - adv) / r0)
+            out["range_pos"] = float((c[p] - lw) / (hi - lw) if sgn > 0 else (hi - c[p]) / (hi - lw)) if hi > lw else None
+        if atr and atr > 0:
+            out["r0_atr"] = r0 / atr
+            if p - CTX_TREND >= 0:
+                out["trend_atr"] = float(sgn * (c[p] - c[p - CTX_TREND]) / atr)
+            m = mean_back(tr, p, CTX_LOOKBACK) if p >= CTX_LOOKBACK else None
+            if m and m > 0:
+                out["atr_ratio"] = atr / m
+        return out
+    return at
 
 
 def _forward(b: Sequence[dict], k: int, sgn: float, entry: float, r0: float, close_r: float, max_fwd: int) -> Dict:
