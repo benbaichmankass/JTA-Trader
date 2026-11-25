@@ -3,7 +3,7 @@
 id: RQ-20261125-f1a0-33
 title: 'ml_entry TARGET LEVER (clf_target): a per-side CLASSIFIER of P(net R > 0), traded iff it clears the side''s training breakeven probability, vs the
   registered net-R regressor and 100 take-rate-matched random thinnings, on the 8 dev folds, net of the full cost stack'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -151,3 +151,17 @@ related:
 - RQ-20261124-f1a0-06
 not_before: '2026-11-25T17:00:00+00:00'
 last_dispatched_at: '2026-11-25T17:01:37+00:00'
+grading:
+  attested: RULE-RQ-20261125-f1a0-33
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ-20261125-f1a0-33
+  evidence:
+  - research/results/RQ-20261125-f1a0-33/45660328335.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
