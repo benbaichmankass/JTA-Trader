@@ -121,3 +121,42 @@ def test_rich_heads_widen_the_value_features_and_fit_refuses_a_width_mismatch(tm
         V.fit(ld, hd, tmp_path / "m")
     (hd / "manifest.json").write_text(json.dumps({"feats": P.HEAD_FEATS, "folds": []}))
     assert V.fit(ld, hd, tmp_path / "m")["feats"] == V.AV_FEATS
+
+
+def test_iteration3_model_free_and_late_policies():
+    """RQ-20261125-c7e3-05..07: mf_tighten_random draws one eligible row from its own seed (deterministic per trade key, disjoint from the
+    controls); mf_tighten_fixed takes the first eligible row aged >= MIN_AGE_K; av_tighten_late ignores clearing rows before MIN_AGE_K; the late
+    control draws only from that window."""
+    ctx, _ = ctx_for(FLAT, tp=106.0)
+    rows = P.decision_rows(ctx)
+    n = len(rows)
+    assert n > V.MIN_AGE_K, "fixture must be longer than the age floor"
+    pred = preds5(n)
+    a = V.decide_mf("mf_tighten_random", ctx, rows, pred, THR, "key-1")
+    b = V.decide_mf("mf_tighten_random", ctx, rows, pred, THR, "key-1")
+    assert len(a) == 1 and a[0]["kind"] == "set_stop" and a[0]["name"] == "tighten_half" and a[0]["k"] == b[0]["k"]
+    ks = {V.decide_mf("mf_tighten_random", ctx, rows, pred, THR, f"key-{i}")[0]["k"] for i in range(40)}
+    assert len(ks) > 1                                             # a uniform draw, not a fixed bar
+    f = V.decide_mf("mf_tighten_fixed", ctx, rows, pred, THR, "key-1")
+    assert len(f) == 1 and f[0]["k"] == min(r["k"] for r in rows if r["k"] >= V.MIN_AGE_K)
+    ev = {"tighten_half": [0.0] * n, "breakeven": [0.0] * n, "lock_half": [0.0] * n}
+    ev["tighten_half"][0] = 0.9                                     # clears at the first bar: av_tighten fires there, av_tighten_late may not
+    late_i = next(i for i, r in enumerate(rows) if r["k"] >= V.MIN_AGE_K)
+    ev["tighten_half"][late_i] = 0.2
+    cuts = {x: 0.1 for x in ev}
+    assert V.decide_av("av_tighten", ctx, rows, pred, THR, ev, cuts)[0]["k"] == rows[0]["k"]
+    late = V.decide_late("av_tighten_late", ctx, rows, pred, THR, ev, cuts)
+    assert len(late) == 1 and late[0]["k"] == rows[late_i]["k"]
+    for d in range(20):
+        cs = V.control_av("av_tighten_late", ctx, rows, pred, THR, {"name": "tighten_half"}, P.control_rng("k1", "av_tighten_late", d), V.MIN_AGE_K)
+        assert len(cs) == 1 and cs[0]["k"] >= V.MIN_AGE_K
+    assert set(V.MODEL_FREE) <= set(V.CLASSES) and "av_tighten_late" in V.CLASSES
+
+
+def test_r123_segment_maps_r4_free_grade():
+    seg = {"verdict": "indeterminate", "label": "no_random_control", "n": 10,
+           "candidate": {"clauses": {"R1_cost": True, "R2_risk_cut": True, "R3_folds": True, "R4_control": None}}}
+    assert V.r123_segment(seg)["verdict"] == "pass"
+    bad = dict(seg, candidate={"clauses": {"R1_cost": True, "R2_risk_cut": False, "R3_folds": True, "R4_control": None}})
+    assert V.r123_segment(bad)["verdict"] == "fail"
+    assert V.r123_segment({"verdict": "indeterminate", "n": 0})["verdict"] == "indeterminate"

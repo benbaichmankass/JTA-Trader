@@ -5,7 +5,9 @@ run-name: am-action-value ${{ inputs.research_unit || inputs.classes }}
 # heads have skill but a probability-cut policy is not a value rule. This workflow measures each bracket action's own realised net value on the replay
 # (label), learns it per purged fold (fit), and acts only where the predicted value clears its cut (shard), graded by RULE-AM-RISK-ADJUSTED-V1 against
 # 100 matched random placements of the same action (reduce). plan -> label shards -> fit -> policy shards -> reduce/grade -> land one result record.
-# One dispatch = ONE class (av_bank | av_tighten | av_loosen | av_family), each its own registered unit RQ-20261124-c7e3-01..04. Tier 1: GitHub-hosted
+# One dispatch = ONE class (av_bank | av_tighten | av_loosen | av_family), each its own registered unit RQ-20261124-c7e3-01..04. ITERATION 3
+# (RQ-20261125-c7e3-05..07, after the a9d2-02 fire-timing read): mf_tighten_random | mf_tighten_fixed (model-free) | av_tighten_late; pass
+# av_run_id of an earlier base-heads run to reuse its value models (the model-free classes only use them to fix the same population). Tier 1: GitHub-hosted
 # runners, no Claude, no API credits, no secret in the compute jobs; it READS the pinned corpus + the keyless Binance Vision archive + the Stage-B heads
 # artifact and UPLOADS artifacts; only the last job writes (the shared research-result / commit-to-main actions). No trade path, no config, no VM.
 # Gates this adds or changes: none. Code: scripts/research/am_action_value.py. Diagnosis: docs/research/am-v2-stage-b-diagnosis-2026-11-24.md.
@@ -22,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       classes:
-        description: "ONE class: av_bank | av_tighten | av_loosen | av_family"
+        description: "ONE class: av_bank | av_tighten | av_loosen | av_family | mf_tighten_random | mf_tighten_fixed | av_tighten_late"
         required: true
       research_unit:
         description: "The queue unit that dispatched this run (RQ-YYYYMMDD-xxxx-NN); empty for a manual run (lands under _unattributed)"
@@ -85,7 +87,7 @@ jobs:
         env:
           CLS: ${{ inputs.classes }}
         run: |
-          case "$CLS" in av_bank|av_tighten|av_loosen|av_family) ;; *) echo "classes must be ONE of av_bank|av_tighten|av_loosen|av_family, got '$CLS'"; exit 2;; esac
+          case "$CLS" in av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late) ;; *) echo "classes must be ONE of av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late, got '$CLS'"; exit 2;; esac
       - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
         if: ${{ inputs.corpus_sha != '' }}
         env:

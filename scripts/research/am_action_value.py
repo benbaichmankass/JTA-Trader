@@ -35,6 +35,14 @@ CLASSES (fixed before the first run)
               AND a structure level exists; the value model must also say it pays. Loosen was the one class better than HOLD on the holdout.
   av_family   the union menu (all seven actions), one value model per (strategy family, action): trend / pullback / scalp / breakout / other.
 
+ITERATION 3 CLASSES (RQ-20261125-c7e3-05..07; diagnosis: scripts/research/am_av_fire_timing.py on a9d2-02 -- the av policies fired at the FIRST
+decision bar on 87% of trades, the eventual winners were cut there, and a uniform placement of the same tighten beat HOLD)
+  mf_tighten_random  MODEL-FREE: tighten_half once at a uniformly drawn eligible row (seeded by the trade key). No control (it IS a uniform draw);
+                     graded on R1-R3 vs HOLD only (``r123_segment``).
+  mf_tighten_fixed   MODEL-FREE: tighten_half once at the first eligible row aged >= MIN_AGE_K bars. Control: tighten_half at a uniform eligible row.
+  av_tighten_late    the av_tighten value models with the first crossing allowed only from MIN_AGE_K. Control: the same kind at a uniform eligible
+                     row aged >= MIN_AGE_K (does the model's choice beat random timing INSIDE the late window?).
+
   python3 scripts/research/am_action_value.py label  --run-id ID --out DIR --heads DIR --index I [I ...]
   python3 scripts/research/am_action_value.py fit    --labels DIR --heads DIR --out DIR
   python3 scripts/research/am_action_value.py shard  --run-id ID --out DIR --heads DIR --av DIR --index I [I ...] --classes av_bank
@@ -67,10 +75,24 @@ import live_review_counterfactual as lrc  # noqa: E402
 
 SCHEMA = "am_action_value/1"
 RULE_ID = "RULE-AM-ACTION-VALUE-20261124"
+RULE_ID_R123 = "RULE-AM-MF-RANDOM-TIGHTEN-20261125"   # mf_tighten_random: V1 R1-R3 vs HOLD, R4 not a clause (RQ-20261125-c7e3-05)
 ACTIONS = ("bank_now", "bank_q50", "bank_1r", "bank_2r", "tighten_half", "breakeven", "lock_half", "loosen_struct")
 CLASS_MENU = {"av_bank": ("bank_now", "bank_q50", "bank_1r", "bank_2r"), "av_tighten": ("tighten_half", "breakeven", "lock_half"),
-              "av_loosen": ("loosen_struct",), "av_family": ACTIONS}
+              "av_loosen": ("loosen_struct",), "av_family": ACTIONS,
+              # ITERATION 3 (RQ-20261125-c7e3-05..07, row AM-V2-STAGE-B-POLICY-ARM): the av policies fired at the FIRST decision bar on 87% of
+              # trades (optional stopping over noisy per-bar values) and cut the eventual winners; uniform placement of the same tighten beat HOLD.
+              "mf_tighten_random": ("tighten_half",),     # MODEL-FREE: tighten_half once at a uniformly drawn eligible row (the winning control, standalone)
+              "mf_tighten_fixed": ("tighten_half",),      # MODEL-FREE: tighten_half once at the first eligible row aged >= MIN_AGE_K bars
+              "av_tighten_late": ("tighten_half", "breakeven", "lock_half")}   # the av_tighten value models, first crossing only from MIN_AGE_K
 CLASSES = tuple(CLASS_MENU)
+#: classes that consult no value model (they still replay only trades in a fold with one, so the population equals the av units')
+MODEL_FREE = ("mf_tighten_random", "mf_tighten_fixed")
+#: the age floor (decision rows are bars since fill, k = 1, 2, ...) for mf_tighten_fixed and av_tighten_late; FIXED before any run
+#: (RQ-20261125-c7e3-06/07). Basis: the a9d2-02 fire-timing read put the av fires' gain at k / bars_held >= 0.1; the median HOLD path is 22 bars.
+MIN_AGE_K = 5
+#: the value-model menu whose fold coverage defines the replayed population of each class (model-free classes use av_tighten's)
+VM_MENU = {**{c: CLASS_MENU[c] for c in ("av_bank", "av_tighten", "av_loosen", "av_family")},
+           "mf_tighten_random": CLASS_MENU["av_tighten"], "mf_tighten_fixed": CLASS_MENU["av_tighten"], "av_tighten_late": CLASS_MENU["av_tighten"]}
 FAMILIES = ("trend", "pullback", "scalp", "breakout", "other")
 ROWS_PER_TRADE = 8
 BANK_FRAC = 0.5
@@ -411,16 +433,46 @@ def decide_av(cls: str, ctx, rows, pred, thr, ev: dict[str, Any], cuts: dict[str
     return []
 
 
-def control_av(cls: str, ctx, rows, pred, thr, spec: dict, rng: random.Random) -> list[dict]:
-    """The same action kind, placed once at a uniformly drawn row where it is eligible (same eligibility as the policy, incl. the dip cut)."""
+def control_av(cls: str, ctx, rows, pred, thr, spec: dict, rng: random.Random, min_k: int = 0) -> list[dict]:
+    """The same action kind, placed once at a uniformly drawn row where it is eligible (same eligibility as the policy, incl. the dip cut), among
+    rows aged >= ``min_k`` (av_tighten_late's control is drawn from the same late window its policy may fire in)."""
     cache = ctx.setdefault("_elig_av", {})
-    el = cache.get(spec["name"])
+    ck = (spec["name"], min_k)
+    el = cache.get(ck)
     if el is None:
-        el = cache[spec["name"]] = [i for i, r in enumerate(rows) if eligible(cls, spec["name"], ctx, r, row_preds(pred, i), thr) is not None]
+        el = cache[ck] = [i for i, r in enumerate(rows)
+                          if r["k"] >= min_k and eligible(cls, spec["name"], ctx, r, row_preds(pred, i), thr) is not None]
     if not el:
         return []
     i = rng.choice(el)
     return [eligible(cls, spec["name"], ctx, rows[i], row_preds(pred, i), thr)]
+
+
+def policy_rng(key: str, cls: str) -> random.Random:
+    """mf_tighten_random's own placement draw: seeded by the trade key, disjoint from every control draw (control_rng salts are 0..N_CONTROL-1)."""
+    return random.Random(int(hashlib.sha256(f"{key}|{cls}|policy".encode()).hexdigest()[:12], 16))
+
+
+def decide_mf(cls: str, ctx, rows, pred, thr, key: str) -> list[dict]:
+    """The model-free policies (no value model is read). mf_tighten_random: tighten_half once at a uniformly drawn eligible row. mf_tighten_fixed:
+    tighten_half once at the first eligible row aged >= MIN_AGE_K (HOLD if the trade never reaches that age)."""
+    el = [i for i, r in enumerate(rows) if eligible(cls, "tighten_half", ctx, r, row_preds(pred, i), thr) is not None]
+    if cls == "mf_tighten_fixed":
+        el = [i for i in el if rows[i]["k"] >= MIN_AGE_K][:1]
+    elif cls != "mf_tighten_random":
+        raise ValueError(cls)
+    if not el:
+        return []
+    i = el[0] if cls == "mf_tighten_fixed" else policy_rng(key, cls).choice(el)
+    return [dict(eligible(cls, "tighten_half", ctx, rows[i], row_preds(pred, i), thr), cls=cls, name="tighten_half", ev=0.0)]
+
+
+def decide_late(cls: str, ctx, rows, pred, thr, ev: dict[str, Any], cuts: dict[str, float]) -> list[dict]:
+    """av_tighten_late: decide_av restricted to rows aged >= MIN_AGE_K (the first crossing may not happen before that age); ``ev`` aligns with ``rows``."""
+    idx = [i for i, r in enumerate(rows) if r["k"] >= MIN_AGE_K]
+    sub_ev = {n: [ev[n][i] for i in idx] for n in ev}
+    sub_pred = {h: [pred[h][i] for i in idx] for h in pred}
+    return decide_av(cls, ctx, [rows[i] for i in idx], sub_pred, thr, sub_ev, cuts)
 
 
 def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls: str, n_control: int = N_CONTROL, fetcher=None) -> dict:
@@ -429,21 +481,28 @@ def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls
     sdir.mkdir(parents=True, exist_ok=True)
     items, reasons, state, err = prepare_shard(shard, chunks, jobs, heads, lambda j: True, fetcher)
     menu = CLASS_MENU[cls]
+    vmenu = VM_MENU[cls]
+    min_k = MIN_AGE_K if cls == "av_tighten_late" else 0
+    if cls == "mf_tighten_random":
+        n_control = 0           # its own placement IS a uniform draw: a uniform control would be the same distribution (R4 is not a clause)
     tmp = sdir / f"{shard['shard_id']}.jsonl.gz.tmp"
     n_rep, n_fired, kinds = 0, 0, Counter()
     with gzip.open(tmp, "wt", encoding="utf-8") as fh:
         for key, job, ctx, rows, fold, pred, X in items:
             scope = f"fam:{family(job.get('strategy'))}" if cls == "av_family" else "all"
-            if not vm.has_fold(fold["fold_id"], scope, menu):
+            if not vm.has_fold(fold["fold_id"], scope, vmenu):
                 reasons["no_value_model_for_fold"] += 1
                 continue
             base = P.run_arm(ctx)
             rec = {"b": P._arm_cell(base), "a": {}}
             specs = []
-            if rows and pred is not None:
+            if rows and pred is not None and cls in MODEL_FREE:
+                specs = decide_mf(cls, ctx, rows, pred, fold["thresholds"], key)
+            elif rows and pred is not None:
                 # provenance: predict -- ValueModels.predict: each action's predicted net-R value vs HOLD (E[R|act]-E[R|hold], cost included)
                 ev = {name: vm.predict(fold["fold_id"], scope, name, X) for name in menu}
-                specs = decide_av(cls, ctx, rows, pred, fold["thresholds"], ev, {n: vm.cuts[(fold["fold_id"], scope, n)] for n in menu})
+                cuts = {n: vm.cuts[(fold["fold_id"], scope, n)] for n in menu}
+                specs = (decide_late if cls == "av_tighten_late" else decide_av)(cls, ctx, rows, pred, fold["thresholds"], ev, cuts)
             if not specs:
                 rec["a"][cls] = {"n": 0}
             else:
@@ -452,7 +511,7 @@ def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls
                 arm = P.run_arm(ctx, [_act(s) for s in specs])
                 ctl = []
                 for d in range(n_control):
-                    cs = control_av(cls, ctx, rows, pred, fold["thresholds"], specs[0], P.control_rng(ctx["key"], cls, d))
+                    cs = control_av(cls, ctx, rows, pred, fold["thresholds"], specs[0], P.control_rng(ctx["key"], cls, d), min_k)
                     c = P.run_arm(ctx, [_act(s) for s in cs]) if cs else base
                     ctl.append([round(c["net_r"], 6), None if c["exit_ts"] is None else int(c["exit_ts"])])
                 rec["a"][cls] = {"n": 1, "p": P._arm_cell(arm), "c": ctl, "kind": specs[0]["name"], "k": specs[0]["k"], "ev": round(specs[0]["ev"], 5)}
@@ -480,8 +539,12 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None,
         claim_rec = holdout_lock.claim_read(f"AM-HEADS-av-{cls}", P.HOLDOUT_START, max(end_day, P.HOLDOUT_START), unit, reader,
                                             ledger or holdout_lock.LEDGER, train_end=P.HOLDOUT_TRAIN_END, family="AM-HEADS")
         (out / "holdout_claims.jsonl").write_text(json.dumps(claim_rec) + "\n")
+    if cls == "mf_tighten_random":
+        n_control = 0
     seg_dev = P._segment(dev, cls, n_control)
     seg_hold = P._segment(hold, cls, n_control)
+    if cls == "mf_tighten_random":
+        seg_dev, seg_hold = r123_segment(seg_dev), r123_segment(seg_hold)
     verdict = P.unit_verdict(seg_dev, seg_hold)
     cuts = {"family": P._cuts(dev + hold, cls, lambda r: family(r["st"]), 500), "strategy": P._cuts(dev + hold, cls, lambda r: str(r["st"]), 500),
             "timeframe": P._cuts(dev + hold, cls, lambda r: str(r["tf"]), 500)}
@@ -493,13 +556,30 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None,
     pop = (f"{len(recs)} replayed backtest trades (run-w corpus sha 1eb164f4, crypto legs with Binance Vision bars, entry in a fold with a value model, "
            f"i.e. 2022-07-01..end): {len(dev)} dev (entry < {P.DEV_END}), {len(hold)} claimed holdout; arm {cls} vs HOLD (replayed_actual) and "
            f"{n_control} matched random re-timings of the same action; R in the original stop distance, full cost stack; per-trade-R SCREEN")
-    return {"schema": SCHEMA, "rule_id": RULE_ID, "unit": unit, "class": cls, "verdict": verdict, "read_state": "measured", "n": len(recs),
+    return {"schema": SCHEMA, "rule_id": RULE_ID_R123 if cls == "mf_tighten_random" else RULE_ID, "unit": unit, "class": cls, "verdict": verdict, "read_state": "measured", "n": len(recs),
             "population": pop, "dev": seg_dev, "holdout": seg_hold,
             "lever": {"trades_fired": sum(1 for c in fired if c["n"]), "share_fired": round(sum(1 for c in fired if c["n"]) / len(recs), 4) if recs else None,
                       "kinds": dict(kinds)},
             "could_not_replay": dict(could), "n_shards": len(metas), "reported_cuts": cuts, "holdout_claim": claim_rec, "graduation_eligible": False,
             "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R books); a PASS is a fresh-window confirmation input, then a Tier-3 proposal input.",
             "provenance": "ESTIMATED"}
+
+
+def r123_segment(seg: dict) -> dict:
+    """mf_tighten_random's registered rule (RQ-20261125-c7e3-05): R1-R3 of RULE-AM-RISK-ADJUSTED-V1 vs HOLD decide; R4 is NOT a clause, because the
+    policy is itself a uniform random placement (a uniform control is the same distribution). With no declared control the V1 grader returns
+    INDETERMINATE (no_random_control) when R1-R3 pass; this maps that to PASS, and leaves a failed R1-R3 as FAIL."""
+    c = (seg.get("candidate") or {}).get("clauses") or {}
+    if not c or seg.get("n", 0) == 0:
+        return seg
+    r123 = [c.get("R1_cost"), c.get("R2_risk_cut"), c.get("R3_folds")]
+    if any(v is False for v in r123):
+        v, lab = "fail", "fails_R1_R3_model_free"
+    elif all(v is True for v in r123):
+        v, lab = "pass", "passes_R1_R3_model_free_R4_not_a_clause"
+    else:
+        v, lab = "indeterminate", "r1_r3_unreadable"
+    return dict(seg, verdict=v, label=lab, r4_clause=False)
 
 
 def brief(res: dict) -> dict:
