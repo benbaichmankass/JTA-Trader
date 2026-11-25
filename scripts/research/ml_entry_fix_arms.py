@@ -23,6 +23,16 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
   book_feats    BOOK / RECENCY INPUTS, policy-independent and point-in-time: the symbol's own long / short bracket outcome of the
                 decision 24 h earlier (closed by bar t's close), and across the universe at t-24 h the mean long net R and the
                 long / short stop-out shares. Placebo: the same 5 columns with their timestamps shuffled (seeded).
+  fund_feats    FUNDING INPUTS (new information; every bracket / entry-order arm landed within +-0.007 R of its comparator, f1a0-14/17/21/22/27):
+                the symbol's last funding rate, its 9-print (3 d) mean and 90-print z-score, and the universe-mean funding, all as-of bar t's
+                CLOSE (Binance Vision monthly fundingRate, the prop_ml_leg.f1_features convention). Placebo: the same 4 columns with their
+                timestamps shuffled (seeded, shuffle_ts). Graded vs the registered recipe on the same rows (rows lacking funding history dropped
+                from BOTH sides before any fit).
+  oi_feats      POSITIONING INPUTS (f1a0-29 funding INDETERMINATE -0.0093; its fail_action): open-interest change / z, top-trader and global
+                long-short ratios and taker buy/sell flow (prop_ml_leg F1_OI_COLS via f1_features, as-of bar t's CLOSE) from the Binance Vision DAILY
+                metrics files, which exist only from 2021-12. Every row is kept: before 2021-12 the columns are NaN (LightGBM routes NaN natively),
+                so early folds train mostly without them and later folds with them; the test rows (2022-01..) all carry them. Placebo: the same
+                columns timestamp-shuffled AMONG THE ROWS THAT HAVE THEM (NaN rows stay NaN). Graded vs the registered recipe on the same rows.
   sl_wide       SL PLACEMENT. Same predictions; the bracket is SL 3 / TP 4.5 ATR14 (same 1.5 reward:risk, 24 h stop) instead of
                 SL 2 / TP 3, each decision in its own R (sizing is by risk). Control (reported, attributes the gain): random-side
                 entries on the same rows under both brackets.
@@ -59,6 +69,17 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 hours, not 24), which adds noise unrelated to the entry order. lim_paired scores the limit entry on EXACTLY the market arm's taken
                 decisions (same rows, same sides; unfilled = 0 R), so the one factor is the entry order and the comparison is paired per decision.
                 Control: the same rows' market outcomes thinned at random to the arm's fill rate (100 draws).
+  lim_fallback  ITERATION 3 of the limit entry (f1a0-21 lim_paired INDETERMINATE +0.0068, t 0.92; vs random thinning +0.0121, t 2.48): every
+                fold showed ADVERSE SELECTION, the decisions that filled were market losers (-0.05..-0.17 R) and the unfilled were winners (+0.12..+0.37
+                R), so the limit's ~0.125 R price gain on fills was spent on forfeited winners. lim_fallback keeps the limit and, when it is still
+                unfilled after LIM_W hours, enters at MARKET at the next bar's open (taker fee, full slippage): fills keep their price, winners are
+                kept at a worse price. Scored on exactly the market arm's decisions (paired, as lim_paired).
+  lim_choose    ITERATION 4 of the limit entry (f1a0-22 lim_fallback INDETERMINATE -0.0027: re-entering the unfilled winners at market gave back
+                more than the limit saved). The limit is a SELECTIVE thinning (it beat random thinning by +0.012 R on f1a0-21) whose value flips by
+                fold: positive where the market arm loses, negative where it wins. lim_choose learns that per decision: a LightGBM regressor
+                (huber, LIMC_PARAMS, per fold on TRAIN decisions only, both sides as rows with a side feature) on delta = limit net R - market net R
+                (unfilled = 0 R) from M.FEATURES, and on the market arm's taken decisions uses the LIMIT only where the predicted delta > 0, else
+                MARKET. Paired, scored on exactly those decisions. Control: the same choice made at RANDOM at the arm's limit share (100 draws).
   rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
                 training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
                 vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
@@ -92,13 +113,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
+#: lim_choose's delta regressor: fixed before any run (a smaller, more regularised copy of M.LGB_PARAMS; the target is a noisy per-decision difference)
+LIMC_PARAMS = {"n_estimators": 200, "learning_rate": 0.03, "num_leaves": 15, "min_child_samples": 1000, "subsample": 0.8, "subsample_freq": 1,
+               "colsample_bytree": 0.8, "reg_lambda": 10.0, "random_state": 20261125, "verbose": -1, "deterministic": True, "force_row_wise": True}
 DRAWS = 100                           # matched-random draws (research-queue-design-fields-guard minimum)
 TAU = 0.10
 SEED = 20261124
+OI_FEATURES = ["oi_chg24", "oi_z", "ls_top_cnt", "ls_top_pos", "ls_all", "taker_ratio", "taker_ratio_ma24"]   # == prop_ml_leg.F1_OI_COLS
+FUND_FEATURES = ["fund", "fund_ma3d", "fund_z", "xs_fund_mean"]
 BOOK_FEATURES = ["own_prev_net_long", "own_prev_net_short", "xs_prev_net_long", "xs_prev_stop_long", "xs_prev_stop_short"]
 SL_WIDE, TP_WIDE = 3.0, 4.5
 SL_XWIDE, TP_XWIDE = 4.0, 6.0          # sl_xwide_retrain: cost per R ~ half of SL 2 at the same 1.5 reward:risk
@@ -226,6 +252,61 @@ def book_columns(tab: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([out, x], axis=1)[BOOK_FEATURES]
 
 
+def oi_columns(cache: Path, syms: list[str], tab: pd.DataFrame) -> pd.DataFrame:
+    """OI_FEATURES per decision row: prop_ml_leg.f1_features on each symbol's full HOURLY klines (so the 24 h change and 168 h z are in hours),
+    as-of bar t's close, joined to the decision rows on (symbol, ts). NaN where the metrics have no history (before 2021-12) or a day is missing."""
+    import prop_ml_leg as P
+    met = P.fetch_metrics(cache, syms)
+    parts = []
+    for sym in syms:
+        kl = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if not len(kl):
+            continue
+        f = P.f1_features(kl[["ts"]].assign(ts=pd.to_datetime(kl["ts"], utc=True)), pd.DataFrame(), met.get(sym, pd.DataFrame()))
+        for c in OI_FEATURES:
+            if c not in f:
+                f[c] = np.nan
+        parts.append(f[["ts"] + OI_FEATURES].assign(symbol=sym))
+    lut = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=["ts", "symbol"] + OI_FEATURES)
+    key = pd.DataFrame({"symbol": tab["symbol"].to_numpy(), "ts": pd.to_datetime(tab["ts"], utc=True).reset_index(drop=True)})
+    lut["ts"] = pd.to_datetime(lut["ts"], utc=True)
+    out = key.merge(lut.drop_duplicates(["symbol", "ts"]), on=["symbol", "ts"], how="left", validate="many_to_one")
+    return out[OI_FEATURES].astype(float).reset_index(drop=True)
+
+
+def fund_asof(fund: pd.DataFrame, close_ts: pd.Series) -> pd.DataFrame:
+    """fund / fund_ma3d / fund_z as-of each ``close_ts`` (last print stamped <= close_ts); NaN before the first print."""
+    out = pd.DataFrame(index=range(len(close_ts)), columns=["fund", "fund_ma3d", "fund_z"], dtype=float)
+    if not len(fund):
+        return out
+    f = fund.set_index("ts")["last_funding_rate"].astype(float).sort_index()
+    f = f[~f.index.duplicated(keep="last")]
+    cols = {"fund": f, "fund_ma3d": f.rolling(9).mean(), "fund_z": (f - f.rolling(90).mean()) / f.rolling(90).std()}
+    idx = f.index.searchsorted(pd.DatetimeIndex(close_ts), side="right") - 1
+    for k, ser in cols.items():
+        v = ser.to_numpy()[np.clip(idx, 0, None)]
+        out[k] = np.where(idx >= 0, v, np.nan)
+    return out
+
+
+def fund_columns(cache: Path, syms: list[str], tab: pd.DataFrame) -> pd.DataFrame:
+    """FUND_FEATURES per decision row, as-of bar t's CLOSE (ts + 1 h): own funding (fund_asof) and the universe-mean last funding at that close."""
+    import concurrent.futures as cfu
+    import prop_ml_leg as P
+    with cfu.ThreadPoolExecutor(8) as ex:
+        fund = dict(zip(syms, ex.map(lambda s: P.fetch_funding(cache, [s])[s], syms)))
+    close_ts = pd.to_datetime(tab["ts"], utc=True) + pd.Timedelta(hours=1)
+    out = pd.DataFrame(index=tab.index, columns=FUND_FEATURES, dtype=float)
+    for sym, g in tab.groupby("symbol"):
+        out.loc[g.index, ["fund", "fund_ma3d", "fund_z"]] = fund_asof(fund.get(sym, pd.DataFrame()), close_ts.loc[g.index]).to_numpy()
+    uniq = pd.DatetimeIndex(np.sort(close_ts.unique()))
+    per = np.vstack([fund_asof(fund[s], pd.Series(uniq))["fund"].to_numpy() for s in syms if s in fund]) if fund else np.full((1, len(uniq)), np.nan)
+    with np.errstate(all="ignore"):
+        xs = pd.Series(np.nanmean(per, axis=0), index=uniq)
+    out["xs_fund_mean"] = xs.reindex(pd.DatetimeIndex(close_ts)).to_numpy()
+    return out[FUND_FEATURES]
+
+
 def shuffle_ts(tab: pd.DataFrame, cols: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
     """Placebo: each timestamp's values are moved to another (seeded) timestamp; distribution kept, timing destroyed."""
     ts = pd.to_datetime(tab["ts"], utc=True)
@@ -280,10 +361,12 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl=SL_WIDE, t
 
 # ------------------------------------------------------------------------------------------------ regime-similarity weights
 def lim_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, k: float = LIM_K, lw: int = LIM_W, sl: float = SL_XWIDE,
-               tp: float = TP_XWIDE) -> pd.DataFrame:
+               tp: float = TP_XWIDE, fallback: bool = False) -> pd.DataFrame:
     """Per decision row and side: the outcome of a post-only limit entry ``k`` ATR14 better than bar t+1's open, resting ``lw`` bars, then the
     SL ``sl`` / TP ``tp`` ATR14 bracket measured from the fill for M.HORIZON_H bars (the fill bar counts as the first: its low/high may stop
-    the trade, its target side never counts). Unfilled: net = gross = cost = 0, reason -1, bars = lw (busy while the order rests)."""
+    the trade, its target side never counts). Unfilled: net = gross = cost = 0, reason -1, bars = lw (busy while the order rests).
+    ``fallback`` (lim_fallback): an order still unfilled after ``lw`` bars is replaced by a MARKET entry at the next bar's open (bar t+lw+1),
+    taker fee on both sides and the full slippage, the same bracket measured from that entry for M.HORIZON_H bars; reason = 10 + bracket reason."""
     from src.runtime.execution_costs import FUNDING_WINDOW_HOURS, resolve_cost_policy
     slip_bps, fund_bps = resolve_cost_policy("BTCUSDT")
     rows = []
@@ -296,7 +379,7 @@ def lim_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, k: float = LI
         ts = df["ts"]
         close_hour = (ts + pd.Timedelta(hours=1)).dt.hour.to_numpy()
         H, N = M.HORIZON_H, len(df)
-        span = lw + H
+        span = lw + H + (1 if fallback else 0)
         cand = np.where((close_hour % M.DECISION_EVERY_H == 0) & ~np.isnan(atr))[0]
         cand = cand[cand + span < N]
         t_ns = ts.to_numpy().astype("datetime64[ns]").astype("int64")
@@ -336,6 +419,21 @@ def lim_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, k: float = LI
                 cst = per_r * (MAKER_BPS + TAKER_BPS + slip_bps / 2.0 + fund_bps * nwin) / 1e4
                 gross[f], cost[f], net[f] = g, cst, g - cst
                 reason[f], bars[f] = rs.astype(np.int64), jf[f] + j - 1
+            u = np.flatnonzero(~filled) if fallback else np.array([], dtype=int)
+            if len(u):
+                eb = cand[u] + lw + 1                                  # market fallback at the open of the bar after the window
+                win = eb[:, None] + np.arange(0, H)[None, :]
+                e = o[eb]
+                px, j, rs = M.bracket_outcome(o[win], h[win], lo[win], c[win], e, a[u], side, sl_atr=sl, tp_atr=tp)
+                risk = sl * a[u]
+                g = side * (px - e) / risk
+                per_r = ((np.abs(e) + np.abs(px)) / 2.0) / risk
+                w = FUNDING_WINDOW_HOURS * 3600.0
+                t_in, t_out = t_ns[eb] / 1e9, t_ns[eb + j - 1] / 1e9 + 3600.0
+                nwin = np.floor(t_out / w) - np.floor(t_in / w)
+                cst = per_r * (2 * TAKER_BPS + slip_bps + fund_bps * nwin) / 1e4
+                gross[u], cost[u], net[u] = g, cst, g - cst
+                reason[u], bars[u] = 10 + rs.astype(np.int64), lw + j
             out |= {f"net_{name}": net, f"gross_{name}": gross, f"cost_{name}": cost, f"reason_{name}": reason, f"bars_{name}": bars}
         rows.append(pd.DataFrame(out))
     alt = pd.concat(rows, ignore_index=True)
@@ -436,6 +534,30 @@ def years_and_folds(cat: dict, folds: list[dict], arm: str, ref: str = "base") -
     return fb, yearly, sum(1 for v in yearly.values() if v is not None and v > 0)
 
 
+def fit_lim_chooser(train: pd.DataFrame, fixed: pd.DataFrame, lim: pd.DataFrame, n_jobs: int | None = None):
+    """lim_choose's delta regressor, fitted on TRAIN decisions only: one row per (decision, side) with M.FEATURES + side (+1 long / -1 short),
+    target = limit net R - market net R for that side (an unfilled limit is 0 R), rows with a missing label dropped."""
+    import lightgbm as lgb
+    X0 = train[list(M.FEATURES)].to_numpy(float)
+    Xs, ys = [], []
+    for sd, sg in (("long", 1.0), ("short", -1.0)):
+        y = lim[f"net_{sd}"].to_numpy(float) - fixed[f"net_{sd}"].to_numpy(float)
+        ok = np.isfinite(y)
+        Xs.append(np.column_stack([X0[ok], np.full(ok.sum(), sg)]))
+        ys.append(y[ok])
+    m = lgb.LGBMRegressor(objective="huber", n_jobs=n_jobs or 4, **LIMC_PARAMS)
+    m.fit(np.vstack(Xs), np.concatenate(ys))
+    return m
+
+
+def choose_rows(mk: pd.DataFrame, lim_df: pd.DataFrame, use: np.ndarray) -> pd.DataFrame:
+    """Per decision: the limit outcome where ``use`` else the market outcome (same rows, same sides)."""
+    out = mk.copy()
+    for c in ("net_r", "gross_r", "cost_r", "reason"):
+        out[c] = np.where(use, lim_df[c].to_numpy(), mk[c].to_numpy())
+    return out
+
+
 def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs: int | None = None, folds_lim: int | None = None) -> dict:
     bounds = [pd.Timestamp(x, tz="UTC") for x in M.DEV_FOLDS] + [pd.Timestamp(M.HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < bounds[-1]]
@@ -478,8 +600,11 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 arms_p[name] = (ql, qs)
                 tk[name] = seq.run(ql, qs)
             info |= {"train_up_share": share, "test_up_share": float(up_te.mean())}
-        elif arm == "book_feats":
-            for name, cols in {"arm": BOOK_FEATURES, "control": [f"pb_{c}" for c in BOOK_FEATURES]}.items():
+        elif arm in ("book_feats", "fund_feats", "oi_feats"):
+            fcols = {"book_feats": BOOK_FEATURES, "fund_feats": FUND_FEATURES, "oi_feats": OI_FEATURES}[arm]
+            info |= {"feature_coverage_train": float(train[fcols].notna().all(axis=1).mean()) if len(train) else None,
+                     "feature_coverage_test": float(test[fcols].notna().all(axis=1).mean()) if len(test) else None}
+            for name, cols in {"arm": fcols, "control": [f"pb_{c}" for c in fcols]}.items():
                 ql, qs = M.fit_predict(train, test, M.FEATURES + cols, n_jobs)
                 tk[name] = seq.run(ql, qs)
         elif arm == "sl_wide":
@@ -506,10 +631,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
         elif arm in ("volsl_retrain", "rsz_xwide"):
-            alt, alt2 = alt
-            lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
-            tr_fix = train.assign(**{c: alt.loc[train.index, c] for c in lab})
-            seq_fix = Seq(test, alt.loc[test.index])
+            alt_f, alt2 = alt   # never rebind `alt`: it is the per-run (fixed, vol) pair every fold unpacks (f1a0-14 run 45532031095 died at fold 2)
+            lab = [c for c in alt_f.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: alt_f.loc[train.index, c] for c in lab})
+            seq_fix = Seq(test, alt_f.loc[test.index])
             fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
             tk["fixed"] = seq_fix.run(fl_, fs_)
             if arm == "volsl_retrain":
@@ -536,7 +661,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 info |= {"sharpe_split": sharpe(bs), "sharpe_base": sharpe(bb),
                          "sharpe_random_mean": float(np.nanmean([sharpe(bar_series(fx, pw)) or np.nan for pw in perms]))}
                 extra.append((fx, w, perms))
-        elif arm == "lim_paired":
+        elif arm in ("lim_paired", "lim_fallback"):
             fixed, lim = alt
             lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
             tr_fix = train.assign(**{c: fixed.loc[train.index, c] for c in lab})
@@ -551,7 +676,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
             arm_df = mk.copy()
             arm_df["net_r"], arm_df["gross_r"], arm_df["cost_r"], arm_df["reason"] = pick("net"), pick("gross"), pick("cost"), pick("reason").astype(int)
             tk["arm"] = arm_df
-            fill = float((arm_df.reason != -1).mean()) if len(arm_df) else 0.0
+            fill = float(((arm_df.reason >= 0) & (arm_df.reason < 10)).mean()) if len(arm_df) else 0.0
             ctl = []
             for _ in range(DRAWS):
                 keep = rng.random(len(mk)) < fill
@@ -559,11 +684,39 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 c.loc[~keep, ["net_r", "gross_r", "cost_r"]] = 0.0
                 ctl.append(c)
             tk["control"] = pd.concat(ctl, ignore_index=True)
-            filled = arm_df[arm_df.reason != -1]
+            filled = arm_df[(arm_df.reason >= 0) & (arm_df.reason < 10)]
             info |= {"fill_rate": fill, "filled_mean_net_r": float(filled.net_r.mean()) if len(filled) else None,
-                     "market_mean_net_r_same_rows_when_filled": float(mk.net_r.to_numpy()[arm_df.reason.to_numpy() != -1].mean()) if len(filled) else None,
-                     "market_mean_net_r_same_rows_when_unfilled": float(mk.net_r.to_numpy()[arm_df.reason.to_numpy() == -1].mean())
-                     if (arm_df.reason == -1).any() else None}
+                     "market_mean_net_r_same_rows_when_filled": float(mk.net_r.to_numpy()[((arm_df.reason >= 0) & (arm_df.reason < 10)).to_numpy()].mean()) if len(filled) else None,
+                     "market_mean_net_r_same_rows_when_unfilled": float(mk.net_r.to_numpy()[((arm_df.reason < 0) | (arm_df.reason >= 10)).to_numpy()].mean())
+                     if ((arm_df.reason < 0) | (arm_df.reason >= 10)).any() else None,
+                     "fallback_mean_net_r": float(arm_df.net_r[arm_df.reason >= 10].mean()) if (arm_df.reason >= 10).any() else None}
+        elif arm == "lim_choose":
+            fixed, lim = alt
+            lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: fixed.loc[train.index, c] for c in lab})
+            fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
+            mk = Seq(test, fixed.loc[test.index]).run(fl_, fs_)
+            tk["fixed"] = mk
+            chooser = fit_lim_chooser(train, fixed.loc[train.index], lim.loc[train.index], n_jobs)
+            key = test[["symbol", "ts"] + list(M.FEATURES)].assign(**{c: lim.loc[test.index, c].to_numpy() for c in lab})
+            key["ts"] = pd.to_datetime(key.ts, utc=True)
+            m = mk.assign(ts=pd.to_datetime(mk.ts, utc=True)).merge(key, on=["symbol", "ts"], how="left", validate="one_to_one")
+            lg = (m.side == "long").to_numpy()
+            pick = lambda k: np.where(lg, m[f"{k}_long"].to_numpy(), m[f"{k}_short"].to_numpy())  # noqa: E731
+            lim_df = mk.copy()
+            lim_df["net_r"], lim_df["gross_r"], lim_df["cost_r"], lim_df["reason"] = pick("net"), pick("gross"), pick("cost"), pick("reason").astype(int)
+            # provenance: predict -- the chooser's predicted (limit - market) net R for the side the market arm took; > 0 -> use the limit
+            pd_ = chooser.predict(np.column_stack([m[list(M.FEATURES)].to_numpy(float), np.where(lg, 1.0, -1.0)])) if len(m) else np.zeros(0)
+            use = pd_ > 0
+            tk["arm"] = choose_rows(mk, lim_df, use)
+            share = float(use.mean()) if len(use) else 0.0
+            tk["control"] = pd.concat([choose_rows(mk, lim_df, rng.random(len(mk)) < share) for _ in range(DRAWS)], ignore_index=True)
+            realised = lim_df.net_r.to_numpy() - mk.net_r.to_numpy()
+            info |= {"limit_share": share, "pred_delta_mean": float(pd_.mean()) if len(pd_) else None,
+                     "corr_pred_realised_delta": float(np.corrcoef(pd_, realised)[0, 1]) if len(pd_) > 2 and np.std(pd_) > 0 else None,
+                     "realised_delta_where_limit": float(realised[use].mean()) if use.any() else None,
+                     "realised_delta_where_market": float(realised[~use].mean()) if (~use).any() else None,
+                     "all_limit_delta": float(realised.mean()) if len(realised) else None}
         elif arm == "lim_xwide":
             fixed, lim = alt
             lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
@@ -647,14 +800,14 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
     if arm in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain"):
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm", ref)
-    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain")
+    ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain", "lim_fallback")
     v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
             "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
@@ -668,6 +821,21 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     if arm in ("long_mute", "regime_heads"):
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=["btc_ret168", "btc_vol_pct90d"]).reset_index(drop=True)
+    if arm == "oi_feats":
+        tab = tab.reset_index(drop=True)
+        oc = oi_columns(cache, syms, tab)
+        have = oc.notna().any(axis=1).to_numpy()
+        pb = pd.DataFrame(np.nan, index=oc.index, columns=OI_FEATURES)
+        if have.any():
+            sub = tab[have].reset_index(drop=True)
+            pb.loc[have, OI_FEATURES] = shuffle_ts(sub, oc[have].reset_index(drop=True)).to_numpy()
+        tab = pd.concat([tab, oc, pb.add_prefix("pb_")], axis=1)
+    if arm == "fund_feats":
+        tab = tab.reset_index(drop=True)
+        fc = fund_columns(cache, syms, tab)
+        ok = fc[["fund", "fund_ma3d", "fund_z"]].notna().all(axis=1).to_numpy()
+        tab, fc = tab[ok].reset_index(drop=True), fc[ok].reset_index(drop=True)
+        tab = pd.concat([tab, fc, shuffle_ts(tab, fc).add_prefix("pb_")], axis=1)
     if arm == "book_feats":
         bc = book_columns(tab)
         pb = shuffle_ts(tab, bc).add_prefix("pb_")
@@ -684,9 +852,9 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         volsl = alt_labels(cache, syms, tab, sl_of, TP_XWIDE / SL_XWIDE) if arm == "volsl_retrain" else fixed
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & volsl["net_long"].notna() & volsl["net_short"].notna()).to_numpy()
         return tab[ok], (fixed[ok], volsl[ok])
-    if arm in ("lim_xwide", "lim_paired"):
+    if arm in ("lim_xwide", "lim_paired", "lim_fallback", "lim_choose"):
         fixed = alt_labels(cache, syms, tab, SL_XWIDE, TP_XWIDE)
-        lim = lim_labels(cache, syms, tab)
+        lim = lim_labels(cache, syms, tab, fallback=arm == "lim_fallback")
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & lim["net_long"].notna() & lim["net_short"].notna()).to_numpy()
         return tab[ok], (fixed[ok], lim[ok])
     if arm == "rsw_xwide_h48":
@@ -824,6 +992,51 @@ def _self_test() -> None:
         assert all(lab.reason_long.iloc[j] == -1 and lab.net_long.iloc[j] == 0.0 for j in miss)
         assert all(lab.reason_long.iloc[j] == 0 and abs(lab.gross_long.iloc[j] - 0.125) < 1e-9 for j in hit), lab.iloc[hit]
         assert all(0.0225 <= lab.cost_long.iloc[j] < 0.03 for j in hit) and (lab.reason_short.dropna() == -1).all()
+        fb = lim_labels(Path(td), ["A"], tabl, fallback=True)
+        okfb = fb.net_long.notna().to_numpy()
+        assert all(fb.reason_long.iloc[j] == 10 and abs(fb.gross_long.iloc[j]) < 1e-9 and fb.cost_long.iloc[j] > lab.cost_long.iloc[hit[0]]
+                   for j in miss if okfb[j]), fb.iloc[miss]   # flat path: a market fallback earns 0 gross and pays the full taker cost
+        assert (fb.reason_short.dropna() == 10).all()
+    # lim_choose: the chooser learns a delta that follows a feature (limit pays when ret_24 > 0, market otherwise), and choose_rows picks per row
+    rg = np.random.default_rng(3)
+    n_c = 6000
+    trc = pd.DataFrame({f: rg.normal(size=n_c) for f in M.FEATURES})
+    fx = pd.DataFrame({"net_long": rg.normal(size=n_c), "net_short": rg.normal(size=n_c)})
+    sig = np.where(trc.ret_24.to_numpy() > 0, 0.5, -0.5)
+    lm = pd.DataFrame({"net_long": fx.net_long + sig + rg.normal(0, 0.3, n_c), "net_short": fx.net_short + sig + rg.normal(0, 0.3, n_c)})
+    ch = fit_lim_chooser(trc, fx, lm, 2)
+    te = pd.DataFrame({f: rg.normal(size=400) for f in M.FEATURES})
+    pr = ch.predict(np.column_stack([te[list(M.FEATURES)].to_numpy(float), np.ones(400)]))
+    assert ((pr > 0) == (te.ret_24.to_numpy() > 0)).mean() > 0.9
+    mk_ = pd.DataFrame({"net_r": [1.0, 2.0], "gross_r": [1.0, 2.0], "cost_r": [0.0, 0.0], "reason": [1, 1]})
+    li_ = pd.DataFrame({"net_r": [5.0, 6.0], "gross_r": [5.0, 6.0], "cost_r": [0.0, 0.0], "reason": [0, -1]})
+    out_ = choose_rows(mk_, li_, np.array([True, False]))
+    assert out_.net_r.tolist() == [5.0, 2.0] and out_.reason.tolist() == [0, 1]
+    # fund_feats: as-of join is causal (a print stamped AFTER the close is not seen; one AT the close is), and the rolling windows are the documented ones
+    fts = pd.date_range("2024-01-01", periods=120, freq="8h", tz="UTC")
+    fdf = pd.DataFrame({"ts": fts, "last_funding_rate": np.arange(120, dtype=float) * 1e-5})
+    q = fund_asof(fdf, pd.Series([fts[100] - pd.Timedelta(minutes=1), fts[100], fts[0] - pd.Timedelta(hours=1)]))
+    assert abs(q.fund.iloc[0] - 99e-5) < 1e-12 and abs(q.fund.iloc[1] - 100e-5) < 1e-12 and np.isnan(q.fund.iloc[2])
+    assert abs(q.fund_ma3d.iloc[1] - np.mean(np.arange(92, 101)) * 1e-5) < 1e-12 and np.isfinite(q.fund_z.iloc[1])
+    assert fund_asof(pd.DataFrame(), pd.Series(fts[:2])).isna().all().all()
+    # oi_feats: hourly features joined to decision rows; a row before the metrics start is NaN; the join is on (symbol, ts) with tz-aware keys
+    import prop_ml_leg as P
+    with tempfile.TemporaryDirectory() as td2:
+        kts = pd.date_range("2021-11-20", periods=24 * 40, freq="1h", tz="UTC")
+        pd.DataFrame({"ts": kts, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}).to_pickle(Path(td2) / "AUSDT.pkl")
+        mts = pd.date_range("2021-12-01", periods=12 * 24 * 25, freq="5min", tz="UTC")
+        met = pd.DataFrame({"ts": mts, "sum_open_interest": 1.0, "sum_open_interest_value": np.linspace(100, 200, len(mts)),
+                            "count_toptrader_long_short_ratio": 1.5, "sum_toptrader_long_short_ratio": 1.2, "count_long_short_ratio": 0.9,
+                            "sum_taker_long_short_vol_ratio": 1.1})
+        real = P.fetch_metrics
+        P.fetch_metrics = lambda cache, syms: {"AUSDT": met}
+        try:
+            tabo = pd.DataFrame({"symbol": ["AUSDT", "AUSDT"], "ts": [kts[24], kts[24 * 30]]})
+            oc = oi_columns(Path(td2), ["AUSDT"], tabo)
+        finally:
+            P.fetch_metrics = real
+        assert list(oc.columns) == OI_FEATURES and oc.iloc[0].isna().all(), oc
+        assert abs(oc.taker_ratio.iloc[1] - np.log(1.1)) < 1e-9 and oc.oi_chg24.iloc[1] > 0
     print("self-test ok")
 
 

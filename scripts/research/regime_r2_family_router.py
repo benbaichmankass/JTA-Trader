@@ -51,6 +51,13 @@ statistic and within-week permutation control as R4. Classifiers (fixed, no sear
   hmm2    a 2-state Gaussian HMM on weekly BTC log returns, fit by EM on weeks before TEST_START only; the week's cell is the FILTERED (forward) most
           probable state given returns through the previous week.
 Two classifiers, so each needs permutation share <= 0.025.
+
+R3 DECOMPOSITION (``--books symbol --mode decomp``, unit RQ-20261125-f1a0-23, RULE-REGIME-R3-DECOMP-20261125), from the f1a0-20 PASS (run 45517557704:
+hmm2 +0.0247 t 3.87, advol +0.0134 t 2.02, both permutation share 0.00): the HMM put 239 of 251 test weeks in ONE state, so its tilt is close to "the
+book's prior expanding mean". This mode adds the NO-STATE arm (the same tilt rule with a single cell: the book's mean over ALL prior weeks) and grades
+each classifier AGAINST it, week-paired: d_w = (state-tilt weighted R - no-state weighted R) / trades in week w; delta = sum / total trades, se from
+1,000 week-bootstrap draws. A state classifier ADDS information beyond book quality iff delta >= +0.005 R/trade AND t >= 2 AND >= 3 of 5 years > 0.
+The no-state arm is also graded on its own under RULE_STATE (vs equal risk, permutation control).
 """
 from __future__ import annotations
 
@@ -448,7 +455,64 @@ def tilt_verdict(g: Dict[str, Any], rule: Dict[str, Any] = RULE_TILT) -> Tuple[s
     return "indeterminate", chk
 
 
+RULE_DECOMP = {"id": "RULE-REGIME-R3-DECOMP-20261125", "min_delta_r": 0.005, "min_t": 2.0, "min_years_positive": 3}
+
+
+def tilt_week_sums(f: pd.DataFrame, test_weeks: Sequence[pd.Timestamp], raw_all: pd.Series) -> pd.DataFrame:
+    """Per test week: weighted R (renormalised tilt), unweighted R and trades."""
+    sel = f.week.isin(test_weeks) & (f.y_n > 0)
+    t = f[sel].reset_index(drop=True)
+    w = tilt_weights(t, raw_all[sel].to_numpy(float))
+    d = pd.DataFrame({"week": t.week, "wr": w * t.y_sum.to_numpy(float), "r": t.y_sum.to_numpy(float), "n": t.y_n.to_numpy(float)})
+    return d.groupby("week").sum()
+
+
+def paired_delta(a: pd.DataFrame, b: pd.DataFrame, rng: np.random.Generator) -> Dict[str, Any]:
+    """Week-paired difference of two tilts' weighted R per trade on the same trades."""
+    j = a.join(b, lsuffix="_a", rsuffix="_b", how="inner")
+    da, n = (j.wr_a - j.wr_b).to_numpy(), j.n_a.to_numpy()
+    delta = float(da.sum() / n.sum())
+    W = len(j)
+    boots = [float(da[ix].sum() / n[ix].sum()) for ix in (rng.integers(0, W, W) for _ in range(N_BOOT))]
+    se = float(np.std(boots))
+    years = {}
+    for y in sorted({x.year for x in j.index}):
+        m = np.array([x.year == y for x in j.index])
+        years[str(y)] = round(float(da[m].sum() / n[m].sum()), 4)
+    return {"n_weeks": W, "delta": round(delta, 5), "se_week_boot": round(se, 5), "t": round(delta / se, 3) if se > 0 else None, "yearly_delta": years}
+
+
+def decomp_verdict(d: Dict[str, Any], rule: Dict[str, Any] = RULE_DECOMP) -> str:
+    yp = sum(1 for v in d["yearly_delta"].values() if v > 0)
+    if d["delta"] >= rule["min_delta_r"] and (d["t"] or 0) >= rule["min_t"] and yp >= rule["min_years_positive"]:
+        return "pass"
+    if d["delta"] <= 0:
+        return "fail"
+    return "indeterminate"
+
+
 def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family", mode: str = "route", btc: Optional[pd.Series] = None) -> Dict[str, Any]:
+    if mode == "decomp":
+        S, N = weekly_books(trades, level)
+        f = features(S, N)
+        test_weeks = [w for w in S.index if w >= pd.Timestamp(TEST_START)]
+        btc = btc if btc is not None else btc_daily()
+        none_cells = pd.Series("all", index=S.index)
+        raws = {"nostate": state_raw(f, none_cells), "advol": state_raw(f, cells_advol(btc, list(S.index))),
+                "hmm2": state_raw(f, cells_hmm2(btc, list(S.index))[0])}
+        sums = {k: tilt_week_sums(f, test_weeks, r) for k, r in raws.items()}
+        g = grade_tilt(f, test_weeks, np.random.default_rng(seed), raw_all=raws["nostate"])
+        v, g["checks"] = tilt_verdict(g, RULE_STATE)
+        g["verdict"] = v
+        arms = {"nostate_vs_equal": g}
+        verdicts = {}
+        for k in ("advol", "hmm2"):
+            d = paired_delta(sums[k], sums["nostate"], np.random.default_rng(seed + 1))
+            d["verdict"] = verdicts[k] = decomp_verdict(d)
+            arms[f"{k}_vs_nostate"] = d
+        uv = "pass" if "pass" in verdicts.values() else ("fail" if all(x == "fail" for x in verdicts.values()) else "indeterminate")
+        census = {"n_books": int(S.shape[1]), "trades": int(N.to_numpy().sum()), "sum_r": round(float(S.to_numpy().sum()), 2)}
+        return {"arms": arms, "verdict": uv, "books": census, "n_test_weeks": len(test_weeks), "level": level, "mode": mode, "rule": RULE_DECOMP}
     if mode == "state":
         S, N = weekly_books(trades, level)
         f = features(S, N)
@@ -499,7 +563,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--out", default="/tmp/regime_r2")
     ap.add_argument("--unit", default="")
     ap.add_argument("--books", choices=["family", "symbol"], default="family")
-    ap.add_argument("--mode", choices=["route", "tilt", "state"], default="route")
+    ap.add_argument("--mode", choices=["route", "tilt", "state", "decomp"], default="route")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -516,7 +580,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     pop = (f"backtest trade corpus (cf_bulk.TRADE_GLOBS, {counts.get('files')} files, {counts.get('distinct_jobs')} distinct jobs) -> {len(trades)} unique crypto "
            f"trades of {list(FAMILIES)} with entries {DATA_START}..{DATA_END} (variants averaged), {m['books']['n_books'] if a.books == 'symbol' else 8} {'family x symbol x direction' if a.books == 'symbol' else 'family x direction'} books, weekly; test weeks "
            f"{TEST_START}..{DATA_END} ({m['n_test_weeks']}); harness net_r (fee + slippage + funding)")
-    why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']} random share {g['random']['share_ge_arm']} trade share {g['trade_share']}"
+    why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']}" + (f" random share {g['random']['share_ge_arm']}" if "random" in g else "")
                     for k, g in m["arms"].items())
     dw = {"data_start": DATA_START, "data_end": DATA_END, "test_start": TEST_START, "corpus_sha256": fp, "n_unique_trades": int(len(trades)),
           "n_files": counts.get("files")}
@@ -599,6 +663,9 @@ def _self_test() -> int:
     ms_ = run(trd, level="symbol", mode="state", btc=btc_)
     check("state mode: a trend-conditioned edge is found by advol", ms_["arms"]["advol"]["delta"] > 0.02
           and ms_["arms"]["advol"]["random"]["share_ge_arm"] <= 0.05)
+    md_ = run(trd, level="symbol", mode="decomp", btc=btc_)
+    check("decomp: a trend-conditioned edge is regime information beyond book quality (advol beats no-state)",
+          md_["arms"]["advol_vs_nostate"]["delta"] > 0.01 and md_["arms"]["advol_vs_nostate"]["verdict"] == "pass")
     check("verdict mapping", unit_verdict({"a": "fail", "b": "indeterminate"}) == "indeterminate" and unit_verdict({"a": "fail", "b": "fail"}) == "fail")
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
