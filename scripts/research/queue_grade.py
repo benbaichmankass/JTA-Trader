@@ -353,6 +353,38 @@ CONFIRM_WAIT_MAX_DAYS = 366
 _HOLDOUT_INPUTS = {
     "m20-exit-lever-sweep.yml": {"holdout_frac": "0.25"},
 }
+#: COMMAND-LEVEL holdout (RESEARCH-UNBLOCK-BUILDS-W48, 2026-11-25): a generic-runner unit whose script
+#: grades `--grade <from>` and also carries `--grade <to>` (the same rule with the pre-registered holdout
+#: in ONE run) is confirmed by re-running that command with `<to>` NOW -- the same "Holdout re-run"
+#: policy as `_HOLDOUT_INPUTS`, keyed on the script because research-script-run.yml has no holdout input.
+#: Before this map every roster-walkforward `sweep` PASS opened a forward-wait unit `blocked` for want of a
+#: window input (9 such units on 2026-11-25, not_before 2027-01).
+_HOLDOUT_COMMANDS: Dict[str, Dict[str, Any]] = {
+    "scripts/research/exit_lever_ablation.py": {
+        "workflows": ("research-script-run.yml",),
+        "grade_from": "sweep", "grade_to": "sweep_holdout", "holdout_frac": "0.25",
+    },
+}
+
+
+def holdout_command(run: Dict[str, Any], child_id: str) -> Optional[Tuple[List[str], str]]:
+    """(the command re-pointed at its holdout grade, holdout_frac) when the unit's run can hold out
+    (`_HOLDOUT_COMMANDS`), else None. Pure; the command keeps every flag of the PASS run."""
+    cmd = run.get("command")
+    if not isinstance(cmd, list) or len(cmd) < 2 or "--grade" not in cmd:
+        return None
+    spec = _HOLDOUT_COMMANDS.get(str(cmd[1]))
+    if spec is None or str(run.get("workflow") or "") not in spec["workflows"]:
+        return None
+    i = cmd.index("--grade")
+    if i + 1 >= len(cmd) or str(cmd[i + 1]) != spec["grade_from"]:
+        return None
+    if any(str(t).startswith("--holdout-") or str(t) == "--research-unit" for t in cmd):
+        return None    # the run already declares its own holdout / unit stamp: a session's design, not ours
+    out = [str(t) for t in cmd]
+    out[i + 1] = spec["grade_to"]
+    out += ["--holdout-frac", spec["holdout_frac"], "--research-unit", child_id]
+    return out, spec["holdout_frac"]
 _HOLDOUT_POLICY = ("operator 2026-10-16 (popup, 'Holdout re-run'): \"From now on, each sweep holds back the "
                    "most recent ~25% of history before it chooses settings, then tests the winner on that "
                    "held-back part, so discovery and confirmation come from one run with no wait. The 13 "
@@ -360,8 +392,8 @@ _HOLDOUT_POLICY = ("operator 2026-10-16 (popup, 'Holdout re-run'): \"From now on
                    "less data.\"")
 #: FORWARD-WAIT workflows (a window input, no holdout input): workflow -> fn(after) giving the input
 #: overrides that confine the evidence to data after the PASS run. EMPTY today: m20 confirms by
-#: holdout re-run (`_HOLDOUT_INPUTS`), and no other harness can express a window yet
-#: (PI-20261016-QOTFUEXV-0002). A PASS on a workflow in neither map gets its confirmation unit
+#: holdout re-run (`_HOLDOUT_INPUTS`), exit_lever_ablation sweeps by a command-level one
+#: (`_HOLDOUT_COMMANDS`, 2026-11-25), and no other harness can express a window yet (PI-20261016-QOTFUEXV-0002). A PASS on a workflow in neither map gets its confirmation unit
 #: authored `blocked` with the reason, never a same-window re-run labelled fresh.
 _FRESH_WINDOW_INPUTS: Dict[str, Any] = {}
 _POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a template cell is a "
@@ -449,6 +481,9 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str,
     wf = str(run.get("workflow") or "")
     if wf in _HOLDOUT_INPUTS:
         return _holdout_rerun_unit(unit, g, child_id, run, header)
+    hc = holdout_command(run, child_id)
+    if hc is not None:
+        return _holdout_rerun_unit(unit, g, child_id, {**run, "command": hc[0]}, header, frac=hc[1])
     window_fn = _FRESH_WINDOW_INPUTS.get(wf)
     wait_days, wait_basis = forward_wait_days(unit, g)
     blocked = None
@@ -507,7 +542,7 @@ _GRADER_HEADER = ("# AUTHORED by scripts/research/queue_grade.py: the one confir
 
 
 def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, run: Dict[str, Any],
-                        header: Optional[str]) -> str:
+                        header: Optional[str], frac: Optional[str] = None) -> str:
     """The confirmation of a PASS that did NOT hold out, on a workflow that can: the SAME run
     re-dispatched NOW with the pre-registered holdout (`_HOLDOUT_INPUTS`). Discovery is re-done on
     the earlier span, ONLY the cells it selects are graded once on the held-back latest span, and
@@ -515,10 +550,12 @@ def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, 
     yaml = _yaml()
     pid = str(unit.get("id"))
     wf = str(run.get("workflow") or "")
-    inputs = {**(run.get("inputs") or {}), **_HOLDOUT_INPUTS[wf]}
-    if isinstance(g.get("holdout_frac"), str):
-        inputs["holdout_frac"] = g["holdout_frac"]
-    run = {**run, "inputs": inputs}
+    if frac is None:    # workflow-input holdout (_HOLDOUT_INPUTS); a command-level one passes `frac`
+        inputs = {**(run.get("inputs") or {}), **_HOLDOUT_INPUTS[wf]}
+        if isinstance(g.get("holdout_frac"), str):
+            inputs["holdout_frac"] = g["holdout_frac"]
+        run = {**run, "inputs": inputs}
+        frac = inputs["holdout_frac"]
     n_cells = g.get("cells_swept")
     cells = list(g.get("passing_cells") or [])
     out: Dict[str, Any] = {"id": child_id,
@@ -531,14 +568,14 @@ def _holdout_rerun_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str, 
             out[k] = _swap_id(v, pid, child_id) if k == "lands" else v
     out["roadmap"] = confirmation_roadmap(unit)
     out["question"] = (f"HOLDOUT RE-RUN of {pid}'s single-window PASS: with the latest ~"
-                       f"{inputs['holdout_frac']} of each leg's history held back BEFORE selection, does a "
+                       f"{frac} of each leg's history held back BEFORE selection, does a "
                        "cell still clear the SAME registered gate on the earlier span, and does it hold on the "
                        f"held-back span? Original question: {unit.get('question')}")
     out["run"] = run
     out["requires_result"] = {"unit": pid, "verdict": "pass"}
     out["confirmation"] = {
         "of": pid, "mode": "holdout_rerun", "policy": _HOLDOUT_POLICY,
-        "holdout_frac": inputs["holdout_frac"],
+        "holdout_frac": frac,
         "selected_from_cells": n_cells if isinstance(n_cells, int) else None,
         "passing_cells": cells,
         "note": (f"{pid} PASSED on one full-history window, selected from "
@@ -771,12 +808,63 @@ def _superseded_by(root: Path, unit: Dict[str, Any]) -> Optional[str]:
     return live[0]["id"] if live else None
 
 
+def holdout_rerun_id(parent_id: str, graded_at: str) -> str:
+    """Deterministic id of a holdout re-run that REPLACES a blocked forward-wait confirmation
+    (`_rearm_forward_wait`). Seeded apart from `confirm_unit_id` so the two can never collide."""
+    import hashlib
+    h4 = hashlib.sha256(f"holdout:{parent_id}".encode()).hexdigest()[:4]
+    return f"RQ-{graded_at.replace('-', '')[:8]}-{h4}-01"
+
+
+def _rearm_forward_wait(root: Path, unit: Dict[str, Any], text: str,
+                        graded_at: str) -> Optional[Tuple[str, Tuple[str, str]]]:
+    """A forward-wait confirmation authored `blocked` because its workflow had no window input, whose
+    PASS can now be confirmed by a COMMAND-LEVEL holdout re-run (`_HOLDOUT_COMMANDS`): open that re-run
+    and retire this unit as superseded by it, in one grade (so --verify reproduces both). Only while the
+    parent's latest grade is still a PASS and no holdout re-run of it is live; never a unit that fired."""
+    pid = confirmation_of(unit)
+    if (not pid or confirmation_mode(unit) != "forward_wait" or unit.get("status") != "blocked"
+            or unit.get("last_dispatched_at")):
+        return None
+    cid = holdout_rerun_id(pid, graded_at)
+    if any(c["mode"] == "holdout_rerun" and c["status"] != "retired" and c["id"] != cid
+           for c in confirmations_for(root, pid)):
+        return None    # another live re-run exists: `_superseded_by` retires this unit
+    ppath = root / QUEUE / f"{pid}.yaml"
+    if not ppath.is_file():
+        return None
+    yaml = _yaml()
+    try:
+        parent = yaml.safe_load(ppath.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None
+    pg = parent.get("grading") if isinstance(parent.get("grading"), dict) else {}
+    if not isinstance(parent, dict) or pg.get("verdict") != "pass":
+        return None
+    if holdout_command(_swap_id(parent.get("run") or {}, pid, cid), cid) is None:
+        return None
+    g = {"cells_swept": pg.get("selected_from_cells"), "passing_cells": pg.get("passing_cells") or []}
+    child = confirmation_unit(parent, g, cid)
+    taken = root / QUEUE / f"{cid}.yaml"
+    if taken.is_file() and taken.read_text(encoding="utf-8") != child:
+        return None    # a different file holds the id (hand-edited, or a hash collision): a session reads it
+    new = apply_text(text, {"status": "retired", "reset_stamp": False, "grading": {
+        "auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py",
+        "superseded_by": cid, "verdict": None,
+        "note": (f"forward-wait confirmation (blocked: no window input) superseded by the command-level holdout "
+                 f"re-run {cid} of the same PASS (operator 2026-10-16, 'Holdout re-run'; "
+                 "RESEARCH-UNBLOCK-BUILDS-W48); never dispatched")}})
+    return new, (cid, child)
+
+
 def grade_unit_full(root: Path, unit_id: str, text: str,
                     graded_at: str) -> Optional[Tuple[str, Optional[Tuple[str, str]]]]:
     """(new unit text, (child id, child text) | None), or None when nothing is to be written. The
     child is the fresh-window confirmation unit a template-cell PASS opens (`confirmation_unit`)."""
     yaml = _yaml()
     unit = yaml.safe_load(text)
+    if isinstance(unit, dict) and (re_ := _rearm_forward_wait(root, unit, text, graded_at)):
+        return re_
     if isinstance(unit, dict) and (sup := _superseded_by(root, unit)):
         new = apply_text(text, {"status": "retired", "reset_stamp": False, "grading": {
             "auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py",
