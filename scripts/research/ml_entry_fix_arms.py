@@ -54,6 +54,11 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 0 R and keeps the symbol busy for the window. Graded per DECISION vs the same decisions entered at market (the one factor is the
                 entry order); control: the market outcomes of the same decisions thinned AT RANDOM to the arm's fill rate (100 draws), so a pass
                 means the fill SELECTION + price beats random thinning, not just fewer trades.
+  lim_paired    ITERATION 2 of lim_xwide (f1a0-17 INDETERMINATE +0.0052 vs market, t 0.64; +0.0088 vs random thinning, t 1.97; fill ~65%; cost
+                0.037 -> 0.017 R/decision): lim_xwide's arm took MORE decisions than the market arm (an unfilled order frees the symbol after LIM_W
+                hours, not 24), which adds noise unrelated to the entry order. lim_paired scores the limit entry on EXACTLY the market arm's taken
+                decisions (same rows, same sides; unfilled = 0 R), so the one factor is the entry order and the comparison is paired per decision.
+                Control: the same rows' market outcomes thinned at random to the arm's fill rate (100 draws).
   rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
                 training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
                 vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
@@ -87,7 +92,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -531,6 +536,34 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 info |= {"sharpe_split": sharpe(bs), "sharpe_base": sharpe(bb),
                          "sharpe_random_mean": float(np.nanmean([sharpe(bar_series(fx, pw)) or np.nan for pw in perms]))}
                 extra.append((fx, w, perms))
+        elif arm == "lim_paired":
+            fixed, lim = alt
+            lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: fixed.loc[train.index, c] for c in lab})
+            fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
+            mk = Seq(test, fixed.loc[test.index]).run(fl_, fs_)
+            tk["fixed"] = mk
+            key = test[["symbol", "ts"]].assign(**{c: lim.loc[test.index, c].to_numpy() for c in lab})
+            key["ts"] = pd.to_datetime(key.ts, utc=True)
+            m = mk.assign(ts=pd.to_datetime(mk.ts, utc=True)).merge(key, on=["symbol", "ts"], how="left", validate="one_to_one")
+            lg = (m.side == "long").to_numpy()
+            pick = lambda k: np.where(lg, m[f"{k}_long"].to_numpy(), m[f"{k}_short"].to_numpy())  # noqa: E731
+            arm_df = mk.copy()
+            arm_df["net_r"], arm_df["gross_r"], arm_df["cost_r"], arm_df["reason"] = pick("net"), pick("gross"), pick("cost"), pick("reason").astype(int)
+            tk["arm"] = arm_df
+            fill = float((arm_df.reason != -1).mean()) if len(arm_df) else 0.0
+            ctl = []
+            for _ in range(DRAWS):
+                keep = rng.random(len(mk)) < fill
+                c = mk.copy()
+                c.loc[~keep, ["net_r", "gross_r", "cost_r"]] = 0.0
+                ctl.append(c)
+            tk["control"] = pd.concat(ctl, ignore_index=True)
+            filled = arm_df[arm_df.reason != -1]
+            info |= {"fill_rate": fill, "filled_mean_net_r": float(filled.net_r.mean()) if len(filled) else None,
+                     "market_mean_net_r_same_rows_when_filled": float(mk.net_r.to_numpy()[arm_df.reason.to_numpy() != -1].mean()) if len(filled) else None,
+                     "market_mean_net_r_same_rows_when_unfilled": float(mk.net_r.to_numpy()[arm_df.reason.to_numpy() == -1].mean())
+                     if (arm_df.reason == -1).any() else None}
         elif arm == "lim_xwide":
             fixed, lim = alt
             lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
@@ -614,7 +647,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
@@ -651,7 +684,7 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         volsl = alt_labels(cache, syms, tab, sl_of, TP_XWIDE / SL_XWIDE) if arm == "volsl_retrain" else fixed
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & volsl["net_long"].notna() & volsl["net_short"].notna()).to_numpy()
         return tab[ok], (fixed[ok], volsl[ok])
-    if arm == "lim_xwide":
+    if arm in ("lim_xwide", "lim_paired"):
         fixed = alt_labels(cache, syms, tab, SL_XWIDE, TP_XWIDE)
         lim = lim_labels(cache, syms, tab)
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & lim["net_long"].notna() & lim["net_short"].notna()).to_numpy()
