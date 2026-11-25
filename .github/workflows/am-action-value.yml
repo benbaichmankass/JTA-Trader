@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       classes:
-        description: "ONE class: av_bank | av_tighten | av_loosen | av_family | mf_tighten_random | mf_tighten_fixed | av_tighten_late"
+        description: "ONE class: av_bank | av_tighten | av_loosen | av_family | mf_tighten_random | mf_tighten_fixed | av_tighten_late | mf_tighten_causal | mf_tighten_fixed_cc"
         required: true
       research_unit:
         description: "The queue unit that dispatched this run (RQ-YYYYMMDD-xxxx-NN); empty for a manual run (lands under _unattributed)"
@@ -87,7 +87,7 @@ jobs:
         env:
           CLS: ${{ inputs.classes }}
         run: |
-          case "$CLS" in av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late) ;; *) echo "classes must be ONE of av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late, got '$CLS'"; exit 2;; esac
+          case "$CLS" in av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late|mf_tighten_causal|mf_tighten_fixed_cc) ;; *) echo "classes must be ONE of av_bank|av_tighten|av_loosen|av_family|mf_tighten_random|mf_tighten_fixed|av_tighten_late|mf_tighten_causal|mf_tighten_fixed_cc, got '$CLS'"; exit 2;; esac
       - name: Pin the trade corpus to corpus_sha (code stays at the dispatch ref)
         if: ${{ inputs.corpus_sha != '' }}
         env:
