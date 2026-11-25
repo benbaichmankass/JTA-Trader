@@ -126,6 +126,28 @@ def test_prop_package_carries_all_its_accounts_and_the_prop_label():
     assert wt.ltr_label(p["entries"]) == "prop"
 
 
+def test_a_failed_marker_entry_blocks_a_repost_for_ten_minutes_then_is_due_again():
+    """LTR-FAILED-MARKER-RETRY: a could_not_commit wake started no reviewer; it must not suppress the review forever."""
+    import sys as _s
+    from datetime import datetime, timedelta, timezone
+    from pathlib import Path as _P
+    _s.path.insert(0, str(_P(__file__).resolve().parents[1] / "scripts" / "ops"))
+    import live_review_wake as wake
+    now = datetime(2026, 11, 25, 19, 40, tzinfo=timezone.utc)
+    cfg = wake.load_cfg()
+    acct = sorted(cfg["accounts"])[0]
+    doc = {"read_state": "looked", "due_count": 1, "generated_at": now.isoformat(),
+           "due": [{"order_package_id": "pkg-1", "account_id": acct, "telemetry_updated_at": now.isoformat(),
+                    "events": [{"event": "near_target", "level": 1, "why": "x"}]}]}
+    ent = {"order_package_id": "pkg-1", "event": "near_target", "level": 1, "evidence_state": "could_not_commit"}
+
+    def marker(at, e):
+        return [{"kind": "wake", "posted_at": at.isoformat(), "entries": [e]}]
+    assert wake.plan(doc, marker(now - timedelta(minutes=3), ent), cfg, now)["kind"] != "wake"   # just posted
+    assert wake.plan(doc, marker(now - timedelta(minutes=12), ent), cfg, now)["kind"] == "wake"  # retried
+    ok = dict(ent, evidence_state="committed")
+    assert wake.plan(doc, marker(now - timedelta(minutes=12), ok), cfg, now)["kind"] != "wake"   # a good one stays deduped
+
 def test_a_build_timeout_names_the_reads_still_in_flight(monkeypatch):
     """LTR-PACKET-BUILD-TIMEOUT: could_not_build used to record only 'TimeoutExpired'."""
     import subprocess as sp
