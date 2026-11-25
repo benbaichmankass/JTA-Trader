@@ -131,6 +131,23 @@ flags, never defaults chosen here:
     ``scripts/ops/mandate_resolver.py`` clause ``R-HOLDOUT`` reads from a Stage-0 record
     (``source_run`` is null here: whoever writes the record points it at the committed
     ``verdict.json``).
+  * ``sweep_holdout`` (RESEARCH-UNBLOCK-BUILDS-W48, 2026-11-25) -- the ``sweep`` rule with discovery and
+    confirmation in ONE run, so a roster-walkforward ``sweep`` PASS is confirmed NOW (queue_grade's holdout
+    re-run) instead of a forward wait of ~60 days. The boundary is placed exactly as ``holdout`` places it
+    (``--holdout-frac`` / ``--holdout-min-trades`` / ``--holdout-max-frac``, the BASELINE arm's entry times
+    only). DISCOVERY: every arm's trades whose entry AND exit precede the boundary (``HoldoutLeak`` on
+    anything else), folded on ``--folds`` calendar spans of [start, boundary); the ``sweep`` rule is applied
+    VERBATIM to those discovery arms (same ``--delta-r`` / ``--fold-majority`` / ``--n-floor``, maxDD
+    recomputed from each arm's discovery trades in exit order). HOLDOUT: the ONE candidate the sweep rule
+    selects is read ONCE against the baseline on trades entered in [boundary, end]; it holds iff
+    net R(C) >= net R(B) AND maxDD(C) <= maxDD(B) with one of them strict (m20's ``beats``, Path A).
+      pass / ``confirmed``              if the baseline holds >= --holdout-min-trades held-back trades and C holds;
+      fail / ``not_replicated``         if the floor is met and C does not hold (closes the configuration);
+      fail / ``no_discovery``           if the sweep rule selects nothing on discovery;
+      indeterminate / ``insufficient_discovery`` if the discovery baseline n < --n-floor;
+      indeterminate / ``underpowered``  if the baseline holds < --holdout-min-trades held-back trades;
+      indeterminate / ``control_failed`` / ``premise_failed`` as ``sweep``.
+    It writes the same ``holdout_confirmation`` block as ``holdout``.
   * ``risk_adjusted`` (AM-RISK-ADJUSTED-RULE, operator decision 2026-10-29: *"Small R cost for big risk cut"*) --
     the named rule ``RULE-AM-RISK-ADJUSTED-V1`` for an active-management action class, graded on the arms' whole
     BOOKS (``<out>/arms/<label>__trades.jsonl``) by ``am_risk_adjusted.grade_risk_adjusted``: R1 R given up per
@@ -162,7 +179,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
 VERDICTS = ("pass", "fail", "indeterminate")
-GRADES = ("parity", "sweep", "stage0", "replace", "holdout", "risk_adjusted", "paired")
+GRADES = ("parity", "sweep", "stage0", "replace", "holdout", "risk_adjusted", "paired", "sweep_holdout")
 N_FOLDS = 4
 
 
@@ -806,6 +823,79 @@ def holdout_confirmation(g: dict[str, Any], *, fingerprint: str | None, cost_sta
             "expectancy_r_holdout": held.get("expectancy_r"), "cost_stack": cost_stack, "source_run": None}
 
 
+def _span_max_dd(trades: list[dict[str, Any]]) -> float:
+    """Peak-to-trough of cumulative net R over ``trades`` in exit order (entry order when no exit), as a
+    positive magnitude -- the harness's ``max_drawdown_r`` convention, recomputed on a sub-span."""
+    keyed = sorted(trades, key=lambda t: _ts(t.get("exit_time") or t["entry_time"]))
+    cum = peak = dd = 0.0
+    for t in keyed:
+        cum += float(t.get("net_r") or 0.0)
+        peak = max(peak, cum)
+        dd = max(dd, peak - cum)
+    return round(dd, 4)
+
+
+def _sub_arm(trades: list[dict[str, Any]], edges: list[Any] | None) -> dict[str, Any]:
+    """The sweep grader's arm shape (n, net_r, max_drawdown_r, folds) over one span's trades."""
+    out = {"n": len(trades), "net_r": round(sum(float(t.get("net_r") or 0.0) for t in trades), 4),
+           "max_drawdown_r": _span_max_dd(trades)}
+    out["expectancy_r"] = round(out["net_r"] / out["n"], 4) if out["n"] else None
+    if edges is not None:
+        out["folds"] = fold_net_r(trades, edges)
+    return out
+
+
+def _holds(c: dict[str, Any], b: dict[str, Any]) -> bool:
+    """m20_fleet_exit_sweep.beats (Path A): net R and maxDD both no worse, one of them strictly better."""
+    return (c["net_r"] >= b["net_r"] and c["max_drawdown_r"] <= b["max_drawdown_r"]
+            and (c["net_r"] > b["net_r"] or c["max_drawdown_r"] < b["max_drawdown_r"]))
+
+
+def grade_sweep_holdout(trades: dict[str, list[dict[str, Any]]], *, baseline: str, candidates: list[str],
+                        plan: dict[str, Any], lo: Any, hi: Any, delta_r: float, fold_majority: int, n_floor: int,
+                        holdout_min_trades: int, control: dict[str, Any] | None,
+                        same_as: tuple[str, str] | None) -> dict[str, Any]:
+    """Pure. The ``sweep`` rule on the discovery span, then ONE read of its selection on the held-back span."""
+    b = plan["boundary"]
+    step = (b - lo) / N_FOLDS
+    d_edges = [lo + step * i for i in range(N_FOLDS)] + [b]
+    disc: dict[str, dict[str, Any]] = {}
+    for lab in [baseline] + list(candidates) + [x for x in (same_as or ()) if x != baseline and x not in candidates]:
+        d = discovery_trades(trades[lab], b)
+        _assert_discovery_only(d, b)
+        disc[lab] = _sub_arm(d, d_edges)
+    gd = grade_sweep(disc, baseline=baseline, candidates=list(candidates), delta_r=delta_r,
+                     fold_majority=fold_majority, n_floor=n_floor, control=control, same_as=same_as)
+    plan_out = {**plan, "discovery_fold_edges": [str(e) for e in d_edges],
+                "straddling_excluded": {lab: sum(1 for t in trades[lab] if _ts(t["entry_time"]) < b) - disc[lab]["n"]
+                                        for lab in disc}}
+    sel = gd.get("best") if gd["verdict"] == "pass" else None
+    m: dict[str, Any] = {"selected": sel, "selected_from": len(candidates), "discovery_grade": gd, "plan": plan_out,
+                         "holdout_min_trades": holdout_min_trades, "discovery_n_floor": n_floor,
+                         "evaluations_on_holdout": 1 if sel else 0, "holdout": None, "holdout_baseline": None}
+    if gd["verdict"] == "indeterminate":
+        label = "insufficient_discovery" if gd.get("label") == "underpowered" else gd.get("label")
+        return {"verdict": "indeterminate", "label": label, **m, "why": f"discovery: {gd.get('why')}"}
+    if sel is None:
+        return {"verdict": "fail", "label": "no_discovery", **m,
+                "why": f"the sweep rule selects no candidate on the discovery span: {gd.get('why')}"}
+    hb = _sub_arm(holdout_trades(trades[baseline], b, hi), None)
+    hc = _sub_arm(holdout_trades(trades[sel], b, hi), None)
+    m["holdout"], m["holdout_baseline"] = hc, hb
+    if hb["n"] < holdout_min_trades:
+        return {"verdict": "indeterminate", "label": "underpowered", **m,
+                "why": f"the baseline holds n={hb['n']} held-back trades < {holdout_min_trades}: the span cannot decide"}
+    d_r, d_dd = round(hc["net_r"] - hb["net_r"], 4), round(hc["max_drawdown_r"] - hb["max_drawdown_r"], 4)
+    m["holdout_delta"] = {"delta_net_r": d_r, "delta_max_drawdown_r": d_dd}
+    if _holds(hc, hb):
+        return {"verdict": "pass", "label": "confirmed", **m,
+                "why": f"{sel} (selected on discovery from {len(candidates)} candidate(s)) holds on the held-back span, "
+                       f"read once: dR {d_r:+} R, dmaxDD {d_dd:+} R vs {baseline} over n={hb['n']} baseline trades"}
+    return {"verdict": "fail", "label": "not_replicated", **m,
+            "why": f"{sel} does not hold on the held-back span: dR {d_r:+} R, dmaxDD {d_dd:+} R vs {baseline} "
+                   f"(closes the configuration, never the family)"}
+
+
 def verdict_record(grade: dict[str, Any], *, leg: str, arms: dict[str, dict[str, Any]], population: str,
                    n: int, extra: dict[str, Any]) -> dict[str, Any]:
     return {"verdict": grade["verdict"], "read_state": "measured", "population": population, "n": n,
@@ -846,6 +936,37 @@ def _run_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[st
                                      "see: a record cannot be bound to it")
     g["_block"] = holdout_confirmation(g, fingerprint=fp, cost_stack=cs, lo=lo, hi=hi, unit=a.research_unit)
     g["plan"]["boundary"] = str(b)
+    return g
+
+
+def _run_sweep_holdout(a: Any, base: dict[str, Any], specs: list[Any], labels: list[str], arms_dir: Path,
+                       edges: list[Any], arms: dict[str, dict[str, Any]], control: dict[str, Any] | None,
+                       same_as: tuple[str, str] | None) -> dict[str, Any]:
+    """Boundary from the baseline arm's entry times (as ``_run_holdout``), the sweep rule on discovery, one read."""
+    sys.path.insert(0, str(REPO / "scripts" / "ci"))
+    from check_roster_promotion_evidence import config_fingerprint
+    lo, hi = edges[0], edges[-1]
+    trades = {lab: _load_trades(str(arms_dir / f"{lab}__trades.jsonl")) for lab in labels}
+    plan = holdout_boundary([t["entry_time"] for t in trades[a.baseline]], lo, hi, frac=a.holdout_frac,
+                            min_trades=a.holdout_min_trades, max_frac=a.holdout_max_frac)
+    cands = [lab for lab in labels if lab != a.baseline and (not same_as or lab not in same_as)]
+    g = grade_sweep_holdout(trades, baseline=a.baseline, candidates=cands, plan=plan, lo=lo, hi=hi,
+                            delta_r=a.delta_r, fold_majority=a.fold_majority, n_floor=a.n_floor,
+                            holdout_min_trades=a.holdout_min_trades, control=control, same_as=same_as)
+    sel = g["selected"]
+    c = arms[sel or a.baseline]["cost_stack"]
+    cs = {"fees": c.get("fee_bps_roundtrip"), "slippage": c.get("slippage_bps_roundtrip"),
+          "funding": c.get("funding_bps_per_window"), "unit": "bps_roundtrip (funding: bps per funding window)"}
+    fp = None
+    if sel:
+        spec = next(sp for sp in specs if sp[0] == sel)
+        fp = config_fingerprint(arm_cfg(base, spec[1], spec[2]))
+        if spec[3]:
+            g["raw_flag_warning"] = (f"{sel} carries raw harness flags {spec[3]} the config fingerprint does not "
+                                     "see: a record cannot be bound to it")
+    g["_block"] = holdout_confirmation({**g, "holdout": g.get("holdout") or {}}, fingerprint=fp, cost_stack=cs,
+                                       lo=lo, hi=hi, unit=a.research_unit)
+    g["plan"]["boundary"] = str(plan["boundary"])
     return g
 
 
@@ -1206,6 +1327,8 @@ def main(argv: list[str] | None = None) -> int:
                           delta_r_per_trade=a.delta_r_per_trade, vs_controls=vs_controls)
     elif a.grade == "holdout":
         g = _run_holdout(a, base, specs, labels, arms_dir, edges, arms)
+    elif a.grade == "sweep_holdout":
+        g = _run_sweep_holdout(a, base, specs, labels, arms_dir, edges, arms, control, same_as)
     elif a.grade == "risk_adjusted":
         import am_risk_adjusted as am
         rc: dict[str, list[str]] = {}
@@ -1240,7 +1363,7 @@ def main(argv: list[str] | None = None) -> int:
     extra_m: dict[str, Any] = {"window": window, "argv": argvs}
     if trigger_meta:
         extra_m["trigger"] = trigger_meta
-    if a.grade == "holdout":
+    if a.grade in ("holdout", "sweep_holdout"):
         extra_m["holdout_confirmation"] = g.pop("_block")
         pop += (f"; holdout boundary {g['plan']['boundary']} (share {g['plan']['share']}), selection on "
                 "discovery trades only, the selected arm read once on the held-back span")
