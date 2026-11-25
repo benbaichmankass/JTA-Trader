@@ -29,6 +29,12 @@ on:
       fit_rich_unit:
         description: "Optional queue unit id (e.g. RQ-20261124-a9d2-01): after the labels, run am_heads_fit.py run --feats rich on them (needs context=true) and upload summary/verdict"
         default: ""
+      research_unit:
+        description: "Pass-through queue unit id the research dispatcher threads (labels the run; the fit job uses fit_rich_unit). Never a command."
+        default: ""
+      power_state:
+        description: "Pass-through dispatcher power-state label, if any (never a command)"
+        default: ""
 
 permissions:
   contents: read
