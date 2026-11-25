@@ -1,0 +1,133 @@
+# Authored 2026-11-25 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager PRIORITY (row ALPACA-LIVE-COST-REPRICE-FAIL). Rule registered BEFORE the run. Gates this adds or changes: none.
+id: RQ-20261125-11d7-01
+title: 'COST ITERATION 1 of tlt_pullback_1h: at the measured 26 bps round trip, does any one of pullback_frac 0.618/0.786, atr_stop_mult 3.0/4.0, tp_r 5.0 or an open/close skip-hours
+  window turn the leg net-positive in >= 3 of 4 folds?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+kind: experiment
+question: On tlt_pullback_1h over TLT 1h 2025-06-02 .. 2026-11-11 at --slippage-bps-roundtrip=26, does any single-lever arm beat the S26 baseline by >= 27 R (so net R > 0), in >= 3 of
+  4 folds, with no worse drawdown?
+why_this_matters: 'tlt_pullback_1h is a real-money alpaca_live leg that FAILED the measured-cost reprice (RQ-20261119-f2a4-07: S26 net -26.2 R, n 49, 0/4 folds). The operator rule (2026-11-25)
+  is no demotion until the leg has been iterated and nothing is left to try. Cost in R scales inversely with the stop distance and with trade count, so the levers here cut cost per R
+  (wider stops, deeper pullbacks, fewer entries) or avoid wide-spread hours. PASS gives the manager a Tier-3 declare proposal for the best arm with the 7-arm denominator; FAIL closes
+  THESE arms at THIS window and leaves the levers map open (limit/pullback entry needs a harness build, regime_gating and symbol_set are untested).'
+power:
+  alpha: 0.05
+  basis: 'ESTIMATE: S26 n=49 on this window; arms that change entries will trade fewer. Below 39 the arm grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 49
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+decision_rule:
+  id: RULERQ20261125-11d7-01
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg tlt_pullback_1h --grade sweep, window 2025-06-02 .. 2026-11-11, 4 calendar folds, every arm carries --slippage-bps-roundtrip=26.
+    Arms fixed now: S26 (baseline); PF618 pullback_frac=0.618; PF786 pullback_frac=0.786; SL30 atr_stop_mult=3.0; SL40 atr_stop_mult=4.0; TP50 tp_r=5.0; SKO --skip-hours=13,14; SKC --skip-hours=19,20.
+    One lever per arm. Per arm: n, net R, maxDD, net R per fold.'
+  rule: 'INDETERMINATE IF n(S26) < 39 or the producer fails. A candidate C PASSES iff net_r(C) - net_r(S26) >= 27 R (the S26 record is -26.2 R, so a pass means net R > 0 at 26 bps) AND
+    maxDD(C) <= maxDD(S26) AND C out-earns S26 in >= 3 of 4 folds AND n(C) >= 39 (fewer trades is INDETERMINATE for that arm, never a pass). PASS if one or more pass: the best by net
+    R is named, the denominator is 7 arms, and S53 is then re-run on that arm and reported (never graded) before a Tier-3 declare PROPOSAL. FAIL IF none passes with n(S26) >= 39: these
+    arm settings are closed at this window and the lever FAMILIES stay open (scripts/research/family_retirement_policy.yaml). Thresholds and arms are not changed after any result.'
+  regime_robustness: Per-fold net R table for every arm is reported with the result and is part of the rule above. Set before the run.
+  what_it_does_not_do: 'Edits no config, roster or account mode and places no order. Both legs stay live (operator 2026-11-25: no demotion until iterated and nothing is left to try).
+    Not a promotion case; a PASS is a Tier-3 declare PROPOSAL for the manager.'
+practice_precedent: 'T3 (docs/reference/trading-and-model-practice-principles.md): cost measured, not assumed; M4 every arm counted'
+intervention_controls:
+  not_applicable: a Stage-0 parameter re-measurement of the declared leg through the harness, not an in-trade action
+iteration:
+  subject: tlt_pullback_1h
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261119-f2a4-07 (S26 -26.2 R n 49)
+  verdict_read: fail
+  diagnosis: 'f2a4-07 (MEASURED, 2026-11-19): S26 net -26.2 R, n 49, 0/4 folds; the record at the old cost basis is +8.17 R n 75 with gross +16.76 R, so cost is ~51% of gross at the
+    old basis and exceeds it at 26 bps. Lever map: atr_stop_mult SL30 was tested at the OLD cost basis and was worse (-32 R, one-point); it is repeated here only because the cost basis
+    changed (stated, per PLANNING.md "look before you re-test"). Untried: pullback_frac, tp_r, skip_hours (session family untested).'
+  search: one-factor sweep of the cost-sensitive levers at 26 bps; limit/pullback ENTRY is not a lever of this harness (entry-mode exists only in backtest_ict_scalp) and needs a build;
+    regime_gating, symbol_set untested.
+  levers:
+  - sizing_vs_cost
+  - entry
+  - exit
+  - session
+  map_entries:
+  - research/levers/tlt_pullback_1h.yaml#levers.sizing_vs_cost.slippage_bps_roundtrip
+  attempt: 1
+  due_by: '2026-12-02'
+compute: cpu_light
+value:
+  basis: a real-money alpaca_live leg whose edge failed or is fold-fragile at the measured 26 bps cost (operator 2026-11-25); an estimate, not a measurement
+  bucket: own_losses
+  confidence: 0.3
+  usd_at_stake_per_month: 250
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (b163-*, f3a8-01); the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - tlt_pullback_1h
+  - --arm
+  - S26=--slippage-bps-roundtrip=26
+  - --arm
+  - PF618=pullback_frac=0.618;--slippage-bps-roundtrip=26
+  - --arm
+  - PF786=pullback_frac=0.786;--slippage-bps-roundtrip=26
+  - --arm
+  - SL30=atr_stop_mult=3.0;--slippage-bps-roundtrip=26
+  - --arm
+  - SL40=atr_stop_mult=4.0;--slippage-bps-roundtrip=26
+  - --arm
+  - TP50=tp_r=5.0;--slippage-bps-roundtrip=26
+  - --arm
+  - SKO=--skip-hours=13,14;--slippage-bps-roundtrip=26
+  - --arm
+  - SKC=--skip-hours=19,20;--slippage-bps-roundtrip=26
+  - --days
+  - '540'
+  - --start
+  - '2025-06-02'
+  - --end
+  - 2026-11-11 23:59
+  - --grade
+  - sweep
+  - --baseline
+  - S26
+  - --delta-r
+  - '27'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261125-11d7-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-11d7-01
+  timeout_minutes: 120
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- research/levers/tlt_pullback_1h.yaml
+- RQ-20261119-f2a4-07

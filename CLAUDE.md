@@ -243,7 +243,7 @@ after an operator OK in chat.
 Workflows live under [`.claude/skills/`](.claude/skills/). **Skill-first lookup is binding** — before generating task output, scan the
 catalog; precedents are example outputs, not authority. **The manager contract is `.claude/skills/manager/SKILL.md`.**
 
-- `research-ops` (4×/day) · `weekly-audit` (Mon 06:07Z) · `frontier-research` (weekly; `ml_plan_status.py --diversity`) · the ML plan, reviewed
+- `research-ops` (once a day, 14:47Z) · `weekly-audit` (Mon 06:07Z) · `frontier-research` (weekly; `ml_plan_status.py --diversity`) · the ML plan, reviewed
   weekly as step 9 of the Sunday `/ml-review` (`ROADMAP.md` § "AI trader (ML) — build plan"). The three reviews stay separate:
   `/health-review` · `/performance-review` (hands off to `/perf-followup`) · `/ml-review`. The `/system-review` roll-up and ten process
   skills were retired 2026-09-21 (`docs/archive/2026-09-21-operating-reset/skills/`); do not resurrect.

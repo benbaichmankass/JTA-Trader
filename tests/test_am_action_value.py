@@ -160,3 +160,26 @@ def test_r123_segment_maps_r4_free_grade():
     bad = dict(seg, candidate={"clauses": {"R1_cost": True, "R2_risk_cut": False, "R3_folds": True, "R4_control": None}})
     assert V.r123_segment(bad)["verdict"] == "fail"
     assert V.r123_segment({"verdict": "indeterminate", "n": 0})["verdict"] == "indeterminate"
+
+
+def test_iteration4_causal_draws_ignore_the_realised_exit():
+    """RQ-20261125-c7e3-08/09: the causal age is drawn from U{1..hz_bars} regardless of how long the trade lived; a draw past the last row means
+    no action (HOLD), so a short trade is mostly left alone instead of always being tightened inside its realised life."""
+    ctx, _ = ctx_for(FLAT, tp=106.0)
+    rows = P.decision_rows(ctx)
+    pred = preds5(len(rows))
+    last_k = max(r["k"] for r in rows)
+    ctx["hz_bars"] = last_k * 10                                   # the horizon is 10x the realised life
+    picks = [V.causal_pick(ctx, rows, random.Random(s)) for s in range(400)]
+    none_share = sum(p is None for p in picks) / len(picks)
+    assert 0.8 < none_share < 0.97                                   # ~90% of draws land after the trade closed
+    assert all(p is None or rows[p]["k"] <= last_k for p in picks)
+    acts = [V.decide_mf("mf_tighten_causal", ctx, rows, pred, THR, f"k{s}") for s in range(200)]
+    assert 0.8 < sum(1 for a in acts if not a) / len(acts) < 0.97   # the policy is HOLD on those draws
+    ctx["hz_bars"] = last_k                                         # horizon == realised life: every draw lands on a row
+    assert all(V.causal_pick(ctx, rows, random.Random(s)) is not None for s in range(50))
+    cs = [V.control_causal("mf_tighten_fixed_cc", ctx, rows, pred, THR, {"name": "tighten_half"}, random.Random(s)) for s in range(50)]
+    assert all(len(c) == 1 and c[0]["kind"] == "set_stop" for c in cs)
+    f = V.decide_mf("mf_tighten_fixed_cc", ctx, rows, pred, THR, "k1")
+    assert len(f) == 1 and f[0]["k"] == min(r["k"] for r in rows if r["k"] >= V.MIN_AGE_K)
+    assert {"mf_tighten_causal", "mf_tighten_fixed_cc"} <= set(V.CLASSES) and "mf_tighten_fixed_cc" in V.CAUSAL_CONTROL

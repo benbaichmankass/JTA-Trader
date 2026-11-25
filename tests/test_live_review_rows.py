@@ -100,3 +100,33 @@ def test_attention_watch_rows_lag_sees_per_row_files(monkeypatch):
     monkeypatch.setattr(aw, "_git", fake)
     rows, bad, _ = aw._lr_rows(aw._lr_branch_text())
     assert sorted(rows) == ["LR-1", "LR-2"] and bad == 0
+
+
+def test_read_at_batches_cold_blob_reads_into_one_process(tmp_path):
+    """LTR-DUE-COLD-BLOB-CACHE: same rows with or without the batch reader, and one batch call for all cold blobs."""
+    import subprocess
+    from src.runtime import live_review_rows as R
+    repo = tmp_path / "r"
+    (repo / R.ROWS_DIR).mkdir(parents=True)
+    for i in range(3):
+        row = {"review_id": f"LR-2026112{i}T0000Z-pkg-x{i}", "order_package_id": f"pkg-x{i}", "reviewed_at": "2026-11-25T00:00:00Z"}
+        (repo / R.row_path(row["review_id"])).write_text(__import__("json").dumps(row))
+    for cmd in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]):
+        subprocess.run(["git", "-C", str(repo), *cmd], check=True, capture_output=True)
+
+    def git(*a):
+        r = subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True)
+        return r.returncode, (r.stdout if r.returncode == 0 else r.stderr).strip()
+    R._blob_cache.clear()
+    plain = R.read_at("HEAD", git)
+    R._blob_cache.clear()
+    calls = []
+
+    def rb(blobs):
+        calls.append(list(blobs))
+        return R.cat_blobs_batch(blobs, repo)
+    batched = R.read_at("HEAD", git, read_blobs=rb)
+    assert plain["rows"] == batched["rows"] and len(batched["rows"]) == 3
+    assert len(calls) == 1 and len(calls[0]) == 3
+    R._blob_cache.clear()
+    assert R.cat_blobs_batch(["0" * 40], repo) == {}  # a blob git cannot give is left out, not an error

@@ -448,7 +448,8 @@ def read_branch_rows(git: Optional[Callable[..., Tuple[int, str]]] = None) -> Di
         rc, tip = g("rev-parse", watch.LOCAL_REF)
         if rc != 0:
             return {"state": "could_not_look", "rows": [], "reason": f"branch_ref_absent: {tip[-120:]}"}
-        got = rows_lib.read_at(tip, g)
+        got = rows_lib.read_at(tip, g, read_blobs=(
+            (lambda b: rows_lib.cat_blobs_batch(b, watch.ROOT)) if git is None else None))
         if got.get("state") != "ok":
             return {"state": "could_not_look", "rows": [], "reason": f"branch_unreadable: {got.get('detail')}"}
         return {"state": "read", "rows": got["rows"], "tip": tip}

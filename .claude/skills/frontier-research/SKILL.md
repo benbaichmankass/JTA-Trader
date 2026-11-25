@@ -237,7 +237,7 @@ blocker, not re-filed.
 |---|---|---|
 | scan, register units, file lever rows; practice & methodology refresh | ML-FRONTIER-PREP lane ("Weekly review prep" routine) → `frontier-research` | weekly (Wednesday ~18:53Z, after the reset) |
 | fire the unit | `research-queue-dispatch.yml` | hourly |
-| read result, apply rule, file follow-up | `research-ops` § D | 4×/day |
+| read result, apply rule, file follow-up | `research-ops` § D | once a day (14:47Z) |
 | plan vs field, plumbing, roadmap write-back | `ml-review` § "The ML plan loop" | weekly |
 | strategy half of the scan | `perf-followup` Track 3 | after each performance review |
 
