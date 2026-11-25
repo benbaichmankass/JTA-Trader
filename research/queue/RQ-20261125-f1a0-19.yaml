@@ -49,10 +49,12 @@ ml_consumer:
   consumer: REGIME-PROGRAM
   decision: weekly risk sizing across strategy books (R4)
   legs:
-  - trend_donchian
-  - htf_pullback
-  - fade_breakout
-  - squeeze_breakout
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
   book: money
 baseline:
   definition: Equal risk per trade on every book every week (weight 1), on the same trades; and 200 within-week permutations of the tilt weights.
