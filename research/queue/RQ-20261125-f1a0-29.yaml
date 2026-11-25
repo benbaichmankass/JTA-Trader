@@ -1,0 +1,133 @@
+# Hand-authored 2026-11-25 by lane ML-PRIMARY (Tier 1 research) from the f1a0-14 / f1a0-27 reads. Rule registered before any run; only the
+# synthetic self-test and an offline fund_columns check ran. Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261125-f1a0-29
+title: 'ml_entry FUNDING INPUTS: does adding the symbol''s funding rate (last, 3-day mean, 90-print z) and the universe-mean funding, as-of the
+  decision bar''s close, to the registered recipe beat it by +0.0068 R/decision and beat the same columns with their timestamps shuffled?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-14/45536638875
+  verdict_read: indeterminate
+  diagnosis: 'Bracket geometry and entry order are spent on this model: f1a0-14 (vol-scaled SL, run 45536638875) -0.0016 R/decision vs the fixed
+    SL 4 / TP 6 refit (t -0.23, 4 of 8 folds); f1a0-27 (learned limit-vs-market, run 45535748199) +0.0015 (t 0.21, on its random control in every fold);
+    f1a0-21 / f1a0-22 / f1a0-17 within +-0.007. Every execution-side arm lands near the comparator because the model''s own edge is small (+0.008
+    R/decision on the base recipe) and execution only re-shapes it. The remaining lever is NEW INFORMATION the 20 price / volume features do not
+    carry. Funding is the derivatives-positioning input with full history for the 60-symbol universe from public monthly files (open interest /
+    long-short metrics are daily files: ~120k downloads, out of scope for one runner); prop_ml_leg already loads it (its census family F1).'
+  search: 'one fixed feature block (fund, fund_ma3d = 9-print mean, fund_z = 90-print z, xs_fund_mean = universe mean of the last print), as-of bar t''s
+    close (ts + 1 h), added to the registered recipe''s 20 FEATURES with LGB_PARAMS and the SL 2 / TP 3 / 24 h labels unchanged; placebo = the same 4
+    columns timestamp-shuffled (seeded); rows without funding history dropped from both sides before any fit; no grid.'
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 17
+  due_by: '2026-12-01'
+question: On the 8 dev folds, does the registered ml_entry recipe with 4 funding inputs added (own last funding, its 3-day mean and 90-print z,
+  and the universe-mean funding, all as-of the decision bar's close) beat the same recipe without them by at least +0.0068 R/decision net of the full
+  cost stack, AND beat the same 4 columns with their timestamps shuffled by +0.0068 (week-clustered t >= 2, >= 6/8 folds, >= 3/4 years)?
+why_this_matters: ml_entry trades real money and its edge is thin; execution levers are exhausted, so only new information can move it. Funding
+  is the positioning signal (crowded longs pay, and unwind) the price features do not see. The shuffled-timestamp placebo separates timing
+  information from a mere change in feature count or distribution.
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (f1a0-21 MEASURED 52,029 paired decisions): arm n = decisions (unfilled limits count as 0 R), the same decisions as the comparator so se(delta) ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry entry order type (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - fund_feats
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-29
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm fund_feats (fund_columns, fund_asof, shuffle_ts): per dev fold the registered recipe
+    refit with FEATURES + FUND_FEATURES vs without (same rows); delta = pooled mean net R per decision of the arm policy - the base policy;
+    week-clustered influence se; folds / years vs base; vs_control = the arm vs the same recipe with the 4 columns timestamp-shuffled (GATING).'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - shuffled placebo) >= +0.0068 AND folds_better >= 6
+    of 8 AND years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. Fixed now (the LEVER rule, control
+    gating, as book_feats).
+  pass_action: Fresh-window confirmation (2025-10..2026-11, holdout ledger claim), then a data-backed Tier-3 entry-order proposal to the manager (applied
+    by the operator or a mandate).
+  fail_action: Record funding closed as an ml_entry input on this recipe; the next information lever is open interest / taker flow on a reduced
+    universe (the daily metrics files for the top-volume symbols only), then cross-asset inputs (ETH / BTC lead, index futures).
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  not_applicable: 'a model-INPUT arm, not an intervention on trades: the bracket and execution are unchanged and the comparator is the same recipe
+    on the same rows without the 4 columns. The timing placebo (the same 4 columns timestamp-shuffled, seeded, refit on the same rows) is computed
+    and GATES the verdict through the rule (vs_control); it is one refit, not 100 matched draws, because each draw is a full 8-fold LightGBM refit.'
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 90
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
+- research/queue/RQ-20261125-f1a0-21.yaml
+- research/queue/RQ-20261125-f1a0-22.yaml
+- research/queue/RQ-20261125-f1a0-27.yaml
+- research/queue/RQ-20261124-f1a0-14.yaml
+- scripts/research/prop_ml_leg.py
