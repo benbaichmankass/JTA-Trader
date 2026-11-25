@@ -161,9 +161,9 @@ def build_snapshot_row(*, order_package_id: Any, account_id: Any, symbol: Any = 
                 # order, grade THAT leg; if it is not resting, say so (could_not_look / own_leg_absent) and never
                 # compare against another package's leg price (a filled own stop beside a live sibling's did that).
                 own = None if own_sl_order_id in (None, "") else str(own_sl_order_id)
-                legs = None if stop_legs is None else [l for l in stop_legs if isinstance(l, dict)]
+                legs = None if stop_legs is None else [leg for leg in stop_legs if isinstance(leg, dict)]
                 if own and legs is not None:
-                    mine = [_f(l.get("price")) for l in legs if str(l.get("id")) == own and _f(l.get("price")) is not None]
+                    mine = [_f(leg.get("price")) for leg in legs if str(leg.get("id")) == own and _f(leg.get("price")) is not None]
                     if mine:
                         v_sl, why = mine[0], None
                     else:

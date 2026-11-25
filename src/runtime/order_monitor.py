@@ -13568,7 +13568,7 @@ def _bybit_snapshot_cov(state: Optional[dict], direction: Any) -> Optional[dict]
     out = {**state, "stop_prices": list(split.get("stop") or []),
            "target_prices": list(split.get("target") or [])}
     if state.get("stop_legs") is not None:
-        out["stop_legs"] = [l for l in state["stop_legs"] if l.get("book") in (book, None)]
+        out["stop_legs"] = [leg for leg in state["stop_legs"] if leg.get("book") in (book, None)]
     return out
 
 
