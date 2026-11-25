@@ -121,6 +121,20 @@ NOT_RESEARCH_WORKFLOWS = frozenset({
     # positives on question C from its 7-day artifacts.
     "news-gdelt-panel.yml"})
 
+#: ARTIFACT names that are TRANSPORT copies by design, never a result that should
+#: land on main (question C). `research-store-bundle` (research-queue-grade.yml and
+#: research-queue-dispatch.yml) is the WSD-S6D shadow dual-write: it is BUILT FROM
+#: the files the same run writes to git (scripts/research/research_store.py
+#: make_bundle) and shipped to the trainer's research store by the run's
+#: research-store job. Git stays the source of truth, so its run id never appears on
+#: main by construction. MEASURED 2026-11-20 (PI-20261120-FILLW47B-0015): all 3
+#: flagged bundles (runs 44694465506, 44533148252, 44480035240) were grade runs whose
+#: research-store job shipped the bundle (success) while their own landing timed
+#: out, and `queue_grade.py` on main then reported 0 changed: every disposition was
+#: already landed by a later grade run. A landing failure of the grade itself is a
+#: different question (the run-failure alert), not a lost artifact.
+TRANSPORT_ARTIFACTS = frozenset({"research-store-bundle"})
+
 
 def is_research_workflow(name: str) -> bool:
     return bool(RESEARCH_WORKFLOW_RE.search(name)) and name not in NOT_RESEARCH_WORKFLOWS
@@ -371,7 +385,9 @@ def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str,
                 continue
             run = _api(f"actions/runs/{rid}", repo)
             run_wf[rid] = Path(str(run.get("path", ""))).name or str(run.get("name", ""))
-    research = [a for a in near if is_research_workflow(run_wf[str(a["workflow_run"]["id"])])]
+    research = [a for a in near if is_research_workflow(run_wf[str(a["workflow_run"]["id"])])
+                and a.get("name") not in TRANSPORT_ARTIFACTS]
+    transport = [a for a in near if a.get("name") in TRANSPORT_ARTIFACTS]
     rids = {str(a["workflow_run"]["id"]) for a in research}
     mentioned = run_ids_mentioned(ref, rids)
     if mentioned is None:
@@ -387,6 +403,8 @@ def q_expiring(repo: str, now: datetime, expiry_hours: float, ref: str,
                            f"{len(near)} expire within {expiry_hours}h across "
                            f"{len(run_wf)} run(s); {len(research)} of those from research "
                            f"workflows ({', '.join(sorted({run_wf[r] for r in rids})) or 'none'}); "
+                           f"{len(transport)} transport artifact(s) skipped by design "
+                           f"({', '.join(sorted(TRANSPORT_ARTIFACTS))}); "
                            f"a landed copy = run id named on {ref} in research/results, a "
                            f"commit message, or a file under {', '.join(RESEARCH_PATHS)}"),
             "findings": orphans}
