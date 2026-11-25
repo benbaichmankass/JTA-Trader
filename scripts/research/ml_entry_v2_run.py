@@ -9,6 +9,7 @@
     python3 scripts/research/ml_entry_v2_run.py levers   <unit> <out_dir>   # b601/b602/b604/a508: one-factor ENTRY lever tests, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py ensemble <unit> <out_dir>   # d507-01: K=3 seed ensembles + per-fold quantile threshold, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py timeframe <unit> <out_dir>  # b620..b626: the ENTRY pipeline at 5m/15m/1h/4h bars, DEV FOLDS ONLY
+    python3 scripts/research/ml_entry_v2_run.py ablation_macro <unit> <out_dir>  # F8 cross-asset family vs A / A2, DEV FOLDS ONLY
 
 Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image carries it, row RESEARCH-RUNNER-ML-DEPS / #22143),
 fetch the Binance Vision streams (vision_streams.py), build the family table, run the arms in parallel (dev folds only), combine.
@@ -33,7 +34,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "ablation_macro", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -80,9 +81,20 @@ def main(argv: list[str]) -> int:
     run(vs, "--out", str(streams), "--streams", "metrics", "--start", "2021-12-01", "--end", "2026-10-31", "--workers", "32")
     run(vs, "--out", str(octd), "--streams", "klines12d,premiumd", "--start", "2026-10-01", "--end", "2026-10-31", "--workers", "16")
     run(vs, "--out", str(octd), "--streams", "funding", "--start", "2026-10", "--end", "2026-10", "--workers", "16")
-    run(v2, "build-table", "--streams", str(streams), "--oct-dir", str(octd), "--out", str(work))
-    if mode in ("ablation", "ablation_trend"):
-        arms = ARMS if mode == "ablation" else ["A", "A2", "T"]   # ablation_trend (TREND-ALIGNMENT-FEATURE step 5): baseline + seed-noise + the F7 trend-align family only
+    macro = []
+    if mode == "ablation_macro":
+        # F8 (D3-POINT-IN-TIME-MACRO-BUILDER): daily SPY/QQQ/TLT/GLD/UUP closes, fetched once; dev folds only are read
+        sys.path.insert(0, str(HERE))
+        import ml_entry_families as F
+        got = F.fetch_macro_daily(work / "macro", "2020-05-01", "2026-11-01")
+        if "SPY" not in got:
+            print("F8: SPY daily closes unavailable; the family cannot be evaluated", file=sys.stderr)
+            return 1
+        macro = ["--macro-dir", str(work / "macro")]
+    run(v2, "build-table", "--streams", str(streams), "--oct-dir", str(octd), "--out", str(work), *macro)
+    if mode in ("ablation", "ablation_trend", "ablation_macro"):
+        # ablation_trend (TREND-ALIGNMENT-FEATURE step 5) / ablation_macro (F8): baseline + seed-noise + that one family only
+        arms = {"ablation": ARMS, "ablation_trend": ["A", "A2", "T"], "ablation_macro": ["A", "A2", "M"]}[mode]
         procs = [subprocess.Popen([sys.executable, v2, "arm", "--arm", a, "--out", str(work), "--n-jobs", "2"]) for a in arms]
         if any(p.wait() for p in procs):
             return 1
@@ -91,6 +103,8 @@ def main(argv: list[str]) -> int:
             shutil.copy(f, out / f.name)
         if mode == "ablation_trend":
             write_ablation_trend_verdict(unit, out)
+        elif mode == "ablation_macro":
+            write_ablation_trend_verdict(unit, out, arm_key="M", family="F8 cross-asset / macro-state")
     else:
         abl = os.environ.get("ABLATION_JSON")
         if not abl:
@@ -110,7 +124,7 @@ _TF = {"beats_1h": "pass", "reproduces": "pass", "viable_not_better": "no_action
        "does_not_reproduce": "fail", "indeterminate": "indeterminate", "smoke_not_judged": "indeterminate"}
 
 
-def write_ablation_trend_verdict(unit: str, out: Path) -> bool:
+def write_ablation_trend_verdict(unit: str, out: Path, arm_key: str = "T", family: str = "F7 trend-align") -> bool:
     """TREND-ALIGNMENT-FEATURE step 5: map the F7 arm's combine verdict (admit/reject/indeterminate) to the unit's E5
     verdict. admit -> pass (the trend-align family adds >= +0.010 R per decision over the noise floor, 6/8 folds,
     >= 40 percent coverage, on the DEV folds); reject -> fail; indeterminate (coverage) -> indeterminate. The admission
@@ -120,19 +134,20 @@ def write_ablation_trend_verdict(unit: str, out: Path) -> bool:
     if not ab.exists():
         return False
     d = json.loads(ab.read_text())
-    arm = (d.get("arms") or {}).get("T")
+    arm = (d.get("arms") or {}).get(arm_key)
     if not isinstance(arm, dict) or arm.get("verdict") not in ("admit", "reject", "indeterminate"):
         return False
     v = {"admit": "pass", "reject": "fail", "indeterminate": "indeterminate"}[arm["verdict"]]
     (out / "verdict.json").write_text(json.dumps({
         "verdict": v, "read_state": "measured",
-        "population": f"{unit}: F7 trend-align family vs baseline A (+ seed-noise A2), pooled ENTRY recipe, DEV FOLDS ONLY; "
+        "population": f"{unit}: {family} family vs baseline A (+ seed-noise A2), pooled ENTRY recipe, DEV FOLDS ONLY; "
                       f"n={arm.get('n')} decisions, dev_coverage={arm.get('dev_coverage')}",
         "n": arm.get("n"),
         "measurement": {"rule": d.get("rule"), "baseline_A": d.get("baseline_A"),
-                        "noise_floor_abs_A_minus_A2": d.get("noise_floor_abs_A_minus_A2"), "T": arm},
-        "note": "mechanical map of ml_entry_v2.combine's admission verdict for the F7 arm (admit->pass, reject->fail, "
-                "indeterminate->indeterminate); directional trend features, the pooled model chooses its own side",
+                        "noise_floor_abs_A_minus_A2": d.get("noise_floor_abs_A_minus_A2"), arm_key: arm},
+        "note": (f"mechanical map of ml_entry_v2.combine's admission verdict for the {family} arm {arm_key} (admit->pass, "
+                 "reject->fail, indeterminate->indeterminate)" + ("; directional trend features, the pooled model chooses its "
+                                                                  "own side" if arm_key == "T" else "")),
     }, indent=2) + "\n")
     return True
 
@@ -224,6 +239,6 @@ def write_verdict(unit: str, out: Path) -> bool:
 
 if __name__ == "__main__":
     rc = main(sys.argv[1:])
-    if rc == 0 and len(sys.argv) == 4 and sys.argv[1] != "ablation_trend":
+    if rc == 0 and len(sys.argv) == 4 and sys.argv[1] not in ("ablation_trend", "ablation_macro"):
         write_verdict(sys.argv[2], Path(sys.argv[3]))
     sys.exit(rc)
