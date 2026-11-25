@@ -1275,6 +1275,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/reviews/2026-11-12-weekly-walkthrough.md` | evidence | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/reviews/2026-11-18-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/reviews/2026-11-18-weekly-walkthrough.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
+| `docs/reviews/2026-11-25-weekly-audit.md` | evidence | unknown | — | never | `name:audit-measures / not-assessed` | — |
 | `docs/runbooks/account-balance-history-purge.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/alpaca-integration.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |
 | `docs/runbooks/backfill-orphan-pnl.md` | lookup | unknown | — | never | `dir:runbooks-are-procedures-to-consult / not-assessed` | — |

@@ -39,7 +39,7 @@
 | C3 | pass | 15 passed, 1 skipped | 15 | **re-run:** dropping slv_trend_1h from alpaca_portfolio fails `test_alpaca_portfolio_covers_every_alpaca_live_leg` (restored) |
 | C4 | pass | cost-model single owner clean (5 registered duplicates, 0 drifted) | clean | — |
 | C5 | **fail → fixed** | paper headline sign flips on a provenance filter (S); this report passes `check_stated_population.py` (PR body) | pass | the split itself |
-| C6 | fail (worse) | due 868; **unrouted 35 → 140**; oldest unrouted 14 → 21 d (PI-20261104-PREP1104-0003); 977 open of 3,059 | 730 / 35 / 14 d | alarm breached on both rules |
+| C6 | fail (worse) | due 868; **unrouted 35 → 140**; oldest unrouted 14 → 21 d (PI-20261104-PREP1104-0003); 977 open of 3,059 (`--stats`, source work_store_api). `pipeline.py --check` over the committed export says **606 due / 0 unrouted** (3,064 records): the two reads disagree, the STORE-WRITES-UNGUARDED class (in_flight, AM-OPS-10) | 730 / 35 / 14 d | alarm breached on both rules |
 | C7 | could_not_look | `--capacity`: the weekly reading names no reset time (2nd week) | could_not_look | — |
 | C8 | 1 agree / 1 qualified | 11-18 **H2** (trader e0c1a09, 0 src/config diff): re-derived at window_end 18:20Z, 0 files; the two src merges came at 19:04Z+ → agrees. **H3** "exchange_positions read_state ok for all": 2 of 14 accounts are `ok` with positions null (blind) → the check read a reducer | 2 agree | raw `git diff`, `/api/diag/exchange_positions` |
 | C9 | fail (flat) | last-run breaches per day 3,4,6,2,4,3,5 (7/7 days present); red all 7 days: runnable_floor, theme_share; research_ops_age_h red 4/7 (by construction, see 0) | 3,3,4,2,3,2,4 | — |
