@@ -1,0 +1,82 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 395186,
+ "note": "persist: indeterminate delta +0.0181 t 1.141 random share 0.0 trade share 0.3863",
+ "population": "backtest trade corpus (cf_bulk.TRADE_GLOBS, 7341 files, 510883 distinct jobs) -> 395186 unique crypto trades of ['trend_donchian', 'htf_pullback', 'fade_breakout', 'squeeze_breakout'] with entries 2020-09-01..2026-10-26 (variants averaged), 210 family x symbol x direction books, weekly; test weeks 2022-01-03..2026-10-26 (251); harness net_r (fee + slippage + funding)",
+ "rule": {
+  "id": "RULE-REGIME-R2B-SYMBOL-BOOKS-20261124",
+  "min_delta_r": 0.02,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "min_trade_share": 0.3,
+  "fail_random_share": 0.5
+ },
+ "data_window": {
+  "data_start": "2020-09-01",
+  "data_end": "2026-10-26",
+  "test_start": "2022-01-03",
+  "corpus_sha256": "32483d60814c4980d7ea341d7d021f57845451db7ccf42bc13c71d593c04cd55",
+  "n_unique_trades": 395186,
+  "n_files": 7341
+ },
+ "measurement": {
+  "arms": {
+   "persist": {
+    "n_weeks": 251,
+    "trades_arm": 124781,
+    "trades_base": 323016,
+    "trade_share": 0.3863,
+    "money_arm": -0.02472,
+    "money_base": -0.04286,
+    "delta": 0.01814,
+    "se_week_boot": 0.0159,
+    "t": 1.141,
+    "sum_r_arm": -3085.06,
+    "sum_r_base": -13845.54,
+    "random": {
+     "draws": 200,
+     "mean": -0.04779,
+     "p95": -0.04007,
+     "share_ge_arm": 0.0
+    },
+    "yearly_delta": {
+     "2022": 0.0058,
+     "2023": 0.0211,
+     "2024": 0.0611,
+     "2025": -0.0059,
+     "2026": -0.0007
+    },
+    "mean_books_per_week": 85.291,
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": true,
+     "years_positive": false,
+     "trade_share": true
+    },
+    "verdict": "indeterminate"
+   }
+  },
+  "verdict": "indeterminate",
+  "books": {
+   "n_books": 210,
+   "trades": 395186,
+   "sum_r": -15255.45
+  },
+  "n_test_weeks": 251,
+  "level": "symbol",
+  "rule": {
+   "id": "RULE-REGIME-R2B-SYMBOL-BOOKS-20261124",
+   "min_delta_r": 0.02,
+   "min_t": 2.0,
+   "max_random_share": 0.05,
+   "min_years_positive": 4,
+   "n_test_years": 5,
+   "min_trade_share": 0.3,
+   "fail_random_share": 0.5
+  }
+ }
+}
