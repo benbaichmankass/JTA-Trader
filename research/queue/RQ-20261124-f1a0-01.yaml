@@ -6,7 +6,7 @@
 id: RQ-20261124-f1a0-01
 title: 'ml_entry SIDE ASYMMETRY: does muting the LONG side when BTC is in a 7d downtrend with vol at/above its 90d median beat the recipe and
   a matched random long-mute by +0.0068 R/decision on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -142,3 +142,18 @@ related:
 - docs/research/ml-entry-review-2026-11-24.md
 - research/queue/RQ-20261124-e1a7-02.yaml
 last_dispatched_at: '2026-11-24T21:59:01+00:00'
+grading:
+  attested: RULE-ML-ENTRY-FIX-ARMS-20261124
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  evidence:
+  - research/results/RQ-20261124-f1a0-01/45484674095.jsonl
+  - research/results/RQ-20261124-f1a0-01/45488221836.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate
