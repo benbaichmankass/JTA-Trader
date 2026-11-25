@@ -83,13 +83,29 @@ def verdict_from(arms: Dict[str, Dict[str, Any]], control: Dict[str, Any]) -> Di
         verdict, why = "fail", "no arm clears n >= 30 with mean > 0 and cluster CI LB > 0"
     n = sum(a["n"] for a in arms.values())
     return {"verdict": verdict, "read_state": "measured", "n": n,
-            "population": (f"{UNIT}: frozen E4 arm re-replayed on the held-out window (2024-11-01..2025-10-25) at oi_z "
-                           f"{', '.join(str(k) for k in arms)}; n = summed filled trades over the {len(arms)} arms; net R = driver net "
+            "population": (f"{UNIT}: frozen E4 arm re-replayed on the held-out window (2024-11-01..2025-10-25), "
+                           f"{ARM_KIND} arms {', '.join(str(k) for k in arms)}; n = summed filled trades over the {len(arms)} arms; net R = driver net "
                            f"(full cost stack); control oi_z {CONTROL_OI_Z} vs committed ledger: "
                            f"{'reproduces' if control['reproduces'] else 'DOES NOT reproduce'}"),
             "note": f"{RULE_ID}: {verdict} -- {why}; " + "; ".join(
-                f"oi_z {k}: n {a['n']} mean {a['mean_net_r']} ci95 {a['ci95']} -> {a['state']}" for k, a in arms.items()),
-            "measurement": {"rule_id": RULE_ID, "control": control, "arms": arms, "alpha": ALPHA, "n_min": N_MIN}}
+                f"{ARM_KIND} {k}: n {a['n']} mean {a['mean_net_r']} ci95 {a['ci95']} -> {a['state']}" for k, a in arms.items()),
+            "measurement": {"rule_id": RULE_ID, "control": control, "arms": arms, "arm_kind": ARM_KIND, "alpha": ALPHA,
+                            "n_min": N_MIN}}
+
+
+ARM_KIND = "oi_z"   # E4-OI-LEVER-DRIVER (2026-11-25): oi_z (default, byte-identical) | horizon | side
+
+
+def arm_kwargs() -> Dict[str, Dict[str, Any]]:
+    """{arm label: e4_prop_ledger.rows_for kwargs}. oi_z arms vary the threshold (labels '4.0', as before); horizon arms
+    vary the time-stop in bars at the frozen oi_z 3.0 ('h48'); side arms vary the side rule at oi_z 3.0 ('fade')."""
+    if ARM_KIND == "oi_z":
+        return {str(float(z)): {"oi_z": float(z)} for z in ARMS}
+    if ARM_KIND == "horizon":
+        return {f"h{int(h)}": {"oi_z": CONTROL_OI_Z, "geom": {"horizon": int(h)}} for h in ARMS}
+    if ARM_KIND == "side":
+        return {str(sd): {"oi_z": CONTROL_OI_Z, "side_mode": str(sd)} for sd in ARMS}
+    raise ValueError(f"--arm-kind {ARM_KIND!r}")
 
 
 def run(root: Path, out: Path, fetch: bool) -> Dict[str, Any]:
@@ -100,7 +116,7 @@ def run(root: Path, out: Path, fetch: bool) -> Dict[str, Any]:
     committed = [r for r in (json.loads(ln) for ln in LEDGER.read_text().splitlines() if ln.strip())
                  if r.get("window") == "holdout"]
     control = control_diff(led.rows_for(root, m.HOLDOUT, CONTROL_OI_Z), committed)
-    arms = {str(z): grade_arm(led.rows_for(root, m.HOLDOUT, z), m.cluster_mean) for z in ARMS}
+    arms = {label: grade_arm(led.rows_for(root, m.HOLDOUT, **kw), m.cluster_mean) for label, kw in arm_kwargs().items()}
     v = verdict_from(arms, control)
     out.mkdir(parents=True, exist_ok=True)
     (out / "verdict.json").write_text(json.dumps(v, indent=2, default=str) + "\n")
@@ -132,6 +148,26 @@ def self_test() -> int:
     chk("control compares on the key, gross_r to 6 dp", control_diff([r], [{**r, "gross_r": 2.0}])["reproduces"])
     chk("control catches a missing row", not control_diff([r], [r, {**r, "symbol": "Y"}])["reproduces"])
     chk("detect() default threshold is the frozen OI_Z 3.0", __import__("inspect").signature(m.detect).parameters["oi_z"].default == 3.0 == m.OI_Z)
+    global ARM_KIND, ARMS
+    saved = (ARM_KIND, ARMS)
+    ARM_KIND, ARMS = "oi_z", (4.0, 5.0)
+    chk("oi_z arms keep their labels and kwargs (byte-identical)", arm_kwargs() == {"4.0": {"oi_z": 4.0}, "5.0": {"oi_z": 5.0}})
+    ARM_KIND, ARMS = "horizon", (12.0, 48.0)
+    chk("horizon arms run at the frozen oi_z with the horizon overridden",
+        arm_kwargs() == {"h12": {"oi_z": 3.0, "geom": {"horizon": 12}}, "h48": {"oi_z": 3.0, "geom": {"horizon": 48}}})
+    ARM_KIND, ARMS = "side", ("fade", "long_only")
+    chk("side arms run at the frozen oi_z with the side mode", arm_kwargs()["fade"] == {"oi_z": 3.0, "side_mode": "fade"})
+    ARM_KIND, ARMS = saved
+    import e4_prop_ledger as led
+    try:
+        led.rows_for(Path("/nonexistent"), m.HOLDOUT, side_mode="sideways")
+        refused = False
+    except ValueError:
+        refused = True
+    chk("an unknown side mode is refused before any data is read", refused)
+    import inspect
+    sig = inspect.signature(led.rows_for).parameters
+    chk("rows_for defaults are the frozen arm", sig["geom"].default is None and sig["side_mode"].default == "as_event")
     print("e4_oi_z_arms self-test:", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
@@ -142,13 +178,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--out")
     ap.add_argument("--fetch", action="store_true", help="fetch the held-out window's OI/funding/candles into --root first")
     ap.add_argument("--self-test", action="store_true")
-    ap.add_argument("--arms", help="comma list of oi_z arm thresholds (default 4.0,5.0, the 78fc-11 grid)")
+    ap.add_argument("--arms", help="comma list of arm values: oi_z thresholds (default 4.0,5.0, the 78fc-11 grid), horizon "
+                                   "bars (e.g. 12,48) or side modes (long_only,short_only,fade) per --arm-kind")
+    ap.add_argument("--arm-kind", choices=("oi_z", "horizon", "side"), default="oi_z",
+                    help="the lever the arms vary (E4-OI-LEVER-DRIVER); horizon/side arms run at the frozen oi_z 3.0. "
+                         "The oi_z 3.0 instrument control is unchanged for every kind")
     ap.add_argument("--unit", help="research unit id stamped in the verdict (default RQ-20261101-78fc-11)")
     ap.add_argument("--rule-id", help="decision rule id stamped in the verdict (default RULE-RQ-20261101-78fc-11)")
     a = ap.parse_args(argv)
-    global UNIT, RULE_ID, ARMS
+    global UNIT, RULE_ID, ARMS, ARM_KIND
+    ARM_KIND = a.arm_kind
     if a.arms:
-        ARMS = tuple(float(x) for x in a.arms.split(","))
+        vals = [x.strip() for x in a.arms.split(",") if x.strip()]
+        ARMS = tuple(vals) if ARM_KIND == "side" else tuple(float(x) for x in vals)
+    elif ARM_KIND != "oi_z":
+        ap.error("--arm-kind horizon|side needs --arms")
+    if ARM_KIND == "side":
+        import e4_prop_ledger as led
+        bad = [x for x in ARMS if x not in led.SIDE_MODES or x == "as_event"]
+        if bad:
+            ap.error(f"side arms {bad} not in {[x for x in led.SIDE_MODES if x != 'as_event']}")
     if a.unit:
         UNIT = a.unit
     if a.rule_id:
