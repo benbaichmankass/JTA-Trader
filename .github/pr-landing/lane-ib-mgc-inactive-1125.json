@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "DECISION: merge + deploy ict-trader-live (paper order path only; ib_paper). Tier-2 order-path change dispatched by Manager Session 2026-11-25a under the operator's 11-25 pre-planning approval; the manager merges and restarts the trader, the lane verifies on the next mgc_trend_1h signal. Revert = revert this PR (instruments.yaml roll keys are inert without the code).",
+  "why": "IB-MGC-INACTIVE-1125. ROOT CAUSE (MEASURED, trader journal 11-25, first refusal 14:45:26Z): IBKR Error 201 'placing an order during the contracts delivery window' -- ContFuture resolved MGCZ6 (Dec, first notice 11-30) and IBKR refuses opening orders in a physically delivered contract inside its delivery window. FIX: (1) config/instruments.yaml ib.roll_days_before_month + active_months for MGC/MHG; IBClient._build_open_contract rolls OPENING orders to the next active month; close/protective/modify follow the HELD contract. (2) src/core/placement_backoff.py: per (account, strategy, symbol, direction) backoff after 3 consecutive venue rejections (2, 4, 8 ... 60 min), one alert per streak, retries never stop (Prime Directive rule 7); the account-level critical alert fires once per streak instead of on every rejection. Gates this adds or changes: none -- the backoff paces retries of a leg the venue is refusing, it never stops a leg or touches mode/execution."
+}

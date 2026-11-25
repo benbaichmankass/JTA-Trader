@@ -26,7 +26,11 @@ MANAGER_ID = re.compile(r"(?:Manager[^\n]{0,80}?|manager:)(session_[A-Za-z0-9]{1
 #: blocked the manager's own stop with lane wording.
 MANAGER_SELF = re.compile(
     r"\bYou are Manager Session\b|^\s*Manager Session \d{4}-\d{2}-\d{2}[a-z]|^\s*Run the operating loop"
-    r"|\bYou are the (?:JTA[ -]Trader |Metis(?: Insights)? |ICT(?: bot)? )?manager\b(?!['’]s)"
+    # LANE-STOP-HOOK-MANAGER-MISID (2026-11-25): a rotation brief "You are the NEW JTA Trader MANAGER" was read as a lane,
+    # so the hook blocked the manager's own stop. An optional adjective (new/next/incoming/current) may sit before the
+    # product name or directly before "manager"; "the manager's lane" is still a lane (the (?!['’]s) guard).
+    r"|\bYou are the (?:(?:new|next|incoming|current)\s+)?(?:JTA[ -]Trader |Metis(?: Insights)? |ICT(?: bot)? )?"
+    r"(?:(?:new|next|incoming|current)\s+)?manager\b(?!['’]s)"
     # STOP-HOOK-ROTATED-MANAGER (2026-11-14): a rotated-in manager starts from "read MANAGER-HANDOFF-<date>.md"
     # / "you are the next manager" (the handoff doc's own wording), and before it titles itself the hook read
     # it as a lane and named its predecessor (session_01AFoLuLyarNRcy3nziCep2U). No lane is handed that doc.
@@ -190,6 +194,14 @@ def self_test() -> int:
         ("a rotation manager brief ('You are the JTA Trader manager (rotation)') never blocks",
          [_u("You are the JTA Trader manager (rotation). Dispatch lane:GENERAL via From Manager triggers."),
           _a("Waiting on the operator's go-ahead?")], False),
+        ("a rotation brief 'You are the NEW JTA Trader MANAGER' never blocks (LANE-STOP-HOOK-MANAGER-MISID)",
+         [_u("You are the NEW JTA Trader MANAGER. Dispatch lane:GENERAL via From Manager triggers."),
+          _a("Waiting on the operator's go-ahead?")], False),
+        ("'You are the next manager' / 'the incoming Metis manager' never block",
+         [_u("You are the incoming Metis manager. From Manager lane:X"), _a("Should I merge #5?")], False),
+        ("'You are the new manager's lane' is still a lane",
+         [_u("You are the new manager's GENERAL lane (session_01AFoLuLyarNRcy3nziCep2U); lane:GENERAL."),
+          _a("Blocked; awaiting your go-ahead.")], True),
         ("a lane brief that QUOTES the manager is still a lane",
          [_u("You are lane GENERAL, dispatched by Manager Session 2026-11-11a (session_01AFoLuLyarNRcy3nziCep2U). "
              "The manager said: 'You are the JTA Trader manager'."), _a("Blocked; awaiting your go-ahead.")], True),

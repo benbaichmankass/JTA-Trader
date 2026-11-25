@@ -12,6 +12,7 @@ Families (columns are prefixed ``f<n>_``):
                      before bar_open + 50 min (10 min before the close, conservative for the undocumented stamp convention)
   F4 cross-section   ranks, dispersion, breadth and BTC-relative terms over the symbols present at the same ts
   F5 shape/calendar  higher moments, semivariance, range volatility, efficiency ratio, extreme age, hour-of-week
+  F8 cross-asset     SPY/QQQ/TLT/GLD/UUP last-completed-session returns and realised vol (market-wide; see ``f8``)
 
 Leakage test (``--self-test``): a feature at ts must be IDENTICAL when every input row after the bar close is removed.
 """
@@ -38,6 +39,14 @@ FAMILIES = {
     "F7": ["f7_adx", "f7_dmi_diff", "f7_trend_up", "f7_trend_dn", "f7_adx_d1", "f7_dmi_diff_d1",
            "f7_trend_up_d1", "f7_trend_dn_d1", "f7_agree_up", "f7_agree_dn", "f7_present"],
 }
+# F8 cross-asset / macro state (row D3-POINT-IN-TIME-MACRO-BUILDER, lane RESEARCH-UNBLOCK-BUILDS-W48, 2026-11-25): the one ENTRY
+# feature class with no committed read (PI-20261122-CRWK64UZ-0001): equity-index, long-bond, gold and dollar context from the
+# LAST COMPLETED US session at or before the decision bar's close. Market-wide (the same values for every symbol at a ts).
+MACRO_TICKERS = ("SPY", "QQQ", "TLT", "GLD", "UUP")
+#: A session dated D is used only from D + this many hours UTC. The US cash close is 20:00 UTC (EDT) / 21:00 UTC (EST);
+#: 22:00 leaves a margin in both seasons, so a session is never read before it closed.
+MACRO_AVAIL_HOURS = 22
+FAMILIES["F8"] = [f"f8_{t.lower()}_{x}" for t in MACRO_TICKERS for x in ("r1", "r5", "r20", "rv20")] + ["f8_present"]
 
 
 def _z(s: pd.Series, n: int) -> pd.Series:
@@ -217,6 +226,70 @@ def f7(k: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def f8(ts: pd.Series, daily: dict[str, pd.DataFrame] | None) -> pd.DataFrame:
+    """Cross-asset / macro-state features at each decision ``ts`` (F8). ``daily`` maps a ticker in MACRO_TICKERS to a frame
+    with ``date`` (the US session date) and ``close`` (adjusted). Per ticker: log return of the last completed session (r1),
+    over 5 and 20 sessions (r5, r20) and the 20-session realised vol of daily log returns (rv20).
+
+    LEAKAGE: a session dated D becomes usable at D + MACRO_AVAIL_HOURS (UTC), after the US close in both seasons; the value
+    at ``ts`` is the last session usable at or before the decision bar's close (ts + 1h), as every family reads. Removing
+    every session not yet usable at ts + 1h leaves the features at ts unchanged (self-test). A missing ticker stays NaN
+    (never 0) and ``f8_present`` is 1 only where the SPY block is present."""
+    out = pd.DataFrame({"ts": pd.to_datetime(ts, utc=True).astype("datetime64[ns, UTC]")})
+    order = out["ts"].argsort(kind="stable").to_numpy()
+    left = out.iloc[order].reset_index().rename(columns={"index": "_row"})
+    left["_at"] = left["ts"] + pd.Timedelta(hours=1)
+    for t in MACRO_TICKERS:
+        cols = [f"f8_{t.lower()}_{x}" for x in ("r1", "r5", "r20", "rv20")]
+        d = (daily or {}).get(t)
+        if d is None or len(d) < 2:
+            for c in cols:
+                left[c] = np.nan
+            continue
+        d = d[["date", "close"]].copy()
+        d["date"] = pd.to_datetime(d["date"]).dt.tz_localize(None).dt.normalize()
+        d = d.dropna().drop_duplicates("date").sort_values("date").reset_index(drop=True)
+        lc = np.log(d["close"].astype(float))
+        lr = lc.diff()
+        feat = pd.DataFrame({"_avail": (d["date"] + pd.Timedelta(hours=MACRO_AVAIL_HOURS)).dt.tz_localize("UTC")
+                             .astype("datetime64[ns, UTC]"),
+                             cols[0]: lr, cols[1]: lc - lc.shift(5), cols[2]: lc - lc.shift(20), cols[3]: lr.rolling(20).std()})
+        left = pd.merge_asof(left, feat, left_on="_at", right_on="_avail", direction="backward").drop(columns="_avail")
+    left["f8_present"] = left["f8_spy_r1"].notna().astype(float)
+    left = left.sort_values("_row").reset_index(drop=True)
+    return left[["ts"] + FAMILIES["F8"]]
+
+
+def fetch_macro_daily(out_dir, start: str, end: str) -> dict[str, pd.DataFrame]:
+    """Daily adjusted closes for MACRO_TICKERS from yfinance (the research runner installs it), cached as <out_dir>/<T>.csv
+    with columns date, close. A ticker that returns nothing is left out (its F8 columns stay NaN, never 0)."""
+    from pathlib import Path
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    res: dict[str, pd.DataFrame] = {}
+    for t in MACRO_TICKERS:
+        p = out_dir / f"{t}.csv"
+        if not p.exists():
+            import yfinance as yf
+            df = yf.download(t, start=start, end=end, interval="1d", auto_adjust=True, progress=False, threads=False)
+            if df is None or len(df) == 0:
+                print(f"[F8] {t}: yfinance returned no rows ({start}..{end}); its columns stay NaN", file=sys.stderr)
+                continue
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            pd.DataFrame({"date": pd.DatetimeIndex(df.index).tz_localize(None).normalize(),
+                          "close": df["Close"].to_numpy()}).to_csv(p, index=False)
+        res[t] = pd.read_csv(p, parse_dates=["date"])
+    return res
+
+
+def load_macro_daily(d) -> dict[str, pd.DataFrame]:
+    """The <T>.csv files fetch_macro_daily wrote (missing tickers are simply absent)."""
+    from pathlib import Path
+    d = Path(d)
+    return {t: pd.read_csv(d / f"{t}.csv", parse_dates=["date"]) for t in MACRO_TICKERS if (d / f"{t}.csv").exists()}
+
+
 def symbol_frame(k12: pd.DataFrame, prem: pd.DataFrame | None, fund: pd.DataFrame | None, met: pd.DataFrame | None) -> pd.DataFrame:
     k = k12.copy()
     k["ts"] = _ts(k["open_time"])
@@ -325,7 +398,52 @@ def self_test() -> None:
     frames = {"BTCUSDT": full, "ETHUSDT": symbol_frame(_synthetic(seed=2)[0], None, None, None)}
     cs = cross_section(frames)
     assert cs["f4_rank_ret4"].dropna().between(0, 1).all()
+    _self_test_f8()
     print("ml_entry_families self-test OK")
+
+
+def _macro_synthetic(seed=3):
+    rng = np.random.default_rng(seed)
+    days = pd.bdate_range("2023-12-01", "2024-03-01")
+    return {t: pd.DataFrame({"date": days, "close": 100 * np.exp(np.cumsum(rng.normal(0, 0.01, len(days))))})
+            for t in MACRO_TICKERS}
+
+
+def _self_test_f8() -> None:
+    daily = _macro_synthetic()
+    ts = pd.Series(pd.date_range("2024-01-02", "2024-02-20", freq="1h", tz="UTC"))
+    full = f8(ts, daily)
+    cols = FAMILIES["F8"]
+    assert list(full.columns) == ["ts"] + cols and len(full) == len(ts)
+    # truncation invariance: drop every session not usable at ts + 1h; the features at ts must not change
+    for i in (30, 400, 900):
+        t = ts.iloc[i]
+        cut = {k: v[v["date"] + pd.Timedelta(hours=MACRO_AVAIL_HOURS) <= (t + pd.Timedelta(hours=1)).tz_localize(None)]
+               for k, v in daily.items()}
+        part = f8(pd.Series([t]), cut)
+        a, b = full.iloc[i][cols].astype(float), part.iloc[0][cols].astype(float)
+        bad = [c for c in cols if not np.isclose(a[c], b[c], equal_nan=True)]
+        assert not bad, f"F8 LOOKAHEAD at {t}: {bad}"
+    # the session dated D is NOT visible at D 20:59 UTC (decision bar 19:00, closes 20:00) and IS at D 21:00 (bar closes 22:00)
+    d0 = pd.Timestamp("2024-01-10")
+    spy = daily["SPY"].set_index("date")["close"]
+    r1_d0 = float(np.log(spy.loc[d0] / spy.loc[spy.index[spy.index.get_loc(d0) - 1]]))
+    pre = f8(pd.Series([pd.Timestamp("2024-01-10 19:00", tz="UTC")]), daily)["f8_spy_r1"].iloc[0]
+    post = f8(pd.Series([pd.Timestamp("2024-01-10 21:00", tz="UTC")]), daily)["f8_spy_r1"].iloc[0]
+    assert not np.isclose(pre, r1_d0) and np.isclose(post, r1_d0), (pre, post, r1_d0)
+    # a planted lead (sessions usable from their own midnight) IS caught by the truncation test
+    global MACRO_AVAIL_HOURS
+    saved, MACRO_AVAIL_HOURS = MACRO_AVAIL_HOURS, 0
+    try:
+        lead = f8(pd.Series([pd.Timestamp("2024-01-10 08:00", tz="UTC")]), daily)["f8_spy_r1"].iloc[0]
+    finally:
+        MACRO_AVAIL_HOURS = saved
+    assert np.isclose(lead, r1_d0), "planted midnight availability should see D's close (the lead the 22h lag removes)"
+    # missing tickers stay NaN; present flag follows SPY; row order follows the input ts order
+    none = f8(ts, None)
+    assert none[cols[:-1]].isna().all().all() and none["f8_present"].eq(0).all()
+    rev = f8(ts.iloc[::-1].reset_index(drop=True), daily)
+    assert np.allclose(rev[cols].to_numpy(dtype=float)[::-1], full[cols].to_numpy(dtype=float), equal_nan=True)
 
 
 if __name__ == "__main__":

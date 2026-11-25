@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "runtime_change",
+  "hold_text": "live_review_due: the branch-rows read (live_review_rows.read_at) now fetches every not-yet-cached row blob through ONE git cat-file --batch instead of one git subprocess per row file. MEASURED 2026-11-25 20:20Z on the live route: timings_ms reviews=24341 of total=25631 (536 row files, cold per-process blob cache after a restart); every other section under 1 s. Local A/B on the same ref: 1.3 s serial vs 0.1 s batched, identical rows (779 == 779, same bad_files). Read-only; no order path; falls back to the per-blob read for any blob the batch cannot give. Revert: git revert.",
+  "why": "Stop a cold live_review_due from taking ~25 s and starving the Actions fallback poller."
+}
