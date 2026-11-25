@@ -685,7 +685,13 @@ def _default_alerter() -> Optional[Callable[[str, str, dict], None]]:
         from src.runtime.outcomes import Level, report
 
         def _alerter(channel: str, summary: str, payload: dict) -> None:
-            report(channel, level=Level.ERROR, reason=summary, **payload)
+            # ⚠️ `status` is a REQUIRED positional of outcomes.report(action, status, ...).
+            # Omitting it raised TypeError on every violation (23x, 2026-11-25
+            # health review) and the alert never sent.
+            report(
+                channel, "violation", level=Level.ERROR, reason=summary,
+                **payload,
+            )
 
         return _alerter
     except Exception as exc:  # noqa: BLE001  # allow-silent: outcomes import is best-effort; violations still land in the JSONL log.
