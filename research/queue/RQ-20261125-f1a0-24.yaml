@@ -1,0 +1,132 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (row REGIME-ROSTERED-CONFIG-REPLAY; the fresh-population confirmation of the R3 PASS). Rule fixed before any
+# run; a 1-leg replay smoke (fetch + harness, state/n only, no grade) checked the path. Gates this adds or changes: none.
+id: RQ-20261125-f1a0-24
+title: 'REGIME-PROGRAM R3 CONFIRMATION on the ROSTERED legs: replayed with their declared configs, do the BTC-state tilts (advol, hmm2) or the
+  no-state book-quality tilt beat equal risk by +0.01 R/trade, beating within-week permutations?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-20/45517557704
+  verdict_read: pass
+  diagnosis: 'f1a0-20 (run 45517557704) PASSED on the sweep corpus (hmm2 +0.0247 R/trade t 3.87; advol +0.0134 t 2.02; permutation share 0.00) and its pass_action is a fresh-window confirmation before any sizing proposal. The sweep corpus averages parameter variants (mean -0.043 R/trade) and cannot isolate rostered configs; the legs a sizing proposal would act on are the rostered ones. This unit replays every rostered crypto leg of the four families with its DECLARED params (different trades, the configs we trade) and grades the same tilts plus the no-state control f1a0-23 introduced.'
+  search: one population (every rostered crypto trend / pullback / fade / squeeze leg, declared params), three fixed arms (advol, hmm2,
+    no-state); no grid.
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 7
+  due_by: '2026-12-01'
+question: 'On every rostered crypto leg of the trend, pullback, fade and squeeze harnesses (a mode: live book) replayed with its declared config
+  over 2020-09-01..2026-10-26 (books = leg x direction, test weeks 2022-01-03..), does any of the three tilts (advol state, hmm2 state, no-state
+  book quality; 2.0 / 0.5, renormalised weekly) beat equal risk by >= +0.01 R/trade with week-bootstrap t >= 2, beat >= 98.3% of 200 within-week
+  permutations, and hold in >= 4 of 5 years?'
+why_this_matters: 'The confirmation the R3 rule requires before a Tier-3 sizing proposal, on the population the proposal would act on. A pass names
+  which tilt (regime-conditioned or book quality) carries to the rostered legs; a fail says the sweep-corpus effect does not transfer to the declared
+  configs.'
+power:
+  expected_n: 251
+  min_detectable_effect: 0.01
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'ESTIMATE: 251 test weeks (the cluster) over ~40 leg x direction books; the 1-leg smoke measured 269 trades for one 4h leg over the window,
+    so ~5-15k trades pooled. Fewer books than f1a0-20 (210), so INDETERMINATE is a live outcome, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: weekly risk sizing across strategy books (regime-conditioned vs book-quality)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: Equal risk per trade on every book every week (weight 1), on the same trades; and 200 within-week permutations of the state-tilt weights.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261125-f1a0-24
+decision_rule:
+  id: RULE-REGIME-R3-CONFIRM-ROSTERED-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: equal risk per trade on the same leg books; 200 within-week permutations of each arm's weights
+  statistic: 'scripts/research/rostered_leg_replay.py (rostered_legs, replay_leg via exit_lever_ablation.fetch_candles / build_arm_argv, grade):
+    per arm (advol, hmm2, no-state), delta = weighted net R per trade - unweighted over test weeks 2022-01-03..2026-10-26; se from 1,000 week-bootstrap
+    draws; permutation share of 200 within-week permutations; yearly delta. Reported, not graded: the state-vs-no-state paired deltas, per-leg n / net R.'
+  rule: 'Per arm PASS iff delta >= +0.01 R/trade AND delta/se >= 2 AND permutation share <= 0.0167 AND delta > 0 in >= 4 of 5 test years; FAIL iff
+    delta <= 0 or share >= 0.5; else INDETERMINATE. UNIT PASS iff any arm passes; FAIL iff every arm fails; else INDETERMINATE.'
+  pass_action: A Tier-3 sizing proposal to the manager for the passing tilt on the rostered legs (sizing, never a drop gate), with this record and
+    f1a0-20 / f1a0-23 as evidence.
+  fail_action: Record that the sweep-corpus effect does not transfer to the declared configs; R3 moves to change-point / LGBM state classifiers
+    on the rostered population.
+  proposal_mapping: pass -> Tier-3 sizing proposal (manager / operator); fail or indeterminate -> the next regime iteration from this diagnosis.
+    on the same metric.
+  what_it_does_not_do: Changes no config, sizing or order path; adds no gate. Re-runs the evidence builder's harness path read-only (writes only
+    under --out).
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: each arm's weights permuted across books within each test week (200 draws, renormalised); each arm must beat >= 98.3% of draws
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket; only its risk weight changes, with the weekly total unchanged'
+  best_static:
+    grid:
+    - equal risk per trade on every book (weight 1), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule, not chosen on any fold; no grid was searched'
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  why_runner: Keyless Binance Vision candles for ~20 legs plus the repo harnesses; numpy only for the grade.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est.
+    under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- scripts/research/regime_r2_family_router.py
+- REGIME-ROSTERED-CONFIG-REPLAY
+- research/queue/RQ-20261125-f1a0-20.yaml
+- REGIME-PROGRAM
