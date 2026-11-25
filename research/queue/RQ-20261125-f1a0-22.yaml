@@ -1,0 +1,120 @@
+# Hand-authored 2026-11-25 by lane ML-PRIMARY (Tier 1 research) from the f1a0-21 read. Rule registered before any run; a 1-fold code-path smoke ran
+# with its output discarded (exit code only). Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261125-f1a0-22
+title: 'ml_entry LIMIT ENTRY WITH MARKET FALLBACK: on exactly the SL 4 / TP 6 refit''s market-entry decisions, does a post-only limit 0.5
+  ATR better (4 h, maker fee) that falls back to a market entry when unfilled beat plain market entry by +0.0068 R/decision?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-21/45518523469
+  verdict_read: indeterminate
+  diagnosis: 'f1a0-21 (lim_paired, run 45518523469) was INDETERMINATE: +0.0068 R/decision vs market on the same 52,029 decisions (t 0.92, 6 of 8 folds, 3 of 4 years), +0.0121 vs random thinning (t 2.48). Every fold showed adverse selection: the decisions whose limit FILLED were market losers (-0.05..-0.17 R at market) and the ones that did NOT fill were winners (+0.12..+0.37 R). The limit earned ~0.125 R of price plus ~0.02 R of cost on each fill but forfeited the runaway winners. A market fallback when the limit is still unfilled after 4 h keeps those winners (at a worse, later price) while fills keep the improvement.'
+  search: 'one fixed policy: the f1a0-17 limit (0.5 ATR14, 4 x 1h bars, strict fill, maker entry) plus a market fallback at bar t+5 open when unfilled
+    (taker both sides, full slippage); LGB_PARAMS, FEATURES and the SL 4 / TP 6 / 24 h labels unchanged.'
+  levers:
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 15
+  due_by: '2026-12-01'
+question: On the 8 dev folds, on exactly the decisions the SL 4 / TP 6 / 24 h refit takes with market entry, is mean net R per decision with a
+  post-only limit 0.5 ATR14 better than bar t+1's open (4 h, strict fill, maker fee) that FALLS BACK to a market entry at bar t+5's open when
+  unfilled at least +0.0068 above plain market entry (week-clustered t >= 2, >= 6/8 folds, >= 3/4 years)?
+why_this_matters: Cost per R binds; the entry order is the remaining cost term, and a pullback fill also improves the price. The random-thinning
+  control separates the fill's selection from mere trade reduction.
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: arm n = decisions (~70,000, unfilled count as 0 R), the same decisions as the comparator so se(delta) ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry entry order type (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - lim_fallback
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-22
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm lim_fallback (lim_labels fallback=True): the market arm''s taken decisions per fold;
+    delta = pooled mean net R per decision with limit-or-fallback entry - the same rows at market; week-clustered influence se; folds/years vs
+    market. Fill rate, filled vs fallback net R, and the market R of filled vs unfilled decisions reported per fold. The random-thinning
+    control is computed and REPORTED, not gating (every decision trades here).'
+  rule: PASS iff arm n >= 3000 AND delta(arm - market entry) >= +0.0068 AND t >= 2.0 AND folds_better >= 6 of 8 AND years_positive >= 3 of
+    4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. Fixed now.
+  pass_action: Fresh-window confirmation (2025-10..2026-11, holdout ledger claim), then a data-backed Tier-3 entry-order proposal to the manager (applied
+    by the operator or a mandate).
+  fail_action: Record the 0.5 ATR / 4 h limit closed on the paired read; the next execution form is a fill-probability model (post a limit only
+    when P(fill) x price gain exceeds the expected missed-winner cost), the D9 learned step.
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  not_applicable: a deterministic execution-policy variant on the SAME decisions (paired); every decision trades, so random thinning is not
+    a like-for-like control (it is computed and reported, not gating); the comparator is the same decisions at market
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 50
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
