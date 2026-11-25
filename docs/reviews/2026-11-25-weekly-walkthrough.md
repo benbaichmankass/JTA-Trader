@@ -46,7 +46,7 @@
 |---|---|---|---|---|
 | TG1 | TRADING | Harness cost stacks omit the measured markout term (T3) | Row `COST-STACK-MARKOUT-TERM`, report-only beside the current net. Close `MARKOUT-HARNESS` and `EVENT-SPAN-HISTORY` | 12-02; **operator** on making it the grading basis |
 | TG2 | TRADING | The calendar weights FOMC minutes like a decision, and the 12-09 decision is timed 30 min late (T15; evidence now in) | `CALENDAR-FOMC-RELEASE-SPLIT` (Tier 2) | **operator OK before 12-08** |
-| TG3 | TRADING | `ib_paper` MGC: 73 IBKR `status=Inactive` rejects today; 2 legs make no floor data | New row `IB-PAPER-MGC-INACTIVE-REJECTS` (Tier 2 diagnosis) | **11-27** |
+| TG3 | TRADING | `ib_paper` MGC: 73 IBKR `status=Inactive` rejects today; 2 legs make no floor data | Owned by row `IB-MGC-INACTIVE-1125` (lane dispatched 18:35Z); evidence: 73 rejects | in flight |
 | TG4 | TRADING | 22/58 floor cells cannot be classified | Raise `FLOOR-LIVENESS-CHECK` + `AUD-20261028-DEMO-FLOOR-NO-EVAL` | manager |
 | TG5 | TRADING | 286 slice-budget re-emissions for 79 `bybit_1` fills | Note on `NETTED-SLICES`: log once per held slice per bar | 12-02 |
 | TG6 | TRADING | `DESK-PAPER-ACCOUNTS` unproven for five refreshes; `VERDICT-LEFT-TAIL`, `DESK-REPEATABILITY` idle | Raise | manager |
