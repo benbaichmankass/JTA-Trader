@@ -237,7 +237,7 @@ def test_measured_state_2026_08_17():
     # column already pinned above.
     # 108 -> 106 on 2026-10-28: gld_pullback_1h retired by record (STRATEGY-STATUS-MODEL, operator Q4); its two
     # pending tp cells (tp_extend, tp_retarget) left the live population.
-    assert len(movable) == 116   # 106 -> 116 on 2026-10-30 (E4-DEMO-LEG: 10 harness_gap cells of e4_oi_shock_1h); 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
+    assert len(movable) == 126   # 116 -> 126 on 2026-11-25 (INDEX-CAPIT-1X-LEG: 10 harness_gap cells of index_capitulation_1x, as E4); 106 -> 116 on 2026-10-30 (E4-DEMO-LEG: 10 harness_gap cells of e4_oi_shock_1h); 74 -> 102 on 2026-10-27 (12 legs shadow -> live, DEMO-FLOOR RULE); 102 -> 108 on 2026-10-28 (trend_donchian_1h row: 6 pending cells)
     #
     # E65 (2026-09-24, PR #12868): 4 -> 2. The `exit_ladder` cells on
     # trend_donchian_eth_prop and trend_donchian_sol_prop RESOLVED to
@@ -261,7 +261,7 @@ def test_measured_state_2026_08_17():
     # open. The one that remains: squeeze_breakout_4h exit_ladder
     # (blocked:no_harness_levers).
     # 2 -> 4 on 2026-10-28: trend_donchian_1h re-enters the matrix with pending exit_ladder + regime_flip_exit cells, neither of which has a sweep path.
-    assert len(cut.get("no_sweep_path", [])) == 6   # 4 -> 6 on 2026-10-30: e4_oi_shock_1h's exit_ladder + regime_flip_exit (E4-DEMO-LEG); 1 -> 2 on 2026-10-27: fvg_range_15m joined the live population (squeeze_breakout_4h is the other; both exit_ladder)
+    assert len(cut.get("no_sweep_path", [])) == 8   # 6 -> 8 on 2026-11-25: index_capitulation_1x exit_ladder + regime_flip_exit (INDEX-CAPIT-1X-LEG, as E4); 4 -> 6 on 2026-10-30: e4_oi_shock_1h's exit_ladder + regime_flip_exit (E4-DEMO-LEG); 1 -> 2 on 2026-10-27: fvg_range_15m joined the live population (squeeze_breakout_4h is the other; both exit_ladder)
     assert {i[3] for i in cut["no_sweep_path"]} == {"exit_ladder", "regime_flip_exit"}
 
 
@@ -282,8 +282,8 @@ def test_internal_keys_are_not_printed_as_buckets():
     # ...while the measured count IS rendered (0 since the 2026-09-29
     # out_of_scope_family correction, 1 since the 2026-09-29
     # regime_flip_exit resolution; see test_measured_state_2026_08_17 above).
-    assert "MOVABLE BY A SESSION: 116" in text   # 106 -> 116 on 2026-10-30 (E4-DEMO-LEG); 108 -> 106 on 2026-10-28 (gld_pullback_1h retired); 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
-    assert "NO SWEEP PATH AT ALL: 6" in text   # 4 -> 6 on 2026-10-30 (E4-DEMO-LEG)
+    assert "MOVABLE BY A SESSION: 126" in text   # 116 -> 126 on 2026-11-25 (INDEX-CAPIT-1X-LEG); 106 -> 116 on 2026-10-30 (E4-DEMO-LEG); 108 -> 106 on 2026-10-28 (gld_pullback_1h retired); 0 before GEOM-B1 added the two tp columns; 76 -> 73 on 2026-10-18 (three tp cells resolved); 73 -> 74 on 2026-10-22 (xrp_adx25 soak alias mirrors the incumbent tp_extend pending cell)
+    assert "NO SWEEP PATH AT ALL: 8" in text   # 6 -> 8 on 2026-11-25 (INDEX-CAPIT-1X-LEG); 4 -> 6 on 2026-10-30 (E4-DEMO-LEG)
 
 
 def test_the_cut_is_NOT_inside_the_partition():

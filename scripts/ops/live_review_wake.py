@@ -248,6 +248,26 @@ def evidence_files(b: Dict[str, Any]) -> List[Tuple[str, bytes]]:
 Http = Callable[[str, str, Optional[bytes], str], Tuple[Optional[int], Any]]
 
 
+def _http_error_doc(exc: Any) -> Dict[str, Any]:
+    """The error body of an HTTPError as a small dict, never raising. LTR-WAKE-ACTIONS-ERRPATH-IMPORT (2026-11-25):
+    run 45709763387 died with ``ModuleNotFoundError: No module named 'src'`` on this very line, because the Actions
+    step runs ``python3 scripts/ops/live_review_wake.py`` (sys.path[0] is scripts/ops, not the repo root), so the
+    error path crashed on the first HTTP 404 -- a NORMAL answer for a file absent from the rows branch. Put the repo
+    root on sys.path first so the VM poster's helper is reused; if the import still fails (any reason), fall back to
+    the same shape locally. Either way the error path returns a doc and never raises."""
+    try:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
+        return _error_doc(exc)
+    except Exception:  # noqa: BLE001 -- the error path of an HTTP helper must not raise
+        try:
+            msg = json.loads(exc.read() or b"{}").get("message")
+        except Exception:  # noqa: BLE001
+            msg = None
+        return {"_error": {"message": str(msg or "")[:160]}}
+
+
 def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[Optional[int], Any]:
     """(status, parsed JSON or None). Never raises; status None = no response."""
     import urllib.error
@@ -260,8 +280,7 @@ def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[
             raw = resp.read()
             return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as exc:
-        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
-        return exc.code, _error_doc(exc)
+        return exc.code, _http_error_doc(exc)
     except Exception:  # noqa: BLE001 — a network failure is a state, never a raise
         return None, None
 

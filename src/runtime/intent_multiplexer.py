@@ -109,6 +109,7 @@ from src.runtime.strategy_signal_builders import (
     ml_entry_v2_signal_builder,
     ml_entry_eq_signal_builder,
     ml_entry_eq_struct_signal_builder,
+    index_capitulation_1x_signal_builder,
     trend_donchian_sol_4h_signal_builder,
     trend_donchian_xrp_4h_signal_builder,
     trend_donchian_xrp_adx25_signal_builder,
@@ -322,6 +323,8 @@ def _default_intent_builders() -> Dict[str, IntentBuilder]:
         # ML ENTRY equity-native testing leg (alpaca_paper only; evidence RQ-20261105-e9a1-02): scored from the pool snapshot, no tick-time fetch.
         "ml_entry_eq": ml_entry_eq_signal_builder,
         "ml_entry_eq_struct": ml_entry_eq_struct_signal_builder,
+        # Daily long-only capitulation bounce on 18 1x index ETFs (row INDEX-CAPIT-1X-LEG; evidence RQ-20261124-1e06-06/-08).
+        "index_capitulation_1x": index_capitulation_1x_signal_builder,
         "trend_donchian_sol_4h": trend_donchian_sol_4h_signal_builder,
         "trend_donchian_xrp_4h": trend_donchian_xrp_4h_signal_builder,
         "trend_donchian_xrp_adx25": trend_donchian_xrp_adx25_signal_builder,
