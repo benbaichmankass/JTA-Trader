@@ -528,10 +528,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 ra.append(seq_alt.run(fl, fs, tau=0.0))
             tk["control_base_bracket"], tk["control"] = pd.concat(rb, ignore_index=True), pd.concat(ra, ignore_index=True)
         elif arm in ("volsl_retrain", "rsz_xwide"):
-            alt, alt2 = alt
-            lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
-            tr_fix = train.assign(**{c: alt.loc[train.index, c] for c in lab})
-            seq_fix = Seq(test, alt.loc[test.index])
+            alt_f, alt2 = alt   # never rebind `alt`: it is the per-run (fixed, vol) pair every fold unpacks (f1a0-14 run 45532031095 died at fold 2)
+            lab = [c for c in alt_f.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: alt_f.loc[train.index, c] for c in lab})
+            seq_fix = Seq(test, alt_f.loc[test.index])
             fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
             tk["fixed"] = seq_fix.run(fl_, fs_)
             if arm == "volsl_retrain":
