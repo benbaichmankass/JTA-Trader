@@ -126,6 +126,28 @@ kaggle_overflow:
   classes: [cpu_light, cpu_long]
   after: kaggle_cpu
   keep_gpu_hours: 12
+  # SHORT-UNIT TAIL (COMPUTE-FILL-W48, 2026-11-25). A cpu_light unit at or under kaggle_first.min_est_minutes never had `after` in its list,
+  # so it could not overflow at all: MEASURED in dispatcher run 45712315025 (22:26Z), 4 such units (est 5-10 min, not runner-only) waited on
+  # the full runner (4/4) while kaggle_cpu and kaggle were both idle (GPU 1.46 of 30 h used). With this on, such a unit gets [after, backend]
+  # appended AFTER the runner: the runner stays its first choice (plan() and the value score are unchanged); the kernels take it only when
+  # the runner is full. keep_gpu_hours above still applies. ROLLBACK: set short_units_tail: false.
+  short_units_tail: true
+
+# TRAINER OVERFLOW (COMPUTE-FILL-W48, manager 2026-11-25b; operator 2026-11-25: "these resources are free and should never sit idle!!!!").
+# Gates this adds or changes: none (it only ADDS a backend at the END of a CPU class's list; nothing that ran before is refused).
+# MEASURED, dispatcher run 45712315025 (2026-11-25 22:26Z): github_runner 4/4 busy with 13 due units waiting (7 of them runner-only:
+# needs_internet / why_runner, so the Kaggle kernels cannot take them) while the trainer had 1 idle slot and nothing due. The trainer
+# has outbound internet (it pulls main from GitHub every few minutes) and the same python venv the needs_vm_data units already use, so a
+# CPU unit that waits on the full runner may take the trainer's idle WINDOW (backends.trainer.queue: the same windows_utc and fit rule
+# as a needs_vm_data unit, so the training cycle is never crowded). It is the LAST resort of the class: kaggle_cpu / kaggle / the runner
+# keep their order. Only a unit that DECLARES routing.peak_memory_gb <= max_peak_memory_gb (the trainer's measured spare memory:
+# comms/cloud/compute_spare.json hosts.trainer.spare_memory_gb 1.002, max daily p95 over 7 days to 2026-11-25T17:38Z) and needs no
+# secret (the trainer job carries none) or GPU. A unit with no peak_memory_gb never overflows here.
+# ROLLBACK: delete this block; compute_router.class_backends then never appends the trainer.
+trainer_overflow:
+  backend: trainer
+  classes: [cpu_light, cpu_long]
+  max_peak_memory_gb: 1.0
 
 # Dispatcher-wide ceilings. The per-backend max_concurrent above is the ONE capacity statement per backend;
 # these bound the sum, so research can never saturate the runner pool a system-action waits in.

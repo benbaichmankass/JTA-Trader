@@ -82,8 +82,11 @@ def test_runpod_is_never_auto_routed():
 def test_capacity_makes_a_unit_wait_and_a_fallback_class_moves_on():
     st = cr.BackendState(quota_hours=29.98)
     st.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
-    w = cr.resolve(unit(compute="cpu_light"), CFG, st)
+    # a RUNNER-ONLY unit has no other backend (no kernel: no internet; no trainer: no declared memory) -> it waits
+    w = cr.resolve(unit(compute="cpu_light", routing={"needs_internet": True}), CFG, st)
     assert w.ok and w.wait and "at capacity" in w.reason
+    # a plain short unit overflows to the idle kernel instead of waiting (short_units_tail, COMPUTE-FILL-W48)
+    assert cr.resolve(unit(compute="cpu_light"), CFG, st).backend == "kaggle_cpu"
     st.inflight["kaggle"] = 1
     f = cr.resolve(unit(compute="gpu_preferred", routing={"needs_gpu": False}), CFG, st)
     assert f.wait                                                          # both full
@@ -388,7 +391,8 @@ def test_kaggle_first_gpu_classes_unchanged_and_published_not_duplicated():
 def test_overflow_puts_the_gpu_kernel_after_kaggle_cpu_and_before_the_runner_for_cpu_classes_only():
     assert cr.class_backends("cpu_long", unit(routing=_r(est_minutes=90)), CFG) == ["kaggle_cpu", "kaggle", "github_runner"]
     assert cr.class_backends("cpu_light", unit(routing=_r(est_minutes=45)), CFG) == ["kaggle_cpu", "kaggle", "github_runner"]
-    assert cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20)), CFG) == ["github_runner"]       # not on the Kaggle path at all
+    # a short unit keeps the runner FIRST; the kernels are only its overflow tail (short_units_tail, COMPUTE-FILL-W48)
+    assert cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20)), CFG) == ["github_runner", "kaggle_cpu", "kaggle"]
     assert cr.class_backends("gpu", unit(), CFG)[0] == "kaggle" and cr.class_backends("needs_vm_data", unit(), CFG) == ["trainer"]
 
 
@@ -424,3 +428,47 @@ def test_overflow_keeps_gpu_hours_back_for_real_gpu_units_and_never_routes_blind
     # a REAL GPU unit is unaffected by the overflow reserve: it may use the hours down to the backend's own floor
     gpu = unit(compute="gpu", routing=_r(needs_gpu=True, est_minutes=60))
     assert cr.resolve(gpu, CFG, cr.BackendState(total_inflight=0, now=NOW, quota_hours=floor + 1.5)).backend == "kaggle"
+
+
+# ── Trainer overflow (COMPUTE-FILL-W48, manager 2026-11-25b): a small CPU unit may take the idle trainer window, last ──
+def test_trainer_overflow_is_the_last_backend_and_only_for_a_declared_small_unit():
+    cap = CFG["trainer_overflow"]["max_peak_memory_gb"]
+    small = unit(routing=_r(est_minutes=20, peak_memory_gb=cap))
+    assert cr.class_backends("cpu_light", small, CFG) == ["github_runner", "kaggle_cpu", "kaggle", "trainer"]
+    assert cr.class_backends("cpu_long", unit(routing=_r(est_minutes=90, peak_memory_gb=cap)), CFG)[-1] == "trainer"
+    assert "trainer" not in cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20, peak_memory_gb=cap + 0.5)), CFG)
+    assert "trainer" not in cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20)), CFG)        # undeclared memory
+    assert "trainer" not in cr.class_backends("cpu_light", unit(routing=_r(est_minutes=20, peak_memory_gb=cap, needs_secrets=True)), CFG)
+    assert cr.class_backends("gpu", unit(routing=_r(needs_gpu=True, peak_memory_gb=cap)), CFG) == ["kaggle", "runpod"]
+    # a runner-only unit (internet) IS eligible: the trainer has outbound internet, the Kaggle kernels do not
+    ro = unit(routing=_r(est_minutes=20, peak_memory_gb=cap, needs_internet=True))
+    assert cr.class_backends("cpu_light", ro, CFG) == ["github_runner", "trainer"]
+
+
+def test_a_small_unit_takes_the_trainer_only_when_the_runner_is_full_and_a_window_fits():
+    cap = CFG["trainer_overflow"]["max_peak_memory_gb"]
+    u = unit(compute="cpu_light", routing=_r(est_minutes=20, peak_memory_gb=cap))
+    in_window = NOW.replace(hour=12, minute=0)
+    st = cr.BackendState(total_inflight=0, now=in_window, quota_hours=29.0)
+    assert cr.resolve(u, CFG, st).backend == "github_runner"
+    st.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
+    st.inflight["kaggle_cpu"] = st.inflight["kaggle"] = 1               # the kernels come before the trainer in the tail
+    r = cr.resolve(u, CFG, st)
+    assert (r.ok, r.wait, r.backend) == (True, False, "trainer")
+    assert cr.plan(u, CFG).backend == "github_runner"           # ranking/cost still uses the class's first choice
+    off = cr.BackendState(total_inflight=0, now=NOW.replace(hour=6, minute=0), quota_hours=29.0)   # 06Z: outside every window
+    off.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
+    off.inflight["kaggle_cpu"] = off.inflight["kaggle"] = 1
+    assert cr.resolve(u, CFG, off).wait is True
+
+
+def test_a_short_unit_overflows_to_the_kernels_only_when_the_runner_is_full():
+    u = unit(compute="cpu_light", routing=_r(est_minutes=10))
+    st = cr.BackendState(total_inflight=0, now=NOW, quota_hours=29.0)
+    assert cr.plan(u, CFG).backend == "github_runner" and cr.resolve(u, CFG, st).backend == "github_runner"
+    st.inflight["github_runner"] = CFG["backends"]["github_runner"]["max_concurrent"]
+    assert cr.resolve(u, CFG, st).backend == "kaggle_cpu"
+    st.inflight["kaggle_cpu"] = 1
+    assert cr.resolve(u, CFG, st).backend == "kaggle"
+    ro = unit(compute="cpu_light", routing=_r(est_minutes=10, needs_internet=True))
+    assert cr.class_backends("cpu_light", ro, CFG) == ["github_runner"]      # runner-only: no kernel; no memory declared: no trainer
