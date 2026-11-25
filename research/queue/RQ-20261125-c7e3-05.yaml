@@ -1,0 +1,162 @@
+# Hand-authored 2026-11-25 by the ML-PRIMARY lane (operator order via manager 12:03Z: iterate now). AM v2 iteration 3 from the measured fire-timing
+# diagnosis; registered BEFORE any run. Gates this adds or changes: none. No trade path; a pass is a confirmation input, never an apply.
+id: RQ-20261125-c7e3-05
+title: 'AM v2 iteration 3 (mf_tighten_random): a MODEL-FREE tighten_half placed once at a uniformly drawn eligible bar vs HOLD on the CF replay'
+status: queued
+cadence: once
+not_before: '2026-11-25T14:00:00+00:00'
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261125-a9d2-02/45581671996.jsonl
+  verdict_read: fail
+  diagnosis: 'Iteration 2 (RQ-20261124-c7e3-01..04, RQ-20261125-a9d2-02) FAILED in every class with effect: the value model chose WORSE than a uniform placement of the same
+    action (av_tighten dev: policy -11,618 R vs HOLD -10,282 vs random +7,180; rich features -11,550, so the inputs are not the constraint). MEASURED (scripts/research/am_av_fire_timing.py
+    on all 24 a9d2-02 policy shards, 108,922 fired dev trades): 87.1% of fires are at the FIRST decision bar (k p50 1; fire point p50 = 5.6% of the HOLD path); fires at k/bars_held
+    < 0.1 (65%) cost -16,376 R vs HOLD where the uniform control made +2,492 R on the same trades (HOLD win rate 0.39 there: the eventual winners, cut early); later fires (k/held
+    0.1-0.5) equal the control (+0.40 vs +0.41 R/trade). Cause: first-crossing over noisy per-bar predicted values (optional stopping) fires at bar 1, and the labels were drawn
+    uniformly so the fit never saw that selection. The structural value is tightening AFTER the trade develops.'
+  search: 'lever family bracket; mechanism: remove the first-crossing timing bias (model-free uniform / fixed-age tighten, or the value model with a minimum-age floor). Every
+    number fixed in am_action_value.py before the run.'
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  attempt: 3
+  due_by: '2026-12-02'
+question: Does a stop tightened half-way from the original stop to the close, ONCE per trade at a uniformly drawn eligible decision bar (no model, seeded by the trade key),
+  clear RULE-AM-RISK-ADJUSTED-V1 clauses R1-R3 vs HOLD (R1 cost <= 0.05 R/trade, R2 drawdown or weekly-CVaR5 cut >= 15%, R3 >= 4 of 6 calendar folds), net of the full cost
+  stack, on the dev segment AND the claimed 2026 holdout?
+why_this_matters: 'Uniform placement of the same tighten beat HOLD by ~17.5k R dev / ~3.9k R holdout as iteration 2''s CONTROL (conditioned on trades where the model fired).
+  As a standalone policy on every replayable trade it is a time-stop / giveback rule that needs no model, no heads and no label pipeline: the cheapest possible live AM lever
+  if it holds. A pass goes to a fresh-window confirmation, then a Tier-3 proposal input.'
+power:
+  expected_n: 430
+  min_detectable_effect: 0.02
+  effect_units: R_per_trade_weekly_mean_delta
+  sd: 0.05
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE. The independent unit is the entry WEEK (~430 distinct dev+holdout entry weeks from 2022-07, the first fold with a value model; Stage A measured ~481 over
+    2022-01..). Statistic: the week''s mean paired (arm - HOLD) net R per trade; sd 0.05 R of that weekly mean is NOT measured (same inflated guess as Stage B). At sd 0.05
+    and a 0.02 R effect the paired floor is 49 weeks, below 430. The graded verdict is RULE-AM-RISK-ADJUSTED-V1''s R1-R4 screen.'
+  feasibility:
+    source: none
+    accrual_basis: Re-reads the SAME fixed corpus Stage B replayed; nothing accrues.
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: .claude/skills/live-trade-review/SKILL.md
+  decision: tighten moves a live-review packet states and may make (advice-only until a class passes RULE-AM-RISK-ADJUSTED-V1 and a fresh-window confirmation)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: 'HOLD = `replayed_actual` of the same replay (the leg''s own TP, trail and harness timeout), net of the full cost stack. REFERENCE (reported, never gating): the
+    random placements of the same action (R4) and the Stage B class result.'
+  net_of_cost: true
+  per_leg_base_rates: reported per family / strategy / timeframe in the landed measurement (reported_cuts), never graded
+run:
+  workflow: am-action-value.yml
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261125-c7e3-05
+    classes: mf_tighten_random
+    av_run_id: '45537635254'
+decision_rule:
+  id: RULE-AM-MF-RANDOM-TIGHTEN-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: scripts/research/am_action_value.py (shard with class mf_tighten_random, reduce_run) over am_policy_arm._segment / am_risk_adjusted.grade_risk_adjusted, on the
+    dev segment (entry 2022-07-01..2025-12-31) and the claimed holdout (entry >= 2026-01-01). Population = the av units' (trades in a fold with an av_tighten value model; value
+    models reused from am-action-value run 45537635254).
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 with V1 parameters UNCHANGED, per segment, clauses R1-R3 ONLY: R1 net R given up per baseline trade <= 0.05; R2 max-drawdown cut >= 15% OR
+    weekly-CVaR5 cut >= 15%; R3 the fold holds in >= 4 of 6 calendar folds; n floor 39; the lever must fire. R4 is NOT a clause: the policy IS a uniform random placement, so
+    a uniform control is the same distribution (am_action_value.r123_segment maps the grader''s no_random_control to PASS only when R1-R3 all hold). UNIT verdict: PASS iff
+    dev AND holdout both PASS; FAIL iff dev FAILS; else INDETERMINATE.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; a per-trade-R SCREEN (BOOK-SIM-REAL-SIZER owns the book-level $ measurement);
+    says nothing about the other classes (each is its own unit).
+  pass_action: Register a FRESH-WINDOW confirmation of mf_tighten_random (trades after the corpus end, or a fresh corpus pull) before any proposal; on that pass, propose the
+    class to the manager as a Tier-3 / mandate decision input (advice-only today).
+  fail_action: 'Diagnose the fail from the landed cuts and per-action kinds and author the next iteration unit at once (lever: features, labels, menu or the cut), recorded
+    on the iteration block; never a re-run at another threshold.'
+  proposal_mapping: pass -> fresh-window confirmation, then Tier-3 proposal input; fail -> next iteration from its diagnosis; indeterminate -> state which segment/clause and
+    why, then iterate.
+  choices_where_the_design_memo_is_silent:
+  - 'LABELS: every replayable dev trade (entry 2022-01-01..2025-12-31, crypto legs with Binance Vision bars) gets up to 8 decision rows drawn by a seed of its trade key; at
+    each, EVERY menu action is replayed alone from that row''s close (placed once, never re-placed) through am_policy_arm.run_arm: label = arm net R - HOLD net R (fee + exit
+    slippage + funding). No holdout trade is labelled.'
+  - 'FEATURES (point-in-time, bars <= k): the 9 Stage-A head features, the six Stage-B head outputs of the trade''s own fold head (q0.5, q0.9, reach_1, reach_2, stop_first,
+    dip_recovers), the gap to the structure level and the gap to the leg''s TP. Heads reused from am-policy-arm run 45384292963 (artifact am-heads-45384292963).'
+  - 'FIT: per heads test fold from 2022-07-01 (8 folds incl. the 2026 holdout fold), LightGBM huber regressor per action (fixed params, seed 20261124, deterministic), trained
+    ONLY on label rows of trades whose label window ends 7 days before the fold (the holdout fold: before 2025-12-01), labels winsorised at +-3 R, <= 300k rows per fit. Trades
+    entering 2022-01-01..2022-06-30 have no out-of-sample value model and are excluded (counted as no_value_model_for_fold).'
+  - 'POLICY: at each decision row (the unmanaged trade''s open rows) the class''s eligible actions are scored; the FIRST row where an action''s predicted value clears max(EV_MARGIN_R
+    = 0, that action''s TRAINING-row p75 predicted value) fires the highest-value such action ONCE; nothing else on that trade. Every number fixed in am_action_value.py before
+    the first run and never changed after a result.'
+  - BASELINE = HOLD = replayed_actual of the same replay (the leg's own TP + trail + harness timeout), byte for byte; a policy that never acts equals it.
+  - 'CONTROL (R4): 100 seeded draws per fired trade: the SAME action kind placed once at a uniformly drawn decision row where that action is eligible (same count, kind and
+    level rule; no timing information). It never fires into a closed unmanaged trade: a stronger control than a causal one.'
+  - 'GRADING: RULE-AM-RISK-ADJUSTED-V1 with V1 parameters unchanged (am_risk_adjusted.grade_risk_adjusted via am_policy_arm._segment) on DEV (entry < 2026-01-01) and on the
+    claimed HOLDOUT (entry >= 2026-01-01). PASS iff both pass R1-R4; FAIL iff dev fails a necessary clause; else INDETERMINATE. Per-family / per-strategy / per-timeframe cuts
+    REPORTED, never graded. BOOK-SIM-REAL-SIZER does not exist: a per-trade-R SCREEN (graduation_eligible false).'
+  - R unit = the ORIGINAL stop distance; positions are not re-sized in trade, so a loosened stop genuinely risks more than 1 R and that tail is charged to the arm's drawdown
+    and CVaR.
+  - 'THIS CLASS (mf_tighten_random): tighten_half (stop half-way from the original stop to the close) once at a uniformly drawn eligible decision row; seed = sha256(trade key|class|policy),
+    disjoint from control seeds.'
+  - 'DESIGN DISCLOSURE: MIN_AGE_K = 5 and the model-free forms were chosen AFTER reading the dev fire-timing of a9d2-02, so the DEV segment is not a clean test of those choices;
+    the claimed 2026 HOLDOUT is, and the unit passes only if BOTH segments pass.'
+  - 'HOLDOUT: family AM-HEADS, 2026-01-01..end, claimed by the reduce step BEFORE the holdout books are built (model_id AM-HEADS-av-<class>); graded against the ledger''s deflated
+    bar_for(n) at its n_tries.'
+  - 'DISPATCH STAGGER: c7e3-05/06/07 not_before 14:00/16:00/18:00Z so result jobs never append comms/research/holdout_reads.jsonl concurrently.'
+  min_n: 100000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 500
+  confidence: 0.15
+  basis: 'ESTIMATE: the operator named predictive two-way brackets the top ML priority; the value is whether any action class pays net of cost.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: HOLD is `replayed_actual` of the same replay
+  not_applicable: 'the policy IS a uniform random placement of tighten_half: a matched uniform control would be the same distribution, so R4 is not a rule clause; HOLD is the
+    baseline every clause reads against'
+  best_static:
+    grid:
+    - hold
+    excludes_test_folds: true
+    note: the static alternatives (alt_sl*/tp*) are reported by cf_bulk, not re-graded here
+  bootstrap_group: week
+practice_precedent: action-value (uplift) policies; the design memo § 4 action-value arm chooser; matched random-intervention control (T1); RULE-AM-RISK-ADJUSTED-V1 per class;
+  docs/research/am-v2-stage-b-diagnosis-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  basis: 'ESTIMATE: 24 label shards (~469k dev trades x 8 rows x 8 actions) + 8 parallel fold fits + 24 policy shards (101 replays per fired trade) + a reduce.'
+  why_runner: CPU LightGBM and a Python replay over keyless bars; sharded on GitHub-hosted runners (am-action-value.yml), not this session.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/am_action_value.py
+- scripts/research/am_policy_diag.py
+- scripts/research/am_policy_arm.py
+- scripts/research/am_risk_adjusted.py
+- .github/workflows/am-action-value.yml
+- docs/research/am-v2-stage-b-diagnosis-2026-11-24.md
+- docs/research/ml-am-heads-design-2026-11-23.md
+- AM-V2-STAGE-B-POLICY-ARM
+- BOOK-SIM-REAL-SIZER
+- scripts/research/am_av_fire_timing.py
+- RQ-20261125-a9d2-02
