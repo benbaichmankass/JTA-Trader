@@ -1,0 +1,126 @@
+# Hand-authored 2026-11-24 by lane ML-PRIMARY (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a) on the
+# operator's 11-24 ask ("I want solutions"; "it's the whole trading flow for these trades that are failing, not just the ml").
+# Queue-fill on the manager's 23:14Z watchdog note; not_before staggered. Rule registered before any run. One factor against a matched control.
+# Decision rule registered BEFORE any run.
+# Gates this adds or changes: none (a research arm; changes no config, served model, sizing or order path).
+id: RQ-20261124-f1a0-14
+title: 'ml_entry REGIME ARM 2: does setting the bracket width by the BTC vol regime (SL = 3 + 2 x BTC vol percentile ATR14, TP = 1.5 x SL, 24
+  h, refit) beat the fixed SL 4 / TP 6 / 24 h refit by +0.0068 R/decision on the dev folds, net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261124-f1a0-12 (pre-named fail action) + f1a0-10/45498384564
+  verdict_read: indeterminate
+  diagnosis: Cost per R is the binding constraint on ml_entry (gross ~ +0.067 vs cost ~ 0.064 R/decision over 11 arms); f1a0-10 (fixed SL 4 /
+    TP 6, 24 h) cut cost to 0.037 R for +0.0087 (t 0.59). A stop that must survive noise needs to be wider when BTC vol is high and can be tighter
+    when it is low; a fixed multiple over-pays in calm regimes and gets noise-stopped in volatile ones. Regime as bracket WIDTH (operator 2026-11-24
+    regime directive; f1a0-12's pre-named next form) conditions the mechanics, not the side, which R1 (local read) found has no persistent regime
+    edge.
+  search: 'lever family regime/bracket, one fixed mapping (no grid): SL = 3 + 2 x btc_vol_pct90d (ATR14), TP = 1.5 x SL, 24 h; LGB_PARAMS and
+    FEATURES unchanged.'
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 2
+  due_by: '2026-12-01'
+question: On the 8 dev folds, is mean net R per decision of the recipe refit on vol-scaled bracket labels (SL 3..5 ATR14 by the BTC vol24 percentile
+  over 90 d at the decision bar, TP = 1.5 x SL, 24 h) and traded under them at least +0.0068 above the fixed SL 4 / TP 6 / 24 h refit (week-clustered
+  t >= 2, >= 6/8 folds, >= 3/4 years)? Net R per BTC regime cell is reported for both.
+why_this_matters: Cost per R binds; the bracket width is the cost lever, and regime is the obvious conditioner of how wide a stop must be.
+power:
+  expected_n: 70000
+  min_detectable_effect: 0.0068
+  effect_units: R_per_decision
+  sd: 1.1
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: arm n ~ base n (~70,000), mostly the same decisions so se(delta) ~ 0.005-0.010; INDETERMINATE possible, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: ml_entry sl_wide (see question)
+  legs:
+  - ml_entry
+  book: money
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol,
+    SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_fix_arms.py
+  - --arm
+  - volsl_retrain
+  - --fetch
+  - --run-date
+  - '2026-11-22'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261124-f1a0-14
+decision_rule:
+  id: RULE-ML-ENTRY-FIX-ARMS-20261124
+  registered_at: '2026-11-24'
+  registered_before_run: true
+  baseline: the registered recipe on the same folds, rows, tau and cost stack
+  statistic: 'scripts/research/ml_entry_fix_arms.py --arm volsl_retrain: delta = pooled mean net R per decision (vol-scaled refit) - (fixed SL
+    4 refit) over the 8 dev folds; week-clustered influence se; folds/years vs the fixed refit.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - comparator) >= +0.0068 AND t >= 2.0 AND folds_better >= 6 of 8 AND years_positive >= 3 of 4. FAIL
+    iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. The random-side control is COMPUTED and REPORTED, not gating (a bracket
+    is a mechanics lever). Fixed now.
+  pass_action: Fresh-window confirmation (2025-10..2026-11, holdout ledger claim), then a data-backed Tier-3 bracket proposal to the manager (applied
+    by the operator or a mandate).
+  fail_action: Record the vol-scaled width closed at this mapping; the next regime-bracket form is a per-symbol vol percentile (the symbol's own
+    state, not BTC's).
+  proposal_mapping: pass -> fresh-window confirmation (bars after 2025-10-01, holdout ledger claim, deflated bar) -> Tier-3 proposal to the manager
+    with this evidence record; fail/indeterminate -> the next iteration authored from this diagnosis at once.
+  what_it_does_not_do: Changes no served model, config, sizing or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3000
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 on bybit_2 summed -5.8 R over 26 trades (journal, MEASURED in docs/research/ml-entry-review-2026-11-24.md);
+    this arm targets one named cause of that loss.'
+intervention_controls:
+  not_applicable: a static bracket alternative fixed at entry (vol-scaled vs fixed SL 4 / TP 6), not an active in-trade action; the random-side
+    control (100 seeded draws under both brackets) is computed and reported
+  bootstrap_group: week
+practice_precedent: one-factor arm vs the registered recipe with a matched control and week-clustered se (principles M6, M13); docs/research/ml-entry-review-2026-11-24.md.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 50
+  why_runner: Keyless public Binance Vision data; LightGBM pair refits on CPU.
+  basis: 'ESTIMATE from RQ-20261124-e1a7-02 (MEASURED there: fetch + 8 base refits + 100 random draws completed inside one runner job).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_entry_fix_arms.py
+- docs/research/ml-entry-review-2026-11-24.md
+- research/queue/RQ-20261124-e1a7-02.yaml
+not_before: '2026-11-25T02:00:00+00:00'
