@@ -145,7 +145,11 @@ jobs:
           WORK_STORE_TOKEN: ${{ secrets.WORK_STORE_TOKEN }}
         run: |
           set -euo pipefail
-          python3 scripts/ops/soak_report.py --write --sync-pipeline \
+          # BACKLOG-TRIAGE-W48 2026-11-25: --sync-pipeline REMOVED. It re-filed one PI-SOAK-* pipeline item per
+          # Stage-1 leg every Sunday, but the soak step was retired 2026-11-12 (MD-PROMOTE-S1-S2 soak_step:
+          # retired; operator "Absolutely no steps"), and the operator approved closing the PI-SOAK items on
+          # 2026-11-25. Left on, the next run (Sun 03:00Z) would re-file ~45 of them. The report itself is unchanged.
+          python3 scripts/ops/soak_report.py --write \
             --grade-file "${{ steps.run.outputs.out_path }}"
 
       - id: touchsplit
