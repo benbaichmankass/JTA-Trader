@@ -29,6 +29,11 @@ Grade per arm over the test weeks [TEST_START, DATA_END):
 RULE-REGIME-R2-FAMILY-ROUTER-20261124: an arm PASSES iff delta >= +0.02 R/trade AND delta/se >= 2 AND random share <= 0.025 (two arms, Bonferroni
 of 0.05) AND delta > 0 in >= 4 of the 5 test years AND the arm takes >= 30% of the baseline's trades. The unit PASSES iff either arm passes;
 FAILS iff both arms have delta <= 0 or random share >= 0.5; INDETERMINATE otherwise.
+
+ITERATION 2 (``--books symbol``, unit RQ-20261124-f1a0-18, RULE-REGIME-R2B-SYMBOL-BOOKS-20261124), from f1a0-16 (run 45511033292): ``persist`` was
+INDETERMINATE (+0.021 R/trade, t 0.76, random share 0.10, 4 of 5 years positive) and ``logit`` FAILED (anti-predictive, 0.49 books/week). With only 8
+books the week-clustered se is wide. Iteration 2 makes each book a family x SYMBOL x direction (hundreds of books, so many more routing decisions
+per week) and runs the ``persist`` arm ONLY (logit dropped as failed); everything else is unchanged. One arm, so random share <= 0.05.
 """
 from __future__ import annotations
 
@@ -88,10 +93,14 @@ def unique_trades(jobs: Dict[str, dict]) -> pd.DataFrame:
     return g
 
 
-def weekly_books(trades: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """(sum R, n) frames indexed by week start (Monday, UTC), one column per book 'family|direction'."""
+RULE_SYMBOL = dict(RULE, id="RULE-REGIME-R2B-SYMBOL-BOOKS-20261124", max_random_share=0.05)
+
+
+def weekly_books(trades: pd.DataFrame, level: str = "family") -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """(sum R, n) frames indexed by week start (Monday, UTC), one column per book 'family|direction' (level 'family') or
+    'family|symbol|direction' (level 'symbol')."""
     t = trades.copy()
-    t["book"] = t.family + "|" + t.direction
+    t["book"] = (t.family + "|" + t.direction) if level == "family" else (t.family + "|" + t.symbol + "|" + t.direction)
     t["week"] = (t.ts.dt.tz_convert(None).dt.normalize() - pd.to_timedelta(t.ts.dt.weekday, unit="D"))
     s = t.pivot_table(index="week", columns="book", values="net_r", aggfunc="sum").fillna(0.0)
     n = t.pivot_table(index="week", columns="book", values="net_r", aggfunc="size").fillna(0).astype(float)
@@ -220,7 +229,8 @@ def grade(f: pd.DataFrame, pick: pd.Series, test_weeks: Sequence[pd.Timestamp], 
             "yearly_delta": years, "mean_books_per_week": round(float(k_by_week.mean()), 3)}
 
 
-def arm_verdict(g: Dict[str, Any]) -> Tuple[str, Dict[str, bool]]:
+def arm_verdict(g: Dict[str, Any], rule: Optional[Dict[str, Any]] = None) -> Tuple[str, Dict[str, bool]]:
+    RULE = rule or globals()["RULE"]
     yrs = [v for v in g["yearly_delta"].values() if v == v]
     chk = {"delta_ge_min": g["delta"] >= RULE["min_delta_r"], "t_ge_min": (g["t"] or 0) >= RULE["min_t"],
            "beats_random": g["random"]["share_ge_arm"] <= RULE["max_random_share"],
@@ -254,25 +264,30 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def run(trades: pd.DataFrame, seed: int = SEED) -> Dict[str, Any]:
-    S, N = weekly_books(trades)
+def run(trades: pd.DataFrame, seed: int = SEED, level: str = "family") -> Dict[str, Any]:
+    S, N = weekly_books(trades, level)
     f = features(S, N)
     test_weeks = [w for w in S.index if w >= pd.Timestamp(TEST_START)]
     rng = np.random.default_rng(seed)
-    picks = {"persist": choose_persist(f), "logit": choose_logit(f, test_weeks)}
+    picks = {"persist": choose_persist(f)} if level == "symbol" else {"persist": choose_persist(f), "logit": choose_logit(f, test_weeks)}
     res = {a: grade(f, p, test_weeks, rng) for a, p in picks.items()}
+    rule = RULE_SYMBOL if level == "symbol" else RULE
     verdicts = {}
     for a, g in res.items():
-        verdicts[a], g["checks"] = arm_verdict(g)
+        verdicts[a], g["checks"] = arm_verdict(g, rule)
         g["verdict"] = verdicts[a]
-    book_census = {b: {"trades": int(N[b].sum()), "sum_r": round(float(S[b].sum()), 2)} for b in S.columns}
-    return {"arms": res, "verdict": unit_verdict(verdicts), "books": book_census, "n_test_weeks": len(test_weeks)}
+    if level == "symbol":
+        book_census = {"n_books": int(S.shape[1]), "trades": int(N.to_numpy().sum()), "sum_r": round(float(S.to_numpy().sum()), 2)}
+    else:
+        book_census = {b: {"trades": int(N[b].sum()), "sum_r": round(float(S[b].sum()), 2)} for b in S.columns}
+    return {"arms": res, "verdict": unit_verdict(verdicts), "books": book_census, "n_test_weeks": len(test_weeks), "level": level, "rule": rule}
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="/tmp/regime_r2")
     ap.add_argument("--unit", default="")
+    ap.add_argument("--books", choices=["family", "symbol"], default="family")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -284,20 +299,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     files = cf_bulk.discover()
     jobs, counts = cf_bulk.load_jobs(files)
     trades = unique_trades(jobs)
-    m = run(trades)
+    m = run(trades, level=a.books)
     fp = corpus_fingerprint(trades)
     pop = (f"backtest trade corpus (cf_bulk.TRADE_GLOBS, {counts.get('files')} files, {counts.get('distinct_jobs')} distinct jobs) -> {len(trades)} unique crypto "
-           f"trades of {list(FAMILIES)} with entries {DATA_START}..{DATA_END} (variants averaged), 8 family x direction books, weekly; test weeks "
+           f"trades of {list(FAMILIES)} with entries {DATA_START}..{DATA_END} (variants averaged), {m['books']['n_books'] if a.books == 'symbol' else 8} {'family x symbol x direction' if a.books == 'symbol' else 'family x direction'} books, weekly; test weeks "
            f"{TEST_START}..{DATA_END} ({m['n_test_weeks']}); harness net_r (fee + slippage + funding)")
     why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']} random share {g['random']['share_ge_arm']} trade share {g['trade_share']}"
                     for k, g in m["arms"].items())
     dw = {"data_start": DATA_START, "data_end": DATA_END, "test_start": TEST_START, "corpus_sha256": fp, "n_unique_trades": int(len(trades)),
           "n_files": counts.get("files")}
-    summ = {"schema": "regime_r2_family_router/1", "unit": a.unit, "verdict": m["verdict"], "why": why, "rule": RULE, "population": pop,
+    summ = {"schema": "regime_r2_family_router/1", "unit": a.unit, "verdict": m["verdict"], "why": why, "rule": m["rule"], "population": pop,
             "data_window": dw, "load_counts": counts, "measurement": m, "git_sha": _git_sha(), "elapsed_s": round(time.time() - t0), "read_state": "measured"}
     (out / "summary.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": m["verdict"], "read_state": "measured", "n": int(len(trades)), "note": why, "population": pop,
-                                                  "rule": RULE, "data_window": dw, "measurement": m}, indent=1, default=str) + "\n")
+                                                  "rule": m["rule"], "data_window": dw, "measurement": m}, indent=1, default=str) + "\n")
     print(json.dumps({"verdict": m["verdict"], "why": why}), flush=True)
     return 0
 
@@ -344,6 +359,10 @@ def _self_test() -> int:
     check("persistent regimes: logit arm beats baseline", m["arms"]["logit"]["delta"] > 0.05)
     m0 = run(_synthetic(seed=4, persistent=False))
     check("no regimes: no arm passes", m0["verdict"] != "pass")
+    ms = run(tr, level="symbol")
+    check("symbol books: persist only, symbol-level rule", list(ms["arms"]) == ["persist"] and ms["rule"]["max_random_share"] == 0.05
+          and ms["books"]["n_books"] > 8)
+    check("symbol books: persistent regimes beat baseline", ms["arms"]["persist"]["delta"] > 0.05)
     check("verdict mapping", unit_verdict({"a": "fail", "b": "indeterminate"}) == "indeterminate" and unit_verdict({"a": "fail", "b": "fail"}) == "fail")
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return 0 if ok else 1
