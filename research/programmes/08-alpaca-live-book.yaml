@@ -173,3 +173,22 @@ nodes:
       author a scoping unit -- which long call / put or debit-spread structures on the pool cost <= 0.9 x cash per contract, and what
       the macro sleeve's alpaca_options_paper record (P4) says they earn net of the options cost stack. The options executor has no
       cancel / open-orders read today (docs/reference/account-capability-matrix.md), a build gap before any live use.
+
+# ── PROGRAMME REVIEW 2026-11-25 (lane PROGRAMME-REVIEW-20261125): the measured-cost reprice FAILs and the operator decision.
+# Gates this adds or changes: none.
+rollforward_2026_11_25:
+  schema: iteration-plan-2w/v1-regroup
+  regrouped: '2026-11-25'
+  weeks: [w2026_12_01, w2026_12_08]
+  operator_decision: 'Operator 2026-11-25 ~18:55Z, relayed by Manager 2026-11-25a: tlt_pullback_1h is NOT demoted ("It doesn''t get demoted
+    until we''ve tried iterating and we don''t have anything else to do with it"); slv_trend_1h "Keep on real money". No demotion proposal
+    for a leg whose lever map is not exhausted. Row ALPACA-LIVE-COST-REPRICE-FAIL closed as decided; iteration units owned by QUEUE-FILL-STANDING-W49.'
+  subjects:
+    tlt_pullback_1h:
+      w48_outcome: 'RQ-20261119-f2a4-07 FAIL: Stage-0 edge does not survive the measured Alpaca cost.'
+      w2026_12_01: 'COST-LEVER iteration (owner QUEUE-FILL-STANDING-W49): the sizing_vs_cost / entry-order levers that cut cost per trade (fewer, larger-move entries; limit entry), graded at the measured Alpaca cost.'
+      w2026_12_08: 'Read; a FAIL moves to the next untested family on the lever map. Demotion is not on the table until the map is exhausted.'
+    slv_trend_1h:
+      w48_outcome: 'RQ-20261119-f2a4-06 FAIL at measured cost; the slv head-to-head f2a4-03 also FAIL.'
+      w2026_12_01: 'FOLD-ROBUSTNESS iteration (owner QUEUE-FILL-STANDING-W49): per-fold net R at the measured cost, to tell a cost-shaped loss from one bad fold.'
+      w2026_12_08: 'Read; the leg stays on real money (operator) while it iterates.'

@@ -521,7 +521,7 @@
      {
       "cluster": "cost reprice",
       "cause": "cost drag",
-      "variant": "manager decision ALPACA-LIVE-COST-REPRICE-FAIL"
+      "variant": "operator 2026-11-25: no demotion; TLT cost-lever iteration, SLV fold-robustness iteration (QUEUE-FILL-STANDING-W49)"
      }
     ],
     "answered": [],
@@ -605,16 +605,6 @@
    }
   },
   {
-   "call": "The manager moves ALPACA-LIVE-COST-REPRICE-FAIL off queued (decision recorded)",
-   "p": 0.7,
-   "track": "TRADING",
-   "check": {
-    "command": "python3 scripts/ops/work.py get ALPACA-LIVE-COST-REPRICE-FAIL",
-    "rule": "hit iff state != queued",
-    "resolves_when": "2026-12-02"
-   }
-  },
-  {
    "call": ">= 3 of the 8 P2-PR1125-D* nodes have an authored unit citing them",
    "p": 0.45,
    "track": "MODEL",
@@ -643,6 +633,16 @@
     "rule": "hit iff state in (landed_unproven, done)",
     "resolves_when": "2026-12-02"
    }
+  },
+  {
+   "call": "The TLT cost-lever iteration unit is authored and dispatched (a queue unit citing tlt_pullback_1h dated >= 20261126)",
+   "p": 0.6,
+   "track": "TRADING",
+   "check": {
+    "command": "grep -l 'tlt_pullback_1h' research/queue/RQ-2026112[6-9]*.yaml research/queue/RQ-202612*.yaml 2>/dev/null | wc -l",
+    "rule": "hit iff >= 1",
+    "resolves_when": "2026-12-02"
+   }
   }
  ],
  "nodes_authored": [],
@@ -664,7 +664,10 @@
  "rows_filed": [
   "RESEARCH-LEVER-ARM-NOOP (owner manager, due 2026-12-02, L-PROGRAMMES)",
   "RESEARCH-LEVER-FAMILY-REACH (owner manager, due 2026-12-09, L-PROGRAMMES)",
-  "ALPACA-LIVE-COST-REPRICE-FAIL (owner manager, due 2026-11-27, L-LADDER, Tier 3)"
+  "ALPACA-LIVE-COST-REPRICE-FAIL (decided by the operator 2026-11-25: no demotion; closed, iteration units owned by QUEUE-FILL-STANDING-W49)",
+  "CJ-4-RISK-ATR-HAZARD (owner manager, due 2026-12-09, L-ML-MECE)",
+  "FAMILY-REVIEW-HTF-TD1H (owner manager, due 2026-12-09, L-PROGRAMMES)",
+  "LTR-BEYOND-EXIT-REPLAY (existing twin; due_by set 2026-12-09)"
  ],
  "driver_rows_named": {
   "D7/D8 in-trade policy": "ML-AM-NEXT-LIVE (queued, due_by 2026-11-12 overdue) + TMBENCH-V2-TRAIN-INPUT (landed_unproven)",
@@ -683,12 +686,13 @@
  "handoff": [
   "ML-PRIMARY (reply 2026-11-25 18:36Z) owns D2 (REGIME-PROGRAM) and D3 (ML-ENTRY-FINETUNE), so P2-PR1125-D2/-D3 are authoring_closed to it. It also owns AM v2 / ml-brackets (AM-V2-STAGE-B-POLICY-ARM, c7e3-07/08/09), INDEX-CAPIT-1X-LEG and DESK-MACRO-DAILY. It does NOT own D5-D10: research-ops authors P2-PR1125-D5/D6/D10, and D7/D8/D9 wait on their driver-row owners. Re-date ML-AM-NEXT-LIVE, MLP-D9-WHIPPET, MLP-D2-REVIEW-HEADS and ML-D9-MAKER-EXIT-HARNESS (all past due_by).",
   "research-ops: author from rollforward_2026_11_25 first designs for orphans ltr-close, ltr-partial-close, ltr-sl-to-structure, ltr-tp-pull-in, ltr-tighten-sl (P1) and claude_desk, qqq_pullback_1h (session declare is a manager Tier-3 proposal), spy_pullback_1h, xsec-crypto, cost-levers-live-legs, movement-capture (P3); ml-exit-head-donchian-1h, ml-holdbias-exit, ml-btc-router-cells (P2, via ML-PRIMARY).",
-  "manager: the continuation-replay harness for ed2b-02/-04 (ltr widen_sl / tp_extend) has no checklist row; owner on blocked_on is 'lane ORPHANS-LTR (or the P1 programme lane)'.",
-  "manager: the CJ-4 label hazard (D10 dependency, 11-23 plan) has no checklist row.",
-  "manager: family-review records due for htf_pullback_trend_2h and trend_donchian_1h (lever maps exhausted)."
+  "Thursday planning list (manager): qqq_pullback_1h session-skip Tier-3 declare (RQ-20261118-001 holdout PASS)."
  ],
  "nodes_closed_to_owner": [
   "P2-PR1125-D2-survivors-as-d3-features -> ML-PRIMARY/REGIME-PROGRAM",
   "P2-PR1125-D3-trend-conditioned-side -> ML-PRIMARY/ML-ENTRY-FINETUNE"
+ ],
+ "operator_decisions": [
+  "2026-11-25 ~18:55Z (via Manager 2026-11-25a): tlt_pullback_1h not demoted; slv_trend_1h keep on real money; no demotion proposals for legs whose lever map is not exhausted."
  ]
 }

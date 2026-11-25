@@ -35,7 +35,7 @@ Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-
 | P2 | P1 | D7 Stage B v2 policy actions | ltr classes on MD-TRADE-DESK | waits on ML-AM-NEXT-LIVE |
 | P3 | P6 | no-op armed results graded FAIL | RESEARCH-LEVER-ARM-NOOP + an armed-result hygiene unit | row filed |
 | P3 | P7 | timeframe untested on 34 of 39 overdue legs | RESEARCH-LEVER-FAMILY-REACH | row filed |
-| P8 | manager | 2 real-money legs fail measured-cost reprice | ALPACA-LIVE-COST-REPRICE-FAIL | Tier-3 decision |
+| P8 | P8 | 2 real-money legs fail measured-cost reprice | operator: no demotion; TLT cost-lever + SLV fold-robustness iterations (QUEUE-FILL-STANDING-W49) | decided 2026-11-25 |
 | P4 | P2 | event-class weights (a5b3-02 PASS) | D3 feature candidate | handoff |
 
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118)
