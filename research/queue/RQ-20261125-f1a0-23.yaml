@@ -1,0 +1,129 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (REGIME-PROGRAM R3 decomposition) from the f1a0-20 PASS. Rule fixed before any run. DISCLOSURE: the
+# f1a0-20 state-tilt results on these books were read (both classifiers passed); the NO-STATE arm and the paired state-vs-no-state difference were never computed. Gates: none.
+id: RQ-20261125-f1a0-23
+title: 'REGIME-PROGRAM R3 decomposition: does the BTC state cell add money BEYOND book quality, i.e. does the f1a0-20 state tilt beat the same
+  tilt with no state (the book''s all-prior mean), week-paired, by +0.005 R/trade?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-20/45517557704
+  verdict_read: pass
+  diagnosis: 'f1a0-20 (run 45517557704) PASSED: hmm2 +0.0247 R/trade (t 3.87, all 5 years), advol +0.0134 (t 2.02, 4 of 5), both beating all 200 within-week permutations. But the 2-state HMM put 239 of 251 test weeks in ONE state, so its tilt is nearly the book''s prior expanding mean, book QUALITY persistence rather than regime switching. Before a confirmation and any sizing proposal, the regime claim must be separated from book quality: grade each classifier against the same tilt with a single cell.'
+  search: one decomposition (no-state arm vs advol and hmm2, same tilt rule, same books and weeks); no grid.
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 6
+  due_by: '2026-12-01'
+question: 'On the same corpus, 210 books and 251 test weeks as f1a0-20, does each state classifier''s tilt (advol, hmm2) beat the same 2.0 / 0.5 tilt
+  keyed on the book''s mean over ALL prior weeks (no state), week-paired, by >= +0.005 R/trade with week-bootstrap t >= 2 and >= 3 of 5 years positive?
+  The no-state arm is also graded alone vs equal risk under the R3 rule.'
+why_this_matters: 'It decides what a sizing proposal would be: regime-conditioned sizing (if a classifier beats no-state) or plain book-quality
+  sizing (if only the no-state arm earns). Either way the next step is the rostered-config confirmation (REGIME-ROSTERED-CONFIG-REPLAY).'
+power:
+  expected_n: 251
+  min_detectable_effect: 0.005
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'ESTIMATE: 251 test weeks (the cluster); f1a0-18 measured se 0.016 R/trade for routing on these books; a tilt keeps every trade so its
+    se should be lower, but a +0.01 effect may still be INDETERMINATE, stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: weekly risk sizing across strategy books (regime-conditioned vs book-quality)
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: Equal risk per trade on every book every week (weight 1), on the same trades; and 200 within-week permutations of the state-tilt weights.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/regime_r2_family_router.py
+  - --unit
+  - '{unit}'
+  - --books
+  - symbol
+  - --mode
+  - decomp
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-f1a0-23
+decision_rule:
+  id: RULE-REGIME-R3-DECOMP-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: the same tilt with a single cell (the book''s all-prior mean), week-paired; the no-state arm itself vs equal risk with 200 within-week permutations
+  statistic: 'scripts/research/regime_r2_family_router.py --books symbol --mode decomp (state_raw, tilt_week_sums, paired_delta, decomp_verdict):
+    per classifier, d_w = state-tilt weighted R - no-state weighted R in test week w; delta = sum d_w / total trades; se from 1,000 week-bootstrap
+    draws; yearly delta. The no-state arm vs equal risk via grade_tilt under RULE_STATE (reported).'
+  rule: 'Per classifier PASS iff delta >= +0.005 R/trade AND t >= 2 AND >= 3 of 5 test years > 0; FAIL iff delta <= 0; else INDETERMINATE. UNIT
+    PASS iff either classifier passes; FAIL iff both fail; else INDETERMINATE.'
+  pass_action: The confirmation (REGIME-ROSTERED-CONFIG-REPLAY) tests regime-conditioned sizing with the passing classifier and the no-state
+    arm side by side.
+  fail_action: The f1a0-20 effect is book quality, not regime; the confirmation tests no-state book-quality sizing, and R3 moves to change-point
+    and LGBM state classifiers judged against the no-state arm.
+  proposal_mapping: pass -> fresh-window confirmation -> Tier-3 sizing proposal; fail/indeterminate -> change-point and LGBM state classifiers
+    on the same metric.
+  what_it_does_not_do: Changes no config, sizing or order path; adds no gate. The f1a0-20 read is disclosed in the header.
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    draws: 200
+    description: the no-state arm vs 200 within-week permutations of its own weights (reported); the classifiers are graded week-paired against the no-state arm
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: each trade keeps its harness bracket; only its risk weight changes, with the weekly total unchanged'
+  best_static:
+    grid:
+    - equal risk per trade on every book (weight 1), the registered comparator
+    excludes_test_folds: true
+    note: 'one fixed rule, not chosen on any fold; no grid was searched'
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6,
+  M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 30
+  why_runner: Reads the in-repo trade corpus plus keyless Binance Vision BTCUSDT 1h klines; numpy only.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est.
+    under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/regime_r2_family_router.py
+- research/queue/RQ-20261125-f1a0-20.yaml
+- REGIME-PROGRAM
