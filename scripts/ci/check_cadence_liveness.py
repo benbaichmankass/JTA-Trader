@@ -362,6 +362,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "full-regenerated from ALL committed captures every run and "
                "committed via commit-to-main -- a fixed, overwritten path",
     },
+    "earnings-calendar-snapshot.yml": {
+        "receipt": "comms/macro/earnings_calendar_snapshots.jsonl",
+        "why": "DESK-MACRO-DAILY: every weekday run appends the next 7 days' earnings (new report dates enter the window "
+               "daily) to this fixed append-only path via commit-to-main",
+    },
     "news-gdelt-panel.yml": {
         "receipt": "comms/news_alpha/gdelt_panel",
         "why": "NEWS-ALPHA-CORPUS-SLICE1: every daily run re-folds the CURRENT month and commits "
