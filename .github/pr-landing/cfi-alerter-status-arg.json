@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_runtime_alerting",
+  "hold_text": "Decision: pass the required `status` to outcomes.report() in the closed-flat invariant alerter. Tier 2 runtime alerting; manager merges and deploys. It was TypeError on every violation (23x per the 11-25 health review), so the safety alert never sent. Revert: git revert.",
+  "why": "A safety alert that silently cannot fire must fire."
+}

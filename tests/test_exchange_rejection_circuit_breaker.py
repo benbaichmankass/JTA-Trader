@@ -255,11 +255,19 @@ def test_critical_alert_emitted_at_threshold(coord, live_yaml):
     assert critical[0]["consecutive_rejections"] == 3
 
 
-def test_breaker_never_auto_pauses_regardless_of_streak(coord, live_yaml):
+def test_breaker_never_auto_pauses_regardless_of_streak(coord, live_yaml, monkeypatch):
     """No matter how long the rejection streak, the breaker never flips
-    the account to dry_run (Prime Directive). The counter keeps climbing
-    past the threshold and the account stays live; each rejection at or
-    past the threshold re-emits the critical alert."""
+    the account to dry_run (Prime Directive) and retries never stop.
+
+    IB-MGC-INACTIVE-1125 changed two things on purpose: after 3 consecutive
+    rejections the LEG backs off exponentially instead of re-hitting the venue
+    every tick, and the critical alert fires ONCE per streak (at the
+    threshold), not on every later rejection. Retries resume when the backoff
+    elapses -- contained, never halted.
+    """
+    from src.core import placement_backoff as pb
+    now = [1_000_000.0]
+    monkeypatch.setattr(pb, "_clock", lambda: now[0])
     captured_alerts = []
     real_push = coord.push_alert
 
@@ -267,20 +275,33 @@ def test_breaker_never_auto_pauses_regardless_of_streak(coord, live_yaml):
         captured_alerts.append({"message": message, **kwargs})
         return real_push(message, **kwargs)
 
+    calls = {"n": 0}
+
+    def _counting_reject(*a, **k):
+        calls["n"] += 1
+        return _stub_reject(*a, **k)
+
     with patch(
         "src.units.accounts.execute.execute_pkg",
-        side_effect=_stub_reject,
+        side_effect=_counting_reject,
     ), patch(
         "src.units.accounts.clients.bybit_client_for",
         return_value=object(),
     ), patch.object(coord, "push_alert", side_effect=_capture):
         for _ in range(5):
             coord.multi_account_execute(_pkg(), accounts_path=live_yaml)
+        # Rejections 1-3 reached the venue; dispatches 4-5 sat in backoff.
+        assert calls["n"] == 3
+        assert coord_mod._EXCHANGE_REJECTION_COUNTS.get("bybit_live") == 3
+        # The backoff elapses -> the leg is tried again (no halt).
+        now[0] += pb.delay_after(3) + 1
+        coord.multi_account_execute(_pkg(), accounts_path=live_yaml)
+        assert calls["n"] == 4
 
-    # Counter keeps climbing — the account is never auto-paused, so every
-    # dispatch still reaches execute_pkg and rejects.
-    assert coord_mod._EXCHANGE_REJECTION_COUNTS.get("bybit_live") == 5
+    assert coord_mod._EXCHANGE_REJECTION_COUNTS.get("bybit_live") == 4
     _assert_no_flip_mechanism()
-    # Critical alerts fire on each rejection at/after the threshold (3,4,5).
     critical = [a for a in captured_alerts if a.get("level") == "critical"]
-    assert len(critical) == 3
+    assert len(critical) == 1
+    leg_flags = [a for a in captured_alerts if a.get("level") == "error"
+                 and a.get("strategy") == "vwap"]
+    assert len(leg_flags) == 1

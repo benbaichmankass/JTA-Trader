@@ -69,6 +69,8 @@ MAX_BODY_CHARS = 60000
 #: byte-exact, before the wake comment is posted, so a reviewer never re-types them (a reviewer's re-typed
 #: packet dropped ``"sd_r":null`` and the mirror refused the row: packet_sha mismatch).
 ROWS_BRANCH = "live-review/rows"
+#: the last commit_files failure {step, http_code, message?, retry-after?, ...}; named in could_not_commit reasons.
+LAST_COMMIT_FAILURE: Dict[str, Any] = {}
 PACKETS_DIR = "comms/live_review/packets"
 REPO = os.environ.get("GITHUB_REPOSITORY", "benbaichmankass/JTA-Trader")  # tolerant of the JTA Trader repo rename
 API = "https://api.github.com"
@@ -180,11 +182,27 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
 def build_bundle(pkg: str, timeout: int = PACKET_TIMEOUT_S) -> Dict[str, Any]:
     """``live_review_packet.py <pkg> --bundle``: {state: built, packet, packet_sha, table_path, table}
     or {state: could_not_build, reason}. Never raises."""
+    import tempfile
+    stage_fd, stage_file = tempfile.mkstemp(prefix="ltr-stage-")
+    os.close(stage_fd)
     try:
         r = subprocess.run([sys.executable, str(PACKET_BUILDER), str(pkg), "--bundle"], cwd=ROOT,
-                           capture_output=True, text=True, timeout=timeout)
+                           capture_output=True, text=True, timeout=timeout,
+                           env=dict(os.environ, LTR_STAGE_FILE=stage_file))
     except (OSError, subprocess.SubprocessError) as exc:
-        return {"state": "could_not_build", "reason": f"{type(exc).__name__}"}
+        # LTR-PACKET-BUILD-TIMEOUT: a bare ``TimeoutExpired`` named no stage; the builder lists the reads still in
+        # flight in the stage file, so the reason says which read hung (or "none in flight": a later step).
+        try:
+            left = Path(stage_file).read_text().strip() or "[]"
+        except OSError:
+            left = "unknown"
+        return {"state": "could_not_build",
+                "reason": f"{type(exc).__name__} after {timeout}s; reads in flight: {left}"[:300]}
+    finally:
+        try:
+            os.unlink(stage_file)
+        except OSError:
+            pass
     if r.returncode != 0:
         # The traceback FRAME names the culprit; the last 160 chars kept only the exception line (2026-11-06T01:56Z
         # JSONDecodeError wake could not be attributed). Keep the last 6 lines, capped at 700 chars.
@@ -242,7 +260,8 @@ def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[
             raw = resp.read()
             return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as exc:
-        return exc.code, None
+        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
+        return exc.code, _error_doc(exc)
     except Exception:  # noqa: BLE001 — a network failure is a state, never a raise
         return None, None
 
@@ -269,34 +288,82 @@ def commit_files(files: List[Tuple[str, bytes]], message: str, auth: str,
     no git credential on the VM). (commit sha, None) or (None, http code of the step that failed)."""
     base = f"{API}/repos/{REPO}/git"
     code: Optional[int] = None
+    global LAST_COMMIT_FAILURE
+    LAST_COMMIT_FAILURE = {}
+
+    def fail(step: str, c: Optional[int], doc: Any) -> Tuple[None, Optional[int]]:
+        global LAST_COMMIT_FAILURE
+        LAST_COMMIT_FAILURE = {"step": step, "http_code": c, **((doc or {}).get("_error") or {} if isinstance(doc, dict) else {})}
+        return None, c
+
     for _ in range(4):
         code, ref = http("GET", f"{base}/ref/heads/{ROWS_BRANCH}", None, auth)
         if code != 200 or not isinstance(ref, dict):
-            return None, code
+            return fail("get_ref", code, ref)
         head = ref["object"]["sha"]
         code, cm = http("GET", f"{base}/commits/{head}", None, auth)
         if code != 200 or not isinstance(cm, dict):
-            return None, code
+            return fail("get_commit", code, cm)
         entries = []
         for rel, data in files:
             code, blob = http("POST", f"{base}/blobs", json.dumps(
                 {"content": base64.b64encode(data).decode(), "encoding": "base64"}).encode(), auth)
             if code != 201 or not isinstance(blob, dict):
-                return None, code
+                return fail("post_blob", code, blob)
             entries.append({"path": rel, "mode": "100644", "type": "blob", "sha": blob["sha"]})
         code, tree = http("POST", f"{base}/trees", json.dumps({"base_tree": cm["tree"]["sha"], "tree": entries}).encode(), auth)
         if code != 201 or not isinstance(tree, dict):
-            return None, code
+            return fail("post_tree", code, tree)
         code, new = http("POST", f"{base}/commits", json.dumps(
             {"message": message, "tree": tree["sha"], "parents": [head]}).encode(), auth)
         if code != 201 or not isinstance(new, dict):
-            return None, code
-        code, _ = http("PATCH", f"{base}/refs/heads/{ROWS_BRANCH}", json.dumps({"sha": new["sha"], "force": False}).encode(), auth)
+            return fail("post_commit", code, new)
+        code, pdoc = http("PATCH", f"{base}/refs/heads/{ROWS_BRANCH}", json.dumps({"sha": new["sha"], "force": False}).encode(), auth)
         if code == 200:
             return new["sha"], None
         if code != 422:  # 422 = not a fast-forward: someone appended first; re-read the tip and retry
-            return None, code
+            return fail("patch_ref", code, pdoc)
     return None, code
+
+
+#: LTR-ROWS-BRANCH-MISSING-BRIEF (2026-11-25): the rows branch is the reviewer's whole checkout, and it never carried
+#: the brief (it was cut from main before the brief existed and is append-only). The machine that lands the
+#: evidence also lands these main files on the branch (a fast-forward commit; create or update, never forced).
+REVIEWER_DOCS = (".claude/skills/live-trade-review/REVIEWER-BRIEF.md",
+                 ".claude/skills/live-trade-review/AMENDMENTS.md")
+_docs_synced: Dict[str, bytes] = {}
+
+
+def sync_reviewer_docs(auth: str, http: Http = http_json, root: Path = ROOT) -> Dict[str, Any]:
+    """Make the rows branch carry main's REVIEWER-BRIEF.md + AMENDMENTS.md. Best effort, never raises, never
+    blocks the packets: ``{state: synced|current|could_not_sync, ...}``. A file already synced with the same bytes
+    in this process is not re-read from GitHub."""
+    try:
+        files: List[Tuple[str, bytes]] = []
+        for rel in REVIEWER_DOCS:
+            f = root / rel
+            if not f.is_file():
+                continue
+            data = f.read_bytes()
+            if _docs_synced.get(rel) == data:
+                continue
+            have, blob, code = _branch_blob(rel, auth, http)
+            if have == "unknown":
+                return {"state": "could_not_sync", "reason": f"could not read {rel} (http {code})"}
+            if have == "present" and blob == data:
+                _docs_synced[rel] = data
+                continue
+            files.append((rel, data))
+        if not files:
+            return {"state": "current"}
+        sha, code = commit_files(files, "live-review: reviewer brief from main (machine, byte-exact)", auth, http)
+        if not sha:
+            return {"state": "could_not_sync", "reason": f"commit failed (http {code})"}
+        for rel, data in files:
+            _docs_synced[rel] = data
+        return {"state": "synced", "commit": sha, "files": [r for r, _ in files]}
+    except Exception as exc:  # noqa: BLE001 — best effort
+        return {"state": "could_not_sync", "reason": type(exc).__name__}
 
 
 def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: str,
@@ -308,6 +375,8 @@ def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: s
     ``committed`` / ``exists`` has its bundle state set to that value, so its block does not ride the comment
     and no reviewer is started on evidence that is not on the branch. Never raises."""
     out: Dict[str, Dict[str, Any]] = {}
+    if any(b.get("state") == "built" for b in bundles.values()):
+        sync_reviewer_docs(auth, http)
     need: List[Tuple[str, bytes]] = []
     need_pkgs: List[str] = []
     for pkg, b in bundles.items():
@@ -335,7 +404,8 @@ def land_evidence(p: Dict[str, Any], bundles: Dict[str, Dict[str, Any]], auth: s
         sha, code = commit_files(need, f"live-review: evidence {ids} (machine, byte-exact)", auth, http)
         for k in need_pkgs:
             out[k] = ({"state": "committed", "commit": sha} if sha else
-                      {"state": "could_not_commit", "http_code": code, "reason": "git data API commit failed"})
+                      {"state": "could_not_commit", "http_code": code,
+                                    "reason": "git data API commit failed: " + json.dumps(LAST_COMMIT_FAILURE, sort_keys=True)[:260]})
     for pkg, st in out.items():
         if st["state"] not in ("committed", "exists"):
             bundles[pkg] = dict(bundles[pkg], state=st["state"], reason=st.get("reason"))

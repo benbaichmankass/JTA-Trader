@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research tooling: scripts/ops/research_loss_detector.py question C skips the research-store-bundle TRANSPORT artifact (the WSD-S6D shadow dual-write, built from files the same run commits to git, so its run id never appears on main by construction). PI-20261120-FILLW47B-0015: all 3 flagged bundles were grade runs whose bundle shipped to the trainer while their landing timed out, and queue_grade.py on main reports 0 changed. Test with a negative control. No runtime, order-path or config change. Gates this adds or changes: none. Also: .github/workflows/research-queue-grade.yml landing step gains refresh-command (queue_grade.py --write) so a stale-branch conflict re-derives instead of waiting out the 80-min verify (run 45567748608: refresh=failed_conflict). Existing commit-to-main input; no new gate, no threshold change."
+}

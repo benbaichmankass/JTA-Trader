@@ -2,7 +2,7 @@
 # no local read of these bars. Gates this adds or changes: none (a research unit; changes no config or order path).
 id: RQ-20261125-1e07-02
 title: 'SHORTER-TIMEFRAME capitulation (4h, ETF-18): the INDEX-CAPIT daily spec kept in 4h bars, not re-tuned, graded POOLED'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -106,3 +106,16 @@ intervention_controls:
     same stop geometry, TP and cost), which is a rule clause here
 not_before: '2026-11-25T15:00:00+00:00'
 last_dispatched_at: '2026-11-25T15:31:06+00:00'
+grading:
+  attested: RULE-RQ-20261125-1e07-02
+  auto: true
+  decision_rule_id: RULE-RQ-20261125-1e07-02
+  evidence:
+  - research/results/RQ-20261125-1e07-02/45640939958.jsonl
+  graded_at: '2026-11-25'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

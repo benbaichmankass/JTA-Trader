@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Edits scripts/research/queue_grade.py (in the unvouchable list: E58's --verify producer), so the manager merges. MUST LAND AFTER #28865 (exit_lever_ablation --grade sweep_holdout): the holdout re-runs this grader authors call that grade. What it does: a roster-walkforward exit_lever_ablation `--grade sweep` PASS on research-script-run.yml now opens a holdout RE-RUN (--grade sweep_holdout, dispatches now) instead of a forward-wait unit blocked until 2027 for want of a window input; and the grader re-arms the already-blocked ones (opens the re-run + retires the blocked unit as superseded, in one grade that --verify reproduces), only while the parent's latest grade is PASS. Dry run on origin/main 2026-11-25: 6 re-runs opened, 6 blocked units retired, 3 left alone (parent now FAIL). No queue file is edited in this PR: the next research-queue-grade run writes them on its own vouched branch. 31 queue_grade tests pass (6 new incl. a --verify planted/clean pair). Revert: git revert.",
+  "why": "Unblock the 6 fresh-window confirmations of currently-passing exit-lever sweeps (one on the real-money bybit_2 leg trend_donchian_xrp_4h) and stop every future sweep PASS from parking a confirmation for ~60 days."
+}

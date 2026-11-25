@@ -147,3 +147,20 @@ def test_a_failed_marker_entry_blocks_a_repost_for_ten_minutes_then_is_due_again
     assert wake.plan(doc, marker(now - timedelta(minutes=12), ent), cfg, now)["kind"] == "wake"  # retried
     ok = dict(ent, evidence_state="committed")
     assert wake.plan(doc, marker(now - timedelta(minutes=12), ok), cfg, now)["kind"] != "wake"   # a good one stays deduped
+
+def test_a_build_timeout_names_the_reads_still_in_flight(monkeypatch):
+    """LTR-PACKET-BUILD-TIMEOUT: could_not_build used to record only 'TimeoutExpired'."""
+    import subprocess as sp
+    import json as _j
+    import sys as _s
+    from pathlib import Path as _P
+    _s.path.insert(0, str(_P(__file__).resolve().parents[1] / "scripts" / "ops"))
+    import live_review_wake as wake
+
+    def fake_run(cmd, **kw):
+        _P(kw["env"]["LTR_STAGE_FILE"]).write_text(_j.dumps(["bybit_open_orders", "prop_status:tradeify_1"]))
+        raise sp.TimeoutExpired(cmd, 180)
+    monkeypatch.setattr(wake.subprocess, "run", fake_run)
+    b = wake.build_bundle("pkg-1")
+    assert b["state"] == "could_not_build" and "TimeoutExpired after 180s" in b["reason"]
+    assert "bybit_open_orders" in b["reason"] and "prop_status:tradeify_1" in b["reason"]
