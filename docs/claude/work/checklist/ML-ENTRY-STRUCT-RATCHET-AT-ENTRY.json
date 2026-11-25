@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-STRUCT-RATCHET-AT-ENTRY",
+  "title": "structure_exit sl_only ratchets on the decision bar's own pivot seconds after entry (XRP 11-24: stop 0.34% / ~0.15 ATR, 33 s after fill): harness flag + unit 'no ratchet before the first post-entry bar closes' vs today",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-15",
+  "note": "Filed 2026-11-24 by lane ML-ENTRY-REVIEW-20261124. MEASURED: journalctl 2026-11-24 12:03:35Z order_monitor verdict sl 0.92866964 reason swing_ratchet bar_ts 11:00 (the decision bar) for pkg-cd163af407234223, entry fill 0.9318; stopped 12:15Z at -0.20R (untouched bracket proxy for the same trade -1.05R). Across n=26 tightened stops SAVED money in this regime (+5.88R on 10 sl exits). Low priority: the live mechanic matches the harness (structure_exit_live.replay start_sl at entry_idx) and RQ-20261103-5e04-01 PASSED with it. Build: an entry-delay flag in structure_sl_path (scripts/research/ml_entry_tp_revision.py) and one registered unit on the c692-06 traded subset.",
+  "phase": "research",
+  "updated_at": "2026-11-24T17:20:04Z",
+  "updated_by": "session_01AFoLuL8XqcgVmRK9WCEeZn"
+}

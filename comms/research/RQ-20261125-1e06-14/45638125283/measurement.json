@@ -1,0 +1,1129 @@
+{
+  "family": "capitulation_wide",
+  "pairs": {
+    "KBE->KBE": {
+      "n_signals": 54,
+      "skips": {
+        "stop_wrong_side_at_entry": 4,
+        "risk_degenerate": 1
+      },
+      "tp_calibration": {
+        "k_star": 1.25,
+        "state": "calibrated",
+        "n_is": 30,
+        "is_boundary": "2020-01-29",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.433,
+            "is_cf_net_r": -5.575
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.433,
+            "is_cf_net_r": -2.325
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.333,
+            "is_cf_net_r": -4.386
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.267,
+            "is_cf_net_r": -7.386
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.267,
+            "is_cf_net_r": -5.386
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.2,
+            "is_cf_net_r": -2.339
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.133,
+            "is_cf_net_r": -3.618
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.1,
+            "is_cf_net_r": -3.988
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.1,
+            "is_cf_net_r": -2.488
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.033,
+            "is_cf_net_r": -7.059
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -6.984
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -6.984
+          }
+        ]
+      },
+      "n": 49,
+      "net_r": 0.4232,
+      "mean_net_r": 0.0086,
+      "max_drawdown_r": 10.4432,
+      "win_rate": 0.51,
+      "by_outcome": {
+        "stop": 23,
+        "take_profit": 21,
+        "timeout": 5
+      },
+      "folds": [
+        {
+          "n": 11,
+          "net_r": 1.5393
+        },
+        {
+          "n": 11,
+          "net_r": 0.7748
+        },
+        {
+          "n": 15,
+          "net_r": -9.0244
+        },
+        {
+          "n": 12,
+          "net_r": 7.1335
+        }
+      ],
+      "net_r_2x_slip": -2.4209,
+      "oos": {
+        "n": 19,
+        "net_r": 2.3762,
+        "mean_net_r": 0.1251,
+        "max_drawdown_r": 4.7573,
+        "win_rate": 0.579,
+        "by_outcome": {
+          "stop": 7,
+          "take_profit": 8,
+          "timeout": 4
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 3.55,
+      "sizing_note": {
+        "median_entry_price": 39.02,
+        "median_risk_per_share": 0.76,
+        "min_equity_for_1_share_at_1pct_risk": 76.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": true,
+          "folds_ge_3": true,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": true
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "SMH->SMH": {
+      "n_signals": 58,
+      "skips": {
+        "stop_wrong_side_at_entry": 4,
+        "risk_degenerate": 2
+      },
+      "tp_calibration": {
+        "k_star": 1.0,
+        "state": "calibrated",
+        "n_is": 32,
+        "is_boundary": "2020-03-11",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.469,
+            "is_cf_net_r": -1.11
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.344,
+            "is_cf_net_r": -6.95
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.281,
+            "is_cf_net_r": -6.939
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.125,
+            "is_cf_net_r": -13.747
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.094,
+            "is_cf_net_r": -13.918
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.094,
+            "is_cf_net_r": -12.418
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.062,
+            "is_cf_net_r": -11.52
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.062,
+            "is_cf_net_r": -10.52
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.062,
+            "is_cf_net_r": -9.52
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.062,
+            "is_cf_net_r": -7.52
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.031,
+            "is_cf_net_r": -7.665
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.031,
+            "is_cf_net_r": -5.665
+          }
+        ]
+      },
+      "n": 52,
+      "net_r": -3.5038,
+      "mean_net_r": -0.0674,
+      "max_drawdown_r": 10.7899,
+      "win_rate": 0.519,
+      "by_outcome": {
+        "stop": 23,
+        "take_profit": 20,
+        "timeout": 9
+      },
+      "folds": [
+        {
+          "n": 9,
+          "net_r": 4.0808
+        },
+        {
+          "n": 14,
+          "net_r": -4.2032
+        },
+        {
+          "n": 16,
+          "net_r": -3.4654
+        },
+        {
+          "n": 13,
+          "net_r": 0.084
+        }
+      ],
+      "net_r_2x_slip": -6.3018,
+      "oos": {
+        "n": 20,
+        "net_r": -2.9473,
+        "mean_net_r": -0.1474,
+        "max_drawdown_r": 5.1074,
+        "win_rate": 0.45,
+        "by_outcome": {
+          "stop": 9,
+          "take_profit": 5,
+          "timeout": 6
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 4.08,
+      "sizing_note": {
+        "median_entry_price": 51.808,
+        "median_risk_per_share": 1.113,
+        "min_equity_for_1_share_at_1pct_risk": 111.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": false,
+          "folds_ge_3": false,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": false
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "EWZ->EWZ": {
+      "n_signals": 56,
+      "skips": {
+        "stop_wrong_side_at_entry": 7
+      },
+      "tp_calibration": {
+        "k_star": 3.0,
+        "state": "calibrated",
+        "n_is": 30,
+        "is_boundary": "2020-03-11",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.3,
+            "is_cf_net_r": -12.873
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.267,
+            "is_cf_net_r": -11.325
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.2,
+            "is_cf_net_r": -11.863
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.2,
+            "is_cf_net_r": -10.363
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.2,
+            "is_cf_net_r": -8.863
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.167,
+            "is_cf_net_r": -9.027
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.133,
+            "is_cf_net_r": -7.954
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.1,
+            "is_cf_net_r": -8.138
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.067,
+            "is_cf_net_r": -8.931
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.067,
+            "is_cf_net_r": -6.931
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.067,
+            "is_cf_net_r": -4.931
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.033,
+            "is_cf_net_r": -5.392
+          }
+        ]
+      },
+      "n": 49,
+      "net_r": -1.4936,
+      "mean_net_r": -0.0305,
+      "max_drawdown_r": 15.3764,
+      "win_rate": 0.306,
+      "by_outcome": {
+        "stop": 29,
+        "take_profit": 8,
+        "timeout": 12
+      },
+      "folds": [
+        {
+          "n": 12,
+          "net_r": -6.3711
+        },
+        {
+          "n": 14,
+          "net_r": -1.1517
+        },
+        {
+          "n": 10,
+          "net_r": -0.937
+        },
+        {
+          "n": 13,
+          "net_r": 6.9662
+        }
+      ],
+      "net_r_2x_slip": -3.8205,
+      "oos": {
+        "n": 19,
+        "net_r": 6.2301,
+        "mean_net_r": 0.3279,
+        "max_drawdown_r": 5.537,
+        "win_rate": 0.368,
+        "by_outcome": {
+          "stop": 10,
+          "take_profit": 4,
+          "timeout": 5
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 5.02,
+      "sizing_note": {
+        "median_entry_price": 32.96,
+        "median_risk_per_share": 1.06,
+        "min_equity_for_1_share_at_1pct_risk": 106.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": false,
+          "folds_ge_3": false,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": false
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "FXI->FXI": {
+      "n_signals": 74,
+      "skips": {
+        "stop_wrong_side_at_entry": 14
+      },
+      "tp_calibration": {
+        "k_star": 1.0,
+        "state": "calibrated",
+        "n_is": 36,
+        "is_boundary": "2021-07-12",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.417,
+            "is_cf_net_r": -4.335
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.333,
+            "is_cf_net_r": -7.552
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.25,
+            "is_cf_net_r": -9.118
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.222,
+            "is_cf_net_r": -8.569
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.194,
+            "is_cf_net_r": -9.569
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.139,
+            "is_cf_net_r": -7.024
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.111,
+            "is_cf_net_r": -6.701
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.056,
+            "is_cf_net_r": -9.978
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.056,
+            "is_cf_net_r": -8.978
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.028,
+            "is_cf_net_r": -8.127
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -10.23
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -10.23
+          }
+        ]
+      },
+      "n": 60,
+      "net_r": -7.67,
+      "mean_net_r": -0.1278,
+      "max_drawdown_r": 11.5651,
+      "win_rate": 0.517,
+      "by_outcome": {
+        "stop": 27,
+        "take_profit": 24,
+        "timeout": 9
+      },
+      "folds": [
+        {
+          "n": 17,
+          "net_r": -1.5644
+        },
+        {
+          "n": 11,
+          "net_r": -1.4514
+        },
+        {
+          "n": 14,
+          "net_r": -4.2177
+        },
+        {
+          "n": 18,
+          "net_r": -0.4365
+        }
+      ],
+      "net_r_2x_slip": -11.8947,
+      "oos": {
+        "n": 24,
+        "net_r": -4.4059,
+        "mean_net_r": -0.1836,
+        "max_drawdown_r": 8.4909,
+        "win_rate": 0.5,
+        "by_outcome": {
+          "stop": 12,
+          "take_profit": 9,
+          "timeout": 3
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 4.17,
+      "sizing_note": {
+        "median_entry_price": 36.805,
+        "median_risk_per_share": 0.79,
+        "min_equity_for_1_share_at_1pct_risk": 79.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": false,
+          "folds_ge_3": false,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": false
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "EWG->EWG": {
+      "n_signals": 89,
+      "skips": {
+        "stop_wrong_side_at_entry": 16,
+        "risk_degenerate": 2
+      },
+      "tp_calibration": {
+        "k_star": 2.0,
+        "state": "calibrated",
+        "n_is": 43,
+        "is_boundary": "2020-10-30",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.395,
+            "is_cf_net_r": -6.267
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.302,
+            "is_cf_net_r": -7.225
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.233,
+            "is_cf_net_r": -4.74
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.186,
+            "is_cf_net_r": -5.728
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.186,
+            "is_cf_net_r": -3.728
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.116,
+            "is_cf_net_r": -5.721
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.093,
+            "is_cf_net_r": -3.821
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.093,
+            "is_cf_net_r": -1.821
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.093,
+            "is_cf_net_r": 0.179
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.093,
+            "is_cf_net_r": 4.179
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.07,
+            "is_cf_net_r": 6.708
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.047,
+            "is_cf_net_r": 10.708
+          }
+        ]
+      },
+      "n": 71,
+      "net_r": -3.5141,
+      "mean_net_r": -0.0495,
+      "max_drawdown_r": 10.531,
+      "win_rate": 0.437,
+      "by_outcome": {
+        "stop": 38,
+        "take_profit": 14,
+        "timeout": 19
+      },
+      "folds": [
+        {
+          "n": 11,
+          "net_r": 0.0519
+        },
+        {
+          "n": 18,
+          "net_r": -4.6482
+        },
+        {
+          "n": 25,
+          "net_r": -0.839
+        },
+        {
+          "n": 17,
+          "net_r": 1.9212
+        }
+      ],
+      "net_r_2x_slip": -8.3498,
+      "oos": {
+        "n": 28,
+        "net_r": -2.5348,
+        "mean_net_r": -0.0905,
+        "max_drawdown_r": 5.6215,
+        "win_rate": 0.393,
+        "by_outcome": {
+          "stop": 16,
+          "take_profit": 6,
+          "timeout": 6
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 5.49,
+      "sizing_note": {
+        "median_entry_price": 28.41,
+        "median_risk_per_share": 0.55,
+        "min_equity_for_1_share_at_1pct_risk": 55.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": false,
+          "folds_ge_3": false,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": false
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "EWU->EWU": {
+      "n_signals": 83,
+      "skips": {
+        "stop_wrong_side_at_entry": 7,
+        "risk_degenerate": 1
+      },
+      "tp_calibration": {
+        "k_star": 5.0,
+        "state": "calibrated",
+        "n_is": 45,
+        "is_boundary": "2020-09-23",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.422,
+            "is_cf_net_r": -3.868
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.4,
+            "is_cf_net_r": 0.835
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.378,
+            "is_cf_net_r": 2.835
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.333,
+            "is_cf_net_r": 3.667
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.267,
+            "is_cf_net_r": 3.231
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.222,
+            "is_cf_net_r": 1.918
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.156,
+            "is_cf_net_r": 1.149
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.111,
+            "is_cf_net_r": -1.229
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.111,
+            "is_cf_net_r": 1.271
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.111,
+            "is_cf_net_r": 6.271
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.067,
+            "is_cf_net_r": 6.511
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.022,
+            "is_cf_net_r": 5.874
+          }
+        ]
+      },
+      "n": 75,
+      "net_r": 44.6182,
+      "mean_net_r": 0.5949,
+      "max_drawdown_r": 12.2052,
+      "win_rate": 0.467,
+      "by_outcome": {
+        "stop": 34,
+        "take_profit": 11,
+        "timeout": 30
+      },
+      "folds": [
+        {
+          "n": 15,
+          "net_r": 14.5236
+        },
+        {
+          "n": 20,
+          "net_r": -7.8866
+        },
+        {
+          "n": 24,
+          "net_r": 9.6487
+        },
+        {
+          "n": 16,
+          "net_r": 28.3325
+        }
+      ],
+      "net_r_2x_slip": 38.5074,
+      "oos": {
+        "n": 30,
+        "net_r": 37.6247,
+        "mean_net_r": 1.2542,
+        "max_drawdown_r": 5.2332,
+        "win_rate": 0.6,
+        "by_outcome": {
+          "stop": 10,
+          "take_profit": 6,
+          "timeout": 14
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 6.49,
+      "sizing_note": {
+        "median_entry_price": 33.29,
+        "median_risk_per_share": 0.5,
+        "min_equity_for_1_share_at_1pct_risk": 50.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "pass",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": true,
+          "folds_ge_3": true,
+          "net_gt_0_at_2x_slip": true,
+          "beats_baseline": true
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "VGK->VGK": {
+      "n_signals": 84,
+      "skips": {
+        "stop_wrong_side_at_entry": 12,
+        "risk_degenerate": 2
+      },
+      "tp_calibration": {
+        "k_star": 2.5,
+        "state": "calibrated",
+        "n_is": 42,
+        "is_boundary": "2020-03-03",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.595,
+            "is_cf_net_r": 8.47
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.5,
+            "is_cf_net_r": 12.727
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.333,
+            "is_cf_net_r": 12.904
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.286,
+            "is_cf_net_r": 10.904
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.286,
+            "is_cf_net_r": 13.904
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.286,
+            "is_cf_net_r": 19.904
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.214,
+            "is_cf_net_r": 18.839
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.19,
+            "is_cf_net_r": 18.239
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.167,
+            "is_cf_net_r": 17.11
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.048,
+            "is_cf_net_r": 19.053
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.024,
+            "is_cf_net_r": 20.067
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": 19.773
+          }
+        ]
+      },
+      "n": 70,
+      "net_r": 30.5352,
+      "mean_net_r": 0.4362,
+      "max_drawdown_r": 7.0483,
+      "win_rate": 0.557,
+      "by_outcome": {
+        "stop": 29,
+        "take_profit": 18,
+        "timeout": 23
+      },
+      "folds": [
+        {
+          "n": 16,
+          "net_r": 11.7143
+        },
+        {
+          "n": 18,
+          "net_r": 3.0366
+        },
+        {
+          "n": 21,
+          "net_r": 1.7252
+        },
+        {
+          "n": 15,
+          "net_r": 14.0591
+        }
+      ],
+      "net_r_2x_slip": 24.6176,
+      "oos": {
+        "n": 28,
+        "net_r": 9.944,
+        "mean_net_r": 0.3551,
+        "max_drawdown_r": 5.2544,
+        "win_rate": 0.5,
+        "by_outcome": {
+          "stop": 14,
+          "take_profit": 6,
+          "timeout": 8
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 5.61,
+      "sizing_note": {
+        "median_entry_price": 55.715,
+        "median_risk_per_share": 0.865,
+        "min_equity_for_1_share_at_1pct_risk": 86.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "pass",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": true,
+          "folds_ge_3": true,
+          "net_gt_0_at_2x_slip": true,
+          "beats_baseline": true
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    },
+    "IJR->IJR": {
+      "n_signals": 52,
+      "skips": {
+        "stop_wrong_side_at_entry": 4,
+        "risk_degenerate": 2
+      },
+      "tp_calibration": {
+        "k_star": 3.0,
+        "state": "calibrated",
+        "n_is": 28,
+        "is_boundary": "2019-05-15",
+        "curve": [
+          {
+            "k": 1.0,
+            "is_reach": 0.393,
+            "is_cf_net_r": -7.205
+          },
+          {
+            "k": 1.25,
+            "is_reach": 0.321,
+            "is_cf_net_r": -5.526
+          },
+          {
+            "k": 1.5,
+            "is_reach": 0.286,
+            "is_cf_net_r": -5.776
+          },
+          {
+            "k": 1.75,
+            "is_reach": 0.179,
+            "is_cf_net_r": -7.726
+          },
+          {
+            "k": 2.0,
+            "is_reach": 0.179,
+            "is_cf_net_r": -6.476
+          },
+          {
+            "k": 2.5,
+            "is_reach": 0.143,
+            "is_cf_net_r": -4.476
+          },
+          {
+            "k": 3.0,
+            "is_reach": 0.143,
+            "is_cf_net_r": -2.476
+          },
+          {
+            "k": 3.5,
+            "is_reach": 0.036,
+            "is_cf_net_r": -8.81
+          },
+          {
+            "k": 4.0,
+            "is_reach": 0.036,
+            "is_cf_net_r": -8.31
+          },
+          {
+            "k": 5.0,
+            "is_reach": 0.036,
+            "is_cf_net_r": -7.31
+          },
+          {
+            "k": 6.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -7.759
+          },
+          {
+            "k": 8.0,
+            "is_reach": 0.0,
+            "is_cf_net_r": -7.759
+          }
+        ]
+      },
+      "n": 46,
+      "net_r": -6.1103,
+      "mean_net_r": -0.1328,
+      "max_drawdown_r": 12.3673,
+      "win_rate": 0.348,
+      "by_outcome": {
+        "stop": 29,
+        "take_profit": 6,
+        "timeout": 11
+      },
+      "folds": [
+        {
+          "n": 11,
+          "net_r": -4.0723
+        },
+        {
+          "n": 12,
+          "net_r": 0.2058
+        },
+        {
+          "n": 14,
+          "net_r": -6.0263
+        },
+        {
+          "n": 9,
+          "net_r": 3.7825
+        }
+      ],
+      "net_r_2x_slip": -9.0147,
+      "oos": {
+        "n": 18,
+        "net_r": -3.6339,
+        "mean_net_r": -0.2019,
+        "max_drawdown_r": 8.3545,
+        "win_rate": 0.333,
+        "by_outcome": {
+          "stop": 11,
+          "take_profit": 2,
+          "timeout": 5
+        }
+      },
+      "mean_decay_drag": 0.0,
+      "mean_bars_held": 4.63,
+      "sizing_note": {
+        "median_entry_price": 68.63,
+        "median_risk_per_share": 1.275,
+        "min_equity_for_1_share_at_1pct_risk": 127.0
+      },
+      "data_start": "2010-06-01",
+      "data_end": "2026-10-22",
+      "grade": {
+        "verdict": "fail",
+        "checks": {
+          "n_ge_floor": true,
+          "net_gt_0": false,
+          "folds_ge_3": false,
+          "net_gt_0_at_2x_slip": false,
+          "beats_baseline": false
+        },
+        "baseline_kind": "flat (no trade): the execution is already the 1x index ETF",
+        "baseline_net_r": 0.0
+      }
+    }
+  },
+  "hold_cap_sessions": 10,
+  "slip_bps_per_side": 5.0,
+  "window": [
+    "2010-06-01",
+    "2026-10-22"
+  ],
+  "timing_control": {
+    "draws": 200,
+    "shift_sessions": "40..400 either direction",
+    "mean_net_r": -11.353,
+    "p95_net_r": 33.675,
+    "actual_net_r": 53.285,
+    "share_of_draws_ge_actual": 0.0,
+    "gating": true
+  },
+  "pooled": {
+    "n": 472,
+    "net_r_3x": 53.2848,
+    "net_r_1x": 0.0,
+    "net_r_2x_slip": 21.3226,
+    "pairs_positive": 3,
+    "checks": {
+      "pooled_n_ge_floor": true,
+      "pooled_net_gt_0": true,
+      "pairs_positive_ge_4": false,
+      "pooled_net_gt_0_at_2x_slip": true,
+      "beats_timing_control_95": true
+    },
+    "verdict": "fail"
+  }
+}
