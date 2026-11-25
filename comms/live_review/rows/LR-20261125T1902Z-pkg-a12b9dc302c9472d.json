@@ -1,0 +1,77 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261125T1902Z-pkg-a12b9dc302c9472d",
+ "reviewed_at": "2026-11-25T19:06:00Z",
+ "order_package_id": "pkg-a12b9dc302c9472d",
+ "trade_id": 8453,
+ "leg": "spy_pullback_1h",
+ "accounts": ["alpaca_paper"],
+ "trigger": {"event": "momentum_flip", "level": "2026-11-25T18:00:00Z", "l0_snapshot_at": "2026-11-25T19:02:44Z"},
+ "info_cutoff_at": "2026-11-25T19:02:44Z",
+ "state": {
+  "open_r": 0.553, "peak_r": 2.3128, "peak_provenance": "estimated", "giveback_r": 1.7598,
+  "bars_held": 21, "sl": 734.37642857, "tp": 651.139185, "atr_now_over_entry": 0.8427,
+  "regime_cell_now": null, "regime_cell_entry": null
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.8427, "bars_since_peak": 4, "giveback_r": 1.7598,
+  "open_r": 0.553, "peak_r": 2.3128, "r_to_stop": 1.553, "r_to_target": 5.5472
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 734.37642857 / tp 651.139185 agree with every readable account",
+  "per_account": {"alpaca_paper": {"verdict": "match", "evidence": null, "by_design": null}}
+ },
+ "options": [
+  {"action": "hold", "level": null, "n": 8, "mean_r": null, "sd_r": null, "worst_r": null, "net": null},
+  {"action": "close", "level": null, "n": 8, "mean_r": null, "sd_r": null, "worst_r": null, "net": null}
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261125T1902Z-pkg-a12b9dc302c9472d.json",
+ "recommendation": {
+  "action": "tighten_sl",
+  "level": 725.6,
+  "level_atr": 1.5,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.55,
+  "reason": "No previous review to grade. Table is not evidence (hold n=8 < floor 20, every cell null). Three closed 1h bars up (701.71, 710.90, 715.77) took price from the 695.54 low back toward the 720.89 swing high; giveback 1.76R of a 2.31R peak while the stop still rests 1.55R away at 734.38 (full -1R risk on a +0.55R trade). Stop to 725.60, just above the 725.145 swing high and 1.5 ATR from price: a break above that level kills the pullback-short thesis, and it caps the loss near -0.25R instead of -1R. HOLD's target 651.14 stays."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {"bound_r": 0.25, "within_bound": null, "tighten_r": null},
+ "shadow_policy": {"bound_r": 0.5, "within_bound": null, "would_apply": null, "tighten_r": null},
+ "context_flags": [
+  "judgement: hold cell n=8 < n_floor 20, every mean/sd/worst null (thin, not measured)",
+  "packet_defect: priced_options.options all_options_unpriced:insufficient_n 3/3",
+  "packet_note: atr:1.0/1.5/2.0 tighten options invalid_level (stop_level_not_below_price) 3/6",
+  "missing_input: regime.vol_now (frozen edges only in VM registry); regime.cell_entry (vol_regime unknown)",
+  "regime: 1h trend_now chop, adx 18.4; 4h trending adx 25.9",
+  "overlay: atr_now_over_entry 0.84 (no vol expansion; not driving the call)",
+  "book: QQQ short qqq_pullback_1h +0.61R is the same equity-beta short (correlated_open_packages); other open packages are long TLT/IEF/BTC/ETH",
+  "live_vs_backtest: mirror 8 trades CONSISTENT (live -3.19R, pct 46.3); realMoney 0 closed",
+  "tighten_bias: stop-at-price fills flatter any tighten"
+ ],
+ "account_reads": [
+  {"account_id": "alpaca_paper", "account_class": "paper", "read": "would_apply", "evidence": "alpaca_orders: SL 734.38 / TP 651.14, position True, matched by qty; apply paths close, move_tp, tighten"}
+ ],
+ "disposition": {"route": "recommended", "mandate": "MD-LIVE-TIGHTEN-SL", "action_issue": null, "applied_at": null, "verified_readback": null},
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuK6JrV1vybx8726RAB",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [{"field": "priced_options.options", "reason": "all_options_unpriced:insufficient_n", "count": 3, "denominator": 3}],
+ "packet_sha": "c32e5a4f90fbc1ea9471f83a3cf5c6acebcb9c04d33b98aafb92631ffcbd0872",
+ "forecast": {
+  "thesis": "Bounce is a retest of the 720.89/725.145 lower-high zone inside a still-down 4h structure; I expect it to fail and price to roll back toward the 711.64 swing low before 725.145 breaks.",
+  "direction": "with_trade",
+  "target_px": 711.64,
+  "p_target": 0.4,
+  "invalidation_px": 725.145,
+  "horizon_bars": 8,
+  "timeframe": "1h",
+  "evidence": ["chart.swings: highs 720.89 / 725.145, low 711.64", "chart.bars_ohlc: 3 closes up to 715.77", "chart.htf: 4h trending adx 25.87", "regime: 1h chop adx 18.4", "exit_plan: sl_now 734.376 far from price"]
+ }
+}
