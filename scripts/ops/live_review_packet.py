@@ -876,6 +876,7 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
     for a in accts:
         aid, cls, ex = a["account_id"], a["account_class"], a.get("exchange")
         bad0, fail0, ev0 = bad, looked_fail, len(ev)
+        level_bad = 0   # mismatches that are ONLY a venue bracket LEVEL differing while the position rests there
         item = {"account_id": aid, "account_class": cls, "read": None,
                 "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
                 "read_if_amend": "unknown", "evidence": None}
@@ -989,6 +990,7 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                         ev.append(f"{aid}: {floor_note}")
                     bad_i, ev_i, compared = _compare_levels(aid, symbol, ex or "", acct_sl, tp, v)
                     bad += bad_i
+                    level_bad += bad_i
                     ev.extend(ev_i)
                     if not compared:
                         # no level of this package was compared on this account: that is NOT a match
@@ -1024,6 +1026,10 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
             "verdict": "mismatch" if bad > bad0 else "could_not_look" if looked_fail > fail0 else "match",
             "evidence": "; ".join(ev[ev0:]) or None,
             "by_design": next((e.split(": ", 1)[1] for e in ev[ev0:] if "by design" in e), None),
+            # PI-20261124-RORTRAIL-0001: every mismatch on this account is a bracket-LEVEL difference with the
+            # position resting at the venue. A close / reduce does not depend on a bracket level, so the
+            # dispatcher does not skip such an account for those actions (mechanics_scope).
+            "level_only": bool(bad > bad0 and level_bad == bad - bad0),
         }
         item["mechanics"] = per_account[aid]
         bounds.append(item)
