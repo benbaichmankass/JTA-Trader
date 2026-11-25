@@ -735,7 +735,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         # fill-vs-signal gap shows up as R; a fill already through the stop is refused, as the venue does. The trade loop
         # still starts at the bar after ``i``, so the fill bar's own range is tested from its open; ``entry_time`` stays the
         # SIGNAL bar. Research-harness only (row HARNESS-ENTRY-NEXT-OPEN); mirrors scripts/backtest_trend.py.
-        _fill_px: Optional[float] = None
+        _fill_px: float | None = None
         if entry_at == "next_open":
             if i + 1 >= n:
                 break
