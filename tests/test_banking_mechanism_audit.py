@@ -57,7 +57,8 @@ def test_population_is_enabled_and_live(mod):
     # 56 -> 57 on 2026-11-01: ml_entry_v2 (bybit_1 demo TESTING leg; carries record_position_telemetry through the shared module).
     # 57 -> 58 on 2026-11-06: ml_entry_eq joins the enabled+live population (ML-ENTRY-ALL-ACCOUNTS, #23715; alpaca_paper).
     # 58 -> 59 on 2026-11-08: ml_entry_eq_struct (ML-ENTRY-EQ-STRUCT-LIVE; alpaca_live + alpaca_portfolio; same monitor module as ml_entry_eq).
-    assert len(legs) == 59, f"population drifted from the 2026-11-08 denominator: {len(legs)}"
+    # 59 -> 60 on 2026-11-25: index_capitulation_1x (INDEX-CAPIT-1X-LEG; alpaca_live + alpaca_portfolio).
+    assert len(legs) == 60, f"population drifted from the 2026-11-25 denominator: {len(legs)}"
     for name, cfg in legs.items():
         assert cfg.get("enabled") is True, name
         assert str(cfg.get("execution", "live")).lower() == "live", name
@@ -216,9 +217,11 @@ def test_telemetry_hook_set_is_derived_not_trusted(mod):
     # PI-20261027-P6NRDB4X-0002 hooks it (a desk trade's peak-R path is a training input).
     # 3 -> 4 on 2026-11-06: ml_entry_eq (#23715; monitor = time stop only, no record_position_telemetry). Pinned as the
     # measured state, not as acceptable.
-    assert sorted(gap["legs_structurally_invisible"]) == ["claude_desk", "fade_breakout_4h", "fvg_range_15m", "ml_entry_eq", "ml_entry_eq_struct"], \
+    # 5 -> 6 on 2026-11-25: index_capitulation_1x (INDEX-CAPIT-1X-LEG; monitor = 10-session hold cap only, no record_position_telemetry).
+    # Pinned as the measured state, not as acceptable (exit-refinement row blocked:no_harness_levers; telemetry hook owed).
+    assert sorted(gap["legs_structurally_invisible"]) == ["claude_desk", "fade_breakout_4h", "fvg_range_15m", "index_capitulation_1x", "ml_entry_eq", "ml_entry_eq_struct"], \
         gap["legs_structurally_invisible"]
-    assert gap["n_invisible"] == 5
+    assert gap["n_invisible"] == 6
 
 
 def test_counterfactual_never_claims_to_be_net(mod):

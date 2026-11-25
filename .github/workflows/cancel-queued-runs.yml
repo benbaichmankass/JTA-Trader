@@ -16,8 +16,13 @@ name: cancel-queued-runs
 #   for the Actions UI.
 #
 # Scope / blast radius:
-#   * Cancels runs whose status is exactly `queued` — never `in_progress`, so
-#     it can NEVER interrupt active CI (including its own run).
+#   * Cancels runs whose status is exactly `queued` AND created more than
+#     MIN_AGE_HOURS ago (default 24, 2026-11-25 W48 operator decision Q11:
+#     "Approve both (Recommended)", scope >24 h only) — never `in_progress`,
+#     never a run younger than the cutoff, so it can NEVER interrupt active CI
+#     (including its own run). It used to cancel EVERY queued run, which would
+#     also kill the queued CI of open PRs.
+#   * Prints the queued count before and after (the audit trail the row wants).
 #   * No edits, no deploys, no VM access, no secrets. Read-only beyond the
 #     `gh run cancel` calls.
 #
@@ -29,6 +34,11 @@ name: cancel-queued-runs
 
 on:
   workflow_dispatch:
+    inputs:
+      min_age_hours:
+        description: 'Only cancel queued runs created more than this many hours ago (default 24; never younger)'
+        required: false
+        default: '24'
   repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     types: [cancel-queued-runs]
 
@@ -54,13 +64,18 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
+      MIN_AGE_HOURS: ${{ inputs.min_age_hours || '24' }}
     steps:
       - name: Cancel all queued workflow runs
         id: cancel
         run: |
           set -euo pipefail
-          ids=$(gh run list --repo "$REPO" --status queued --limit 300 \
-                  --json databaseId --jq '.[].databaseId' || true)
+          before=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
+          echo "queued runs BEFORE: $before (cancelling only those older than ${MIN_AGE_HOURS} h)"
+          cutoff=$(date -u -d "${MIN_AGE_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
+          ids=$(gh run list --repo "$REPO" --status queued --limit 1000 \
+                  --json databaseId,createdAt \
+                  --jq ".[] | select(.createdAt < \"$cutoff\") | .databaseId" || true)
           if [ -z "$ids" ]; then
             echo "no queued runs to cancel"
             echo "count=0" >> "$GITHUB_OUTPUT"
@@ -82,6 +97,8 @@ jobs:
             fi
           done
           echo "cancelled $n queued run(s)"
+          after=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
+          echo "queued runs AFTER: $after (before: $before)"
           echo "count=$n" >> "$GITHUB_OUTPUT"
           printf 'ids<<EOF\n%s\nEOF\n' "$ids" >> "$GITHUB_OUTPUT"
 

@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-26 (~00:25Z): session_01AZiErvK92E59gCqBV5GoQX → new
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · written 2026-10-26 ~00:25Z by the outgoing manager `session_01AZiErvK92E59gCqBV5GoQX` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `history` · last verified `never` · written 2026-10-26 ~00:25Z by the outgoing manager `session_01AZiErvK92E59gCqBV5GoQX` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 **Why rotating:** context ~600k at 00:18Z (threshold ~650k); quiet boundary (operator asleep since ~22:55Z, every open PR is waiting on either CI or the operator's morning merge window). Follow `.claude/skills/manager/SKILL.md` § Start of session (Rotation case). Subscribe to ops-flags #17895 and the PRs below.
 

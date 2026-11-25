@@ -1,6 +1,6 @@
 # Manager handoff 2026-11-05: session_01AFoLuJnejB97CXXc8yn9oA (Manager Session 2026-11-05a) -> new
 
-> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-05` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · rotation reason: old manager context ~772k tokens (> ~650k threshold); weekly plan usage 31% at 11:32Z (reset Wed 2026-11-11 18:00Z; app warned "at this pace you'll run out tomorrow night").
+> **Doc status:** `historical` · category `handoff` · last verified `2026-11-05` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md) · rotation reason: old manager context ~772k tokens (> ~650k threshold); weekly plan usage 31% at 11:32Z (reset Wed 2026-11-11 18:00Z; app warned "at this pace you'll run out tomorrow night").
 
 ## Operator directives in force (verbatim where quoted)
 

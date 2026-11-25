@@ -184,3 +184,21 @@ def test_research_store_bundle_is_a_transport_artifact_not_a_finding():
         q = rld.q_expiring("o/r", _NOW, 72, "HEAD")
     assert [f["artifact"] for f in q["findings"]] == ["unit-results"]
     assert "1 transport artifact(s) skipped by design" in q["population"]
+
+
+def test_watchdog_rows_is_a_transport_artifact_not_a_finding():
+    """research-watchdog's `watchdog-rows` is the watch -> land hand-off inside one run (the same run's `land` job appends
+    the rows to the incident ledger on main), so it must not page as an expiring unlanded result (loss-detector page
+    2026-11-25 21:58Z, run 45703697928). A real result artifact from the same workflow is still flagged."""
+    arts = [
+        {"id": 1, "name": "watchdog-rows", "expired": False, "expires_at": "2026-11-06T12:00:00Z",
+         "workflow_run": {"id": 45703697928}},
+        {"id": 2, "name": "unit-results", "expired": False, "expires_at": "2026-11-06T12:00:00Z",
+         "workflow_run": {"id": 45703697928}},
+    ]
+    with mock.patch.object(rld, "_paged", return_value=arts), \
+            mock.patch.object(rld, "_api", return_value={"path": ".github/workflows/research-watchdog.yml"}), \
+            mock.patch.object(rld, "run_ids_mentioned", return_value=set()):
+        q = rld.q_expiring("o/r", _NOW, 72, "HEAD")
+    assert [f["artifact"] for f in q["findings"]] == ["unit-results"]
+    assert "1 transport artifact(s) skipped by design" in q["population"]
