@@ -130,7 +130,7 @@
     "expired": 154,
     "invalidation_first": 152,
     "no_data": 14,
-    "pending": 0,
+    "pending": 2,
     "target_first": 158,
     "tie_unresolved": 0
    },
@@ -138,14 +138,14 @@
     "n": 448,
     "rate": 0.4955
    },
-   "n": 478,
+   "n": 480,
    "n_graded": 464,
-   "n_packages": 161,
+   "n_packages": 163,
    "n_scored_with_p": 464,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-25T14:22:36Z",
+ "computed_at": "2026-11-25T19:56:23Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 207,
@@ -153,12 +153,27 @@
    "with_forecast": 32
   },
   "live_review": {
-   "records": 875,
-   "with_forecast": 478
+   "records": 877,
+   "with_forecast": 480
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
- "pending": [],
+ "pending": [
+  {
+   "fid": "LR-20261125T1902Z-pkg-a12b9dc302c9472d",
+   "horizon_end": "2026-11-26T03:06:00Z",
+   "source": "live_review",
+   "symbol": "SPY",
+   "time_remaining_s": 25776
+  },
+  {
+   "fid": "LR-20261125T1903Z-pkg-a1ff4836ce1f4806",
+   "horizon_end": "2026-11-26T05:06:00Z",
+   "source": "live_review",
+   "symbol": "QQQ",
+   "time_remaining_s": 32976
+  }
+ ],
  "pooled": {
   "brier_by_class": {
    "expired": {
@@ -217,7 +232,7 @@
    "expired": 169,
    "invalidation_first": 158,
    "no_data": 14,
-   "pending": 0,
+   "pending": 2,
    "target_first": 169,
    "tie_unresolved": 0
   },
@@ -225,13 +240,13 @@
    "n": 478,
    "rate": 0.5021
   },
-  "n": 510,
+  "n": 512,
   "n_graded": 496,
-  "n_packages": 161,
+  "n_packages": 163,
   "n_scored_with_p": 496,
   "unresolved_ties": 0
  },
- "population": "510 forecasts: live_review=478, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
+ "population": "512 forecasts: live_review=480, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
@@ -242,8 +257,8 @@
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
    "main_reviews": 835,
-   "rows_branch": 534,
-   "union": 875
+   "rows_branch": 536,
+   "union": 877
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000
