@@ -1,11 +1,6 @@
-# Hand-authored 2026-11-24 by lane ML-ENTRY-REVIEW-20261124 (Tier 1 research), dispatched by the JTA Trader manager (Manager Session 2026-11-22a)
-# on the operator's ask (2026-11-24 ~15:15Z: "what is driving the decisions?"; "I want solutions"). Diagnosis: docs/research/ml-entry-review-2026-11-24.md.
-# One factor (5 slow market-STATE columns added to the registered recipe) against a 5-column NOISE placebo. Decision rule registered BEFORE any run.
-# Gates this adds or changes: none (a research arm; changes no config, no served model, no order path).
 id: RQ-20261124-e1a7-01
-title: 'ml_entry REGIME-STATE lever: does adding 5 slow market-state columns (BTC 7d / 30d return, BTC vol percentile over 90d, BTC distance
-  from its 50d mean, 7d breadth) to the registered recipe beat both the recipe and a 5-column noise placebo by +0.0068 R/decision on the
-  dev folds, net of the full cost stack?'
+title: 'ml_entry REGIME-STATE lever: does adding 5 slow market-state columns (BTC 7d / 30d return, BTC vol percentile over 90d, BTC distance from its 50d mean, 7d
+  breadth) to the registered recipe beat both the recipe and a 5-column noise placebo by +0.0068 R/decision on the dev folds, net of the full cost stack?'
 status: queued
 cadence: once
 theme: ml_health
@@ -19,30 +14,29 @@ iteration:
   subject_kind: ml_model
   from_result: ML-ENTRY-REVIEW-20261124/live_shap
   verdict_read: diagnosis
-  diagnosis: 'Live decision trace (61 ml_entry packages 2026-11-16..11-24, model replay matches the logged scores to 5e-6, so serve
-    parity holds): the side is set by MARKET-WIDE inputs. On the 22 crypto LONG packages the mean SHAP contribution to (p_long - p_short)
-    is btc_vol24 +0.255 and btc_ret24 +0.114 (breadth_up24 +0.032); on the 17 SHORT packages breadth_up24 -0.089, btc_ret24 -0.083,
-    ret_72 -0.069. In 9 of the 10 decision bars with a non-zero BTC 24h move the side was AGAINST that move (the one bar WITH it, 11-20
-    11:00Z, won). Live btc_vol24 0.0096-0.0107 sits above the Oct-Nov 90th percentile (0.0073, Binance 1h). The model learned "high BTC vol
-    + BTC down 24h + weak breadth = buy" and has no input that says whether that panic is inside a bull or a bear. The side split tracks
-    the regime (RQ-20261123-d3a1-01: per-fold gap vs the always-short minus always-long gap, corr 0.89); a ret_168 side gate FAILED
-    (+0.012, t 0.83) because a gate throws decisions away; this lever gives the model the state as INPUT instead.'
-  search: 'lever family features/regime-state, one fixed set of 5 columns (no grid): btc_ret168, btc_ret720 (log returns), btc_vol_pct90d
-    (rank of BTC vol24 in its trailing 2160 h), btc_dist_sma1200 (log close minus log 1200 h mean), breadth_up168 (share of the 60 perps
-    with a positive 168 h return). Placebo: 5 seeded N(0,1) columns, one draw per timestamp shared across symbols.'
+  diagnosis: 'Live decision trace (61 ml_entry packages 2026-11-16..11-24, model replay matches the logged scores to 5e-6, so serve parity holds): the side is set
+    by MARKET-WIDE inputs. On the 22 crypto LONG packages the mean SHAP contribution to (p_long - p_short) is btc_vol24 +0.255 and btc_ret24 +0.114 (breadth_up24
+    +0.032); on the 17 SHORT packages breadth_up24 -0.089, btc_ret24 -0.083, ret_72 -0.069. In 9 of the 10 decision bars with a non-zero BTC 24h move the side was
+    AGAINST that move (the one bar WITH it, 11-20 11:00Z, won). Live btc_vol24 0.0096-0.0107 sits above the Oct-Nov 90th percentile (0.0073, Binance 1h). The model
+    learned "high BTC vol + BTC down 24h + weak breadth = buy" and has no input that says whether that panic is inside a bull or a bear. The side split tracks the
+    regime (RQ-20261123-d3a1-01: per-fold gap vs the always-short minus always-long gap, corr 0.89); a ret_168 side gate FAILED (+0.012, t 0.83) because a gate throws
+    decisions away; this lever gives the model the state as INPUT instead.'
+  search: 'lever family features/regime-state, one fixed set of 5 columns (no grid): btc_ret168, btc_ret720 (log returns), btc_vol_pct90d (rank of BTC vol24 in its
+    trailing 2160 h), btc_dist_sma1200 (log close minus log 1200 h mean), breadth_up168 (share of the 60 perps with a positive 168 h return). Placebo: 5 seeded N(0,1)
+    columns, one draw per timestamp shared across symbols.'
   levers:
   - features
   map_entries:
   - research/levers/ml-entry.yaml
   attempt: 1
   due_by: '2026-12-01'
-question: 'On the 8 dev folds (2022-01-01..2025-10-01, expanding refit of the registered recipe, tau 0.10, the 60-perp frozen universe), is
-  the mean net R per decision of the recipe + REGIME_FEATURES at least +0.0068 above BOTH the recipe and the recipe + 5 noise columns,
-  with a week-clustered t >= 2 vs the recipe, better in >= 6 of 8 folds and the same sign in >= 3 of 4 years?'
-why_this_matters: 'ml_entry is the only ML leg on real money (bybit_2 + bybit_portfolio). Every ranked ENTRY lever so far has failed its
-  held-out read and the lever map says the next one must ADD information. This is that information, chosen from the measured driver of
-  the live losses. A pass is the candidate for the ML-LEVER-PLAN combined held-out read and then a data-backed Tier-3 replacement packet
-  through the retrain workflow (the next iteration, drift-remediation skill); a fail closes slow market-state for crypto ENTRY.'
+question: On the 8 dev folds (2022-01-01..2025-10-01, expanding refit of the registered recipe, tau 0.10, the 60-perp frozen universe), is the mean net R per decision
+  of the recipe + REGIME_FEATURES at least +0.0068 above BOTH the recipe and the recipe + 5 noise columns, with a week-clustered t >= 2 vs the recipe, better in >=
+  6 of 8 folds and the same sign in >= 3 of 4 years?
+why_this_matters: ml_entry is the only ML leg on real money (bybit_2 + bybit_portfolio). Every ranked ENTRY lever so far has failed its held-out read and the lever
+  map says the next one must ADD information. This is that information, chosen from the measured driver of the live losses. A pass is the candidate for the ML-LEVER-PLAN
+  combined held-out read and then a data-backed Tier-3 replacement packet through the retrain workflow (the next iteration, drift-remediation skill); a fail closes
+  slow market-state for crypto ENTRY.
 power:
   expected_n: 70000
   min_detectable_effect: 0.0068
@@ -51,10 +45,9 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE from RQ-20261123-d3a1-01 (MEASURED there: both-sides dev arm n 71,334, week-clustered se of a gated-vs-both delta
-    0.014). Arms here share every row, so se(delta) is expected well below that (0.005-0.010): t >= 2 at +0.0068 needs se <= 0.0034, so
-    INDETERMINATE is a live outcome and is stated now. The +0.0068 bar is the lever map''s declared threshold_for_a_win (2 x the v1 dev
-    seed range 0.0034).'
+  basis: 'ESTIMATE from RQ-20261123-d3a1-01 (MEASURED there: both-sides dev arm n 71,334, week-clustered se of a gated-vs-both delta 0.014). Arms here share every
+    row, so se(delta) is expected well below that (0.005-0.010): t >= 2 at +0.0068 needs se <= 0.0034, so INDETERMINATE is a live outcome and is stated now. The +0.0068
+    bar is the lever map''s declared threshold_for_a_win (2 x the v1 dev seed range 0.0034).'
   feasibility:
     source: none
     accrual_basis: Replays public Binance Vision USD-M 1h klines; nothing accrues.
@@ -63,12 +56,13 @@ evidence_class:
   claim: edge
 ml_consumer:
   consumer: ML-ENTRY-LIVE-ADAPTER
-  decision: 'which side ml_entry takes (both sides today), through a refit with more inputs'
-  legs: [ml_entry]
+  decision: which side ml_entry takes (both sides today), through a refit with more inputs
+  legs:
+  - ml_entry
   book: money
 baseline:
-  definition: 'The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position
-    per symbol, SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).'
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per symbol, SL 2 / TP 3 ATR14,
+    24 h time stop, full cost stack (fee 11 bps rt + slip 3 + funding 1 bps/8h).
   net_of_cost: true
 run:
   command:
@@ -95,32 +89,33 @@ decision_rule:
   registered_at: '2026-11-24'
   registered_before_run: true
   baseline: the registered recipe on the same folds, rows, tau and cost stack; control = the same recipe + 5 noise columns
-  statistic: 'scripts/research/ml_decision_entry.py lever-arms --arm regime (lever_verdict / LEVER_RULE): delta = pooled mean net R per
-    decision (arm) - (base); se = week-clustered influence se (arm_diff); folds_better = dev folds where the arm mean beats the base mean;
-    years = calendar years of the fold starts (2022..2025) with a positive pooled yearly delta.'
-  rule: 'PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - placebo) >= +0.0068 AND folds_better >= 6
-    of 8 AND years_positive >= 3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. The 5 columns, tau,
-    folds, bar and cost stack are fixed now and never changed after a result.'
-  pass_action: 'Enter the arm in the ML-LEVER-PLAN combined held-out read (claimed in the holdout ledger at the deflated ENTRY bar). A pass
-    there is a data-backed Tier-3 replacement packet through the retrain workflow (serving needs the 5 columns in
-    src/runtime/ml_decision_features.py with the parity test extended). Applied by the operator or a mandate, never by a lane.'
-  fail_action: 'Close slow market-state inputs for crypto ENTRY on research/levers/ml-entry.yaml; no re-run with other columns or windows.'
-  proposal_mapping: 'pass -> combined held-out read -> Tier-3 packet; fail -> lever closed; indeterminate -> report the realised se, stop.'
-  what_it_does_not_do: 'Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate.'
+  statistic: 'scripts/research/ml_decision_entry.py lever-arms --arm regime (lever_verdict / LEVER_RULE): delta = pooled mean net R per decision (arm) - (base); se
+    = week-clustered influence se (arm_diff); folds_better = dev folds where the arm mean beats the base mean; years = calendar years of the fold starts (2022..2025)
+    with a positive pooled yearly delta.'
+  rule: PASS iff arm n >= 3000 AND delta(arm - base) >= +0.0068 AND t >= 2.0 AND delta(arm - placebo) >= +0.0068 AND folds_better >= 6 of 8 AND years_positive >=
+    3 of 4. FAIL iff n >= 3000 AND delta + 2.0 se < +0.0068. INDETERMINATE otherwise. The 5 columns, tau, folds, bar and cost stack are fixed now and never changed
+    after a result.
+  pass_action: Enter the arm in the ML-LEVER-PLAN combined held-out read (claimed in the holdout ledger at the deflated ENTRY bar). A pass there is a data-backed
+    Tier-3 replacement packet through the retrain workflow (serving needs the 5 columns in src/runtime/ml_decision_features.py with the parity test extended). Applied
+    by the operator or a mandate, never by a lane.
+  fail_action: Close slow market-state inputs for crypto ENTRY on research/levers/ml-entry.yaml; no re-run with other columns or windows.
+  proposal_mapping: pass -> combined held-out read -> Tier-3 packet; fail -> lever closed; indeterminate -> report the realised se, stop.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate.
   min_n: 3000
 compute: cpu_long
 value:
   bucket: ai_trader
   usd_at_stake_per_month: 300
   confidence: 0.15
-  basis: 'ESTIMATE: ml_entry real-money closes since 11-16 on bybit_2 summed -5.8 R over 26 trades (journal, venue P&L over signal-time
-    risk); a regime-aware side is the change aimed at that loss.'
+  basis: 'ESTIMATE: ml_entry real-money closes since 11-16 on bybit_2 summed -5.8 R over 26 trades (journal, venue P&L over signal-time risk); a regime-aware side
+    is the change aimed at that loss.'
 intervention_controls:
   hold_to_bracket: true
-  hold_to_bracket_note: 'every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ'
+  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ
   matched_random:
     draws: 100
-    note: 'declared, NOT computed by this unit (each draw would be a full refit): the control that matters is the 5-column NOISE placebo (same column count, seeded), which prices the recipe''s known overfit to any extra column'
+    note: 'declared, NOT computed by this unit (each draw would be a full refit): the control that matters is the 5-column NOISE placebo (same column count, seeded),
+      which prices the recipe''s known overfit to any extra column'
   best_static:
     grid:
     - recipe (20 features, live)
@@ -128,14 +123,13 @@ intervention_controls:
     excludes_test_folds: true
     note: the model is refit per fold on rows before the fold minus the registered embargo; nothing is tuned on a fold
   bootstrap_group: week
-practice_precedent: 'regime-conditioning a short-horizon contrarian signal on slow state (principles M6, M13 week-clustered se);
-  docs/research/ml-entry-review-2026-11-24.md.'
+practice_precedent: regime-conditioning a short-horizon contrarian signal on slow state (principles M6, M13 week-clustered se); docs/research/ml-entry-review-2026-11-24.md.
 routing:
   needs_trainer_resident_data: false
   needs_gpu: false
   peak_memory_gb: 10.0
   est_minutes: 60
-  why_runner: 'Keyless public Binance Vision data; 8 folds x 3 LightGBM pair fits on CPU.'
+  why_runner: Keyless public Binance Vision data; 8 folds x 3 LightGBM pair fits on CPU.
   basis: 'ESTIMATE from RQ-20261123-d3a1-01 (MEASURED there: 8 refits ~100 s on 4 cores after a ~12 min fetch); 3x the fits here.'
 lands:
   store: research/results/
@@ -158,3 +152,6 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+  owner: ML-ROADMAP-MECE
+  owner_reason: 'producer_failed: ran but did not grade against RULE-ML-ENTRY-LEVER-ARMS-20261124 (summary.json + verdict_regime.json on main under comms/research/RQ-20261124-e1a7-01/45496523516/).
+    ml_entry lever read belongs to the ML-PRIMARY lane (hand grade or driver verdict emission).'

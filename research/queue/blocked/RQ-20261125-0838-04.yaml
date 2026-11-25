@@ -1,0 +1,120 @@
+id: RQ-20261125-0838-04
+title: 'D10 Basset FEATURE-FAMILY / LABEL-HORIZON iteration: after the order-null FAIL (b9d0-01) and the new-info INDETERMINATE (a10d-03), does a learned decay score
+  trained with a 10- or 40-trade horizon (not 20) beat the order null and the CUSUM?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+practice_precedent: 'M-series model-evaluation practice (docs/reference/trading-and-model-practice-principles.md): grade a score against the null of the design it
+  runs in. Here 0.5 is not that null: overlapping next-N labels on short legs and leg-grouped folds both bias the AUC below 0.5 with no signal (harness audit, scripts/research/d10_basset_baseline.py
+  § NULL CALIBRATION).'
+question: Same points, features, folds and learner as aadc-14 / a10d-03, graded against the shuffled-order null (b9d0-01), but with the decay label horizon N in {10,
+  20, 40} next trades instead of the fixed 20. Does any horizon give a learned pooled excess > 0 with p < 0.05 and above the CUSUM excess at the same horizon (Bonferroni
+  over 3 horizons, so p < 0.0167)?
+why_this_matters: b9d0-01 graded the learned score FAIL (p >= 0.20 over the order null at N 20) and a10d-03 added regime/cost features without moving it (pooled excess
+  +0.083, p 0.146, within-leg excess -0.20). fail_action named the NEXT lever as the feature family, not the learner; the one design variable never varied is the
+  label horizon (20 was set once). A leg that decays slowly cannot be ranked by a 20-trade next-mean label, so the horizon is the diagnosis-implicated untested lever.
+iteration:
+  subject: ml-d10-basset
+  subject_kind: ml_model
+  from_result: RQ-20261119-b9d0-01
+  verdict_read: fail
+  diagnosis: 'b9d0-01 FAIL (no skill over the order null at N 20); a10d-03 INDETERMINATE (+0.083 pooled, -0.20 within-leg): features do not rescue it. Label horizon
+    fixed at 20 trades in every D10 unit and never varied.'
+  search: label horizon N in {10,20,40}; features, learner, folds fixed; denominator 3
+  levers:
+  - label
+  attempt: 4
+  due_by: '2026-12-04'
+  map_entries:
+  - research/levers/ml-d10-basset.yaml
+levers:
+- name: label_horizon
+  values:
+  - 10
+  - 20
+  - 40
+  hypothesised_effect: slow-decaying legs are ranked by a longer horizon; the 20-trade horizon was never varied
+power:
+  expected_n: 670
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.025
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE from the synthetic null: order-null sd of the pooled AUC ~0.02-0.03 at ~700 points on 24 legs, so with 40 draws an excess of ~0.05 reaches one-sided
+    p < 0.05 (the smallest attainable p at 40 draws is 1/41 ~ 0.024). Stated before the run.'
+  feasibility:
+    source: none
+    accrual_basis: Reads the trainer-synced trade_journal.db as of the run; nothing accrues.
+baseline:
+  definition: The CUSUM baseline (aadc-05's) on the same points, graded against the same order null.
+decision_rule:
+  id: RULE-RQ20261125-0838-04-D10-HORIZON
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'scripts/research/d10_basset_baseline.py --null-calibrate (draws 200 cusum / 40 learned): per score, the observed pooled and within-leg AUC, the order-null
+    mean and sd, excess = observed - null mean, and p = (1 + #null >= observed) / (1 + draws).'
+  rule: 'Registered 2026-11-25 before any run. For each N in {10,20,40}: learned pooled excess over the order null (observed AUC minus null mean, 40 learned draws
+    / 200 CUSUM draws), p = (1 + #null >= observed) / (1 + draws). PASS IF at least one N has learned pooled excess > 0 AND p < 0.0167 (Bonferroni, 3 horizons) AND
+    excess > the CUSUM excess at that N, with labelled points >= 200 on >= 3 legs. FAIL IF every N has p >= 0.20. INDETERMINATE otherwise or if fewer than 30 learned
+    null draws scored. Within-leg excess reported, never gating. Horizons, draws and thresholds fixed now.'
+  pass_action: 'A horizon exists at which the learned D10 score ranks decay: confirm on a fresh window (trades closed after this run) before any D10 consumer is proposed.'
+  fail_action: The learned D10 lever is empty at every horizon for this feature set; CUSUM stays the D10 reference; record on the lever map and move the next D10
+    test to the population lever (Stage-0 OOS series as extra training legs).
+  what_it_does_not_do: Trains nothing persistent, registers, serves or promotes nothing; changes no config; places no order.
+  min_n: 200 labelled points on >= 3 legs
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 20
+  confidence: 0.3
+  basis: 'stand-in: decides whether the D10 learned lever is empty or mis-graded and which next D10 unit is worth a trainer slot; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Needs the trade journal (account data, never committed), which the trainer syncs to data/trade_journal.db; lightgbm is in the trainer venv.
+  basis: 'ESTIMATE: 41 learned fits of 5 folds on ~700 points (~0.2 s each locally) plus 201 CUSUM rebuilds; minutes, not hours.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/d10_basset_baseline.py
+  - --null-calibrate
+  - --label-horizons
+  - 10,20,40
+  - --journal-db
+  - data/trade_journal.db
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-0838-04
+  note: 'BLOCKED on the driver flag --label-horizons (not yet in d10_basset_baseline.py); checklist row D10-LABEL-HORIZONS-FLAG owns the build. The script must emit
+    verdict per the rule above (the b9d0-01 lesson: verdict vocabulary pass/fail/indeterminate).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  not_applicable: D10 has no served model; this read decides how the D10 learned lever is recorded and which next D10 unit runs. No leg's order changes.
+related:
+- RQ-20261118-f7c1-07
+- RQ-20261118-aadc-14
+- RQ-20261117-aadc-05
+- ML-D10-BASSET-BASELINE
+- RQ-20261119-b9d0-01
+- RQ-20261119-a10d-03
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order.
+blocked_on:
+- kind: lever
+  ref: D10-LABEL-HORIZONS-FLAG
+  what: 'd10_basset_baseline.py has no --label-horizons option: the decay label horizon N is a module constant (20), so the horizon family cannot be run.'
+  clears_when: D10-LABEL-HORIZONS-FLAG is done (git log -- scripts/research/d10_basset_baseline.py shows the flag and its self-test), then git mv this file to research/queue/,
+    set status queued.

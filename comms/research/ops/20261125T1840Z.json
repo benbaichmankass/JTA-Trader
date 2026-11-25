@@ -1,0 +1,309 @@
+{
+ "run": "RESEARCH-OPS-2026-11-25-1822",
+ "finished_at": "2026-11-25T19:40:00Z",
+ "by": "session_01AFoLuLU7ZNd6Xqfow9mqFY (lane RESEARCH-OPS-20261125-1822, dispatched by Manager Session 2026-11-25a)",
+ "floor": 65,
+ "floor_basis": "computed_floor(fired_24h 82)",
+ "authoring_queue_depth": 16,
+ "idle_backends": [
+  "github_runner_data",
+  "kaggle",
+  "kaggle_cpu",
+  "trainer"
+ ],
+ "needs_review_triaged": 5,
+ "needs_review_left": 63,
+ "throughput": {
+  "runnable_before": 21,
+  "queued": 244,
+  "fired_24h": 82,
+  "results_landed_24h": 128,
+  "hours_since_last_dispatch": 0.7,
+  "idle_alarm": false,
+  "runnable_hours_by_backend_before_authoring": {
+   "github_runner": 6.2,
+   "unmanaged": 3.0,
+   "trainer": 0,
+   "kaggle_cpu": 0,
+   "kaggle": 0,
+   "runpod": 0
+  },
+  "runnable_hours_added_this_pass_estimate": {
+   "github_runner": "~9 h (0838-01 3 h, 0838-02 1.5 h, 0838-03 1.5 h, 0838-05 1 h, 0838-06 1 h, 7294-01 2 h, bd30-04 rerun 1 h; est_minutes of each unit)"
+  }
+ },
+ "mechanism": {
+  "dispatch_receipt": "tree_only (utilization 'could not look' in the dispatch dry run; GitHub Actions MCP not queried this pass)",
+  "collector": "ok (results_landed_24h 128)",
+  "stranded_stamp_prs": "not_checked",
+  "incident": null
+ },
+ "results_read": {
+  "pass": 4,
+  "fail": 4,
+  "indeterminate": 2,
+  "units": [
+   "b18a-01 indeterminate",
+   "a10d-03 indeterminate",
+   "b9d0-01 fail",
+   "f1a9-03 fail",
+   "b18a-03 fail",
+   "b18a-04 fail",
+   "0104-08 pass",
+   "bd30-02 pass",
+   "bd30-05 pass",
+   "fa22-06 indeterminate"
+  ]
+ },
+ "unlocked": [
+  "RQ-20261029-7294-01 (corpus manifest 146,158 trades; tm_bench.py exists; moved out of blocked/ with run.command)"
+ ],
+ "retired": [],
+ "levers_filed": [
+  {
+   "lever": "d10_basset_baseline.py --label-horizons",
+   "ref": "D10-LABEL-HORIZONS-FLAG"
+  },
+  {
+   "lever": "structure unit runner (5e01-09..11)",
+   "ref": "ML-STRUCTURE-UNIT-RUNNER"
+  },
+  {
+   "lever": "structure family runner (5e01-12..15)",
+   "ref": "STRUCTURE-FAMILY-EXPANSION"
+  }
+ ],
+ "units_authored": [
+  "RQ-20261125-0838-01",
+  "RQ-20261125-0838-02",
+  "RQ-20261125-0838-03",
+  "RQ-20261125-0838-04 (blocked/)",
+  "RQ-20261125-0838-05",
+  "RQ-20261125-0838-06"
+ ],
+ "units_amended": [
+  "RQ-20261124-bd30-04 (window moved to data that exists, before_any_run, producer_failed run had no verdict)"
+ ],
+ "followups_filed": [],
+ "authoring": {
+  "queue_depth": 16,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "pass spent its budget on the iteration loop (ML slots, PASS confirmations, blocked audit); programme nodes P1-Q6-eth4h-measured-move-w05-declare / P1-Q6-eth4h-stop-declare / P2-R5-voltarget-sizing are the top of --authoring-queue and go to the next pass"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 10,
+   "of": 10
+  },
+  "map_entries_added": "lever_map.py --backfill rewrote research/levers/{qqq_pullback_1h,spy_pullback_1h,splg_trend_long_1d}.yaml; readings below",
+  "next_tests_from_map": 6,
+  "lever_coverage": "iteration_orphans.py --levers: strategy_leg 57 subjects (covered 13, overdue 38, orphan 6); ml_model 13 (covered 10, orphan 3); ltr_class 7 (overdue 2, orphan 5)",
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5,
+   "note": "the new units do not cover an orphan: qqq_pullback_1h and spy_pullback_1h are 'orphans' only because their bd30 iterations are done with no queued successor; 0838-05/-06 are queued in this PR so they flip to covered once it merges"
+  },
+  "results_iterated": [
+   {
+    "result": "RQ-20261122-0104-08",
+    "verdict": "pass",
+    "subject": "ml-position-aggregator-d5",
+    "next": "RQ-20261125-0838-01",
+    "attempt": 4
+   },
+   {
+    "result": "RQ-20261124-bd30-02",
+    "verdict": "pass",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261125-0838-05",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261124-bd30-05",
+    "verdict": "pass",
+    "subject": "spy_pullback_1h",
+    "next": "RQ-20261125-0838-06",
+    "attempt": 2
+   },
+   {
+    "result": "lever map eth_pullback_2h attribution",
+    "verdict": "pass_unconfirmed",
+    "subject": "eth_pullback_2h",
+    "next": "RQ-20261125-0838-02/-03",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261119-b9d0-01 + a10d-03",
+    "verdict": "fail",
+    "subject": "ml-d10-basset",
+    "next": "RQ-20261125-0838-04 (blocked on D10-LABEL-HORIZONS-FLAG)",
+    "attempt": 4
+   }
+  ],
+  "advanced": 5,
+  "survivors": [],
+  "overdue": "38 strategy_leg + 2 ltr_class subjects: iterations past due_by whose units are queued recurring/bakeoff units with 3 results; not re-dated this pass (see handoff)",
+  "retired_by_review": []
+ },
+ "ml_slots": {
+  "D1": "named block: a rule by design (ML-ROADMAP-MECE s3 D1), no ML unit owed",
+  "D2": "ML-PRIMARY (regime) per dispatch coordination",
+  "D3": "ML-PRIMARY (f1a0-*; fa22-02 producer_failed on Bybit 403 -> owner ML-ROADMAP-MECE)",
+  "D4": "ML-PRIMARY (AM / b18a-02 needs hand grade; owner ML-ROADMAP-MECE)",
+  "D5": "RQ-20261125-0838-01",
+  "D6": "named block: ef40-05/06 blocked on a D3 positive-net model, af07-01 blocked on the pointer-v0 subcommand; b18a-03/04 FAIL (incumbent stands)",
+  "D7": "covered by queued RQ-20261118-04a5-07 (f1a9-03 FAIL, 9c action-set lever closed)",
+  "D8": "same family as D7 (04a5-07)",
+  "D9": "named block: b18a-01 INDETERMINATE (n 232, CI [-6.81,+32.77]); its rule forbids a re-run before 40 more real-money fills (~25/week), due about 2026-12-06 on the next markout export",
+  "D10": "RQ-20261125-0838-04 (blocked/, lever D10-LABEL-HORIZONS-FLAG)"
+ },
+ "analysis": {
+  "rows_opened": [
+   "0104-08",
+   "fa22-06",
+   "a474-02",
+   "bd30-02",
+   "bd30-05",
+   "b18a-01",
+   "a10d-03",
+   "b9d0-01",
+   "f1a9-03",
+   "b18a-03",
+   "b18a-04",
+   "bd30-04 log",
+   "fa22-02 log"
+  ],
+  "trading": {
+   "meaning": [
+    "qqq_pullback_1h long-only side filter: +11.2 R over bidirectional (65.20 vs 54.04) in >= 4/6 folds on 2019-2026, and spy_pullback_1h long-only +3.1 R (14.08 vs 10.95) on 2018-06..2020-06 while 203c-01 on 2020-07+ failed on folds, so the direction effect is real on two symbols' early windows but window-dependent: both are single-arm discoveries (denominator 1 each), so 0838-05/-06 run them on earlier disjoint history before any Tier-3 declare proposal.",
+    "eth_pullback_2h: gross +6.76 R but cost 5.38 R (79.5% of gross) on n 83, so cost, not the signal, is the binding term and the untested families are timeframe and stop width; 0838-02/-03 test exactly those on 2020-2026 history.",
+    "ada_pullback_2h and xrp_pullback_2h bracket ceilings (b18a-03/04) both FAIL 'incumbent stands' across 19 static cells each, so the entry bracket surface is flat on these legs and a learned D6 bracket has no measured headroom there."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "xrp_pullback_2h iteration 2 (bd30-04)",
+     "hypotheses": [
+      "noise",
+      "harness defect",
+      "design"
+     ],
+     "test": "read the log",
+     "survivor": "harness",
+     "next": "bd30-04 re-windowed to 2020-01-07..2021-11-24 (the feed starts 2020-01-06)"
+    },
+    {
+     "cluster": "ml-exit-head-donchian-1h (fa22-02)",
+     "hypotheses": [
+      "harness defect",
+      "data route"
+     ],
+     "test": "read the log",
+     "survivor": "harness",
+     "next": "HTTP 403 from api.bybit.com on the runner: needs a Binance-Vision or published-shard feed; owner ML-ROADMAP-MECE"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261125-0838-01",
+     "decision_changed": "whether D5 builds a learned aggregator against rule arm A1-A3",
+     "on_pass": "build learned arm + Tier-3 rule-arm proposal",
+     "on_fail": "D5 stays slices rule; 0104-08 was window noise",
+     "premortem": "ml_entry has no 2021 history so its stream is the harness replay; coverage may make it INDETERMINATE"
+    },
+    {
+     "id_or_node": "RQ-20261125-0838-05",
+     "decision_changed": "whether the qqq long-only declare proposal goes to the manager",
+     "on_pass": "Tier-3 proposal on two windows",
+     "on_fail": "discovery was window-specific",
+     "premortem": "Dukascopy QQQ 1h may not reach 2013 at 2200 days; a short window grades INDETERMINATE"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "D10: learned decay score has no skill over the shuffled-order null (b9d0-01 FAIL) and added regime/cost features did not move it (a10d-03 pooled +0.083, p 0.146, within-leg -0.20), so the learner and the feature family are not the lever; the label horizon (fixed at 20 since aadc-14) is the one untested design variable, hence 0838-04.",
+    "D9: real-money markout gap is +13.4 bps pooled with CI [-6.81,+32.77] at n 232 vs an MDE of ~17 bps, so the slice cannot yet say whether recorded cost is understated; the rule forbids a re-run before 40 more fills, so D9 is a named block with a due date, not a unit.",
+    "D7/D8: the 7-action wide set (f1a9-03) FAILs S-OFFLINE like 04a5-07, so adding actions is not the lever and the queued 04a5-07 read stays the slot's live iteration."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261029-7294-01",
+     "decision_changed": "whether the in-trade action-value model trains on broad-universe paths",
+     "on_pass": "Q-TM1 trains on v1+v2",
+     "on_fail": "trains on v1 only",
+     "premortem": "transfer flags may differ from score; producer_failed is not a verdict"
+    }
+   ]
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "long-only direction filter passes on qqq and spy early windows",
+    "feeds": "RQ-20261125-0838-05/-06 and, if confirmed, a direction label for D4"
+   }
+  ],
+  "surprises": [
+   "tm_bench selfcheck fails locally only because lightgbm/sklearn are not installed in this sandbox; not a repo defect (landed runs use the runner venv)"
+  ]
+ },
+ "calls": [
+  {
+   "call": "0838-05 (qqq long-only on 2013-2018) PASSes",
+   "p": 0.35,
+   "check": {
+    "command": "python3 scripts/research/queue_grade.py --health",
+    "rule": "0838-05 verdict",
+    "resolves_when": "2026-12-04"
+   }
+  },
+  {
+   "call": "0838-01 (D5 confirmation) PASSes",
+   "p": 0.3,
+   "check": {
+    "command": "python3 scripts/research/queue_grade.py --health",
+    "rule": "0838-01 verdict",
+    "resolves_when": "2026-12-04"
+   }
+  },
+  {
+   "call": "bd30-04 re-run lands a measured verdict (no producer_failed)",
+   "p": 0.7,
+   "check": {
+    "command": "python3 scripts/research/result_disposition_check.py --list",
+    "rule": "bd30-04 not in needs_review",
+    "resolves_when": "2026-11-27"
+   }
+  }
+ ],
+ "blocked_audit": {
+  "blocked_over_age": 29,
+  "unlocked": 1,
+  "owners_filed": 3,
+  "left_with_named_owner": "28 (named blocked_on; 12 belong to ml_entry lane ML-PRIMARY: b603-01 b605-01 b609-01 c692-02/-04/-05 d507-01 fs01-01 fs05-01 fs06-01 5b6b-01 78fc-01; DESK/LTR rows queued; d1f3-07 owner EDGE-HOLDOUT-READ-MODE queued; 7294-03 follows 7294-01; 001 names a missing unit 383f-01 -> manager)",
+  "slo_threshold_changed": false
+ },
+ "not_run": [
+  "A: GitHub Actions workflow-run list and stranded stamp PR check (tree_only read)"
+ ],
+ "limits": [
+  "markout/ D9 slice not re-run (rule forbids)",
+  "the 38 overdue strategy_leg iteration blocks were not individually re-dated or replaced; capacity, see handoff",
+  "orphans claude_desk, xsec-crypto, cost-levers-live-legs, movement-capture, ml-exit-head-donchian-1h, ml-holdbias-exit, ml-btc-router-cells and five ltr_class were not reached"
+ ],
+ "handoff": [
+  "MANAGER ALARM: runnable 21 (floor 65); only github_runner has work; trainer, kaggle_cpu, kaggle (28.5 h GPU, refreshes 2026-11-28), runpod have zero due units. The pass authored 6 + unlocked 1; the 14 orphans and 38 overdue iteration blocks need a dedicated authoring lane or a decision on the overdue blocks (recurring bakeoff units carry stale due_by).",
+  "Tier-3 PROPOSALS awaiting confirmation for the manager: qqq_pullback_1h and spy_pullback_1h long-only (0838-05/-06 decide).",
+  "RQ-20261103-001 blocked_on names RQ-20261101-383f-01 which has no unit file: fix or retire.",
+  "ML-PRIMARY owns the 11 ml_entry blocked units over age; coordination message sent, no reply read in this pass.",
+  "DISPATCH-DOUBLE-FIRE-1125: not observed directly; b9d0-01 shows two byte-identical runs 44449459292 / 44450607058 (a non-verdict retry, earlier, different cause).",
+  "needs_review 63 owned, 0 unowned; 79 per previous record, minus triage."
+ ]
+}

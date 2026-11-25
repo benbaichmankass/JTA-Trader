@@ -1,0 +1,122 @@
+id: RQ-20261125-0838-06
+title: 'CONFIRMATION of the spy_pullback_1h long-only side filter on 2012-01..2018-05 (bd30-05 PASS on 2018-06..2020-06 but the 2020-07+ read failed on folds): which
+  window is the outlier?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+kind: experiment
+question: Same leg, arms (A=, LONG=--side-filter=long) and bars as bd30-05; window 2012-01-01..2018-05-31 (Dukascopy SPY history earlier than every prior read), 3
+  folds.
+why_this_matters: spy_pullback_1h is a testing leg with a negative record (-8.55 R) and one lever that responds; this settles whether that lever is a 2020+ artefact
+  (its 203c-01 failure) or an early-slice artefact (its 003 pass). PASS -> the manager gets a Tier-3 declare proposal with the QQQ read (bd30-02) as the cross-symbol
+  denominator; FAIL -> the direction lever is closed for SPY and the iteration moves to untested families.
+power:
+  alpha: 0.05
+  basis: 'ESTIMATE: 003 measured n(LONG)=205 and n(A)=344 over 2018-06..2026-10; scaled by years (2.1/8.4) this is ~51 long / ~86 declared. Below the 25 floor the
+    unit grades INDETERMINATE, never FAIL.'
+  design: one_sample
+  effect_units: sd
+  expected_n: 50
+  feasibility:
+    accrual_basis: Re-measurement on freshly fetched public candles over a pinned window; nothing accrues.
+    source: none
+  min_detectable_effect: 0.45
+  power: 0.8
+decision_rule:
+  id: RULE-RQ20261125083806-LONGONLY-CONFIRM
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'scripts/research/exit_lever_ablation.py --leg spy_pullback_1h --grade replace, window 2018-06-01 .. 2020-06-30 (--non-crypto-source dukascopy), 3 folds
+    by entry time, net of the full cost stack. Arms fixed now: A=; LONG=--side-filter=long.'
+  rule: 'Registered 2026-11-25 before any run. Same statistic and bars as RQ-20261124-bd30-05, window only changed: candidate LONG PASSES iff net_r(LONG) > net_r(A)
+    AND delta >= 0.02 R x n(A) AND net R >= A in >= 2 of 3 folds AND maxDD <= 1.35 x maxDD(A); n(A) >= 25 else INDETERMINATE (also if the arm is byte-identical to
+    A). Regime-robustness: per-year table reported; a pass concentrated in one year (> 50% of the delta) is reported as PASS_CAVEATED. PASS = the long-only side filter
+    holds on a window its discovery never saw: the Tier-3 declare PROPOSAL (with the mirror, never a config edit) goes to the manager on both records. FAIL = the
+    discovery was window-specific; family not retired.'
+  regime_robustness: 'Reported with the result, not graded here (the grade is the rule above): per-year net R table for every arm, long-side and short-side net R
+    separately, and the largest single year share of total net R. Set before the run.'
+  what_it_does_not_do: Edits no config and no roster, places no order, is not a promotion case.
+  pass_action: Tier-3 declare proposal for the manager on the discovery + this confirmation (no config edit here).
+  fail_action: Record the side-filter response as window-specific on the lever map; next untested family.
+practice_precedent: 'M4, M5, M13 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid, every arm counted, baseline = the declared leg,
+  confirmation on an in-hand window the lead was not read on'
+intervention_controls:
+  not_applicable: a Stage-0 / parameter-ablation re-measurement of the declared leg through the harness, not an in-trade action or active-management intervention
+iteration:
+  subject: spy_pullback_1h
+  subject_kind: strategy_leg
+  from_result: RQ-20261124-bd30-05
+  verdict_read: pass_unconfirmed
+  diagnosis: 'bd30-05 PASS (LONG 14.08 vs A 10.95, 2 of 3 folds) on 2018-06..2020-06 while 203c-01 on 2020-07+ failed on folds: the effect is window-dependent, so
+    a third disjoint window decides if it is real or noise.'
+  search: window only (disjoint in-hand earlier history); arm, statistic and bars unchanged; denominator 1 candidate arm
+  attempt: 2
+  due_by: '2026-12-04'
+  map_entries:
+  - research/levers/spy_pullback_1h.yaml
+compute: cpu_light
+value:
+  basis: planning weight for a lever/confirmation cell on a rostered or Stage-0-passing leg; an estimate, not a measurement
+  bucket: structural
+  confidence: 0.1
+  usd_at_stake_per_month: 150
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  needs_internet: true
+  peak_memory_gb: 4.0
+  est_minutes: 25
+  why_runner: Fetches keyless public candles for a pinned window; reads no trainer data; CPU only.
+  basis: Estimate from comparable exit_lever_ablation runs (b163-*, f3a8-01); the first run replaces it.
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - spy_pullback_1h
+  - --arm
+  - A=
+  - --arm
+  - LONG=--side-filter=long
+  - --days
+  - '2300'
+  - --start
+  - '2012-01-01'
+  - --end
+  - 2018-05-31 23:59
+  - --non-crypto-source
+  - dukascopy
+  - --grade
+  - replace
+  - --baseline
+  - A
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.02'
+  - --folds
+  - '3'
+  - --fold-majority
+  - '2'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '25'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-0838-06
+  timeout_minutes: 150
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+programme: P3
+roadmap:
+- L-LADDER
+related:
+- RQ-20261112-003
+- RQ-20261111-203c-01
+- research/levers/spy_pullback_1h.yaml
+- RQ-20261124-bd30-05
