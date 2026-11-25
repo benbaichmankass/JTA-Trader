@@ -46,6 +46,14 @@ Arms (``--arm``, one per queue unit; each graded by its own registered rule, wri
                 clip(train-median BTC vol24 / BTC vol24 at the bar, 0.5, 2) normalised to mean 1 (vol parity across regimes; keeps every decision,
                 so no power loss). Statistic as bar_split: net R per 1R deployed (non-inferiority), bar Sharpe and bar max DD vs the same decisions
                 unweighted; control: the same weights permuted across bars.
+  lim_xwide     PULLBACK LIMIT ENTRY (cost per R is the binding constraint: gross ~ +0.067 vs cost ~ 0.064 R/decision on the registered recipe).
+                The SL 4 / TP 6 / 24 h refit's OWN decisions, each entered by a post-only limit LIM_K ATR14 better than the decision price (bar t+1
+                open), resting LIM_W hours; STRICT fill iff a bar trades LIM_TICK_BPS through the limit; fill at the limit; maker fee on entry
+                (MAKER_BPS) and the taker convention on the exit (TAKER_BPS + half the 3 bps slippage), funding as usual; the bracket is measured
+                from the fill (24 bars from the fill bar; on the fill bar a stop touch counts, a target touch does not). An unfilled decision is
+                0 R and keeps the symbol busy for the window. Graded per DECISION vs the same decisions entered at market (the one factor is the
+                entry order); control: the market outcomes of the same decisions thinned AT RANDOM to the arm's fill rate (100 draws), so a pass
+                means the fill SELECTION + price beats random thinning, not just fewer trades.
   rsw_xwide_h48 REGIME ARM (operator 2026-11-24: regime classification is a standing lever). The sl_xwide_h48_retrain recipe with every
                 training row WEIGHTED by a Gaussian kernel of its BTC regime-state distance (RSW_STATE: 30d return, distance from the 1200 h mean,
                 vol percentile; standardized on the training window) to the mean state of the RSW_REF_DAYS before the test fold; weights normalized
@@ -79,7 +87,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide"]
+ARMS = ["long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -96,6 +104,9 @@ VOLSL_LO, VOLSL_HI = 3.0, 5.0         # volsl_retrain: SL = 3 + 2 x BTC vol perc
 RSZ_CAP = (0.5, 2.0)                   # rsz_xwide: per-decision weight = clip(train-median BTC vol24 / BTC vol24 at the bar), then mean 1
 RSZ_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
             "max_dd_ratio": 0.85, "min_folds_sharpe_better": 5}
+LIM_K, LIM_W = 0.5, 4                 # lim_xwide: limit LIM_K x ATR14 better than bar t+1's open, resting LIM_W 1h bars (fixed, no grid)
+LIM_TICK_BPS = 1.0                    # strict fill: the bar must trade 1 bp THROUGH the limit (queue position)
+MAKER_BPS, TAKER_BPS = 2.0, 5.5       # Bybit linear per side, the same constants as ml_entry_maker_replay.py (delta_F: 5.5 - 2.0 if filled)
 H48 = 48                              # sl_xwide_h48_retrain: the label / time-stop horizon in 1h bars (registered 24)
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
@@ -263,6 +274,71 @@ def alt_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, sl=SL_WIDE, t
 
 
 # ------------------------------------------------------------------------------------------------ regime-similarity weights
+def lim_labels(cache: Path, symbols: list[str], tab: pd.DataFrame, k: float = LIM_K, lw: int = LIM_W, sl: float = SL_XWIDE,
+               tp: float = TP_XWIDE) -> pd.DataFrame:
+    """Per decision row and side: the outcome of a post-only limit entry ``k`` ATR14 better than bar t+1's open, resting ``lw`` bars, then the
+    SL ``sl`` / TP ``tp`` ATR14 bracket measured from the fill for M.HORIZON_H bars (the fill bar counts as the first: its low/high may stop
+    the trade, its target side never counts). Unfilled: net = gross = cost = 0, reason -1, bars = lw (busy while the order rests)."""
+    from src.runtime.execution_costs import FUNDING_WINDOW_HOURS, resolve_cost_policy
+    slip_bps, fund_bps = resolve_cost_policy("BTCUSDT")
+    rows = []
+    for sym in symbols:
+        df = M.regrid_hourly(pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True))
+        o, h, lo, c = (df[x].to_numpy(float) for x in ("open", "high", "low", "close"))
+        pc = np.r_[np.nan, c[:-1]]
+        tr = np.nanmax(np.vstack([h - lo, np.abs(h - pc), np.abs(lo - pc)]), axis=0)
+        atr = pd.Series(tr).rolling(M.ATR_N, min_periods=M.ATR_N).mean().to_numpy()
+        ts = df["ts"]
+        close_hour = (ts + pd.Timedelta(hours=1)).dt.hour.to_numpy()
+        H, N = M.HORIZON_H, len(df)
+        span = lw + H
+        cand = np.where((close_hour % M.DECISION_EVERY_H == 0) & ~np.isnan(atr))[0]
+        cand = cand[cand + span < N]
+        t_ns = ts.to_numpy().astype("datetime64[ns]").astype("int64")
+        cand = cand[(t_ns[cand + span] - t_ns[cand]) == span * 3_600_000_000_000]
+        a = atr[cand]
+        p0 = o[cand + 1]
+        out = {"symbol": sym, "ts": ts.to_numpy()[cand]}
+        for name, side in (("long", 1), ("short", -1)):
+            lim = p0 - side * k * a
+            wf = cand[:, None] + np.arange(1, lw + 1)[None, :]
+            through = (lo[wf] <= (lim * (1 - LIM_TICK_BPS / 1e4))[:, None]) if side > 0 else (h[wf] >= (lim * (1 + LIM_TICK_BPS / 1e4))[:, None])
+            filled = through.any(1)
+            jf = np.where(filled, through.argmax(1) + 1, lw)          # offset of the fill bar from the decision bar (1..lw)
+            net = np.zeros(len(cand))
+            gross = np.zeros(len(cand))
+            cost = np.zeros(len(cand))
+            reason = np.full(len(cand), -1, dtype=np.int64)
+            bars = np.full(len(cand), lw, dtype=np.int64)
+            f = np.flatnonzero(filled)
+            if len(f):
+                fb = cand[f] + jf[f]                                   # absolute index of the fill bar
+                win = fb[:, None] + np.arange(0, H)[None, :]
+                Ob, Hh, Lb, Cb = o[win].copy(), h[win].copy(), lo[win].copy(), c[win].copy()
+                e = lim[f]
+                Ob[:, 0] = e
+                if side > 0:
+                    Hh[:, 0] = e                                       # no target credit on the fill bar
+                else:
+                    Lb[:, 0] = e
+                px, j, rs = M.bracket_outcome(Ob, Hh, Lb, Cb, e, a[f], side, sl_atr=sl, tp_atr=tp)
+                risk = sl * a[f]
+                g = side * (px - e) / risk
+                per_r = ((np.abs(e) + np.abs(px)) / 2.0) / risk
+                w = FUNDING_WINDOW_HOURS * 3600.0
+                t_in, t_out = t_ns[fb] / 1e9, t_ns[fb + j - 1] / 1e9 + 3600.0
+                nwin = np.floor(t_out / w) - np.floor(t_in / w)
+                cst = per_r * (MAKER_BPS + TAKER_BPS + slip_bps / 2.0 + fund_bps * nwin) / 1e4
+                gross[f], cost[f], net[f] = g, cst, g - cst
+                reason[f], bars[f] = rs.astype(np.int64), jf[f] + j - 1
+            out |= {f"net_{name}": net, f"gross_{name}": gross, f"cost_{name}": cost, f"reason_{name}": reason, f"bars_{name}": bars}
+        rows.append(pd.DataFrame(out))
+    alt = pd.concat(rows, ignore_index=True)
+    alt["ts"] = pd.to_datetime(alt["ts"], utc=True)
+    m = tab[["symbol", "ts"]].reset_index().merge(alt, on=["symbol", "ts"], how="left").set_index("index")
+    return m.drop(columns=["symbol", "ts"])
+
+
 def regime_weights(train: pd.DataFrame, test_start: pd.Timestamp, placebo_seed: int | None = None, bw: float = RSW_BW) -> tuple[np.ndarray, dict]:
     """Gaussian-kernel weights of each training row's regime state to the state just before the test fold. Point-in-time: the reference uses
     only rows strictly before test_start (the last RSW_REF_DAYS of the training window). ``placebo_seed``: states permuted across timestamps."""
@@ -455,6 +531,29 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
                 info |= {"sharpe_split": sharpe(bs), "sharpe_base": sharpe(bb),
                          "sharpe_random_mean": float(np.nanmean([sharpe(bar_series(fx, pw)) or np.nan for pw in perms]))}
                 extra.append((fx, w, perms))
+        elif arm == "lim_xwide":
+            fixed, lim = alt
+            lab = [c for c in fixed.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
+            tr_fix = train.assign(**{c: fixed.loc[train.index, c] for c in lab})
+            fl_, fs_ = M.fit_predict(tr_fix, test, None, n_jobs)
+            tk["fixed"] = Seq(test, fixed.loc[test.index]).run(fl_, fs_)
+            tk["arm"] = Seq(test, lim.loc[test.index]).run(fl_, fs_)
+            fill = float((tk["arm"].reason != -1).mean()) if len(tk["arm"]) else 0.0
+            fx = fixed.loc[test.index, lab]
+            ctl = []
+            for _ in range(DRAWS):
+                keep = rng.random(len(fx)) < fill
+                cc = fx.copy()
+                for sd in ("long", "short"):
+                    for col in ("net", "gross", "cost"):
+                        cc.loc[~keep, f"{col}_{sd}"] = 0.0
+                    cc.loc[~keep, f"reason_{sd}"] = -1
+                    cc.loc[~keep, f"bars_{sd}"] = LIM_W
+                ctl.append(Seq(test, cc).run(fl_, fs_))
+            tk["control"] = pd.concat(ctl, ignore_index=True)
+            filled = tk["arm"][tk["arm"].reason != -1]
+            info |= {"fill_rate": fill, "filled_mean_net_r": float(filled.net_r.mean()) if len(filled) else None,
+                     "filled_mean_cost_r": float(filled.cost_r.mean()) if len(filled) else None}
         elif arm == "rsw_xwide_h48":
             lab = [c for c in alt.columns if c.split("_")[0] in ("net", "gross", "cost", "reason", "bars")]
             tr_alt = train.assign(**{c: alt.loc[train.index, c] for c in lab})
@@ -515,7 +614,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm == "volsl_retrain" else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
@@ -552,6 +651,11 @@ def build(cache: Path, arm: str) -> tuple[pd.DataFrame, pd.DataFrame | None]:
         volsl = alt_labels(cache, syms, tab, sl_of, TP_XWIDE / SL_XWIDE) if arm == "volsl_retrain" else fixed
         ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & volsl["net_long"].notna() & volsl["net_short"].notna()).to_numpy()
         return tab[ok], (fixed[ok], volsl[ok])
+    if arm == "lim_xwide":
+        fixed = alt_labels(cache, syms, tab, SL_XWIDE, TP_XWIDE)
+        lim = lim_labels(cache, syms, tab)
+        ok = (fixed["net_long"].notna() & fixed["net_short"].notna() & lim["net_long"].notna() & lim["net_short"].notna()).to_numpy()
+        return tab[ok], (fixed[ok], lim[ok])
     if arm == "rsw_xwide_h48":
         tab = pd.concat([tab.reset_index(drop=True), M.regime_columns(cache, syms, tab)[M.REGIME_FEATURES]], axis=1)
         tab = tab.dropna(subset=RSW_STATE).reset_index(drop=True)
@@ -668,6 +772,25 @@ def _self_test() -> None:
     wp, _ = regime_weights(tr, tsr[-1] + pd.Timedelta(days=1), placebo_seed=1)
     assert abs(wp.mean() - 1.0) < 1e-9 and not np.allclose(wp, w)
     assert np.allclose(wp[0::2], wp[1::2])            # both symbols at one timestamp share a weight under the placebo too
+    # lim_labels: flat 100 +- 0.5 bars (ATR 1): a long limit at 99.5 never fills strictly; one bar dipping to 99.0 fills it at 99.5, and the
+    # flat path then time-exits at 100 -> gross +0.5 / (4 x 1) = +0.125 R, cost 25 x (2 + 5.5 + 1.5 + funding) bps >= 0.0225 R; the short side (limit 100.5, never traded through) stays unfilled
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        n_b = 120
+        tsb = pd.date_range("2025-01-01", periods=n_b, freq="1h", tz="UTC")
+        lo_b = np.full(n_b, 99.5)
+        k_dip = 60
+        lo_b[k_dip] = 99.0
+        pd.DataFrame({"ts": tsb, "open": 100.0, "high": 100.5, "low": lo_b, "close": 100.0, "volume": 1.0}).to_pickle(Path(td) / "A.pkl")
+        dec = [i for i in range(n_b) if (tsb[i] + pd.Timedelta(hours=1)).hour % M.DECISION_EVERY_H == 0]
+        tabl = pd.DataFrame({"symbol": "A", "ts": tsb[dec]})
+        lab = lim_labels(Path(td), ["A"], tabl)
+        hit = [j for j, i in enumerate(dec) if k_dip - LIM_W <= i < k_dip and lab.net_long.notna().iloc[j]]
+        miss = [j for j, i in enumerate(dec) if i < k_dip - LIM_W and lab.net_long.notna().iloc[j]]
+        assert hit and miss, (hit, miss)
+        assert all(lab.reason_long.iloc[j] == -1 and lab.net_long.iloc[j] == 0.0 for j in miss)
+        assert all(lab.reason_long.iloc[j] == 0 and abs(lab.gross_long.iloc[j] - 0.125) < 1e-9 for j in hit), lab.iloc[hit]
+        assert all(0.0225 <= lab.cost_long.iloc[j] < 0.03 for j in hit) and (lab.reason_short.dropna() == -1).all()
     print("self-test ok")
 
 
