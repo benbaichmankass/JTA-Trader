@@ -72,6 +72,10 @@ intervention_controls:
     excludes_test_folds: true
     note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
   bootstrap_group: trade
+pre_run_reads: 'DISCLOSED: a 6-symbol SMOKE run (ETH/SOL/XRP/ADA/BNB/LINK twins, same command, --random-control 200, --n-floor 300) ran locally
+  2026-11-25 ~23:55Z AFTER this rule was committed (commit 7c4912ebf, before the result existed), to prove the pipeline end to end: OOS n
+  1,065, head -0.109 R/trade vs the declared exit, control p95 -0.122 (head beats 98.5% of draws), 5.0 min wall. It is a subset of this
+  unit''s population, so this unit is not blind to it; the rule and thresholds were not changed after it.'
 evidence_class:
   holdout: walk_forward
   claim: edge
@@ -109,7 +113,8 @@ routing:
   est_minutes: 150
   why_runner: 'fetches 4h candles for 54 of the 60 perps from data.binance.vision (the Kaggle candle dataset holds 6); the kernel has no internet'
   basis: 'ESTIMATE: the census (fetch + build, 11.5k trades, 335k rows) took ~12 min with 12 fetch workers; the replay of ~9.6k OOS trades x 2 arms
-    and 500 control draws is the cost, measured on a 6-symbol smoke run before landing (see the PR). The first run replaces it.'
+    and 500 control draws is the cost: MEASURED 5.0 min for the 6-symbol smoke (1,065 OOS trades, 200 draws) -> ~45-60 min at 60 symbols;
+    150 kept as headroom. The first run replaces it.'
 run:
   command:
   - python3
