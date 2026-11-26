@@ -37,8 +37,8 @@ question: 'On ict_scalp_5m (BTCUSDT 5m) trades entering on or after 2026-11-24 (
   per trade over HOLD (paired mean delta > 0, t >= 2) AND beat >= 90 of 100 causal random placements of the same tighten, net of the full cost stack, at n >= the
   target fixed on the dev half?'
 why_this_matters: 'It is the Q10 re-scope the operator asked for, on the one rostered leg where the tighten signal is large enough to measure. A pass is the first
-  disjoint evidence that an AM action class pays on a live leg: an input to a Tier-3 / mandate proposal for that leg''s live-review tighten. A fail closes AM v2''s
-  tighten family on its strongest leg.'
+  disjoint evidence that an AM action class pays on a live leg: an input to a Tier-3 / mandate proposal for that leg''s live-review tighten. A fail records
+  that this fixed-age tighten config does not pay on its strongest leg.'
 power:
   expected_n: 282
   min_detectable_effect: 0.05
@@ -93,9 +93,9 @@ decision_rule:
   what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; a per-trade-R SCREEN for one leg; says nothing about any other leg or class.
   pass_action: Propose the tighten on ict_scalp_5m to the manager as a Tier-3 / mandate decision input with this record (live-review tighten advice for that leg); the operator
     or manager decides.
-  fail_action: Record AM v2's tighten family CLOSED on its strongest leg (with the c7e3-01..09 trail); AM v2 moves to a different action family (bank / partial) on the
-    leg with the next largest powered cut, authored from this result.
-  proposal_mapping: pass -> Tier-3 proposal input; fail -> tighten family closed, next family; indeterminate -> n not reached (re-arm) or not separable (state it, iterate).
+  fail_action: 'Record that this CONFIG failed on disjoint data: mf_tighten_fixed_cc (tighten_half once at the first eligible bar aged >= 5) on
+    ict_scalp_5m BTCUSDT 5m. Author the next AM iteration from this result on another action (bank / partial) or another fixed age on the same leg.'
+  proposal_mapping: pass -> Tier-3 proposal input; fail -> this config failed, next action or age from the result; indeterminate -> n not reached (re-arm) or not separable (state it, iterate).
   choices_where_the_design_memo_is_silent:
   - 'FADE_BREAKOUT_4H: recorded "unpowered, not run". MDE = 2.8 x 0.3 / sqrt(102) = 0.083 R (holdout) and 0.042 R (dev, n 403) vs the +0.0023 R family cut; even
     the 93k-trade family needs ~176k trades for 0.002 R.'
