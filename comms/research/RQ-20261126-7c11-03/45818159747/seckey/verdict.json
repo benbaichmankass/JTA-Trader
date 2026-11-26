@@ -1,0 +1,368 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261126-7c11-03",
+ "read_state": "measured",
+ "verdict": "fail",
+ "note": "reproduction of booster 8c3a70b5d1024229: refit sha b42321148a0d1b1e DOES NOT MATCH; n=213 mean net R 0.3891090207472068 (n ok, mean ok); reproduces=False; no holdout read claimed",
+ "generated_at": "2026-11-26T14:27:44Z",
+ "decision_rule": {
+  "id": "RULE-RQ20261126-7c11-02-SECKEY",
+  "registered_at": "2026-11-26",
+  "registered_before_run": true
+ },
+ "population": {
+  "n": 213,
+  "description": "equity-native ENTRY re-trained on structure-exit labels (pivot=5;sl_only), restricted-LONG on the 167-ETF Alpaca liquidity pool, confirming window 2025-07-15..2026-10-31, net of the Alpaca cost stack"
+ },
+ "measurement": {
+  "verdict": "fail",
+  "note": "reproduction of booster 8c3a70b5d1024229: refit sha b42321148a0d1b1e DOES NOT MATCH; n=213 mean net R 0.3891090207472068 (n ok, mean ok); reproduces=False; no holdout read claimed",
+  "stats": {
+   "n": 213,
+   "mean_net_r": 0.3891090207472068,
+   "mean_gross_r": 0.43633079600592195,
+   "mean_cost_r": 0.04722177525871526,
+   "n_symbols": 114,
+   "se": 0.07993868565852418
+  },
+  "bar": {
+   "n_tries": 1,
+   "alpha_one_sided": 0.025,
+   "ci_level": 0.95,
+   "ci_z": 1.96,
+   "ci_lo_percentile": 2.5,
+   "point_t_min": 0.0,
+   "method": "Sidak-corrected CI (alpha_N = 1-(1-0.025)^(1/N), one-sided) for CI bars; Bailey-Lopez de Prado expected max of N null t-stats for point bars"
+  },
+  "ledger_record": null,
+  "booster_sha256": "b42321148a0d1b1e2218e0f5d8390aa124ca813ab8edff6d1814818f9d718e4c",
+  "train_rows": 365766,
+  "config": "B",
+  "tau": 0.25,
+  "dev_oof_mean": 0.10713486143051566,
+  "decision_rows_before_session_gate": 108244,
+  "decision_rows": 56874,
+  "by_month": {
+   "2025-07": {
+    "n": 3,
+    "mean_net_r": -1.2539
+   },
+   "2025-10": {
+    "n": 3,
+    "mean_net_r": -0.2982
+   },
+   "2025-11": {
+    "n": 40,
+    "mean_net_r": -0.1909
+   },
+   "2025-12": {
+    "n": 5,
+    "mean_net_r": -0.6949
+   },
+   "2026-01": {
+    "n": 24,
+    "mean_net_r": 0.0338
+   },
+   "2026-02": {
+    "n": 8,
+    "mean_net_r": 0.9139
+   },
+   "2026-03": {
+    "n": 113,
+    "mean_net_r": 0.7483
+   },
+   "2026-04": {
+    "n": 12,
+    "mean_net_r": 0.2766
+   },
+   "2026-07": {
+    "n": 1,
+    "mean_net_r": -1.0367
+   },
+   "2026-09": {
+    "n": 1,
+    "mean_net_r": -0.6763
+   },
+   "2026-10": {
+    "n": 3,
+    "mean_net_r": 1.4551
+   }
+  },
+  "month_clustered_se_reported": 0.40291823867263454,
+  "by_symbol_top": {
+   "KRE": {
+    "count": 6,
+    "mean": 0.3985
+   },
+   "EZU": {
+    "count": 5,
+    "mean": -0.5524
+   },
+   "KBE": {
+    "count": 5,
+    "mean": 0.6864
+   },
+   "XLB": {
+    "count": 4,
+    "mean": 0.3514
+   },
+   "TNA": {
+    "count": 4,
+    "mean": -0.4311
+   },
+   "QUAL": {
+    "count": 4,
+    "mean": 0.1392
+   },
+   "XLI": {
+    "count": 4,
+    "mean": -0.6073
+   },
+   "EWC": {
+    "count": 3,
+    "mean": -0.2096
+   },
+   "EFA": {
+    "count": 3,
+    "mean": 0.7571
+   },
+   "EWG": {
+    "count": 3,
+    "mean": -0.3208
+   }
+  },
+  "window": {
+   "train_end": "2025-06-30",
+   "start": "2025-07-15",
+   "end": "2026-10-31",
+   "embargo_days": 14
+  },
+  "dev": {
+   "grid": {
+    "B|0.2": {
+     "config": "B",
+     "tau": 0.2,
+     "n": 1855,
+     "mean_net_r": 0.08072329789866985,
+     "mean_gross_r": 0.13949323581250633,
+     "mean_cost_r": 0.058769937913836515,
+     "n_symbols": 145,
+     "se": 0.027828671209605613,
+     "by_fold": {
+      "0": {
+       "n": 572,
+       "mean_net_r": 0.034
+      },
+      "1": {
+       "n": 364,
+       "mean_net_r": 0.1719
+      },
+      "2": {
+       "n": 292,
+       "mean_net_r": -0.1291
+      },
+      "3": {
+       "n": 321,
+       "mean_net_r": -0.2144
+      },
+      "4": {
+       "n": 306,
+       "mean_net_r": 0.5693
+      }
+     }
+    },
+    "B|0.25": {
+     "config": "B",
+     "tau": 0.25,
+     "n": 933,
+     "mean_net_r": 0.10713486143051566,
+     "mean_gross_r": 0.16678422936201995,
+     "mean_cost_r": 0.05964936793150427,
+     "n_symbols": 142,
+     "se": 0.040085564255068866,
+     "by_fold": {
+      "0": {
+       "n": 331,
+       "mean_net_r": -0.0221
+      },
+      "1": {
+       "n": 184,
+       "mean_net_r": 0.3197
+      },
+      "2": {
+       "n": 142,
+       "mean_net_r": -0.239
+      },
+      "3": {
+       "n": 130,
+       "mean_net_r": -0.2204
+      },
+      "4": {
+       "n": 146,
+       "mean_net_r": 0.7604
+      }
+     }
+    }
+   },
+   "n_selection_draws": 2,
+   "selection_rule": "max pooled dev out-of-fold mean net R over (config, tau) subject to >= 300 OOF trades",
+   "selected": {
+    "key": "B|0.25",
+    "config": "B",
+    "tau": 0.25,
+    "n": 933,
+    "mean_net_r": 0.10713486143051566,
+    "mean_gross_r": 0.16678422936201995,
+    "mean_cost_r": 0.05964936793150427,
+    "n_symbols": 142,
+    "se": 0.040085564255068866,
+    "by_fold": {
+     "0": {
+      "n": 331,
+      "mean_net_r": -0.0221
+     },
+     "1": {
+      "n": 184,
+      "mean_net_r": 0.3197
+     },
+     "2": {
+      "n": 142,
+      "mean_net_r": -0.239
+     },
+     "3": {
+      "n": 130,
+      "mean_net_r": -0.2204
+     },
+     "4": {
+      "n": 146,
+      "mean_net_r": 0.7604
+     }
+    }
+   },
+   "dev_rows": 375118
+  },
+  "structure_exit": "pivot=5;sl_only",
+  "reproduction": {
+   "expect_sha": "8c3a70b5d1024229f150f06e99a2e1ad505258dd5573a76ea86633af7e0a7f26",
+   "booster_sha256": "b42321148a0d1b1e2218e0f5d8390aa124ca813ab8edff6d1814818f9d718e4c",
+   "sha_match": false,
+   "expect_n": "213",
+   "n_match": true,
+   "expect_mean": "0.3891090207472068",
+   "mean_match": true,
+   "ledger_claimed": false,
+   "reproduces": false
+  },
+  "trades_jsonl": {
+   "path": "comms/research/RQ-20261126-7c11-03/45818159747/seckey_trades.jsonl",
+   "rows": 213,
+   "sum_net_r": 82.88022141915505
+  },
+  "pool": {
+   "n_assets_active_tradable": 13525,
+   "n_etf_candidates": 5827,
+   "n_pool": 174,
+   "n_excluded_no_dev_bars": 3765,
+   "n_excluded_illiquid": 1888,
+   "assets_sha256": "9eccf091d1d5a1309fa0d6bf8138a0eefaee95885869b363e6d5292f82c83d21",
+   "etf_file_sha256": "5e192ca4064130272b505e57eb3123a2f3dad46b91b9f2aa651e9536a228e412",
+   "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
+   "key_kind": "paper",
+   "security_keyed": {
+    "rule": "one 1h run (gap < 30 d) starting <= 2021-01-01 + 30 d and ending >= data end - 30 d",
+    "n_pool_in": 174,
+    "n_kept": 167,
+    "excluded": {
+     "ANSS": {
+      "reason": "early_end",
+      "runs": [
+       {
+        "first": "2021-01-04 14:00:00+00:00",
+        "last": "2025-07-16 19:00:00+00:00",
+        "bars": 7951
+       }
+      ]
+     },
+     "FB": {
+      "reason": "two_securities",
+      "runs": [
+       {
+        "first": "2021-01-04 14:00:00+00:00",
+        "last": "2022-06-08 19:00:00+00:00",
+        "bars": 2527
+       },
+       {
+        "first": "2025-06-26 13:00:00+00:00",
+        "last": "2026-10-30 18:00:00+00:00",
+        "bars": 616
+       }
+      ]
+     },
+     "INFO": {
+      "reason": "two_securities",
+      "runs": [
+       {
+        "first": "2021-01-04 14:00:00+00:00",
+        "last": "2022-02-25 20:00:00+00:00",
+        "bars": 2016
+       },
+       {
+        "first": "2024-10-10 14:00:00+00:00",
+        "last": "2026-10-30 19:00:00+00:00",
+        "bars": 1910
+       }
+      ]
+     },
+     "NFX": {
+      "reason": "late_start",
+      "runs": [
+       {
+        "first": "2026-07-07 17:00:00+00:00",
+        "last": "2026-10-29 16:00:00+00:00",
+        "bars": 88
+       }
+      ]
+     },
+     "SDC": {
+      "reason": "early_end",
+      "runs": [
+       {
+        "first": "2021-01-04 14:00:00+00:00",
+        "last": "2023-10-03 19:00:00+00:00",
+        "bars": 4843
+       }
+      ]
+     },
+     "SIX": {
+      "reason": "early_end",
+      "runs": [
+       {
+        "first": "2021-01-04 14:00:00+00:00",
+        "last": "2024-07-01 19:00:00+00:00",
+        "bars": 6121
+       }
+      ]
+     },
+     "UN": {
+      "reason": "late_start",
+      "runs": [
+       {
+        "first": "2026-07-07 17:00:00+00:00",
+        "last": "2026-10-30 18:00:00+00:00",
+        "bars": 67
+       }
+      ]
+     }
+    }
+   }
+  },
+  "n_pool": 167,
+  "alpaca_calls": 11064,
+  "runtime_s": 7758.9
+ },
+ "n": 213,
+ "produced_by": {
+  "tool": "python3 scripts/research/ml_entry_equity.py structure",
+  "where": "research-script-run"
+ }
+}

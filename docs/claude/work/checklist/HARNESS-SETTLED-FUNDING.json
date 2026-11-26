@@ -2,8 +2,8 @@
   "id": "HARNESS-SETTLED-FUNDING",
   "title": "Wire the settled funding series (funding_series.py) into backtest_trend and backtest_pullback in place of the flat 1 bps/8h default, so money-leg Stage-0 records carry real funding",
   "state": "queued",
-  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
-  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-ML (session_01AFoLuJkXEM1EigH9)",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "tier": 1,
   "roadmap": [
@@ -14,10 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-09",
   "_seq": 788,
   "note": "Filed by lane SYSTEM-CONFORMANCE-AUDIT 2026-10-29 (Manager Session 2026-10-29c; operator ~07:30Z audit ask, verbatim on WEEKLY-PLANNING). Evidence: docs/reviews/2026-10-29-system-conformance-audit.md \u00a73.3 / top-10 #10. MEASURED: core harness funding is DEFAULT_FUNDING_BPS_PER_WINDOW flat 1.0 bps/8h (execution_costs.py:70); settled funding used only by xsec/carry/frontier runners. Of 1221 result rows since 10-15: 396 at 7.5bps fee, 14 at 11.0, 87 at 0.0, 719 unflagged. Done when: both harnesses take settled funding (default byte-identical unless flagged, per house style), with tests, and one money-leg re-run reports net_r under settled funding. Relates COST-STACK-HARNESS-RESOLVER (fee routing).",
   "phase": null,
-  "updated_at": "2026-10-29T07:33:15Z",
-  "updated_by": "session_01AFoLuLR4k6vdJP5WxbrTSS",
+  "updated_at": "2026-11-26T06:11:25Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

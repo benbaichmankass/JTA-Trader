@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a pullback-family parity run reports PARITY (or each listed defect is fixed or killed with a reason)",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261024-ZUPNKHZR-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "MOMENTUM-LEVERS-PARITY (session_01AYVhF79YumXBY7ZuPNkhZr)",
+    "rerun": "grep -n 'since_entry(candles_df' src/runtime/exit_levers.py src/units/strategies/htf_pullback_trend_2h.py  # any hit not routed through closed_frame is the open defect"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk): routed to its owning row MOMENTUM-PARITY-FO)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row MOMENTUM-PARITY-FOLLOWUPS is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_2026_10_25": "Checked on main 2026-10-25: exit_levers.py:275 and htf_pullback_trend_2h.py:752 use raw since_entry.",
+  "routed_to": "checklist:MOMENTUM-PARITY-FOLLOWUPS",
+  "state": "routed",
+  "what": "[exit-path] MOMENTUM-LEVERS-PARITY measured only the trend_donchian family. Same defect classes still open elsewhere: (1) exit_levers.giveback_verdict still evaluates on the forming bar + intrabar price (harness: bar close); (2) htf_pullback_trend_2h's trail window not checked for the forming-bar / entry-bar-range issues fixed in trend_donchian; (3) the pullback-family momentum_stale cell (slv_pullback_1d ms8/a20, RQ-20261016-016) has no parity run -- no SLV bars were reachable from the lane. Extend scripts/research/momentum_levers_parity.py to the pullback harness + monitor."
+}

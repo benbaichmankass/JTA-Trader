@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261106-WSDS4-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AFoLuKRfwDfF3esJNvcS31 / PR #23962",
+    "rerun": "curl -s https://ict-bot.duckdns.org/api/bot/work/items?limit=1 | jq .canonical,.note; curl -s -o /dev/null -w %{time_total} https://ict-bot.duckdns.org/api/bot/work/brief"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent WSD-S4-READERS-FLIP state landed_unprove)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row WSD-S4-READERS-FLIP is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "L-OPS"
+  ],
+  "routed_to": "WSD-S4-READERS-FLIP",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "WSD-S4 follow-ups: (a) GET /api/bot/work/items still says canonical:false + stale 'S1: files stay canonical' note (src/web/api/routers/work_items.py) -- flip to canonical:true now the register is frozen into the store; (b) checklist.py prints 'wrote docs/.../<id>.json' after a write-through to the store -- say 'wrote work_store item <id>'; (c) /work/brief first call 502 at the proxy's 30s, retry 18s -- measure cold build time vs pre-S4 (F10)"
+}

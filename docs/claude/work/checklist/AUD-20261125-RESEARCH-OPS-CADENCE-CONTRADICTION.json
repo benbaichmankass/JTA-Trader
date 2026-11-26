@@ -1,0 +1,30 @@
+{
+  "id": "AUD-20261125-RESEARCH-OPS-CADENCE-CONTRADICTION",
+  "title": "research_ops_age_h SLO (threshold 8 h, scripts/research/research_slo.yaml) and CLAUDE.md / research-ops SKILL.md say research-ops runs 4x/day, but the live routine trig_01CY11WsVqyuq6oqdU2eAa2e fires once a day (47 14 * * *, citing operator 2026-11-17 'keep the routine on Sonnet at once a day'); the SLO is therefore red by construction ~16 h of every 24 and AUD-20261111-RESEARCH-OPS-NO-RECORD can never meet its clears_when",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "[2026-11-25 20:02Z housekeeping lane] #28887 MERGED (threshold 8->26 h in research_slo.yaml with the 2026-11-17 operator quote and measured pass dates; '4x/day' wording changed in CLAUDE.md and 6 skills/docs). Merged, not yet observed. [2026-11-25 housekeeping lane] fix in PR #28887 (research_ops_age_h 8h->26h in research_slo.yaml with the operator 2026-11-17 quote + measured pass dates; '4x/day' wording changed in CLAUDE.md and 6 skills/docs). Closes when #28887 merges and the next research SLO read shows research_ops_age_h within 26h. WEEKLY-AUDIT-2026-11-25 Layer 0 root cause of a call stalled 3 audits. research_ops_age_h red on 4 of 7 days' last runs (comms/research/health 11-19..11-25). The once-a-day directive is quoted in the trigger prompt; no record on main found (grep). DECISION for the manager (record the operator's words on main, then one of): (a) cadence is once daily -> set research_ops_age_h threshold 26 and fix CLAUDE.md:246 + research-ops SKILL.md description; (b) restore 4x/day. next_action: ask_operator only if the 11-17 words are not on record. CHECK {command: research_slo.py latest, rule: research_ops_age_h breaches only when a scheduled pass is missed, resolves_when: 3 days green}.",
+  "observation": {
+    "due_by": "2026-11-27",
+    "how_to_check": "python3 scripts/research/research_slo.py (research_ops_age_h fact) or comms/research/health/<date>.json",
+    "what": "research_ops_age_h reads under 26 h on the next research SLO read, after the 11-26 14:47Z pass"
+  },
+  "phase": null,
+  "updated_at": "2026-11-25T20:02:05Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: SLO threshold and wording only"
+  }
+}

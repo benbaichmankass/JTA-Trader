@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "python3 scripts/research/infra_selftest.py --check roadmap_ref_valid reports verdict pass (RQ-20261012-5bd1-02/-03/-04/-07/-08 carry roadmap as a list, e.g. [M28])",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261025-THEMEAUTHOR1025-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane THEME-AUTHOR-1025: infra_selftest.py --check roadmap_ref_valid, first run on main 2026-10-25",
+    "rerun": "python3 scripts/research/infra_selftest.py --check roadmap_ref_valid --out /tmp/x && cat /tmp/x/verdict.json"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent RESEARCH-OPS-20261025-1447 state done: O)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, RESEARCH-OPS-20261025-1447, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_2026_10_25": "Fix landed in the research-ops 14:47Z PR (5bd1-02/-03/-04/-07/-08 roadmap -> list); local infra_selftest --check roadmap_ref_valid = pass 77/77. Closes on a main run of RQ-20261025-006 (or the selftest) reading pass.",
+  "routed_to": "checklist:RESEARCH-OPS-20261025-1447",
+  "state": "routed",
+  "what": "Five queued units RQ-20261012-5bd1-02/-03/-04/-07/-08 declare `roadmap: M28` as a bare string. Code that iterates the field reads characters (M, 2, 8) and the unit -> milestone map breaks silently. Fix = change each to a one-element list (`roadmap:` / `- M28`); not done in THEME-AUTHOR-1025 because editing an existing queue unit is outside the generator-only surface that queue_replenish --verify tolerates on a replenish PR. Until fixed, the new roadmap_ref_valid unit (P6-Q6-roadmap-ref-valid) reads FAIL, which is the true state."
+}

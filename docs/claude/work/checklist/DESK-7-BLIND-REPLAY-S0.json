@@ -1,34 +1,35 @@
 {
   "id": "DESK-7-BLIND-REPLAY-S0",
   "title": "Desk: D-S0 blind replay for in-trade + entry review on real-money 2h/4h legs; pre-registered research units",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": "claude-sonnet-5-5",
-  "ceiling_usd": 30,
-  "spend_usd": null,
   "tier": 1,
-  "prs": [
-    20339
-  ],
-  "blocked_on": [],
-  "note": "[Manager Session 2026-10-30c, ~20:45Z] CORRECTION: the 19:36Z re-rank to 1 was a manager error (DESK-7 is in-trade/exit replay, not the entry gate DESK-13 depends on); rank restored to 9. Its closing observation is MET on main: bf56-01 verdict pass (run 40387359527, 370/370 replayed); bf56-02 in-trade FAIL mean dR -0.0483 CI [-0.1425,+0.0414] n=176; bf56-03 exit FAIL mean dR -0.0906 CI [-0.1984,-0.0030] n=176. Ready for done with writeback at the next review.",
-  "priority_rank": 9,
-  "updated_at": "2026-10-30T20:37:55Z",
-  "updated_by": "session_01AFoLuJEaf7dNfk9kc5g3fG",
   "roadmap": [
     "L-DESK",
     "L-ATM"
   ],
+  "priority_rank": 9,
+  "ceiling_usd": 30,
+  "spend_usd": null,
+  "prs": [
+    20339
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-30",
+  "_seq": 684,
+  "note": "[Manager Session 2026-10-30c, ~20:45Z] CORRECTION: the 19:36Z re-rank to 1 was a manager error (DESK-7 is in-trade/exit replay, not the entry gate DESK-13 depends on); rank restored to 9. Its closing observation is MET on main: bf56-01 verdict pass (run 40387359527, 370/370 replayed); bf56-02 in-trade FAIL mean dR -0.0483 CI [-0.1425,+0.0414] n=176; bf56-03 exit FAIL mean dR -0.0906 CI [-0.1984,-0.0030] n=176. Ready for done with writeback at the next review.",
   "observation": {
-    "what": "the first unit run on scripts/research/desk_replay_driver.py (RQ-20261026-bf56-01 selfcheck) lands a result record",
+    "due_by": "2026-11-02",
     "how_to_check": "ls research/results/RQ-20261026-bf56-01 and read the verdict.json read_state; python3 scripts/research/desk_replay_driver.py selfcheck --out <dir> --fetch reproduces it",
-    "due_by": "2026-11-02"
+    "what": "the first unit run on scripts/research/desk_replay_driver.py (RQ-20261026-bf56-01 selfcheck) lands a result record"
   },
+  "phase": null,
+  "updated_at": "2026-11-25T18:45:55Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
-    "roadmap": "none: the L-DESK milestone text is owned by the DESK-LDESK-WRITEBACK lane (branch claude/desk-ldesk-writeback); this row adds tooling only and changes no milestone status",
-    "arch": "none: no architecture contract changes; the driver is research tooling and is listed in docs/research/RESEARCH-CAPABILITY-INDEX.md"
-  },
-  "_seq": 684
+    "arch": "none: no architecture contract changes; the driver is research tooling and is listed in docs/research/RESEARCH-CAPABILITY-INDEX.md",
+    "roadmap": "none: the L-DESK milestone text is owned by the DESK-LDESK-WRITEBACK lane (branch claude/desk-ldesk-writeback); this row adds tooling only and changes no milestone status"
+  }
 }

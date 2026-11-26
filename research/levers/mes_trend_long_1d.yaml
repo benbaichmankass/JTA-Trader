@@ -623,6 +623,27 @@ levers:
       best_delta_r_per_trade: -0.0287
       fold_stability: 0.583
       reading: every tested value is worse than the baseline
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-10
+        window: 2020-11-19..2026-11-25
+        n: 23
+        net_r: 6.5188
+        baseline_n: 23
+        baseline_net_r: 6.7671
+        delta_net_r: -0.2483
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 3.0306
+        verdict: indeterminate
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0108
+      fold_stability: 0.5
+      reading: no response at the tested values
 manifest_notes:
   window_decision_2026_11_23: 'The seven 2026-11-17 units on this leg (9e1a-01, 9e1b-01, 9e1c-01, b2f1-03, b2f1-14, b2f2-02, b2f2-21) were blocked
     on a Yahoo ES=F data refusal, which is fixed (yfinance 1.7.0), but their registered 2018-06-01 window gives A n=31 < the floor of 39, so every

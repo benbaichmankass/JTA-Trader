@@ -184,6 +184,23 @@ def write_verdict(unit: str, out: Path) -> bool:
                         "no_action_warranted, not_viable/does_not_reproduce->fail, indeterminate/smoke_not_judged->indeterminate",
             }, indent=2) + "\n")
             return True
+        # 5e01 (the ML structure-exit arm, scripts/research/ml_structure_unit.py): the unit's OWN registered word, first seed, mapped
+        # mechanically: PASS_BETTER / PASS_NONINFERIOR -> pass, FAIL -> fail, INDETERMINATE -> indeterminate. Unmapped -> nothing written.
+        if isinstance(d, dict) and d.get("schema") == "ml_structure_unit/1":
+            v = {"PASS_BETTER": "pass", "PASS_NONINFERIOR": "pass", "FAIL": "fail", "INDETERMINATE": "indeterminate"}.get(str(d.get("verdict")))
+            if v is None:
+                return False
+            br = d.get("bracket") or {}
+            (out / "verdict.json").write_text(json.dumps({
+                "verdict": v, "read_state": "measured",
+                "population": f"{unit}: ML entry walk-forward (c692 fold models, frozen v1 base), DEV FOLDS ONLY; declared decisions re-scored with a "
+                              f"structure SL/TP at pivot 3/5/8, bracket SL {br.get('sl_atr')} ATR / TP {br.get('tp_r')} R; first seed decides; "
+                              f"registered word {d.get('verdict')!r}",
+                "n": d.get("n"),
+                "note": "mechanical map of RULE-STRUCTURE-EXITS-V1's own word (PASS_BETTER/PASS_NONINFERIOR->pass, FAIL->fail, INDETERMINATE->"
+                        "indeterminate); other seeds, bins, controls and R2/R4 are in the result file. A pass is a discovery, never a config change.",
+            }, indent=2) + "\n")
+            return True
         # b608 (the ENTRY v2 stack): {"levels": {"base": {..., "n": [...]}, "S1_..": {..., "accepted": bool}}, "winning_stack": "<level>"|None}.
         # The registered rule: the WINNING STACK is the highest accepted level (S1, S2, S3 in order, stopping at the first not accepted); if S1 is
         # not accepted there is no winning stack. A winning stack is the unit's positive answer (a CANDIDATE for the one W1 read), none is a fail.

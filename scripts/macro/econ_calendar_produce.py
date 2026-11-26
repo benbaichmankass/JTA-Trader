@@ -174,9 +174,39 @@ def _latest_upcoming(pit_rows: list[dict]) -> list[dict]:
         prev = latest.get(key)
         if prev is None or str(r.get("observed_at", "")) >= str(prev.get("observed_at", "")):
             latest[key] = r
-    out = list(latest.values())
+    out = [r for r in latest.values() if not _superseded(r, latest.values())]
     out.sort(key=lambda r: (str(r.get("scheduled_at")), str(r.get("event_id"))))
     return out
+
+
+RESCHEDULE_WINDOW_DAYS = 4
+
+
+def _superseded(r: dict, rows) -> bool:
+    """A scheduled row whose release was later re-observed at another time within RESCHEDULE_WINDOW_DAYS.
+
+    The event_id embeds the date (``evt-core-pce-mom-2026-11-27-us``), so a moved release arrives as a NEW id and the old one
+    used to survive forever: the October PCE was observed for 11-27 on 11-09, moved to 11-25 (observed 11-25), and the 11-27
+    phantom stayed in upcoming.json and the news config (row ECON-CAL-CONSENSUS-AND-STALE-ROWS). Same (country, kind), a
+    newer observation, a scheduled time within 4 days: the older row is the stale one. Weekly releases are 7 days apart and
+    monthly ones ~30, so the window cannot merge two genuine releases."""
+    from datetime import datetime as _dt
+    try:
+        t = _dt.fromisoformat(str(r.get("scheduled_at")).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    for o in rows:
+        if o is r or o.get("country") != r.get("country") or o.get("kind") != r.get("kind") or not r.get("kind"):
+            continue
+        if str(o.get("observed_at", "")) <= str(r.get("observed_at", "")):
+            continue
+        try:
+            dt = abs((_dt.fromisoformat(str(o.get("scheduled_at")).replace("Z", "+00:00")) - t).total_seconds())
+        except ValueError:
+            continue
+        if 0 < dt <= RESCHEDULE_WINDOW_DAYS * 86400:
+            return True
+    return False
 
 
 def build_news_config_events(

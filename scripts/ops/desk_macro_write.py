@@ -9,11 +9,32 @@ Rules (spec section 2):
   - schema `desk_macro_brief/1`; required keys present; brief_id matches judged_at; model is a TIER (`*-tier`), never a model id
   - every source has retrieved_at <= judged_at and a content_sha256; every judgement cites >= 1 known source_id
   - trades: the desk proposal geometry and TP doctrine (stop/entry/tp ordering, tp < SENTINEL_R_FLOOR R, tp inside the venue cap,
-    p_hit in [REACH_FLOOR, 1)); timeframe 1d; symbol in the desk's universe (claude_desk.symbols; a wider universe needs its own
-    population test, operator rule "an account configures strategies, never symbols"); expected_r_net < tp R; no size-shaped key
+    p_hit in [REACH_FLOOR, 1)); timeframe 1d; expected_r_net < tp R; no size-shaped key
+  - symbol: ANY venue-tradable symbol "if it has the data to support it" (operator 2026-11-26, verbatim: "it shouldn't be limited
+    to any specific symbols. It should be able to recommend trades on any symbols that we are able to trade if it has the data to
+    support it."): its daily bars are measured in the packet or in a fetch file the brief lists in fetch_paths (fetch sha valid,
+    tied to the same packet, retrieved_at <= judged_at), AND desk_macro_packet.is_tradable() says the proposal's venue_class can
+    fill it (the venue's own answer, else the symbol is rostered on that venue). Shadow proposals only; real money follows the ladder
+  - management: every trade carries a `management` block for the live-trade-review sessions that would manage it (operator
+    2026-11-26: "specific instructions for the LTR sessions ... and how the trade was designed"): design, expected_path,
+    watch_for[], catalyst_timing[], tighten_if[], exit_early_if[], do_not[], thesis_invalidated_by (watch_for non-empty; the other lists may be empty). watch_for / tighten_if /
+    exit_early_if items are {signal, source_ids?, check?}; an optional check {kind: close_above|close_below|high_above|low_below,
+    level} is machine-evaluated by desk_macro_outcomes on the replay window
   - informs: leg exists in config/strategies.yaml; until > judged_at
-  - events: class in the v1 taxonomy; no_trade_reason required when trades == []
+  - events: class in the v1 taxonomy
+  - packet: packet_path names the desk_macro_packet the brief was drafted from (scripts/ops/desk_macro_packet.py); its sha256 must
+    equal packet_sha and its built_at must be <= judged_at
+  - trades == [] is REFUSED unless that packet itself shows prices could_not_look (operator 2026-11-26: "it needs to be proposing
+    trades"); a thesis-free day still lists its best-ranked candidate trades, each with judge_prior. no_trade_reason is then required
+  - forecasts: the brief's OWN forecasts (operator 2026-11-26, verbatim: "It should be looking at data to develop its own forecasts
+    ... Not just aggregating open source data, but actually making inferences of deep big data analysis."): forecasts[] is
+    non-empty; each has forecast_id, target {kind: release|asset_return|asset_p_tp, key, resolves_at > judged_at}, own_point
+    inside interval {lo, hi, level}, method, inputs (source_ids and/or analysis_ref = an analysis_id from a listed analysis file:
+    sha valid, same packet, computed_at <= judged_at), consensus (or null) and own_minus_consensus = own_point - consensus.
+    trades[].forecast_ids, when given, must name known forecasts
   - write-once: an existing comms/desk/macro/<date>.json is never overwritten (a correction is a new brief with `supersedes`)
+  - same-day correction (v1.1): a brief whose `supersedes` names the day's CURRENT head brief_id is written as
+    <date>_<brief_id>.json; any other second brief that day is refused. desk_macro_outcomes grades only the head.
 
   python3 scripts/ops/desk_macro_write.py validate BRIEF.json
   python3 scripts/ops/desk_macro_write.py write BRIEF.json [--out-dir comms/desk/macro]
@@ -36,6 +57,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
+from scripts.ops.desk_macro_packet import is_tradable, prices_could_not_look, sha_ok  # noqa: E402
 from src.runtime.target_expectation import SENTINEL_R_FLOOR  # noqa: E402  (the fleet's sentinel idiom)
 from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT  # noqa: E402
 
@@ -80,15 +102,190 @@ def _size_keys(v, path="") -> list[str]:
     return out
 
 
-def trade_problems(t: dict, i: int, universe: set) -> list[str]:
+MGMT_TEXT = ("design", "expected_path", "thesis_invalidated_by")
+MGMT_LISTS = ("watch_for", "catalyst_timing", "tighten_if", "exit_early_if", "do_not")
+MGMT_NONEMPTY = ("watch_for",)   # the operator asked for "anything specific that they should look out for"
+CHECK_KINDS = ("close_above", "close_below", "high_above", "low_below")
+
+
+def management_problems(m, tag: str, sids: set) -> list[str]:
+    if not isinstance(m, dict):
+        return [f"{tag}: management block is required (design, expected_path, watch_for, catalyst_timing, tighten_if, "
+                "exit_early_if, do_not, thesis_invalidated_by)"]
+    out = [f"{tag}.management.{k}: non-empty text required" for k in MGMT_TEXT if not str(m.get(k) or "").strip()]
+    for k in MGMT_LISTS:
+        v = m.get(k)
+        if not isinstance(v, list):
+            out.append(f"{tag}.management.{k}: a list is required (it may be empty except watch_for)")
+            continue
+        if k in MGMT_NONEMPTY and not v:
+            out.append(f"{tag}.management.{k}: at least one item is required")
+        if k in ("watch_for", "tighten_if", "exit_early_if"):
+            for j, it in enumerate(v):
+                it_tag = f"{tag}.management.{k}[{j}]"
+                if not isinstance(it, dict) or not str(it.get("signal") or "").strip():
+                    out.append(f"{it_tag}: an object with a non-empty `signal` is required")
+                    continue
+                bad = set(it.get("source_ids") or []) - sids
+                if bad:
+                    out.append(f"{it_tag}: cites unknown source_id(s) {sorted(bad)}")
+                ck = it.get("check")
+                if ck is not None:
+                    try:
+                        ok = ck.get("kind") in CHECK_KINDS and float(ck.get("level")) > 0
+                    except (AttributeError, TypeError, ValueError):
+                        ok = False
+                    if not ok:
+                        out.append(f"{it_tag}: check must be {{kind: {'|'.join(CHECK_KINDS)}, level: > 0}}")
+    return out
+
+
+def evidence(pkt: dict | None, fetches: list[dict], judged_at: datetime) -> tuple[dict, list[str]]:
+    """symbol -> {bars, source, trad} from the packet, then each valid fetch file; plus the fetch-file problems."""
+    ev, probs = {}, []
+
+    def take(prices: dict, trad: dict, src: str):
+        for s, v in (prices.get("symbols") or {}).items():
+            if v.get("read_state") == "measured" or s not in ev:
+                ev[s] = {"bars": v.get("read_state") == "measured", "source": src,
+                         "trad": (trad.get("symbols") or {}).get(s)}
+    if pkt:
+        take((pkt.get("parts") or {}).get("prices") or {}, (pkt.get("parts") or {}).get("tradability") or {}, "packet")
+    for f in fetches:
+        fid = f.get("fetch_id", "?")
+        if not sha_ok(f, "fetch_sha"):
+            probs.append(f"fetch {fid}: fetch_sha does not match its body")
+            continue
+        if pkt and f.get("packet_sha") != pkt.get("packet_sha"):
+            probs.append(f"fetch {fid}: extends a different packet")
+            continue
+        try:
+            if _ts(f["retrieved_at"]) > judged_at:
+                probs.append(f"fetch {fid}: retrieved_at is after judged_at")
+                continue
+        except (KeyError, ValueError):
+            probs.append(f"fetch {fid}: retrieved_at missing or not ISO")
+            continue
+        take(f.get("prices") or {}, f.get("tradability") or {}, fid)
+    return ev, probs
+
+
+FORECAST_KINDS = ("release", "asset_return", "asset_p_tp")
+
+
+def _z_of(level: float) -> float:
+    """Two-sided normal quantile for a central interval of ``level`` (0.8 -> 1.2816)."""
+    from statistics import NormalDist
+    return NormalDist().inv_cdf(0.5 + level / 2)
+
+
+def analyses_ok(analyses: list[dict], pkt: dict | None, judged_at: datetime) -> tuple[set, list[str]]:
+    ids, probs = set(), []
+    for a in analyses:
+        aid = a.get("analysis_id", "?")
+        if not sha_ok(a, "analysis_sha"):
+            probs.append(f"analysis {aid}: analysis_sha does not match its body")
+        elif pkt and a.get("packet_sha") != pkt.get("packet_sha"):
+            probs.append(f"analysis {aid}: computed on a different packet")
+        else:
+            try:
+                if _ts(a["computed_at"]) > judged_at:
+                    probs.append(f"analysis {aid}: computed_at is after judged_at")
+                else:
+                    ids.add(aid)
+            except (KeyError, ValueError):
+                probs.append(f"analysis {aid}: computed_at missing or not ISO")
+    return ids, probs
+
+
+def forecast_problems(fs, sids: set, aids: set, jt: datetime) -> tuple[set, list[str]]:
+    if not isinstance(fs, list) or not fs:
+        return set(), ["forecasts[]: at least one own forecast is required (the brief develops its own forecasts, it does not only "
+                       "aggregate; run scripts/ops/desk_macro_analysis.py)"]
+    out, ids = [], set()
+    for i, f in enumerate(fs):
+        tag = f"forecasts[{i}]"
+        if not isinstance(f, dict):
+            out.append(f"{tag}: an object is required")
+            continue
+        fid = f.get("forecast_id")
+        if not fid or fid in ids:
+            out.append(f"{tag}: a unique forecast_id is required")
+        ids.add(fid)
+        tg = f.get("target") or {}
+        if tg.get("kind") not in FORECAST_KINDS or not tg.get("key"):
+            out.append(f"{tag}: target {{kind: {'|'.join(FORECAST_KINDS)}, key}} is required")
+        try:
+            if _ts(tg["resolves_at"]) <= jt:
+                out.append(f"{tag}: target.resolves_at must be after judged_at (a forecast of the future)")
+        except (KeyError, ValueError, TypeError):
+            out.append(f"{tag}: target.resolves_at (ISO) is required")
+        iv = f.get("interval") or {}
+        try:
+            pt, lo, hi, lvl = float(f["own_point"]), float(iv["lo"]), float(iv["hi"]), float(iv["level"])
+            if not (lo <= pt <= hi and 0 < lvl < 1):
+                out.append(f"{tag}: need interval.lo <= own_point <= interval.hi and 0 < interval.level < 1")
+        except (KeyError, TypeError, ValueError):
+            out.append(f"{tag}: own_point and interval {{lo, hi, level}} (numbers) are required")
+            pt = None
+        if not str(f.get("method") or "").strip():
+            out.append(f"{tag}: method is required")
+        inp = f.get("inputs") or {}
+        src, aref = set(inp.get("source_ids") or []), inp.get("analysis_ref")
+        if not src and not aref:
+            out.append(f"{tag}: inputs.source_ids and/or inputs.analysis_ref is required")
+        if src - sids:
+            out.append(f"{tag}: cites unknown source_id(s) {sorted(src - sids)}")
+        if aref and aref not in aids:
+            out.append(f"{tag}: analysis_ref {aref!r} is not a valid listed analysis file (analysis_paths)")
+        cons, gap = f.get("consensus"), f.get("own_minus_consensus")
+        crs = f.get("consensus_read_state")
+        if crs not in ("measured", "could_not_look"):
+            out.append(f"{tag}: consensus_read_state must be measured | could_not_look (never a silent null; operator 2026-11-26)")
+        elif crs == "could_not_look":
+            if cons is not None or gap is not None:
+                out.append(f"{tag}: consensus could_not_look -> consensus and own_minus_consensus are null")
+            if not str(f.get("consensus_reason") or "").strip():
+                out.append(f"{tag}: consensus could_not_look needs consensus_reason (where you looked)")
+        else:
+            if not f.get("consensus_source") or f["consensus_source"] not in sids:
+                out.append(f"{tag}: a measured consensus cites its consensus_source (a known source_id)")
+            try:
+                c = float(cons)
+                if pt is not None and (gap is None or abs(float(gap) - (pt - c)) > 1e-6):
+                    out.append(f"{tag}: own_minus_consensus must equal own_point - consensus ({pt - c:.6g})")
+                if pt is not None and gap is not None:
+                    sigma = (float(iv["hi"]) - float(iv["lo"])) / (2 * _z_of(float(iv["level"])))
+                    want = (pt - c) / sigma if sigma > 0 else None
+                    gz = f.get("gap_z")
+                    if want is not None and (gz is None or abs(float(gz) - want) > 1e-3):
+                        out.append(f"{tag}: gap_z must be own_minus_consensus / sigma of the interval ({want:.4g})")
+            except (TypeError, ValueError, KeyError):
+                out.append(f"{tag}: a measured consensus is a number")
+    return ids, out
+
+
+def _load_json(ref: str):
+    path = Path(ref) if Path(ref).is_absolute() else REPO / ref
+    return json.loads(path.read_text())
+
+
+def trade_problems(t: dict, i: int, ev: dict, sids: set | None = None) -> list[str]:
     p, out, tag = t.get("proposal") or {}, [], f"trades[{i}]"
     try:
         side, e, sl, tp = p["side"], float(p["entry"]["level"]), float(p["stop"]["level"]), float(p["tp"]["level"])
         p_hit = float(p["tp"]["p_hit"])
     except (KeyError, TypeError, ValueError):
         return [f"{tag}: proposal needs side, entry.level, stop.level, tp.level, tp.p_hit"]
-    if p.get("symbol") not in universe:
-        out.append(f"{tag}: symbol {p.get('symbol')!r} is outside the desk universe (claude_desk.symbols); a wider universe needs its own population test")
+    e_sym = ev.get(p.get("symbol"))
+    if not e_sym or not e_sym["bars"]:
+        out.append(f"{tag}: no measured daily bars for {p.get('symbol')!r} in the packet or a listed fetch file "
+                   "(run desk_macro_packet.py fetch --packet P SYMBOL, and list the file in fetch_paths)")
+    else:
+        ok, basis = is_tradable(e_sym["trad"], str(p.get("venue_class")))
+        if not ok:
+            out.append(f"{tag}: {p.get('symbol')} is not confirmed tradable as venue_class {p.get('venue_class')!r}: {basis}")
+    out += management_problems(t.get("management"), tag, sids or set())
     if p.get("timeframe") != "1d":
         out.append(f"{tag}: timeframe must be 1d (a macro brief trades daily bars)")
     if not isinstance(p.get("horizon_bars"), int) or p["horizon_bars"] < 1:
@@ -118,9 +315,46 @@ def trade_problems(t: dict, i: int, universe: set) -> list[str]:
     return out
 
 
-def problems(b: dict, universe: set | None = None, legs: set | None = None) -> list[str]:
-    if universe is None or legs is None:
-        universe, legs = desk_universe()
+def load_packet(b: dict) -> tuple[dict | None, str | None]:
+    """The packet the brief names, or (None, why)."""
+    ref = b.get("packet_path")
+    if not ref:
+        return None, "packet_path is required (run scripts/ops/desk_macro_packet.py first and draft from it)"
+    path = Path(ref) if Path(ref).is_absolute() else REPO / ref
+    try:
+        return json.loads(path.read_text()), None
+    except (OSError, ValueError) as e:
+        return None, f"packet_path {ref}: cannot read ({type(e).__name__})"
+
+
+def packet_problems(b: dict, pkt: dict | None, why: str | None) -> list[str]:
+    if pkt is None:
+        return [why or "packet missing"]
+    out = []
+    if not sha_ok(pkt):
+        out.append("packet: its packet_sha does not match its body (edited after build?)")
+    if b.get("packet_sha") != pkt.get("packet_sha"):
+        out.append("packet_sha does not match the packet at packet_path")
+    try:
+        if _ts(pkt["built_at"]) > _ts(b["judged_at"]):
+            out.append("packet built_at is after judged_at")
+    except (KeyError, ValueError):
+        out.append("packet built_at missing or not ISO")
+    if not b["trades"]:
+        if not prices_could_not_look(pkt):
+            out.append("trades == [] is refused: the packet shows prices were read, so list the best-ranked candidate trades "
+                       "(each with judge_prior); an empty list is allowed only when packet prices are could_not_look")
+        elif not b.get("no_trade_reason"):
+            out.append("no_trade_reason is required when trades == []")
+    return out
+
+
+def problems(b: dict, universe: set | None = None, legs: set | None = None, packet: dict | None = None,  # inert: universe — retired 2026-11-26, kept positional for callers
+             fetches: list[dict] | None = None, analyses: list[dict] | None = None) -> list[str]:
+    """``universe`` is retired (any venue-tradable symbol with data); kept positional for callers. ``fetches`` overrides
+    reading ``b['fetch_paths']``."""
+    if legs is None:
+        legs = desk_universe()[1]
     out = [f"missing key {k}" for k in REQUIRED if k not in b]
     if out:
         return out
@@ -134,6 +368,9 @@ def problems(b: dict, universe: set | None = None, legs: set | None = None) -> l
         out.append("info_cutoff_at is after judged_at")
     if b["brief_id"] != f"DMB-{jt.strftime('%Y%m%dT%H%MZ')}":
         out.append(f"brief_id must be DMB-{jt.strftime('%Y%m%dT%H%MZ')} (from judged_at)")
+    sup = b.get("supersedes")
+    if sup is not None and (not re.fullmatch(r"DMB-\d{8}T\d{4}Z", str(sup)) or str(sup) >= str(b["brief_id"])):
+        out.append("supersedes must be an EARLIER brief_id (DMB-YYYYMMDDTHHMMZ)")
     if not re.fullmatch(r"[a-z]+-tier", str(b["model"])):
         out.append("model must be a TIER like 'opus-tier', never a model identifier (desk rule 6)")
     sids = set()
@@ -163,10 +400,33 @@ def problems(b: dict, universe: set | None = None, legs: set | None = None) -> l
             out.append(f"events[{i}]: class {x.get('class')!r} not in the v1 taxonomy")
         if x.get("published_at") and _ts(x["published_at"]) > jt:
             out.append(f"events[{i}]: published_at is after judged_at")
+    pkt, why = (packet, None) if packet is not None else load_packet(b)
+    out += packet_problems(b, pkt, why)
+    if fetches is None:
+        fetches = []
+        for ref in b.get("fetch_paths") or []:
+            try:
+                fetches.append(_load_json(ref))
+            except (OSError, ValueError) as e:
+                out.append(f"fetch_paths {ref}: cannot read ({type(e).__name__})")
+    ev, fprobs = evidence(pkt, fetches, jt)
+    out += fprobs
+    if analyses is None:
+        analyses = []
+        for ref in b.get("analysis_paths") or []:
+            try:
+                analyses.append(_load_json(ref))
+            except (OSError, ValueError) as e:
+                out.append(f"analysis_paths {ref}: cannot read ({type(e).__name__})")
+    aids, aprobs = analyses_ok(analyses, pkt, jt)
+    out += aprobs
+    fids, fcprobs = forecast_problems(b.get("forecasts"), sids, aids, jt)
+    out += fcprobs
     for i, t in enumerate(b["trades"]):
-        out += trade_problems(t, i, universe)
-    if not b["trades"] and not b.get("no_trade_reason"):
-        out.append("no_trade_reason is required when trades == []")
+        out += trade_problems(t, i, ev, sids)
+        bad = set(t.get("forecast_ids") or []) - fids
+        if bad:
+            out.append(f"trades[{i}]: forecast_ids {sorted(bad)} are not in forecasts[]")
     for i, f in enumerate(b["informs"]):
         if f.get("leg") not in legs:
             out.append(f"informs[{i}]: leg {f.get('leg')!r} is not in config/strategies.yaml")
@@ -192,8 +452,26 @@ def render(b: dict) -> str:
             p = t["proposal"]
             L.append(f"| {p['symbol']} | {p['side']} | {p['entry']['level']} | {p['stop']['level']} | {p['tp']['level']} ({p['tp']['p_hit']}) | "
                      f"{p['horizon_bars']}d | {t['catalyst']} |")
+        for t in b["trades"]:
+            m = t.get("management") or {}
+            L += ["", f"### {t['proposal']['symbol']} {t['proposal']['side']}: management handoff (for live-trade-review)", "",
+                  f"- design: {m.get('design')}", f"- expected path: {m.get('expected_path')}"]
+            for k in ("watch_for", "tighten_if", "exit_early_if"):
+                for it in m.get(k) or []:
+                    ck = it.get("check")
+                    L.append(f"- {k}: {it.get('signal')}" + (f" [check {ck['kind']} {ck['level']}]" if ck else ""))
+            L += [f"- catalyst timing: {x}" for x in m.get("catalyst_timing") or []]
+            L += [f"- do not: {x}" for x in m.get("do_not") or []]
+            L.append(f"- thesis invalidated by: {m.get('thesis_invalidated_by')}")
     else:
         L += ["## Trades: none", "", str(b.get("no_trade_reason", ""))]
+    if b.get("forecasts"):
+        L += ["", "## Own forecasts", "", "| id | target | own (interval) | consensus | own - consensus | method |", "|---|---|---|---|---|---|"]
+        for f in b["forecasts"]:
+            iv = f.get("interval") or {}
+            L.append(f"| {f.get('forecast_id')} | {(f.get('target') or {}).get('kind')}: {(f.get('target') or {}).get('key')} | "
+                     f"{f.get('own_point')} ({iv.get('lo')} .. {iv.get('hi')}, {iv.get('level')}) | {f.get('consensus')} | "
+                     f"{f.get('own_minus_consensus')} | {f.get('method')} |")
     for name in ("informs", "calendar", "events", "tilts"):
         if b[name]:
             L += ["", f"## {name.capitalize()}", ""] + [f"- {json.dumps(x, sort_keys=True)}" for x in b[name]]
@@ -201,25 +479,48 @@ def render(b: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: set | None = None) -> Path:
-    probs = problems(b, universe, legs)
+def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: set | None = None,
+          packet: dict | None = None, fetches: list[dict] | None = None, analyses: list[dict] | None = None) -> Path:
+    probs = problems(b, universe, legs, packet, fetches, analyses)
     if probs:
         raise ValueError("refused:\n  " + "\n  ".join(probs))
     day = _ts(b["judged_at"]).strftime("%Y-%m-%d")
     out_dir.mkdir(parents=True, exist_ok=True)
     p = out_dir / f"{day}.json"
     if p.exists():
-        raise FileExistsError(f"{p} exists: a brief is written once; a correction is a new brief with `supersedes`")
+        head = day_head(out_dir, day)
+        if b.get("supersedes") is None or b["supersedes"] != head:
+            raise FileExistsError(f"{p} exists: a brief is written once; a same-day correction must carry "
+                                  f"`supersedes` = the day's current head brief_id ({head})")
+        p = out_dir / f"{day}_{b['brief_id']}.json"
+        if p.exists():
+            raise FileExistsError(f"{p} exists: a brief is written once")
     body = json.dumps(b, indent=1, sort_keys=False) + "\n"
     p.write_text(body)
-    (out_dir / f"{day}.md").write_text(render(b))
+    p.with_suffix(".md").write_text(render(b))
     return p
+
+
+def day_head(out_dir: Path, day: str) -> str | None:
+    """The brief_id of the day's CURRENT head: the one brief of that day no other brief of that day supersedes."""
+    ids, sup = [], set()
+    for f in sorted(out_dir.glob(f"{day}*.json")):
+        try:
+            x = json.loads(f.read_text())
+        except (OSError, ValueError):  # allow-silent: an unreadable file is not a brief
+            continue
+        if isinstance(x, dict) and x.get("schema") == SCHEMA:
+            ids.append(x.get("brief_id"))
+            if x.get("supersedes"):
+                sup.add(x["supersedes"])
+    heads = [i for i in ids if i not in sup]
+    return max(heads) if heads else None
 
 
 # ---- self-test ------------------------------------------------------------------------------------------------------------
 GOOD = {
     "schema": SCHEMA, "brief_id": "DMB-20261126T1307Z", "judged_at": "2026-11-26T13:07:00Z", "info_cutoff_at": "2026-11-26T13:00:00Z",
-    "model": "opus-tier", "skill_sha": "x", "packet_sha": "y",
+    "model": "opus-tier", "skill_sha": "x", "packet_sha": None, "packet_path": "PKT",
     "sources": [{"source_id": "S1", "kind": "econ_calendar", "ref": "comms/macro/econ_calendar_upcoming.json",
                  "retrieved_at": "2026-11-26T13:01:00Z", "content_sha256": hashlib.sha256(b"x").hexdigest(), "influence": "decisive"}],
     "regime": {"call": "neutral", "axes": {"growth": 0, "inflation": 0, "liquidity": 0, "vol": 0}, "confidence": 0.5, "basis": "S1 shows a quiet week"},
@@ -230,48 +531,133 @@ GOOD = {
                              "entry": {"type": "limit", "level": 90.0, "good_till_bars": 2}, "stop": {"level": 88.0, "basis": "swing_low"},
                              "tp": {"level": 94.0, "basis": "prior_range_high", "p_hit": 0.35}, "expected_r_net": 0.1, "thesis": "x",
                              "novelty": "unverifiable", "onboarding": "onboarded"},
-                "judge_prior": 0.35, "catalyst": "US_CPI_2026-12-10", "invalidation": "10y yield closes above 4.8%"}],
+                "judge_prior": 0.35, "catalyst": "US_CPI_2026-12-10", "invalidation": "10y yield closes above 4.8%",
+                "management": {"design": "buy a pullback into a rising SMA20; TP at the prior range high", "expected_path": "toward TP in 3-6 sessions",
+                               "watch_for": [{"signal": "CPI 12-10 13:30Z: core > 0.3% m/m weakens the thesis", "source_ids": ["S1"]}],
+                               "catalyst_timing": ["2026-12-10T13:30:00Z CPI"], "tighten_if": [],
+                               "exit_early_if": [{"signal": "daily close below 88.5", "check": {"kind": "close_below", "level": 88.5}}],
+                               "do_not": ["do not trail inside 1 ATR before CPI"], "thesis_invalidated_by": "10y yield closes above 4.8%"}}],
+    "forecasts": [{"forecast_id": "F1", "target": {"kind": "release", "key": "US_CPI_2026-12-10", "resolves_at": "2026-12-10T13:30:00Z"},
+                   "own_point": 0.28, "interval": {"lo": 0.18, "hi": 0.38, "level": 0.8}, "method": "seasonal_ar_ols_v1 on CPILFESL",
+                   "inputs": {"source_ids": ["S1"]}, "consensus": 0.3, "own_minus_consensus": -0.02,
+                   "consensus_read_state": "measured", "consensus_source": "S1", "gap_z": -0.02 / (0.2 / (2 * 1.2815515655446004))}],
     "informs": [], "no_trade_reason": None,
     "training": {"train_eligible": True, "gate_eligible": False, "label_clean_from": "2026-06-01"},
 }
 
 
+def _pkt(prices_state: str = "measured", built_at: str = "2026-11-26T13:00:00Z") -> dict:
+    syms = {} if prices_state == "could_not_look" else {"TLT": {"read_state": "measured"}, "NVDA": {"read_state": "measured"}}
+    trad = {"TLT": {"rostered_on": ["alpaca"], "venue": None},
+            "NVDA": {"rostered_on": [], "venue": {"read_state": "measured", "exchange": "alpaca", "tradable": False}}}
+    p = {"schema": "desk_macro_packet/1", "packet_id": "DMP-x", "built_at": built_at,
+         "parts": {"prices": {"read_state": prices_state, "symbols": syms}, "tradability": {"symbols": trad}}}
+    p["packet_sha"] = hashlib.sha256(json.dumps(p, sort_keys=True, default=str).encode()).hexdigest()
+    return p
+
+
 def self_test() -> int:
     uni, legs = {"TLT", "SPY", "BTCUSDT"}, {"claude_desk", "trend_donchian"}
     ok = True
+    PKT = _pkt()
+    GOOD["packet_sha"] = PKT["packet_sha"]
 
     def check(name, cond):
         nonlocal ok
         ok &= bool(cond)
         print(("  ok   " if cond else "  FAIL ") + name)
 
-    def bad(fn):
+    def bad(fn, pkt=None):
         b = copy.deepcopy(GOOD)
         fn(b)
-        return problems(b, uni, legs)
-    check("a good brief passes", problems(GOOD, uni, legs) == [])
+        return problems(b, uni, legs, pkt or PKT)
+    check("a good brief passes", problems(GOOD, uni, legs, PKT) == [])
     check("retrieved_at after judged_at is refused", bad(lambda b: b["sources"][0].update(retrieved_at="2026-11-26T13:30:00Z")))
     check("a model id instead of a tier is refused", bad(lambda b: b.update(model="claude-x-1")))
     check("wrong geometry is refused", bad(lambda b: b["trades"][0]["proposal"]["tp"].update(level=87.0)))
     check("tp beyond the venue cap is refused", bad(lambda b: b["trades"][0]["proposal"]["tp"].update(level=99.5)))
     check("p_hit below the reach floor is refused", bad(lambda b: b["trades"][0]["proposal"]["tp"].update(p_hit=0.05)))
-    check("a symbol outside the desk universe is refused", bad(lambda b: b["trades"][0]["proposal"].update(symbol="NVDA")))
+    check("an untradable symbol is refused (venue says not tradable)", bad(lambda b: b["trades"][0]["proposal"].update(symbol="NVDA")))
+    check("a symbol with no bars in the packet or a fetch file is refused", bad(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL")))
+    check("the wrong venue_class for a rostered symbol is refused", bad(lambda b: b["trades"][0]["proposal"].update(venue_class="perp")))
+    fb = {"schema": "desk_macro_fetch/1", "fetch_id": "DMF-x", "retrieved_at": "2026-11-26T13:05:00Z", "packet_sha": PKT["packet_sha"],
+          "prices": {"symbols": {"AAPL": {"read_state": "measured"}}},
+          "tradability": {"symbols": {"AAPL": {"rostered_on": [], "venue": {"read_state": "measured", "exchange": "alpaca", "tradable": True}}}}}
+    fb["fetch_sha"] = hashlib.sha256(json.dumps(fb, sort_keys=True, default=str).encode()).hexdigest()
+
+    def with_fetch(fn, f):
+        b = copy.deepcopy(GOOD)
+        fn(b)
+        return problems(b, uni, legs, PKT, [f])
+    check("ANY symbol passes once fetched in-run with bars + a venue 'tradable'",
+          with_fetch(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL"), fb) == [])
+    late_f = dict(fb, retrieved_at="2026-11-26T13:30:00Z")
+    late_f["fetch_sha"] = hashlib.sha256(json.dumps({k: v for k, v in late_f.items() if k != "fetch_sha"}, sort_keys=True, default=str).encode()).hexdigest()
+    check("a fetch retrieved after judged_at is refused", with_fetch(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL"), late_f))
+    check("a tampered fetch file is refused", with_fetch(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL"), dict(fb, retrieved_at="2026-11-26T13:01:00Z")))
+    check("a trade without a management block is refused", bad(lambda b: b["trades"][0].pop("management")))
+    check("management without a watch_for item is refused", bad(lambda b: b["trades"][0]["management"].update(watch_for=[])))
+    check("an empty exit_early_if list is allowed", not bad(lambda b: b["trades"][0]["management"].update(exit_early_if=[])))
+    check("a malformed machine check is refused", bad(lambda b: b["trades"][0]["management"]["exit_early_if"][0].update(check={"kind": "vibes", "level": 1})))
+    check("a brief with no own forecast is refused", bad(lambda b: b.update(forecasts=[])))
+    check("a forecast resolving before judged_at is refused", bad(lambda b: b["forecasts"][0]["target"].update(resolves_at="2026-11-01T00:00:00Z")))
+    check("a point outside its interval is refused", bad(lambda b: b["forecasts"][0].update(own_point=0.5)))
+    check("a forecast with no consensus_read_state is refused", bad(lambda b: b["forecasts"][0].pop("consensus_read_state")))
+    check("could_not_look consensus needs a reason and nulls", bad(lambda b: b["forecasts"][0].update(consensus_read_state="could_not_look")))
+    check("could_not_look consensus with nulls + reason passes", not bad(lambda b: b["forecasts"][0].update(
+        consensus_read_state="could_not_look", consensus=None, own_minus_consensus=None, gap_z=None, consensus_reason="searched S1; none published")))
+    check("a measured consensus without its source is refused", bad(lambda b: b["forecasts"][0].pop("consensus_source")))
+    check("a wrong gap_z is refused", bad(lambda b: b["forecasts"][0].update(gap_z=5.0)))
+    check("a wrong own_minus_consensus is refused", bad(lambda b: b["forecasts"][0].update(own_minus_consensus=0.1)))
+    check("a forecast citing an unlisted analysis is refused", bad(lambda b: b["forecasts"][0]["inputs"].update(analysis_ref="DMA-x")))
+    check("a trade citing an unknown forecast is refused", bad(lambda b: b["trades"][0].update(forecast_ids=["F9"])))
+    an = {"schema": "desk_macro_analysis/1", "analysis_id": "DMA-ok", "computed_at": "2026-11-26T13:04:00Z", "packet_sha": PKT["packet_sha"]}
+    an["analysis_sha"] = hashlib.sha256(json.dumps(an, sort_keys=True, default=str).encode()).hexdigest()
+    b2 = copy.deepcopy(GOOD)
+    b2["forecasts"][0]["inputs"] = {"analysis_ref": "DMA-ok"}
+    b2["trades"][0]["forecast_ids"] = ["F1"]
+    check("a forecast resting on a valid analysis file, cited by its trade, passes", problems(b2, uni, legs, PKT, [], [an]) == [])
+    check("a management item citing an unknown source is refused", bad(lambda b: b["trades"][0]["management"]["watch_for"][0].update(source_ids=["S9"])))
     check("a size key is refused", bad(lambda b: b["trades"][0]["proposal"].update(qty=10)))
     check("an uncited judgement is refused", bad(lambda b: b["tilts"][0].update(basis="no citation")))
     check("an unknown taxonomy class is refused", bad(lambda b: b["calendar"][0].update(**{"class": "scheduled.macro.vibes"})))
-    check("no trades without a reason is refused", bad(lambda b: b.update(trades=[])))
+    check("no trades is refused when the packet read prices, even WITH a reason",
+          bad(lambda b: b.update(trades=[], no_trade_reason="quiet day")))
+    dead = _pkt("could_not_look")
+    check("no trades + reason passes only when packet prices are could_not_look",
+          bad(lambda b: b.update(trades=[], no_trade_reason="price API down", packet_sha=dead["packet_sha"]), dead) == [])
+    check("no trades without a reason is refused even then",
+          bad(lambda b: b.update(trades=[], packet_sha=dead["packet_sha"]), dead))
+    check("a packet_sha that does not match the packet is refused", bad(lambda b: b.update(packet_sha="0" * 64)))
+    tampered = dict(PKT, parts={"prices": {"read_state": "could_not_look"}})
+    check("a packet edited after build is refused", bad(lambda b: None, tampered))
+    late = _pkt(built_at="2026-11-26T14:00:00Z")
+    check("a packet built after judged_at is refused", bad(lambda b: b.update(packet_sha=late["packet_sha"]), late))
+    check("a brief naming no packet is refused", problems(dict(GOOD, packet_path=None), uni, legs))
     check("an unknown leg in informs is refused", bad(lambda b: b["informs"].append({"leg": "nope", "action": "note", "until": "2026-11-27T00:00:00Z"})))
     check("gate_eligible true is refused", bad(lambda b: b["training"].update(gate_eligible=True)))
     with tempfile.TemporaryDirectory() as td:
-        p = write(copy.deepcopy(GOOD), Path(td), uni, legs)
+        p = write(copy.deepcopy(GOOD), Path(td), uni, legs, PKT)
         check("write creates json + md", p.exists() and (Path(td) / "2026-11-26.md").exists())
         try:
-            write(copy.deepcopy(GOOD), Path(td), uni, legs)
+            write(copy.deepcopy(GOOD), Path(td), uni, legs, PKT)
             check("write-once: a second write is refused", False)
         except FileExistsError:
             check("write-once: a second write is refused", True)
-    real_uni, real_legs = desk_universe()
-    check("the real desk universe loads (claude_desk.symbols)", "SPY" in real_uni and "claude_desk" in real_legs)
+        fix = copy.deepcopy(GOOD)
+        fix.update(brief_id="DMB-20261126T1407Z", judged_at="2026-11-26T14:07:00Z", supersedes="DMB-20261126T1307Z")
+        p2 = write(fix, Path(td), uni, legs, PKT)
+        check("a same-day correction superseding the head is written beside it",
+              p2.name == "2026-11-26_DMB-20261126T1407Z.json" and day_head(Path(td), "2026-11-26") == "DMB-20261126T1407Z")
+        stale = copy.deepcopy(GOOD)
+        stale.update(brief_id="DMB-20261126T1507Z", judged_at="2026-11-26T15:07:00Z", supersedes="DMB-20261126T1307Z")
+        try:
+            write(stale, Path(td), uni, legs, PKT)
+            check("a correction superseding a NON-head brief is refused", False)
+        except FileExistsError:
+            check("a correction superseding a NON-head brief is refused", True)
+    real_legs = desk_universe()[1]
+    check("the real roster loads (informs[] legs)", "claude_desk" in real_legs)
     print("SELF-TEST " + ("PASS" if ok else "FAIL"))
     return 0 if ok else 1
 

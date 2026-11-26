@@ -1,44 +1,45 @@
 {
   "id": "GH-CAPACITY-INFRA-FIRST",
   "title": "Give infra (system-actions/vm-ops/deploy/diag/phone-executor-apk) preference on GitHub runner capacity over research and superseded CI",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "lane GH-CAPACITY-INFRA-FIRST",
   "lane": null,
   "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     18225
   ],
   "blocked_on": [],
-  "note": "MEASURED 08:17Z: system-actions run 40838737529 (flatten-bybit-position APPLY, issue #21201, an operator-directed order action) created 07:57:11Z still QUEUED 20 min later; 90 runs queued repo-wide (Guards 11, armed-branch-push-watch 8, repo-inventory 7, pytest-collect 7, claude-run-failure-alert 7, pytest-run 6, vm-web-api-recover 5 ...). The infra-preference closing observation is NOT met: an order action waits behind CI.",
-  "updated_at": "2026-10-29T08:15:05Z",
-  "updated_by": "session_01AFoLuKwNMzjtn2CH2kVd86",
-  "roadmap": [
-    "L-OPS"
-  ],
-  "observation": {
-    "what": "after-snapshot of GitHub Actions capacity ~24h after #18225 merged: infra queued->started wait (system-actions, phone-executor-apk, diag relays) under ~10 min; pytest-rerun no longer accumulating in queue (before: 23 queued at 08:21Z); branch-protection-sync <= 2 runs per merge burst; >=1 research-queue-dispatch run logging the infra-yield deferral",
-    "how_to_check": "gh api repos/benbaichmankass/metis-insights/actions/runs?status=queued and ?status=in_progress grouped by name; per infra run created_at -> run_started_at; grep research-queue-dispatch job logs for \"research yields the shared GitHub runner pool to infra\"; compare with comms/ci/gh-capacity-inventory-2026-10-15.json queue_picture_before",
-    "due_by": "2026-10-31",
-    "redated": {
-      "on": "2026-10-24",
-      "from": "2026-10-16",
-      "by": "REGISTER-SWEEP-W43",
-      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
-    }
-  },
-  "writeback": {
-    "roadmap": "none: CI runner-capacity hygiene under L-OPS changes no milestone measure or status; the outcome is recorded on this row and in comms/ci/gh-capacity-inventory-2026-10-15.json",
-    "arch": "none: no trade/comms pipeline or contract changed -- GitHub workflow concurrency, research-dispatch backpressure and matrix caps only"
-  },
+  "due_by": "2026-12-09",
+  "_seq": 512,
   "lane_history": [
     {
-      "lane": "session_01PhYMEkk7p8AzzzVHLsqCLw",
-      "archived_at": "2026-10-15T10:10:15Z"
+      "archived_at": "2026-10-15T10:10:15Z",
+      "lane": "session_01PhYMEkk7p8AzzzVHLsqCLw"
     }
   ],
-  "_seq": 512
+  "note": "MEASURED 08:17Z: system-actions run 40838737529 (flatten-bybit-position APPLY, issue #21201, an operator-directed order action) created 07:57:11Z still QUEUED 20 min later; 90 runs queued repo-wide (Guards 11, armed-branch-push-watch 8, repo-inventory 7, pytest-collect 7, claude-run-failure-alert 7, pytest-run 6, vm-web-api-recover 5 ...). The infra-preference closing observation is NOT met: an order action waits behind CI.",
+  "observation": {
+    "due_by": "2026-10-31",
+    "how_to_check": "gh api repos/benbaichmankass/metis-insights/actions/runs?status=queued and ?status=in_progress grouped by name; per infra run created_at -> run_started_at; grep research-queue-dispatch job logs for \"research yields the shared GitHub runner pool to infra\"; compare with comms/ci/gh-capacity-inventory-2026-10-15.json queue_picture_before",
+    "redated": {
+      "by": "REGISTER-SWEEP-W43",
+      "from": "2026-10-16",
+      "on": "2026-10-24",
+      "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
+    },
+    "what": "after-snapshot of GitHub Actions capacity ~24h after #18225 merged: infra queued->started wait (system-actions, phone-executor-apk, diag relays) under ~10 min; pytest-rerun no longer accumulating in queue (before: 23 queued at 08:21Z); branch-protection-sync <= 2 runs per merge burst; >=1 research-queue-dispatch run logging the infra-yield deferral"
+  },
+  "phase": null,
+  "updated_at": "2026-11-25T18:46:30Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no trade/comms pipeline or contract changed -- GitHub workflow concurrency, research-dispatch backpressure and matrix caps only",
+    "roadmap": "none: CI runner-capacity hygiene under L-OPS changes no milestone measure or status; the outcome is recorded on this row and in comms/ci/gh-capacity-inventory-2026-10-15.json"
+  }
 }

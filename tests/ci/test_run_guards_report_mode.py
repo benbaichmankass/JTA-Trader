@@ -26,6 +26,8 @@ REPORT_ONLY = {
     "tp-venue-cap-single-owner",
     # not an operator gate decision: report-only by design, manager direction 2026-11-19 (PROGRAMME-REVIEW), "No new gates"
     "queue-harness-flags-guard",
+    # operator popup 2026-11-26, verbatim: "Yes, warn only (Recommended)" -- annotates a new refusal/limit reason, exit 0 always
+    "new-refusal-reasons-warn",
 }
 
 

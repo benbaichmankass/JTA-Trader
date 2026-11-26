@@ -80,7 +80,7 @@ run:
   - --arm
   - LONG=--side-filter=long
   - --days
-  - '2300'
+  - '5480'
   - --start
   - '2012-01-01'
   - --end
@@ -120,7 +120,7 @@ related:
 - RQ-20261111-203c-01
 - research/levers/spy_pullback_1h.yaml
 - RQ-20261124-bd30-05
-last_dispatched_at: '2026-11-26T01:08:08+00:00'
+last_dispatched_at: '2026-11-26T01:24:55+00:00'  # re-armed 2026-11-26 by ML-PRIMARY research-ops pass: 3 runs producer_failed with 'empty window' -- exit_lever_ablation fetches --days back from TODAY, so --days 2300 never reached --start; --days raised to 5480 (covers --start + 30 d). Rule, arms and window unchanged. Dukascopy depth before 2019 is unverified for the 0838 units: an empty window again is a data-depth finding, not a verdict
 grading:
   attested: RULE-RQ20261125083806-LONGONLY-CONFIRM
   auto: true

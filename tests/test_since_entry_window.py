@@ -94,8 +94,10 @@ def test_pre_fix_definition_reproduces_the_false_stall():
     assert len(old) == N_BARS                      # full pre-entry frame
     rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=old,
                           direction="short", current_price=101.15)
-    assert rec["bars_held"] == N_BARS
-    assert rec["peak_state"] == "measured"         # a pre-entry peak, "measured"
+    # LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26): telemetry now cuts ANY window to bars opened after the
+    # fill, so even the pre-fix definition's 200 pre-entry bars can no longer produce a "measured" peak.
+    assert rec["bars_held"] == 0
+    assert rec["peak_state"] == "thin_window" and rec["peak_r"] is None
 
     # The 199 of the incident: the frame also carried the bar CONTAINING the
     # entry (13:00) — excluded by `ts >= cutoff` — so 199 pre-entry bars + 0.
@@ -187,8 +189,10 @@ def test_a_frame_since_entry_never_touched_keeps_the_callers_claim():
 
 # --- 4. EVERY CALLER DEGRADES A 0/1-ROW WINDOW ----------------------------- #
 
+# 2026-11-26: the bar CONTAINING the entry (13:00, entry 13:32) is no longer a trade bar for telemetry: part of
+# its range is pre-fill and a bar cannot be split (LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS), so both cases read 0.
 @pytest.mark.parametrize("last_open,rows", [("2026-10-29T12:00:00Z", 0),
-                                            ("2026-10-29T13:00:00Z", 1)])
+                                            ("2026-10-29T13:00:00Z", 0)])
 def test_telemetry_first_bar_is_thin_window_not_199_bars(last_open, rows):
     pkg = _pkg()
     w = exit_levers.since_entry(_frame(last_open=last_open), pkg)
@@ -305,9 +309,12 @@ def _first_bar_then_three_bars(pkg):
 
     t0 = datetime(2026, 10, 29, 13, 34, tzinfo=timezone.utc)
     t1 = datetime(2026, 10, 29, 16, 5, tzinfo=timezone.utc)
+    # A LEGACY stored false peak (what the pre-fix window wrote before 2026-11-26): build_record can no longer
+    # produce one, so the sticky / repair behaviour of the running max is exercised from a legacy row.
     first = pt.build_record(open_pkg=pkg, meta=pkg["meta"],
                             window=_pre_fix_since_entry(_deep_prior_low_frame(), pkg),
                             direction="short", current_price=100.5, now=t0)
+    first = {**first, "peak_r": 5.25, "bars_held": N_BARS, "peak_state": "measured", "giveback_r": 4.75}
     true_w = exit_levers.since_entry(_frame(last_open="2026-10-29T15:00:00Z"), pkg)
     later = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=true_w,
                             direction="short", current_price=100.5, now=t1)
@@ -337,7 +344,7 @@ def test_a_window_holding_the_whole_trade_repairs_the_sticky_peak(tmp_path):
     assert pt.write_record(first, db_path=db)
     assert pt.write_record(later, db_path=db)
     peak_r, bars = _stored(db)
-    assert peak_r == pytest.approx(0.25) and bars == 3
+    assert peak_r == pytest.approx(0.25) and bars == 2       # 14:00 and 15:00: the 13:00 entry bar is pre-fill
 
 
 def test_a_genuine_in_trade_peak_survives(tmp_path):
@@ -346,7 +353,7 @@ def test_a_genuine_in_trade_peak_survives(tmp_path):
     db = _telemetry_db(tmp_path)
     pkg = _pkg()
     lows = [99.5] * N_BARS
-    lows[-3] = 95.5                                       # 13:00 bar => 2.25R
+    lows[-2] = 95.5                                       # 14:00 bar (opened after the 13:32 fill) => 2.25R
     w = exit_levers.since_entry(_frame(last_open="2026-10-29T15:00:00Z", lows=lows), pkg)
     rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w,
                           direction="short", current_price=100.0)
@@ -396,3 +403,31 @@ def test_the_donchian_trail_window_keeps_the_stamp():
     pkg = _pkg(entry_time="2026-10-20T13:00:00+00:00", entry_bar_closed=True)
     w = donch._trail_window(pkg["meta"], {}, _frame(last_open="2026-10-20T15:00:00Z"), pkg)
     assert len(w) == 3 and pt.window_covers_trade(w, pkg["meta"])
+
+
+def test_a_peak_inside_the_pre_entry_decision_bar_is_not_the_trades():
+    """LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26, live money): ml_entry stamps entry_time = the DECISION
+    bar's open (15:00Z) while the fill is 16:04Z (package created_at). The 15:00Z bar's low (a 1.23R 'peak' for a
+    short) closed BEFORE the fill and must not become peak_r, so no giveback can be computed from it."""
+    lows = [100.0 - 0.5] * N_BARS
+    lows[-1] = 97.0                                       # the 15:00Z decision bar: 1.5R below a 100 short entry
+    df = _frame(last_open="2026-11-26T15:00:00Z", lows=lows)
+    pkg = _pkg(entry_time="2026-11-26T15:00:00+00:00")
+    pkg["created_at"] = "2026-11-26T16:04:14+00:00"       # the fill
+    w = exit_levers.since_entry(df, pkg)
+    assert len(w) == 0                                    # #29249 anchors since_entry on the fill, so the decision bar is gone
+    rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w, direction="short", current_price=100.1)
+    assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
+    # #29238's own layer, independent of since_entry: handed an old-style window that still holds the decision bar
+    # (what since_entry returned before #29249), build_record's post-fill cut must still refuse it.
+    old = df.tail(1)
+    assert len(old) == 1
+    rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=old, direction="short", current_price=100.1)
+    assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
+
+
+def test_fill_anchor_is_the_latest_known_time():
+    pkg = {"created_at": "2026-11-26T16:04:14Z"}
+    assert pt.fill_anchor(pkg, {"entry_time": "2026-11-26T15:00:00Z"}).hour == 16
+    assert pt.fill_anchor({}, {"entry_time": "2026-11-26T15:00:00Z"}).hour == 15
+    assert pt.fill_anchor({}, {}) is None

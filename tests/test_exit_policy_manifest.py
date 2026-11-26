@@ -99,7 +99,7 @@ def test_evaluator_auc_random_scores_midrange():
 # manifest validity
 # ----------------------------------------------------------------------------
 def test_exit_policy_manifest_is_valid():
-    m = TrainingManifest.from_yaml(Path("ml/configs/exit-policy-v1.yaml"))
+    m = TrainingManifest.from_yaml(Path("ml/configs/retired/exit-policy-v1.yaml"))
     assert m.model_id == "exit-policy-v1"
     assert m.dataset.family == "exit_candidates"
     assert m.evaluator.endswith("ClassificationAUCEvaluator")
@@ -112,7 +112,7 @@ def test_exit_policy_manifest_is_valid():
 
 
 def test_exit_policy_manifest_no_label_leak():
-    m = TrainingManifest.from_yaml(Path("ml/configs/exit-policy-v1.yaml"))
+    m = TrainingManifest.from_yaml(Path("ml/configs/retired/exit-policy-v1.yaml"))
     feats = set(m.trainer_config["feature_columns"])
     forbidden = {
         "should_hold", "label", "fwd_r_multiple", "fwd_ret",

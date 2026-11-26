@@ -2,8 +2,8 @@
   "id": "GITLEAKS-HISTORY-FALSE-POSITIVES",
   "title": "gitleaks-history-weekly fails every week on false positives (no allowlist for research output / fixtures / hashes)",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -14,10 +14,10 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-09",
   "note": "2026-11-23 Manager 2026-11-22a: run 45211501436 (11-23) failed again, 14 generic-api-key findings (down from 387 after SEC-GITLEAKS-BASELINE-1116). All 14 checked by eye, values masked, all false positives: 1 RFC 6455 sample WebSocket nonce (vm-net-diag.yml:99, already in the baseline yet still reported, so baseline matching fails for it), 10 SSH key SHA256 fingerprints (SEC-HOST-CHANGES-1112 note), 3 this row quoting a fixture, 1 row/pipeline ids (ml-review-20261118 json:124). Not fixed now: the history purge at the 11-25 reset rewrites every commit SHA and invalidates every fingerprint. Folded into the PURGE-PREP lane (session_01AFoLuNKXBpirkHaVrN4cAu) runbook as a post-purge step: full-history scan = purge verification, then regenerate the baseline, keep the 4 named revoked rows, prove 0 new. Closes on the first green weekly run after the purge (next scheduled Mon 11-30).",
   "phase": null,
-  "updated_at": "2026-11-23T16:11:49Z",
-  "updated_by": "session_01AFoLuKifPRuyeVhkQU1Fsg",
+  "updated_at": "2026-11-26T06:11:45Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

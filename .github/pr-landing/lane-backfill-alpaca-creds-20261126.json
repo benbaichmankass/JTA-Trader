@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Fix to the backfill-alpaca-entry-fill system-action wrapper (#29165/#29209): load the Alpaca credentials the same way rearm_alpaca_protective_action.sh does. Read path only; the apply stays behind 'apply: true'. The manager merges.",
+  "why": "The 11-26 16:08Z dry run (issue #29223) read 81 orders as not_found and 56 as could_not_look and proposed 0 writes, because the wrapper never loaded the Alpaca keys; the same ids read fine through the web API. Revert: git revert."
+}

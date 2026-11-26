@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261029-Q17QWHDZ-0003",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "python3 scripts/ops/checklist.py queue | grep REGIME-VOL-SPEC; grep -n discover_shadow_stage_model_ids src/runtime/regime/vol_detector.py",
+    "what": "REGIME-VOL-SPEC-ADVISORY-ONLY held PR lands (vol_detector gate path advisory-only)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-SERVE-SETUP-FEATURES session_01AFoLuM3NoUTHiuQ17qwhdZ (B2)",
+    "rerun": "grep -n 'discover_shadow_stage_model_ids' src/runtime/regime/vol_detector.py; grep -n 'return frozen, frozen' src/runtime/intents.py"
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row REGIME-VOL-SPEC-ADVISORY-ONLY is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "REGIME-VOL-SPEC-ADVISORY-ONLY",
+  "state": "routed",
+  "what": "[MODEL, I7 recorded exception, Tier 3] A shadow-stage regime head can still change orders through the trend_vol router: when no advisory head answers for a symbol, intents._decision_vol_regime keeps the FROZEN vol label, which regime.vol_detector derives from the vol_bucket edges of SHADOW-stage heads (resolve_vol_specs). It is a fit-time threshold, not a model score, but a candidate->shadow promotion of a new head for a symbol with authored trend_vol cells starts those cells gating. Decide: restrict vol_detector's spec source to advisory heads for the gate (keep shadow for the observe-only row), or record the exception in regime-selectivity SKILL.md."
+}

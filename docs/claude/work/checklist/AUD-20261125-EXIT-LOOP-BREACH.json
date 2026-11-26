@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261125-EXIT-LOOP-BREACH",
+  "title": "INV-EXIT-INTERVAL FAIL: exit loop max interval 61.3 s vs its 60 s requirement (1 breach in 1,573 intervals, at 2026-11-25T15:00:50Z, coinciding with a 33.0 s max pass); prior audit max 44.8 s",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "WEEKLY-AUDIT-2026-11-25 C1. Evidence: /api/diag/log_file?name=exit_loop_health 18:28Z (process started 05:17Z). One breach at ratio 1.021, so H0 'noise at the US-open load' is live; discriminating test: interval_breaches over the next 7 days and the 15:00Z pass profile. CHECK {command: system_invariants.py over exit_loop_health, rule: interval_breaches 0 over a process lifetime >= 12 h, resolves_when: two consecutive weekly reads clean; else root-cause the 15:00Z pass}.",
+  "phase": null,
+  "updated_at": "2026-11-25T18:44:01Z",
+  "updated_by": "session_01AFoLuKGvpUCcY4M5i6uUuF"
+}

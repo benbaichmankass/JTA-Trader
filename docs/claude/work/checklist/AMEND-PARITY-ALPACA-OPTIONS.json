@@ -2,8 +2,8 @@
   "id": "AMEND-PARITY-ALPACA-OPTIONS",
   "title": "alpaca_options_paper: verify/define how an open debit vertical's exit levels are updated (no bracket leg to PATCH)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 679,
-  "note": "From AMEND-PARITY-ALL-ACCOUNTS inventory: INFERRED gap, paper only, not verified this session. Rank below the real-money row.",
+  "note": "From AMEND-PARITY-ALL-ACCOUNTS inventory: INFERRED gap, paper only, not verified this session. Rank below the real-money row. HEALTH-REVIEW-20261125: related close-path gap (MEASURED journal 11-25): alpaca_options_paper slv_trend_1h short row 8569 closed sl_cross at 17:11:35Z, but its SLV put vertical (long 261231P35 / short 261231P34) stayed open at the venue ~1 h until the reverse reconciler adopted both legs as orphans at 18:11:47Z (rows 8612/8613), which exit_coverage_no_strategy closed at 18:13Z with exit_price/pnl NULL. So a journal close does not flatten the vertical, and the realised P&L of the spread is lost. Paper only. Check: next options-leg close shows the venue spread flat within one monitor pass and a priced exit.",
   "phase": null,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-26T06:11:17Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

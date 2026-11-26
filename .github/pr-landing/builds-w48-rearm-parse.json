@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "CI workflow fix, research dispatcher only: research-queue-dispatch.yml re-arm steps treat a non-integer lookup result as unknown and re-arm (a rate-limited API call used to read as another cycle pending, so the chain never re-armed). Tested with a stub gh, negative control shown. No runtime, config or order path."
+}

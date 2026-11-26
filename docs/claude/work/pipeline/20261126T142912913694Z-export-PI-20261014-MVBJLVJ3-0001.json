@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "both files call r_provenance.initial_risk_usd and provenance.pnl_is_trustworthy (grep shows the calls) and HEADLINE-MEASURE-CAPITAL-DAY's definition cites them",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261014-MVBJLVJ3-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01QdFKBCgBQ5T8tfMvBjLVj3",
+    "rerun": "grep -n 'stop_loss\\|pnl_is_trustworthy\\|initial_risk' src/runtime/net_r_label.py scripts/ml/build_exit_head_dataset.py"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 202)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, ML-HYGIENE, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (live checklist row, manager; W48 planning disposition) -- BACKLOG-TRIAGE-W48 2026-11-25 re-route: previous owner row ML-HYGIENE is done in the work store (manager request, ML-FRONTIER-PREP-20261125 P-7); item left open, not closed. | was: ML-HYGIENE (label provenance: r_provenance.initial_risk_usd + pnl_is_trustworthy in net_r_label.py and build_exit_head_dataset.py; Tier-1, research/label code)",
+  "state": "routed",
+  "what": "LABEL HYGIENE (found by lane AI-TRADER-PROGRAMME, SIGNALS-CATALOG section 6, 2026-10-14): two ML outcome labels skip provenance. (1) src/runtime/net_r_label.py:net_r_for_trade divides by |entry - trades.stop_loss|, which order_monitor overwrites when a trail moves (r_provenance grades it CONTAMINATED); r_provenance.initial_risk_usd exists but no label builder calls it, and no pnl provenance filter is applied. (2) scripts/ml/build_exit_head_dataset.py's live arm builds final_r from trades.pnl with no pnl_is_trustworthy filter, sets exit_reason=None and falls back to the last candle mark. Both feed or will feed the AI-trader labels (02-AI-TRADER Q0/Q3) and the headline measure. FIX: route both through r_provenance.initial_risk_usd + provenance.pnl_is_trustworthy; report rows dropped by class. Tier-1 (research/label code)."
+}

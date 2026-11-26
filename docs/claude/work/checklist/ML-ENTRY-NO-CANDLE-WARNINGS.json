@@ -1,0 +1,28 @@
+{
+  "id": "ML-ENTRY-NO-CANDLE-WARNINGS",
+  "title": "ml_entry logged 146 'no candle data for symbol=X - skipping this tick' warnings 11-24 16:01Z..11-25 16:03Z (fetch_candles None, retried; every decision bar still decided); data-feed reliability check",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 4,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "[CLOSED DONE 2026-11-25 housekeeping lane: Housekeeping lane 2026-11-25 read-only look (diag journalctl ict-trader-live, window 2026-11-24T16:00Z onward, read_state complete): of 143 'ml_entry: no candle data' warnings, 123 (86%) fall within 60 s after a Bybit retCode-10006 rate-limit cooldown start (103 starts in the window); there are 0 'get_ohlcv failed' exceptions, so the None is bybit_connector's cooldown short-circuit, working as designed; the other 20 are alpaca-equity symbols at 03:05Z / 23:03-04Z. Not an ml_entry defect: ml_entry retries and every decision bar was still decided. The residual boundary burst is filed as BYBIT-10006-BOUNDARY-RESIDUAL. The health-review claim that the skips precede the reference-set load was NOT tested.] ",
+  "phase": null,
+  "terminal_reason": "Housekeeping lane 2026-11-25 read-only look (diag journalctl ict-trader-live, window 2026-11-24T16:00Z onward, read_state complete): of 143 'ml_entry: no candle data' warnings, 123 (86%) fall within 60 s after a Bybit retCode-10006 rate-limit cooldown start (103 starts in the window); there are 0 'get_ohlcv failed' exceptions, so the None is bybit_connector's cooldown short-circuit, working as designed; the other 20 are alpaca-equity symbols at 03:05Z / 23:03-04Z. Not an ml_entry defect: ml_entry retries and every decision bar was still decided. The residual boundary burst is filed as BYBIT-10006-BOUNDARY-RESIDUAL. The health-review claim that the skips precede the reference-set load was NOT tested.",
+  "updated_at": "2026-11-25T19:52:27Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: diagnosis only"
+  }
+}

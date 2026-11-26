@@ -1,0 +1,166 @@
+# Hand-authored 2026-11-26 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV; Manager Session 2026-11-26a sequencing item 2).
+# The paired CONFIRMATION that RQ-20261126-11d7-17 and RQ-20261125-cf48-01 REGISTERED for their selected cell ("PASS = a SELECTION,
+# unconfirmed: ... until the selected cell alone passes a confirmation registered now: exit_lever_ablation --grade paired (selected vs B)
+# on a disjoint window (pre-2020-07 where the feed exists, else a symbol twin), same bars"). The feed does NOT exist pre-2020-07 for this
+# leg: the ETHUSDT 4h feed regime_debt_matrix resolves starts 2019-12-31 (MEASURED 2026-11-26, 15,133 bars 2019-12-31..2026-11-25), so the
+# registered fallback applies: a config-exact SYMBOL TWIN (--symbol), two twins registered together (SOLUSDT here, BTCUSDT in its sibling).
+# Arms and bars come from the registered text; neither twin was run with these arms before this rule. Gates this adds or changes: none.
+id: RQ-20261126-1e75-03
+title: 'D6 Pointer CEILING CONFIRMATION on a SYMBOL TWIN (SOLUSDT): with trend_donchian_eth_4h''s config unchanged except symbols[0] = SOLUSDT, does the
+  selected static bracket S10T4 (atr_stop_mult 1.0, tp_r 4.0) beat the declared bracket (1.5 ATR / 4R) per paired trade, 2020-07..2026-10, net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+programme: P2
+kind: experiment
+roadmap:
+- L-ML-LIVE
+plan_node: research/programmes/02-ai-trader.yaml P2-PR1125-D6-ceiling-two-legs (selection PASS on trend_donchian_eth_4h; registered confirmation)
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: 'RQ-20261126-11d7-17 (PASS: S10T4 net R 141.85 vs B 85.58 over 2020-07..2026-10, >= 5/6 folds, within DD tolerance) and its
+    twin RQ-20261125-cf48-01 (PASS)'
+  verdict_read: pass
+  attempt: 3
+  due_by: '2026-12-08'
+  diagnosis: 'The 19-cell grid selected S10T4 on 2020-07..2026-10, the window it was graded on. Its own rule registered the confirmation:
+    the selected cell alone vs B, paired per trade, on the pre-2020-07 window, same bars. A selection that does not survive a disjoint
+    window is noise from 19 tries; one that does gives D6 its first measured headroom, which is the authoring basis for a learned bracket.
+    The ETH feed starts 2019-12-31, so the pre-window holds ~6 months (n < 39): the registered fallback is a symbol twin on the same window,
+    data disjoint by symbol. Two twins (SOLUSDT, BTCUSDT) so one correlated twin cannot carry it alone.'
+  search: one candidate (S10T4, fixed by the selection) vs the declared bracket; no grid, no tuning
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+question: 'On a config-exact twin of trend_donchian_eth_4h on SOLUSDT 4h (every param unchanged except symbols[0] and the arm cell), 2020-07-01..2026-10-15, six calendar folds by entry
+  time, full cost stack the harness resolves: is the paired per-trade net R of S10T4 minus B > +0.03 R with t >= 2.0, and does S10T4
+  out-earn B in >= 5 of 6 folds?'
+why_this_matters: 'PASS -> S10T4 is a data-backed Tier-3 bracket proposal for trend_donchian_eth_4h (two disjoint windows), and D6 has measured
+  headroom, ONLY IF the sibling twin (BTCUSDT) also passes: then a learned entry bracket (Pointer) is worth authoring against S10T4 as the
+  static baseline. FAIL on either twin -> the ETHUSDT selection did not hold on disjoint symbols; the D6 ceiling is flat on all three legs read (ada, xrp, eth) and D6 parks with a re-entry test.'
+decision_rule:
+  id: RULE-RQ20261126-1e75-03-D6-CEILING-TWIN
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  min_n: 39
+  statistic: 'exit_lever_ablation.py --symbol SOLUSDT --grade paired --baseline B --candidate S10T4 over 2020-07-01..2026-10-15 (--days 2330), 6 calendar folds by
+    entry time, full cost stack the harness resolves per venue: mean_dR = mean over paired trades of net_r(S10T4) - net_r(B), t, fold wins.'
+  rule: >-
+    Registered 2026-11-26 BEFORE any run of these arms on SOLUSDT; bars from the 11d7-17 / cf48-01 rule ("same bars"). S10T4 is CONFIRMED only
+    if this unit AND its sibling twin (BTCUSDT) both PASS; this unit's own verdict is graded alone. PASS iff mean_dR > +0.03 R per
+    paired trade AND t >= 2.0 AND S10T4 out-earns B in >= 5 of 6 folds (the harness's candidate_beats_incumbent at --paired-min-mean 0.03,
+    --paired-t-bar 2.0, --fold-majority 5). FAIL on incumbent_beats_candidate or tie_keep_incumbent. INDETERMINATE iff n(B) or n(S10T4) <
+    39, or fewer than 80% of the smaller arm's trades pair by entry time (entries_diverge: the tighter stop frees the position sooner, so
+    entries can drift), or the producer failed. On entries_diverge the registered first variant is the same two arms under --grade replace
+    (net_r(S10T4) - net_r(B) >= 0.03 R x n(B), >= 5 of 6 folds, maxDD(C) <= 1.35 x maxDD(B)) on the same window. Nothing is changed
+    after a result.
+  what_it_does_not_do: Edits no config, roster or order path. A PASS is a Tier-3 proposal, not a promotion. R is stop-denominated, so a tighter
+    stop changes R per trade; the paired grade reads net R per trade on each arm's own risk, as the selection did.
+evidence_class:
+  claim: edge
+  holdout: out_of_sample_symbol
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B and the only comparator, as registered by the selection unit.
+power:
+  expected_n: 270
+  min_detectable_effect: 0.19
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.1
+  basis: 'n ESTIMATED from the ETHUSDT rate MEASURED by 11d7-17 (B n 275 / S10T4 n 289 over the same window); a twin''s count differs with its
+    breakouts and SOLUSDT''s feed start, replaced by the first run. MDE at t 2.0 with sd 1.1 R (ESTIMATE) and n 270 ~ 0.19 R per trade; the
+    selection measured (141.85 - 85.58) / 275 = +0.205 R per B trade on ETHUSDT, so a twin effect of that size is just detectable.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a pinned window; nothing accrues.
+ml_consumer:
+  consumer: ML-DECISION-MODELS
+  decision: whether D6 has measured static headroom on trend_donchian_eth_4h (a learned bracket is worth authoring against S10T4) and whether S10T4 is a Tier-3 bracket proposal
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): a selection confirmed on a disjoint window before it is used; entries fixed, net of cost.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.2
+  basis: 'ESTIMATE: as 11d7-17 (usd 150); confidence 0.15 -> 0.2 on the selection PASS.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 25
+  basis: 'ESTIMATE: 2 arms of one 4h leg over 2330 d; 11d7-17 ran 20 arms in one runner job. The first run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --symbol
+  - SOLUSDT
+  - --arm
+  - B=
+  - --arm
+  - S10T4=atr_stop_mult=1.0;tp_r=4.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - paired
+  - --baseline
+  - B
+  - --candidate
+  - S10T4
+  - --paired-min-mean
+  - '0.03'
+  - --paired-t-bar
+  - '2.0'
+  - --paired-min-match
+  - '0.8'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261126-1e75-03
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261126-1e75-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261126-11d7-17
+- RQ-20261125-cf48-01
+- RQ-20261126-11d7-18
+- RQ-20261125-cf48-02
+- RQ-20261122-b18a-03
+last_dispatched_at: '2026-11-26T18:28:16+00:00'
+grading:
+  attested: RULE-RQ20261126-1e75-03-D6-CEILING-TWIN
+  auto: true
+  decision_rule_id: RULE-RQ20261126-1e75-03-D6-CEILING-TWIN
+  evidence:
+  - research/results/RQ-20261126-1e75-03/45876207193.jsonl
+  - research/results/RQ-20261126-1e75-03/45876964091.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null

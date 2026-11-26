@@ -1,0 +1,23 @@
+{
+  "id": "DEPLOY-TRADER-SKIPPED-RUNTIME-CHANGE",
+  "title": "Auto-deploy restarted web-api but not the trader for a runtime change (scripts/ops/live_review_wake.py, #28885); restart_pending read false",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "deploy-path incident found 2026-11-25; map at Thursday planning",
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "MEASURED 2026-11-25 22:10Z /api/diag/version: trader_git_sha d350e312b2, web-api deployed 31a3afcf2d, disk a499faaca2, restart_pending=false and restart_pending_by_unit trader=false. git diff --name-only d350e312..a499faac minus the non-runtime regex = scripts/ops/live_review_wake.py (a runtime path by BOTH scripts/deploy_pull_restart.sh RUNTIME_CHANGES and diag _NON_RUNTIME_PATHS_RE), loaded in-process by src/runtime/live_review_wake_post.py and cached. So (1) the deploy restarted web-api (to 31a3afcf) but not ict-trader-live, and (2) restart_pending did not flag it. Find why (per-unit RUNTIME_BASE? a trader-restart defer?), fix both, add a test. Workaround used: system-action restart-bot-service issue #28920.",
+  "phase": null,
+  "updated_at": "2026-11-25T22:10:16Z",
+  "updated_by": "session_01AFoLuMBFa9R1WfLbufdhqs"
+}

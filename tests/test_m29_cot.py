@@ -215,3 +215,18 @@ def test_backfill_injected_rows_and_fresh_write(tmp_path):
     assert len(lines) == n
     import json
     assert json.loads(lines[0])["metric"] == "cot_spec_positioning"
+
+
+def test_cot_markets_query_by_stable_contract_code():
+    """DESK-MACRO v1.1: the CFTC renamed most markets on 2022-02-08, so each market is queried by its contract code
+    (a name substring stopped natgas / ust10 at 2022-02-01 and matched ICE Europe WTI for crude)."""
+    import urllib.parse
+
+    cd = cot
+    codes = {m["key"]: m.get("code") for m in cd.COT_MARKETS}
+    assert codes == {"crude": "067651", "natgas": "023651", "gold": "088691", "copper": "085692", "es": "13874A",
+                     "eur": "099741", "ust10": "043602"}
+    q = urllib.parse.parse_qs(urllib.parse.urlparse(cd.build_cot_query_url("ignored", code="023651")).query)
+    assert q["$where"] == ["cftc_contract_market_code = '023651'"]
+    legacy = urllib.parse.parse_qs(urllib.parse.urlparse(cd.build_cot_query_url("gold")).query)
+    assert "like '%GOLD%'" in legacy["$where"][0]

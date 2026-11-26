@@ -3,7 +3,7 @@
 id: RQ-20261126-71f4-01
 title: 'Holdout re-run of RQ-20261106-033: Walk-forward lever sweep of trend_donchian_xrp_4h: next lever
   entry (generated, weekly)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -167,5 +167,17 @@ confirmation:
     passing not named. This re-run CONFIRMS only when a cell selected on the earlier span passes on the
     held-back span (measurement.holdout.confirmation == confirmed); not_replicated closes the configuration,
     never the family. Until then RQ-20261106-033 may not feed a Tier-3 proposal.
+last_dispatched_at: '2026-11-26T14:25:19+00:00'
 grading:
   auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  evidence:
+  - research/results/RQ-20261126-71f4-01/45833731795.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

@@ -69,14 +69,20 @@ _F_COMM_SHORT = "comm_positions_short_all"
 # asset_class). The symbol is a liquid ETF/proxy the candle fetcher can price so the
 # P4/horizon scans have a forward-return series; the COT positioning is on the
 # underlying future (documented proxy). CFTC market names are uppercase.
+# ``code`` = the CFTC contract market code, the STABLE key (DESK-MACRO v1.1, 2026-11-26). The CFTC renamed most markets on
+# 2022-02-08 (NATURAL GAS -> NAT GAS NYME, 10-YEAR U.S. TREASURY NOTES -> UST 10Y NOTE, CRUDE OIL, LIGHT SWEET -> WTI-PHYSICAL,
+# COPPER-GRADE #1 -> COPPER- #1, E-MINI S&P 500 STOCK INDEX -> E-MINI S&P 500), so a name-substring query stopped natgas
+# and ust10 at 2022-02-01 and matched ICE Futures Europe WTI (067411) instead of NYMEX crude; one substring could also
+# match several markets that spec_net_series then blends per date. Codes verified against the Socrata resource
+# 2026-11-26 (each code's names over time). ``name`` stays as the display label.
 COT_MARKETS = (
-    {"key": "crude", "name": "CRUDE OIL, LIGHT SWEET-WTI", "symbol": "USO", "asset_class": "commodity"},
-    {"key": "natgas", "name": "NATURAL GAS - NEW YORK MERCANTILE", "symbol": "UNG", "asset_class": "commodity"},
-    {"key": "gold", "name": "GOLD - COMMODITY EXCHANGE", "symbol": "GLD", "asset_class": "commodity"},
-    {"key": "copper", "name": "COPPER-", "symbol": "CPER", "asset_class": "commodity"},
-    {"key": "es", "name": "E-MINI S&P 500", "symbol": "SPY", "asset_class": "index"},
-    {"key": "eur", "name": "EURO FX", "symbol": "FXE", "asset_class": "fx"},
-    {"key": "ust10", "name": "10-YEAR U.S. TREASURY NOTES", "symbol": "IEF", "asset_class": "bond"},
+    {"key": "crude", "name": "CRUDE OIL, LIGHT SWEET-WTI", "code": "067651", "symbol": "USO", "asset_class": "commodity"},
+    {"key": "natgas", "name": "NATURAL GAS - NEW YORK MERCANTILE", "code": "023651", "symbol": "UNG", "asset_class": "commodity"},
+    {"key": "gold", "name": "GOLD - COMMODITY EXCHANGE", "code": "088691", "symbol": "GLD", "asset_class": "commodity"},
+    {"key": "copper", "name": "COPPER-", "code": "085692", "symbol": "CPER", "asset_class": "commodity"},
+    {"key": "es", "name": "E-MINI S&P 500", "code": "13874A", "symbol": "SPY", "asset_class": "index"},
+    {"key": "eur", "name": "EURO FX", "code": "099741", "symbol": "FXE", "asset_class": "fx"},
+    {"key": "ust10", "name": "10-YEAR U.S. TREASURY NOTES", "code": "043602", "symbol": "IEF", "asset_class": "bond"},
 )
 
 DEFAULT_LOOKBACK_WEEKS = 156     # ~3y — the classic COT-index window
@@ -276,13 +282,16 @@ def _release_stamp(report_date: str, lag_days: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_cot_query_url(name_substring: str, *, base: str = COT_SOCRATA_BASE, limit: int = 5000) -> str:
-    """SoQL query URL for one market's full weekly history — selected fields,
-    case-insensitive name-substring filter, ascending by date, capped at ``limit``."""
+def build_cot_query_url(name_substring: str, *, base: str = COT_SOCRATA_BASE, limit: int = 5000,
+                        code: Optional[str] = None) -> str:
+    """SoQL query URL for one market's full weekly history — selected fields, ascending by date, capped at ``limit``.
+    With ``code`` it filters on the CFTC contract market code (stable across the CFTC's 2022 renames); without it, the
+    legacy case-insensitive name-substring filter."""
+    where = (f"{_F_CODE} = '{code}'" if code else f"upper({_F_NAME}) like '%{str(name_substring).upper()}%'")
     params = {
         "$select": ",".join([_F_DATE, _F_NAME, _F_CODE, _F_OI, _F_SPEC_LONG,
                              _F_SPEC_SHORT, _F_COMM_LONG, _F_COMM_SHORT]),
-        "$where": f"upper({_F_NAME}) like '%{str(name_substring).upper()}%'",
+        "$where": where,
         "$order": f"{_F_DATE} ASC",
         "$limit": int(limit),
     }
@@ -291,7 +300,7 @@ def build_cot_query_url(name_substring: str, *, base: str = COT_SOCRATA_BASE, li
 
 def fetch_cot_market_history(
     name_substring: str, *, base: str = COT_SOCRATA_BASE, limit: int = 5000,
-    urlopen=None, timeout: float = 30.0,
+    urlopen=None, timeout: float = 30.0, code: Optional[str] = None,
 ) -> list[dict]:
     """Parsed weekly COT rows for one market. Off-VM-guarded + ``urlopen``-injectable.
     Best-effort: any fetch/parse failure → ``[]`` (never fatal)."""
@@ -303,7 +312,7 @@ def fetch_cot_market_history(
             )
         import urllib.request
         urlopen = urllib.request.urlopen
-    url = build_cot_query_url(name_substring, base=base, limit=limit)
+    url = build_cot_query_url(name_substring, base=base, limit=limit, code=code)
     try:
         with urlopen(url, timeout=timeout) as resp:
             payload = _json.loads(resp.read().decode())

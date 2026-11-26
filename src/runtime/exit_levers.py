@@ -150,6 +150,25 @@ def since_entry_is_anchored(window: Any) -> bool:
         return True
 
 
+def entry_anchor(meta: Dict[str, Any], open_pkg: Dict[str, Any]) -> Any:
+    """The trade's time anchor: the LATEST readable of ``meta.entry_time`` and the package's ``created_at``.
+
+    LTR-FUNCTION-CORRECTNESS-AUDIT check 1 (2026-11-26): every candle strategy stamps ``entry_time`` = the SIGNAL
+    bar's OPEN (``df.timestamp.iloc[-1]``), and the fill comes after that bar closes. Anchored there, the window kept
+    the whole pre-fill signal bar, so a trail's "extreme since entry" could be a pre-fill wick, tighter than the
+    backtest (``scripts/backtest_trend.py``: ``ext = entry``, loop from the bar after the signal bar). ``created_at``
+    is written when the package is placed, i.e. at the fill; the later of the two keeps the fill bar and drops the
+    signal bar, exactly the backtest's window. A package with only one readable time keeps that one (unchanged)."""
+    cands = []
+    for v in (meta.get("entry_time"), open_pkg.get("created_at")):
+        t = pd.to_datetime(v, utc=True, errors="coerce") if v else None
+        if t is not None and not pd.isna(t):
+            cands.append((t, v))
+    if not cands:
+        return meta.get("entry_time") or open_pkg.get("created_at")
+    return max(cands, key=lambda c: c[0])[1]
+
+
 def since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFrame:
     """Restrict the candle window to the bars of the trade: the bar that
     CONTAINS the entry (``bar_open <= entry_time < bar_open + tf``) and every
@@ -183,7 +202,7 @@ def since_entry(candles_df: pd.DataFrame, open_pkg: Dict[str, Any]) -> pd.DataFr
             meta = {}
     if not isinstance(meta, dict):
         meta = {}
-    entry_ts = meta.get("entry_time") or open_pkg.get("created_at")
+    entry_ts = entry_anchor(meta, open_pkg)
     if entry_ts is None or "timestamp" not in getattr(candles_df, "columns", []):
         return _stamp(candles_df, False)
     try:

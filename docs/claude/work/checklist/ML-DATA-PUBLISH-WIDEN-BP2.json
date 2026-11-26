@@ -1,0 +1,26 @@
+{
+  "id": "ML-DATA-PUBLISH-WIDEN-BP2",
+  "title": "Widen the published ML market data beyond BTC/ETH/SOL: build market_features 1h (v002, regime_label + the D2 vol columns) for the bp2 60-perp universe from public Binance USD-M klines and publish it (private, market-only) so pooled D2/D3 sequence models can run on the Kaggle GPU",
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuKDXSVLvLJ6dweh6To",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28992
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-12-03",
+  "note": "2026-11-26 01:55Z lane session_01AFoLuKDXSVLvLJ6dweh6To: BUILT, PR #28992 (held, manager merges). Contents: (a) market_data_bp2.py builds market_raw + a kline-only market_features 1h projection (v102; trainer label params) for the bp2 60 perps from 2020-07-01, ON A RUNNER from data.binance.vision; (b) the private dataset metis-market-bp2 with a per-dataset allowlist; router + research_compute.yaml; (c) workflow ml-data-export-bp2-kaggle.yml (weekly + dispatch); (d) ml_bakeoff POOLED mode; (e) unit RQ-20261126-2819-01 (pooled GRU twin of 9e72-01, not_before 04:00Z). MEASURED locally: 3-symbol real stage 3/3; smoke of the unit spec ran end to end (pipeline proof, not a result). DONE WHEN: RQ-20261126-2819-01 lands a measured Kaggle row. Next steps: merge -> dispatch the export -> dataset ready -> unit fires. Plan-node sweep: blocked D3 learner units RQ-20261118-f7c1-06 (FT-Transformer) and -dbf8-02 (TabICLv2) have the 60-perp-on-Kaggle data blocker cleared by this dataset (history from 2020-07 matches ml_decision_entry.START; market_raw matches the --cache schema). They stay blocked on learner arms + the Kaggle route build, not data; dbf8-02's blocker-owner row FRONTIER-LEVER-TABULAR is dropped (orphan). The GRU entry-label lever stays gated on a 9e71/9e72 PASS. No other D1-D10 node is unblocked: the rest need funding/OI, 15m/5m, our trades, or are answered/covered. 2026-11-26 03:02Z: PR #28992 MERGED (c490a27d83). metis-market-bp2 is PUBLISHED AND VERIFIED. Export run 45742758768: stage 60/60 symbols, build 240 files, 0 absent, 0 withheld, 2,909,389,472 bytes, zip 383 MB uploaded. Its publish step then exited 1 on a poll bug (status exits non-zero while a NEW dataset is created; fix PR #29009, held). verify_only run 45745723128 downloaded it on a fresh runner and re-hashed it: ok true, files_ok 240, files_bad [], generated_at 02:54:32Z. Remaining to close: RQ-20261126-2819-01 (not_before 04:00Z) lands a measured Kaggle row. 2026-11-26 05:55Z DONE: RQ-20261126-2819-01 read metis-market-bp2 on a Kaggle T4 and produced a MEASURED row. Run 45756683501 (research-script-run-kaggle): ML_DATA_ROOT=/kaggle/input/metis-market-bp2, 60 pooled files, 60 entities, 2.4M rows, torch device cuda, bake-off 898 s, kernel exit 0; verdict fail, read_state measured, n 1,440,000. Done condition met. The result file research/results/RQ-20261126-2819-01/45756683501.jsonl lands through the standard results-batch collector (not on main at 05:55Z). Follow-ups: weekly refresh via ml-data-export-bp2-kaggle (poll fix #29009 merged 7dff70f314); D3 units on this data under D3-TABULAR-LEARNER-ARMS.",
+  "terminal_reason": "done condition met: RQ-20261126-2819-01 landed a measured Kaggle row on metis-market-bp2 (run 45756683501)",
+  "updated_at": "2026-11-26T05:53:29Z",
+  "updated_by": "session_01AFoLuKDXSVLvLJ6dweh6To"
+}

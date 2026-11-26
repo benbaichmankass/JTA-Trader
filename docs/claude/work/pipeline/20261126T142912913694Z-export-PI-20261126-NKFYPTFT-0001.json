@@ -1,0 +1,17 @@
+{
+  "due_when": {
+    "due_date": "2026-12-03",
+    "kind": "date"
+  },
+  "id": "PI-20261126-NKFYPTFT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane XRP-BACKTEST-HOLD-FIDELITY (session_01AFoLuN8NxfFJFAnKFYpTFt), 2026-11-26",
+    "rerun": "git grep -l 'RQ-20261122-fa22-06\\|RQ-20261120-e9b5-01\\|RQ-20261119-c8e2-02' -- docs config  # decision references per unit; engine fix: grep -n _side_filter_suppresses scripts/backtest_system.py"
+  },
+  "owner": "manager",
+  "state": "done",
+  "terminal_reason": "TRIAGED 2026-11-26 by ML-PRIMARY. Each unit was checked by READING its harness: does it run scripts/backtest_system.py, the engine #29082 fixed? (A) NOT on that engine, so no re-run: RQ-20260922-007 (scripts/ml/exit_head_replay.py on backtest_trend.py, trend_donchian 1h exit head); RQ-20261101-78fc-12 and RQ-20261120-e9b5-01 (exit_lever_ablation.py routes turtle_soup to its own harness; zero backtest_system references). (B) ALREADY RE-RUN: RQ-20261018-001 = RQ-20261126-a1f0-03 (measured, on XRP-BACKTEST-HOLD-FIDELITY). (C) ON the engine, roster coarser than 15m, so affected: RQ-20261114-82fd-02 (D5 census PASS), RQ-20261115-a474-02 (D5 rule arms FAIL; fed the D5 triage: the learned aggregator was not built), RQ-20261122-fa22-06 (D5 robustness INDETERMINATE). Re-runs are DEFERRED to row BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME: the fixed engine still reads xrp_4h +0.03R vs Stage-0 +4.23R on the same 25 entries. Re-running these now would swap one unreconciled engine for another, and the D5 FAIL kept today's rule (no money path changes). (D) NEVER MEASURED: RQ-20261119-c8e2-02 (live regime off-cell fresh re-run; roster trend_donchian/squeeze_4h/htf_pullback_2h). Its only run, 44598184518, landed producer_failed (verdict 'mixed' outside the contract) and the unit was marked done anyway. The emitter is fixed on main, and the unit is re-armed in PR #29150. It is a paired same-engine A/B, so the absolute engine gap matters less.",
+  "what": "TRIAGE the 8 research units that ran on the OLD backtest_system engine (before the native-tf monitor frame + live side_filter fix, PR #29082): which verdicts fed a decision and need a re-run. Classification is by REFERENCE ONLY (git grep of the unit id in checklist rows / docs/research), not a re-read of each verdict; verify before acting. FED a decision (reference found; re-run if its legs have tf coarser than 15m or a side_filter): RQ-20260922-007 (E5, W6-RQ009, exit-head gate-check, ml-decision DIAGNOSIS), RQ-20261018-001 (SAME-SYMBOL-ALLOCATION + research-ops rows; legs trend_donchian_sol_4h/sol_prop), RQ-20261101-78fc-12 (E25, soak-backlog-review), RQ-20261115-a474-02 (ML-DEV-PLAN, D5 triage). Referenced only in the capability index / authoring triage (low): RQ-20261114-82fd-02, RQ-20261119-c8e2-02. No decision reference found: RQ-20261122-fa22-06, RQ-20261120-e9b5-01. Already queued re-runs: RQ-20261126-a1f0-01..03 (of e9b5-03/-02/-05). ALSO OPEN on row BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME: after the fix, the engine reads trend_donchian_xrp_4h +0.03R on the SAME 25 entries the Stage-0 harness reads +4.23R (exit resolution / cost basis); unreconciled. Doc docs/research/xrp-4h-hold-fidelity-2026-11-26.md."
+}

@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "trainer and Kaggle GPU each hold runnable plan-derived units for the coming week (re-run the measurement below), or the manager kills this with the plan decision",
+    "kind": "observation",
+    "last_checked": "2026-11-26"
+  },
+  "id": "PI-20261125-CFILLW48-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "COMPUTE-FILL-W48 (Manager Session 2026-11-25b, row COMPUTE-IDLE-TRAINER-GPU-W48)",
+    "rerun": "for research/queue/RQ-*.yaml with status queued, cadence once, no grading.verdict, no blocked_on: sum scripts/research/compute_router.est_hours by plan().backend and by every backend in class_backends() (script in the COMPUTE-FILL-W48 PR body)"
+  },
+  "routed_to": "WEEKLY-PLANNING",
+  "state": "routed",
+  "what": "PLANNING GAP, trainer + GPU (lane COMPUTE-FILL-W48, 2026-11-25): the plans hold almost no unit whose compute is trainer-resident or GPU that is not gated on a build. MEASURED over research/queue status queued, cadence once, ungraded, unblocked (57 units, ~52 h est): first-choice trainer 0 h / GPU 0 h; eligible incl. the new router overflow (PR of this lane) trainer 0.7 h (5 units declaring <=1 GB), Kaggle GPU 14.5 h (16 units, overflow only). Gating builds per plan node: MLP-F-COVARIATE-TSFM <- FUNDING-OI-DATASETS-ETH-SOL (queued) + covariate side-stream for Chronos-2/TiRex-2; D8 exit-now <- ML-EXITHEAD-ROWS-KAGGLE (in_flight); D7 Stage B v2 <- ML-AM-NEXT-LIVE + TMBENCH-V2-TRAIN-INPUT; D9 <- MLP-D9-WHIPPET fill model. Exhausted by evidence, so no unit: MLP-F-CONFORMAL entry arm (RQ-20261112-4654-08 FAIL, matched-coverage uncertainty-normalised selection); MLP-F-TABULAR-FM entry arm (RQ-20261118-dbf8-01 FAIL; frontier scan 11-25 dropped regression TFMs: no learner kind). GPU-shaped and owned by ML-PRIMARY: MLP-F-SEQUENCE-GRU entry-label unit. Most units declare peak_memory_gb 4.0-8.0 by default, which keeps them off the 1 GB trainer overflow: measuring the real peak RSS per unit would widen it honestly."
+}
