@@ -98,7 +98,19 @@ def grade(recs: List[Dict[str, Any]], registry_root: str) -> Dict[str, Any]:
     return {"verdict": v, "read_state": "measured" if checked else "no_data", "n": len(checked),
             "population": f"registry {registry_root}: {len(recs)} entries at stage {'/'.join(SERVED_STAGES)}; "
                           f"{len(checked)} checked on their manifest dataset's tail rows",
-            "note": note, "records": recs}
+            "note": note, "measurement": {"records": recs}, "records": [fanout_row(r, v) for r in recs]}
+
+
+def fanout_row(rec: Dict[str, Any], verdict: str) -> Dict[str, Any]:
+    """One emit-valid E5 row per registry entry (research_result.py refuses a row without verdict / population /
+    population.n; run 45774478743 of f17a-01 could not land). A checked entry is measured with n = rows checked; an
+    entry that could not be checked is not_attempted with n null and verdict not_applicable."""
+    checked = rec.get("state") == "checked"
+    return {"verdict": verdict if checked else "not_applicable",
+            "read_state": "measured" if checked else "not_attempted",
+            "population": f"{rec.get('model_id')} ({rec.get('stage')}): tail rows of {rec.get('dataset') or 'its manifest dataset'}"
+                          + ("" if checked else f" -- not checked: {rec.get('state')}"),
+            "n": int(rec.get("rows_checked") or 0) if checked else None, "measurement": rec}
 
 
 def self_test() -> None:
@@ -109,6 +121,9 @@ def self_test() -> None:
     badr = {"model_id": "b", "state": "checked", "features_ok": False}
     skip = {"model_id": "c", "state": "could_not_check", "reason": "x"}
     assert grade([ok, skip], "r")["verdict"] == "pass"
+    rows = grade([ok, skip], "r")["records"]
+    assert [r["read_state"] for r in rows] == ["measured", "not_attempted"] and rows[1]["n"] is None
+    assert all(r["verdict"] and r["population"] for r in rows) and isinstance(rows[0]["n"], int)
     g = grade([ok, badr], "r")
     assert g["verdict"] == "fail" and "b" in g["note"]
     assert grade([skip], "r")["verdict"] == "indeterminate"

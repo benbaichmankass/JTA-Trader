@@ -1004,7 +1004,9 @@ def atm_view(root: Path | None = None) -> dict[str, Any]:
     unreadable = 0
     for f in sorted(qdir.glob("*.yaml")) + sorted((qdir / "blocked").glob("*.yaml")):
         try:
-            u = yaml.safe_load(f.read_text(encoding="utf-8"))
+            # CI-BRIEF-RENDER-TIMEOUT: libyaml when available (same documents; pure-loader fallback on error).
+            from scripts.research.queue_replenish import _fast_unit_load
+            u = _fast_unit_load(yaml, f.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001 -- counted, never silently skipped
             unreadable += 1
             continue
