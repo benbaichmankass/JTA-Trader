@@ -83,11 +83,74 @@ RULE_FILTER = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-20261125")
 # Dukascopy lane (research-script-run installs dukascopy-python, not yfinance; some symbols resolve to a PROXY instrument, recorded per leg), and the
 # market anchor block (the btc_* columns) built from SPY daily closes instead of BTC. Nothing re-tuned.
 RULE_FILTER_EQ = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-EQ-20261126")
+# ADX-CELL REMOVAL CONFIRMATION (--mode adxcell, unit RQ-20261126-4d1c-01; the walk-forward-before-Tier-3 read the manager required after
+# c4f2-01 priced the LIVE htf_pullback_trend_2h ADX drops at +1.08 R each on a bracket replay): the leg replayed through its OWN harness, each
+# trade tagged with the ADX-14 regime of the last bar CLOSED at or before its entry (src/runtime/regime/detector.py: wilder_adx + regime_label,
+# the live detector), and the 1-D cells of config/regime_policy.yaml applied. Framed as REMOVAL vs the cells: a dropped trade weighs 2, a kept one 1,
+# so delta = (sum of the dropped trades' net R) / all trades = what removing the cells adds back; the permutations add back the same count of random
+# trades within leg x month (the matched-random control). Graded by RR.tilt_verdict on the RULE_MS thresholds, unchanged.
+RULE_ADX = dict(RULE_MS, id="RULE-HTF-ADX-CELL-REMOVAL-20261126")
 RULE_MS_EQ = dict(RULE_MS, id="RULE-REGIME-METASTATE-EQ-20261126")
 EQ_ANCHOR = {"symbols": ["SPY"], "timeframe": "1d"}
 NON_CRYPTO_SOURCE = "auto"
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
+
+
+def load_cells(path: Path = REPO / "config/regime_policy.yaml") -> Dict[str, Dict[str, Dict[str, str]]]:
+    """The 1-D ADX cells: {regime: {strategy: {"long": on|off, "short": on|off}}} for regime in chop / transitional / trending."""
+    import yaml
+    pol = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    def norm(x) -> str:   # YAML 1.1 reads bare on/off as booleans True/False
+        if isinstance(x, bool):
+            return "on" if x else "off"
+        return "off" if str(x).strip().lower() in ("off", "false", "0", "no") else "on"
+    return {r: {k: {sd: norm(v.get(sd, "on")) for sd in ("long", "short")} for k, v in (pol.get(r) or {}).items() if isinstance(v, dict)}
+            for r in ("chop", "transitional", "trending")}
+
+
+def adx_regime_at_entry(bars: pd.DataFrame, when: pd.Series, tf_sec: float) -> pd.Series:
+    """The live detector's label (wilder_adx(14) + regime_label) of the last bar whose CLOSE (open + tf) is <= each entry time; 'unknown' before
+    the first closed bar."""
+    sys.path.insert(0, str(REPO))
+    from src.runtime.regime.detector import regime_label, wilder_adx
+    adx = wilder_adx(bars, period=14)
+    close_t = pd.DatetimeIndex(bars.index).as_unit("ns").asi8 + int(tf_sec * 1e9)
+    x = pd.DatetimeIndex(pd.to_datetime(when, utc=True)).as_unit("ns").asi8
+    i = np.searchsorted(close_t, x, side="right") - 1
+    vals = adx.to_numpy()
+    return pd.Series([regime_label(float(vals[j])) if j >= 0 else "unknown" for j in i], index=when.index)
+
+
+def grade_adxcell(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str, float], cells: Dict[str, Any],
+                  seed: int = RR.SEED) -> Dict[str, Any]:
+    """Removal of each leg's 1-D ADX cells vs the cells as configured, over the test years (>= RR.TEST_START)."""
+    tr = tr.copy().reset_index(drop=True)
+    reg = pd.Series("unknown", index=tr.index, dtype=object)
+    for leg, g in tr.groupby("family"):
+        if leg in bars:
+            reg.loc[g.index] = adx_regime_at_entry(bars[leg], g.ts, tf[leg]).to_numpy()
+    side = np.where(tr.direction.astype(str).str.lower().str.startswith(("short", "sell")), "short", "long")
+    on = np.array([cells.get(r, {}).get(f, {}).get(sd, "on") != "off" for r, f, sd in zip(reg, tr.family, side)])
+    keep = (tr.ts >= pd.Timestamp(RR.TEST_START, tz="UTC")).to_numpy()
+    t = tr[keep].reset_index(drop=True)
+    raw = np.where(on[keep], 1.0, 2.0)
+    g = grade_raw(t, raw, RULE_ADX, seed, normalise=False)
+    rk, sk, ok = reg.to_numpy()[keep], side[keep], on[keep]
+    per_cell = {}
+    for r in ("trending", "transitional", "chop", "unknown"):
+        for sd in ("long", "short"):
+            m = (rk == r) & (sk == sd)
+            if m.any():
+                per_cell[f"{r}/{sd}"] = {"cell": "on" if ok[m][0] else "off", "n": int(m.sum()),
+                                         "mean_net_r": round(float(t.net_r[m].mean()), 4), "sum_net_r": round(float(t.net_r[m].sum()), 3)}
+    dropped = raw == 2.0
+    g["dropped"] = {"n": int(dropped.sum()), "share": round(float(dropped.mean()), 4),
+                    "mean_net_r": round(float(t.net_r[dropped].mean()), 5) if dropped.any() else None,
+                    "kept_mean_net_r": round(float(t.net_r[~dropped].mean()), 5) if (~dropped).any() else None}
+    g["per_cell_reported"] = per_cell
+    g["regime_unknown_trades"] = int((rk == "unknown").sum())
+    return {"arms": {"remove_cells": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
 
 
 def rostered_legs(root: Path = REPO, universe: str = "crypto") -> Dict[str, Dict[str, Any]]:
@@ -464,7 +527,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--work", default="")
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
-    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter"], default="book")
+    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter", "adxcell"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
     ap.add_argument("--universe", choices=["crypto", "equities"], default="crypto",
@@ -515,6 +578,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
         m = grade_intraday(tr, bars, tfs) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_ID
+    elif a.mode == "adxcell":
+        if not a.legs:
+            ap.error("--mode adxcell needs --legs (the legs whose ADX cells are graded)")
+        meas = [leg for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()]
+        bars = {leg: ohlc_bars(work / f"{leg}.csv") for leg in meas}
+        tfs = {leg: tf_seconds(cfgs[leg]["cfg"].get("timeframe")) for leg in meas}
+        m = grade_adxcell(tr, bars, tfs, load_cells()) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_ADX
     elif a.mode in ("metastate", "filter"):
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == anchor_sym and str(cfgs[leg]["cfg"].get("timeframe")) == "1d"),
