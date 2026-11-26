@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "operator confirms scope for the private-repo/VM dispatcher, or kills it with a reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261013-UOCIHAGG-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-09",
+    "how_to_check": "python3 scripts/research/dispatch_queue.py ; checklist row RESEARCH-ROUTER",
+    "what": "RESEARCH-ROUTER has run on Actions for 2 weeks; list its measured limits (utilization ledger, failed fires)"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-ROUTER session_0152EFvvZYHZhJrsuocihAGg, 2026-10-13",
+    "rerun": "git log --oneline -5 -- scripts/research/research_compute.yaml scripts/research/dispatch_queue.py"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent RESEARCH-ROUTER state landed_unproven: O)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row RESEARCH-ROUTER is landed_unproven (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "RESEARCH-ROUTER",
+  "state": "routed",
+  "what": "Operator long-run direction (2026-10-13 ~10:45Z via manager): a PRIVATE repo that holds more of the research-dispatch/compute functions, running on the VM. NOT built: the dispatcher stays on the GitHub Actions cron (RESEARCH-ROUTER). When revisited, decide what moves (dispatcher, collector, utilization ledger), what stays public, and the credential/egress cost of a private repo."
+}

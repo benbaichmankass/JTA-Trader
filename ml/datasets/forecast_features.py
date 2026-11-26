@@ -100,6 +100,16 @@ DEFAULT_CONTEXT_LEN: int = 64
 DEFAULT_STRIDE: int = 4
 DEFAULT_MIN_CONTEXT: int = 8
 
+# Where the stride's phase is anchored (row FC-STRIDE-PHASE, 2026-11-26; RQ-20261126-7f3d-01 measured live-vs-offline
+# fc_* agreement 27% on BTC). "row": every ``stride``-th row counted from the FIRST row of whatever window is passed in --
+# the legacy rule, under which an offline build (window = whole history) and the live producer (window = the last few
+# hundred bars, last bar always forced) emit on DIFFERENT bars, so live served a fresh forecast every bar while the heads
+# trained on forecasts carried forward up to stride-1 bars. "epoch": emit on the bars whose open time t satisfies
+# floor(t / tf) % stride == 0 -- the same bars in any window -- with NO forced last bar, so both paths carry the same
+# forecast forward. The offline producer and the live producer both pass DEFAULT_PHASE; the pure fn keeps "row" as its
+# own default so every existing caller and test is byte-identical.
+DEFAULT_PHASE: str = "epoch"
+
 
 # The fixed forecast feature columns this family contributes to
 # `market_features`. Single source of truth shared by the builder schema, the
@@ -322,8 +332,47 @@ def chronos_forecast_fn(
 
 # --- The pure producer (fully testable with an injected forecast_fn) -----------
 
+def _epoch_s(ts: Any) -> float | None:
+    """ISO-8601 / epoch-number bar time -> epoch seconds (None if unreadable). Stdlib only."""
+    if ts is None:
+        return None
+    if isinstance(ts, (int, float)):
+        v = float(ts)
+        return v / 1000.0 if v > 1e11 else v
+    try:   # a numeric string (an epoch the live producer stringified)
+        v = float(str(ts))
+        return v / 1000.0 if v > 1e11 else v
+    except ValueError:
+        pass
+    try:
+        from datetime import datetime, timezone
+        t = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return t.timestamp()
+    except ValueError:
+        return None
+
+
+def _epoch_strided_indices(bar_ts: Sequence[Any], stride: int, tf_seconds: float | None = None) -> list[int]:
+    """Indices of the bars whose open time t has floor(t / tf) % stride == 0 (phase anchored to the epoch, so the same
+    bars are chosen in ANY window). ``tf_seconds`` None -> the median spacing of the readable times. No forced last bar:
+    the live producer carries the latest aligned forecast forward exactly as the offline as-of join does."""
+    if stride < 1:
+        raise ValueError(f"stride must be >= 1; got {stride}")
+    ep = [_epoch_s(t) for t in bar_ts]
+    if tf_seconds is None:
+        good = [e for e in ep if e is not None]
+        diffs = sorted(b - a for a, b in zip(good, good[1:]) if b > a)
+        if not diffs:
+            return [i for i, e in enumerate(ep) if e is not None] if stride == 1 else []
+        tf_seconds = diffs[len(diffs) // 2]
+    tf = float(tf_seconds)
+    return [i for i, e in enumerate(ep) if e is not None and int(e // tf) % stride == 0]
+
+
 def _strided_indices(n: int, stride: int) -> list[int]:
-    """Bar indices to emit a forecast at: every ``stride``-th bar + the last.
+    """Bar indices to emit a forecast at: every ``stride``-th bar + the last (the legacy ``phase="row"`` rule).
 
     The as-of carry-forward in ``market_features`` fills the gaps with the most
     recent PAST forecast, so a stride never introduces leakage — it only trades
@@ -349,6 +398,8 @@ def compute_forecast_feature_rows(
     horizon: int = DEFAULT_HORIZON,
     quantile_levels: Sequence[float] = FORECAST_QUANTILES,
     batch_size: int = 256,
+    phase: str = "row",
+    tf_seconds: float | None = None,
 ) -> list[dict[str, Any]]:
     """Per-bar TSFM quantile-forecast feature rows for a target, keyed at the bar's ts.
 
@@ -391,7 +442,13 @@ def compute_forecast_feature_rows(
     if forecast_fn is None:
         forecast_fn = chronos_forecast_fn()
 
-    emit_idx = [i for i in _strided_indices(n, stride) if i + 1 >= min_context]
+    if phase == "epoch":
+        strided = _epoch_strided_indices(bar_ts, stride, tf_seconds)
+    elif phase == "row":
+        strided = _strided_indices(n, stride)
+    else:
+        raise ValueError(f"phase must be 'row' or 'epoch'; got {phase!r}")
+    emit_idx = [i for i in strided if i + 1 >= min_context]
 
     out_rows: list[dict[str, Any]] = []
     for start in range(0, len(emit_idx), batch_size):

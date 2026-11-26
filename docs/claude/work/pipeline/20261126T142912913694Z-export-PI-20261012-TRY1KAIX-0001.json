@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": ">=5 RQ-20261012-5bd1-* units have a read_state: measured record under research/results/",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261012-TRY1KAIX-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "ls research/results/ | grep RQ-20261012-5bd1",
+    "what": ">=5 NEWS-ALPHA units measured"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane NEWS-ALPHA-PROGRAM session_01SPre8cB96Nn4sUTry1KAiX, 2026-10-12",
+    "rerun": "ls research/results/ | grep -c RQ-20261012-5bd1; wc -l research/news_alpha/TEST-LEDGER.jsonl"
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row NEWS-ALPHA-PROGRAM is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "NEWS-ALPHA-PROGRAM",
+  "state": "routed",
+  "what": "NEWS-ALPHA-PROGRAM first readout: when >=5 of RQ-20261012-5bd1-01..14 have measured records, apply each unit's registered rule, re-run family BH (q=0.10, budget 600) over every landed cell, list closed vs open configurations, run the ledgered holdout confirmations for survivors (cap 20, Holm), and write back to M28 + NEWS-ALPHA-PROGRAM. Program index docs/research/news-alpha-program-2026-10-12.md."
+}

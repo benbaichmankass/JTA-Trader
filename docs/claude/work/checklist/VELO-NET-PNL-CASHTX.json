@@ -2,8 +2,8 @@
   "id": "VELO-NET-PNL-CASHTX",
   "title": "velotrade_1 close P&L is gross: read the order history's cashTransactions and net commission/financing into venue_exit pnl (PI-20261011-OSERECON-0001)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 555,
   "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns PI-20261011-OSERECON-0001 (follow-up of VELO-CLOSE-RECON, done). FIELD STATE on main: grep cashTransactions over src and scripts returns nothing, so net P&L is still not read; velotrade_1 closes carry pnl_basis 'gross of commission/financing'. MEASURED in the item: prop-manual-6fbebc711fa6 gross -34.50 vs balance delta -43.99 over the trade (~9.49 commission/financing unattributed). NEXT: extend scripts/prop/velotrade_trade_history_read.py to print cashTransactions KEY NAMES and amounts (no ids), dispatch it once, then net them into venue_exit's pnl (pnl_basis -> net) if they hold commission/financing. Tier-2 (prop fill ledger).",
   "phase": "prop",
-  "updated_at": "2026-10-18T00:03:35Z",
-  "updated_by": "research-pipeline-route-1018-fork",
+  "updated_at": "2026-11-26T06:11:38Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "surge"
 }

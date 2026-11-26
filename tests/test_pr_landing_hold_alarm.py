@@ -401,3 +401,14 @@ def test_workflow_uses_one_group_the_selector_and_the_marker():
     assert "group: pr-landing-hold-merge-alarm\n" in wf and "github.sha }}\n  cancel" not in wf
     assert "cancel-in-progress: false" in wf
     assert "--select-from" in wf and pla.MARKER_LABEL in wf
+
+
+def test_a_two_character_verbatim_approval_is_a_decision():
+    """2026-11-26: the operator's whole OK for #29091 / #29165 was "Ok"."""
+    body = ('Operator decision, 2026-11-26 chat, verbatim: "Ok"\n'
+            "(context: in reply to the manager's request to approve #29165 and #29091 together.)\n\n## Summary\n")
+    ok, cite = pla.body_decision(body)
+    assert ok and '"Ok"' in cite
+    assert pla.body_decision('Operator decision, 2026-11-26 chat, verbatim: "K"')[0] is False   # one char is not a choice
+    assert pla.body_decision('Operator decision, 2026-11-26 chat: "Ok"')[0] is False            # no "verbatim"
+

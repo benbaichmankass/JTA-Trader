@@ -1338,7 +1338,7 @@ ml_models:
   - hour_of_day
   - dayofweek
 - model_id: exit-policy-v1
-  manifest: ml/configs/exit-policy-v1.yaml
+  manifest: ml/configs/retired/exit-policy-v1.yaml
   model_family: regression_lightgbm
   dataset:
     family: exit_candidates
@@ -1346,7 +1346,7 @@ ml_models:
     timeframe: 5m
     version: v001
   target_deployment_stage: candidate
-  feature_ref: ml/configs/exit-policy-v1.yaml:53:trainer_config.feature_columns
+  feature_ref: ml/configs/retired/exit-policy-v1.yaml:53:trainer_config.feature_columns
   features:
   - direction
   - unrealized_r
@@ -1652,7 +1652,7 @@ ml_models:
   - log_return_lag_1
   - log_return_lag_2
 - model_id: setup-candidates-metalabel-paper-v1
-  manifest: ml/configs/setup-candidates-metalabel-paper-v1.yaml
+  manifest: ml/configs/retired/setup-candidates-metalabel-paper-v1.yaml
   model_family: regression_lightgbm
   dataset:
     family: setup_candidates

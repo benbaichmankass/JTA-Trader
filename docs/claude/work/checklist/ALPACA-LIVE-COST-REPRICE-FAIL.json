@@ -1,0 +1,21 @@
+{
+  "id": "ALPACA-LIVE-COST-REPRICE-FAIL",
+  "title": "Two real-money alpaca_live legs failed the Stage-0 reprice at MEASURED Alpaca cost (RQ-20261119-f2a4-06 slv_trend_1h FAIL, -07 tlt_pullback_1h FAIL; tqqq_trend_long_1d -05 PASS): demotion-to-floor decision (Tier 3, data-backed) for the manager",
+  "state": "done",
+  "owner": "QUEUE-FILL-STANDING-W49",
+  "lane": "session_01AFoLuKjdgFK9yimnCkttqV",
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "Filed by PROGRAMME-REVIEW-20261125. Both legs are on alpaca_live and alpaca_portfolio rosters (config/accounts.yaml read 2026-11-25). Grades: research/queue/RQ-20261119-f2a4-06.yaml and -07.yaml grading.verdict fail ('1 row, all measured, all fail'), results research/results/RQ-20261119-f2a4-0{6,7}/. No checklist row or pipeline item cited either unit (grep 2026-11-25). Decision for the manager: whether the committed evidence settles a demotion to the demo floor (OPERATING-PLAN s2; data-backed Tier-3 decisions do not wait) or a cost-side fix is tested first (P8 programme). This lane edits no config. [2026-11-25 ~18:55Z OPERATOR POPUP, verbatim, relayed by Manager 2026-11-25a] TLT (tlt_pullback_1h, RQ-20261119-f2a4-07 FAIL: net -26.2R n 49, 0/4 folds at 26 bps): \"It doesn't get demoted until we've tried it rating and we don't have anything else to do with it. That's new flu. Get on same page,\" (voice transcription; read as: no demotion until it has been ITERATED and there is nothing left to try; that is the rule). SLV (slv_trend_1h, f2a4-06 FAIL on folds: net +25.5R n 74, 2/4 folds): \"Keep on real money\". ACTION: both stay on alpaca_live; tlt_pullback_1h gets cost-lever iteration units (entry type / fewer, larger-R trades / session or regime filter) authored by QUEUE-FILL-STANDING-W49; slv_trend_1h gets a fold-robustness iteration. No demotion proposal is raised again for either until its lever map is exhausted. 2026-11-25 ~18:55Z OPERATOR DECISION (relayed by Manager 2026-11-25a): tlt_pullback_1h NOT demoted ('It doesn't get demoted until we've tried iterating and we don't have anything else to do with it'); slv_trend_1h 'Keep on real money'. Both get iteration units, assigned to QUEUE-FILL-STANDING-W49: TLT = cost-lever iteration, SLV = fold-robustness iteration. Decision recorded; row closed as decided.",
+  "phase": "research",
+  "updated_at": "2026-11-25T18:56:14Z",
+  "updated_by": "session_01AFoLuNNDuAoybFeX6bDEM8"
+}

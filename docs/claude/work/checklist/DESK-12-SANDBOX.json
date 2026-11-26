@@ -17,7 +17,7 @@
     20348
   ],
   "blocked_on": [],
-  "due_by": "2026-11-14",
+  "due_by": "2026-11-30",
   "_seq": 679,
   "note": "[2026-10-26 lane session_01REDreBoJY5kB8gMKZ9wrbC] PR #20348 (self-land): scripts/ops/touch_record.py (projection over trades.notes.sl_amends), soak_state untouched-only count, r3 cells untouched-only with touched_split beside, scripts/ops/touch_split.py + weekly step -> docs/claude/work/SOAK-TOUCH-SPLIT.md, desk grading hook (grading.applied/control). MEASURED 2026-10-26 via diag pull (realized_slippage.py pull): bybit_1 1583 closed non-backtest trades, 33 legs, 0 touched, 1535 join a package. CLOSES WHEN: a weekly soak-book-grade run lands SOAK-TOUCH-SPLIT.md on main AND a first applied amend (sl_amends entry) shows as touched>0 in it (until then the live probe is quiet; proven only by planted-touch tests). Open: sl_amends carries no approve/clip verdict (apply path is Tier 2); intent_id/decision_id null until DESK-4 writes them.",
   "observation": {
@@ -26,8 +26,8 @@
     "what": "first weekly soak-book-grade run after merge lands docs/claude/work/SOAK-TOUCH-SPLIT.md on main; and a first applied sl_amends entry shows touched>0 in it"
   },
   "phase": null,
-  "updated_at": "2026-11-07T05:58:11Z",
-  "updated_by": "BACKLOG-DRAIN-20261107",
+  "updated_at": "2026-11-25T18:45:10Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
     "arch": "none: projection over trades.notes.sl_amends, no architecture change",
     "roadmap": "none: tooling for the DECIDED bybit_1 sandbox split; no milestone line changed"

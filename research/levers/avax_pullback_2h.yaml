@@ -74,10 +74,46 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: tested
   sizing_vs_cost: untested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: side_long
+        unit: RQ-20261126-014
+        window: 2021-11-22..2026-11-24
+        n: 178
+        net_r: -13.4508
+        baseline_n: 380
+        baseline_net_r: 11.368
+        delta_net_r: -24.8188
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 27.0938
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: side_short
+        unit: RQ-20261126-014
+        window: 2021-11-22..2026-11-24
+        n: 211
+        net_r: 16.6491
+        baseline_n: 380
+        baseline_net_r: 11.368
+        delta_net_r: 5.2811
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 11.492
+        verdict: fail
+        joint_change: false
+      shape: noisy
+      points: 2
+      best_delta_r_per_trade: 0.0139
+      fold_stability: 0.375
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
   entry:
     pullback_frac:
       tests:

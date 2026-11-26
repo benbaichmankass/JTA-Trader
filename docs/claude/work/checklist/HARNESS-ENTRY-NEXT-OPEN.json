@@ -1,0 +1,25 @@
+{
+  "id": "HARNESS-ENTRY-NEXT-OPEN",
+  "title": "BUILD (manager request MG1, docs/research/practice-review-2026-11-25.md section 6): a default-off --entry-at next_open flag in scripts/backtest_pullback.py (entry = c ~line 731) and scripts/backtest_trend.py (entry = c ~line 867): fill at the NEXT bar's open, SL/TP/risk recomputed from that fill, no fill if no next bar, byte-identical when off (self-test: off == committed argv output; planted gap bar moves the fill). Forward it as a raw flag through exit_lever_ablation (raw --flag tokens already pass). Then QUEUE-FILL-STANDING-W49 (session_01AFoLuKjdgFK9yimnCkttqV) authors the paired same-bar vs t+1-open audit over the rostered 1d legs. Filed (not built) by RESEARCH-UNBLOCK-BUILDS-W48: lane ceiling.",
+  "state": "done",
+  "owner": "manager",
+  "lane": "QUEUE-FILL-STANDING-W49",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28955,
+    28997
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-02T00:00:00Z",
+  "note": "CLOSED 2026-11-26: --entry-at {close,next_open} merged on trend + pullback harnesses (#28955, default byte-identical, 9 tests); the MG1 audit units RQ-20261126-11d7-03..15 (13 rostered 1d legs, paired CLOSE vs NEXT, rule registered first) merged in #28997 and are queued, NOT yet run.",
+  "phase": null,
+  "updated_at": "2026-11-26T02:56:52Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

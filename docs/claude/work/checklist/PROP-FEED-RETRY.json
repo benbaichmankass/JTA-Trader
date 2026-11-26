@@ -1,39 +1,39 @@
 {
   "id": "PROP-FEED-RETRY",
   "title": "Prop feed: retry before tripping on a transient terminal outage (timeout / unknown_page), keep rc 4 trips for captcha, 2FA, login_rejected and the other environment findings",
-  "phase": null,
   "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-PROP"
+  ],
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 2,
   "prs": [
     18164
   ],
   "blocked_on": [],
+  "due_by": "2026-11-30",
+  "_seq": 483,
   "note": "[2026-10-14 weekly planning] OPERATOR-APPROVED 2026-10-14 (Tier-2, order-path-adjacent; approval recorded here, relayed by the manager). Source: PI-20261007-APBY4NTV-0007 -- prop_feed_tick.sh maps every FeasibilityError incl. unknown_page ('Loading...') and timeout to rc 4 = trip on first occurrence, never retried, so a ~4-min Tradeify blip stopped tradeify_1 for 26 h+. Build: a distinct exit for environment-class findings so the 3-failure path decides, one auto re-check after a cool-down, --dump-dir on the trip path only; rc 4 unchanged for captcha/2fa/challenge/login_rejected/password_expired/no_credentials/asn_blocked/access_denied. NO-HALT applies: the feed keeps trying and raises one flag. Verify on the VM post-state (prop journal) after deploy.  [2026-10-15 lane] PR #18164 (draft, hold/tier_2_3_needs_approval) built+tested (78 pass); NOT merged/deployed/observed. Closes only when the prop journal shows a timeout/unknown_page outage retried next tick while captcha/2fa/login_rejected still rc 4. --dump-dir on trip path deliberately not built (no-op on login failure). [2026-10-15 housekeeping lane] CORRECTION: #18164 MERGED 2026-10-15T09:27Z (the 06:30Z note saying not merged is stale). Deployed/observed status still UNVERIFIED this session; observation above stands. 2026-11-03 BACKLOG-DRAIN: still unobserved. Receipt 05:01Z shows probe prop_feed ok (feed untripped now) but that is not the closing event: need a transient timeout/unknown_page outage retried next tick in the prop journal. Cannot be forced without touching the prop feed; waiting for natural event; re-dated 11-10. [salvaged from #22570 by BACKLOG-DRAIN-20261104; evidence re-verified 2026-11-04]",
-  "updated_at": "2026-11-04T18:48:28Z",
-  "updated_by": "session_01AFoLuM1JYKXSjfqdp6rzT1",
-  "roadmap": [
-    "L-PROP"
-  ],
   "observation": {
-    "what": "deployed on the VM: a timeout/unknown_page outage is retried after the cool-down and the feed stays untripped, while captcha/2fa/login_rejected still trip (rc 4); seen in the prop journal on the first transient outage after deploy",
-    "how_to_check": "diag relay: prop journal feed status rows + prop_feed_tick.sh version on the VM",
     "due_by": "2026-10-31",
+    "how_to_check": "diag relay: prop journal feed status rows + prop_feed_tick.sh version on the VM",
     "redated": {
-      "on": "2026-10-24",
-      "from": "2026-10-24",
       "by": "REGISTER-SWEEP-W43",
+      "from": "2026-10-24",
+      "on": "2026-10-24",
       "reason": "not observed yet: the closing observation needs a live VM/diag read, a deploy, a human, or a future event that this register lane cannot take (repo-only, no VM egress); re-checked for repo-visible evidence this session (research/results, PR state) and none closes it; date moved one week for the daily-review pull"
-    }
+    },
+    "what": "deployed on the VM: a timeout/unknown_page outage is retried after the cool-down and the feed stays untripped, while captcha/2fa/login_rejected still trip (rc 4); seen in the prop journal on the first transient outage after deploy"
   },
+  "phase": null,
+  "updated_at": "2026-11-25T18:47:14Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
-    "roadmap": "none: retry hardening of an existing prop feed; no L-PROP milestone measure moves until observed",
-    "arch": "none: no contract change; transient prop-feed outages retry instead of tripping, auth failures still trip"
-  },
-  "due_by": "2026-11-10",
-  "_seq": 483
+    "arch": "none: no contract change; transient prop-feed outages retry instead of tripping, auth failures still trip",
+    "roadmap": "none: retry hardening of an existing prop feed; no L-PROP milestone measure moves until observed"
+  }
 }

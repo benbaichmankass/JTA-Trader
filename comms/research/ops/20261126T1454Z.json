@@ -1,0 +1,240 @@
+{
+ "run": "RESEARCH-OPS-2026-11-26-1447",
+ "finished_at": "2026-11-26T14:54:21Z",
+ "by": "session_01AFoLuLpCY5gABbqk3EBUeV (ML-PRIMARY, the one lane until 12-02; lean pass)",
+ "floor": 179,
+ "floor_basis": "computed_floor(fired_24h 225) -- diagnostic only (STOP-GENERATED-AUTHORING)",
+ "throughput": {
+  "runnable_after": 34,
+  "queued": 318,
+  "fired_24h": 225,
+  "results_landed_24h": 372,
+  "hours_since_last_dispatch": 0.5,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch": "ok (research-script-run runs green 14:01-14:28Z, batch-land PRs #29188/#29191 on main)",
+  "collector": "ok",
+  "incident": null
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "0838-05 (qqq long-only on 2013-2018) PASSes",
+   "p": 0.35,
+   "outcome": "unresolved",
+   "note": "3 runs producer_failed 'empty window': exit_lever_ablation fetches --days back from today, --days 2200 never reached --start 2013; unit fixed this pass (--days 5110)"
+  },
+  {
+   "call": "0838-01 (D5 confirmation) PASSes",
+   "p": 0.3,
+   "outcome": "miss",
+   "note": "FAIL, 2 rows; consistent with a474-02 FAIL and fa22-06 INDETERMINATE (all three D5 units on the OLD backtest engine -- re-runs deferred to BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME)"
+  },
+  {
+   "call": "bd30-04 re-run lands a measured verdict",
+   "p": 0.7,
+   "outcome": "miss",
+   "note": "same --days defect (700 days vs --start 2020-01-07); fixed this pass (--days 2550)"
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-26T14:49Z",
+  "since": "2026-11-25T19:40Z (previous record)",
+  "runnable_by_track": {
+   "TRADING": 25,
+   "MODEL": 6,
+   "INFRA": 3
+  },
+  "results_window": {
+   "units_with_rows": 215,
+   "pass": 63,
+   "fail": 70,
+   "indeterminate": 31,
+   "ungraded": 51
+  },
+  "fails_without_next": 54,
+  "needs_review": {
+   "count": 86,
+   "unowned": 19
+  },
+  "could_not_look": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261126-11d7-03..15",
+   "RQ-20261125-0838-05",
+   "RQ-20261125-0838-06",
+   "RQ-20261124-bd30-04",
+   "RQ-20261118-f7c1-06",
+   "RQ-20261118-dbf8-02",
+   "RQ-20261119-c8e2-02",
+   "RQ-20261126-a1f0-01..03"
+  ],
+  "trading": {
+   "meaning": [
+    "MG1 execution convention (13 rostered 1d legs, paired, same signals): pullback_1d 7/7 tie (|t|<=1.11) while trend_long_1d iwm/qld/qqq are OVERSTATED by the same-bar close fill at |t|>=2 (-0.05..-0.08 R/trade; net R -27%/-12%/-9%), no sign flip -- so daily breakout entries on index ETFs pay a next-open gap the backtest does not see and their Stage-0 edge should be quoted at the NEXT figure; pullback entries do not (recorded on HARNESS-ENTRY-NEXT-OPEN).",
+    "Live regime off-cells re-test (c8e2-02, first real read): HOLDS on the post-freeze fold (+209 net, -2.03 pp maxDD vs ungated, 42 ungated trades; 4/4 earlier folds agree) but every arm loses on that fold -- so the cells cut losses rather than create edge (REGIME-PROGRAM).",
+    "Shared-slot books (a1f0-01..03, fixed engine): on XRP/ETH/SOL the shared book nets below each solo leg -- so same-symbol allocation, not leg quality, is costing R; routed as input to SAME-SYMBOL-ALLOCATION and MLP-D5-MASTIFF (descriptive: xrp_4h carries the open +0.03R vs +4.23R engine gap)."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "0838-05/-06, bd30-04 (3 units, 9 runs)",
+     "hypotheses": [
+      "noise",
+      "harness defect",
+      "data depth"
+     ],
+     "survivor": "harness",
+     "test": "read cmd-0.log: ValueError empty window -- the fetch length is --days from today, not --start",
+     "next": "units re-armed with --days covering --start (this PR)"
+    },
+    {
+     "cluster": "MG1 'fail' x12",
+     "hypotheses": [
+      "design",
+      "noise"
+     ],
+     "survivor": "design",
+     "test": "the rule is read by label; the harness verdict 'fail' is just incumbent_beats_candidate OR tie",
+     "next": "no unit: neither branch changes a decision; the next routine re-measure of iwm/qld/qqq quotes the NEXT figure"
+    }
+   ],
+   "next_tests": []
+  },
+  "model": {
+   "meaning": [
+    "D3 FT-Transformer (f7c1-06, arm complete on cuda): FAIL by rule, 13 windows, mean d -0.013 R/decision CI [-0.078,+0.052], takes 44% more trades and loses on longs -- so a trained deep tabular net adds nothing over LightGBM on this recipe; deep_tabular family added to the ML taxonomy with history [FAIL].",
+    "D3 TabICL (dbf8-02): never measured -- OOM at 30.7 GB on the first window; fixed (batch_size 1 + disk offload + predict-time containment, #29150) and dbf8-03 has run 2h30m+ on Kaggle without crashing (result pending)."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "dbf8-02",
+     "hypotheses": [
+      "harness defect",
+      "the idea is wrong"
+     ],
+     "survivor": "harness",
+     "test": "cmd-0.log OOM at predict; containment wrapped fit only",
+     "next": "RQ-20261126-dbf8-03 (running)"
+    }
+   ],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "shared same-symbol slots net below solo legs",
+    "feeds": "SAME-SYMBOL-ALLOCATION, MLP-D5-MASTIFF"
+   }
+  ],
+  "surprises": [
+   "The D5 population-wide 'empty window' class: any exit_lever_ablation unit registering a pre-dev window older than --days from today fails with producer_failed; 3 found this pass, not swept repo-wide (handoff)."
+  ]
+ },
+ "results_read": {
+  "pass": 2,
+  "fail": 15,
+  "indeterminate": 1,
+  "units": [
+   "RQ-20261126-11d7-03..15",
+   "RQ-20261118-f7c1-06",
+   "RQ-20261119-c8e2-02",
+   "RQ-20261125-0838-01",
+   "RQ-20261126-a1f0-01",
+   "RQ-20261126-a1f0-02",
+   "RQ-20261126-a1f0-03"
+  ]
+ },
+ "unlocked": [
+  "RQ-20261125-0838-05",
+  "RQ-20261125-0838-06",
+  "RQ-20261124-bd30-04"
+ ],
+ "retired": [],
+ "levers_filed": [],
+ "units_authored": [],
+ "followups_filed": [
+  "HARNESS-ENTRY-NEXT-OPEN note (MG1)",
+  "REGIME-PROGRAM note (c8e2-02)",
+  "D3-TABULAR-LEARNER-ARMS notes",
+  "SAME-SYMBOL-ALLOCATION / MLP-D5-MASTIFF notes",
+  "ALPACA-ENTRY-FILL-PRICE-UNSYNCED (row + Tier-2 PR #29165)",
+  "ALPACA-PARTIAL-ENTRY-CANCELLED-WRONG-SIZE (row)"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "one-lane week (operator 2026-11-26 ~07:20Z); value of information of new nodes below the iteration and fix work this pass"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 18,
+   "of": 215,
+   "note": "lean pass: the 13 MG1 rows + 5 ML/regime units opened; 197 window results (mostly generated template units) not attributed by hand"
+  },
+  "map_entries_added": null,
+  "next_tests_from_map": 0,
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 4,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "overdue": {
+   "strategy_leg": 16,
+   "ml_model": 1,
+   "ltr_class": 2
+  },
+  "advanced": 3,
+  "survivors": []
+ },
+ "limits": [
+  "lever_map --backfill ran; map entry count not read back",
+  "fails_without_next 54 not diagnosed one by one (lean pass): 11d7 cluster diagnosed; the RQ-20261126-0xx template units left to the generated-grading loop",
+  "needs_review 19 unowned not triaged this pass"
+ ],
+ "not_run": [
+  "C needs_review triage (19 unowned)"
+ ],
+ "handoff": [
+  "needs_review 19 UNOWNED (86 total) -- triage next pass or a drain lane.",
+  "Sweep exit_lever_ablation units whose --start is earlier than today minus --days (the 'empty window' class): 3 fixed here, population not swept.",
+  "16 strategy_leg + 1 ml_model + 2 ltr_class iterations OVERDUE; orphans 4/3/5 (claude_desk, xsec-crypto, cost-levers-live-legs, movement-capture; ml-exit-head-donchian-1h, ml-holdbias-exit, ml-btc-router-cells; 5 ltr classes).",
+  "dbf8-03 (TabICL) result pending: report T4 time/memory to the manager.",
+  "7c11-03 result pending: record as DESCRIPTIVE on ML-ENTRY-EQ-CORP-EVENTS."
+ ],
+ "calls": [
+  {
+   "call": "dbf8-03 lands a MEASURED verdict (no producer_failed) with gpu_arm_complete tabicl true on >= 10 windows",
+   "p": 0.45,
+   "check": {
+    "command": "ls research/results/RQ-20261126-dbf8-03/",
+    "rule": "read_state measured and gpu_arm_complete.tabicl true",
+    "resolves_when": "2026-11-27"
+   }
+  },
+  {
+   "call": "0838-05 re-run fails again with 'empty window' (Dukascopy QQQ 1h does not reach 2013)",
+   "p": 0.5,
+   "check": {
+    "command": "tail comms/research/RQ-20261125-0838-05/*/logs/cmd-0.log",
+    "rule": "ValueError empty window in the newest log",
+    "resolves_when": "2026-11-28"
+   }
+  },
+  {
+   "call": "bd30-04 re-run lands a measured verdict",
+   "p": 0.8,
+   "check": {
+    "command": "python3 scripts/research/result_disposition_check.py --list",
+    "rule": "bd30-04 has a measured row",
+    "resolves_when": "2026-11-28"
+   }
+  }
+ ]
+}

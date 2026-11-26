@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "desk_trigger_replay.py accepts --decluster-bars and the node P1-RP1119-desk-levelbreak-fade-decluster carries a unit: body; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261119-VEWZICCB-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), comms/research/programme_review/20261119-replan.json",
+    "rerun": "python3 scripts/research/desk_trigger_replay.py --help | grep -c decluster-bars"
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane, now re-owned by the manager) [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb), com; routing-alarm rule]",
+  "state": "routed",
+  "what": "BUILD desk_trigger_replay.py --decluster-bars N (keep the first firing per symbol per N bars, report the dropped count; self-test on a planted cluster). Why: the desk trigger replays RQ-20261119-d7c3-01..04 are NOT_CLEARED vs the +0.15 R bar, but both level-break FADE cells have a cluster lower bound > 0 (level_break_break +0.088 R lb +0.051, sweep +0.057 R lb +0.026, p 1e-4) and ~half the firings fall within 12 bars of the previous same-symbol firing. The declustered re-read is the pre-registered next question, node P1-RP1119-desk-levelbreak-fade-decluster (authoring_blocked on this flag). Owner: the desk entry-review redesign lane (week plan 2026-11-19 item 14)."
+}

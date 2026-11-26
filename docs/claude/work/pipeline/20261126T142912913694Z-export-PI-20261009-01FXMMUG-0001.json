@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "no shadow baseline reports score_read_state=constant, or each remaining one has a stage decision (soft-off/fix) recorded by the ML review",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261009-01FXMMUG-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-HYGIENE session_01FxmMUG6xTvooBvr8w3xuW9, trainer-vm-diag #17184",
+    "rerun": "GET /api/bot/shadow/stats and list rows with score_read_state == 'constant' (after this PR deploys); or trainer-vm-diag the min==max scan in issue #17184"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 202)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, ML-HYGIENE, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (live checklist row, manager; W48 planning disposition) -- BACKLOG-TRIAGE-W48 2026-11-25 re-route: previous owner row ML-HYGIENE is done in the work store (manager request, ML-FRONTIER-PREP-20261125 P-7); item left open, not closed. | was: ML-HYGIENE | [PIPELINE-ROUTE 2026-10-09] owner row is exactly constant-score baselines.",
+  "severity": "low",
+  "state": "routed",
+  "tier": 1,
+  "what": "Constant shadow scorers (ML-HYGIENE item 2, MEASURED trainer-vm-diag #17184 run 37871465155 over runtime_logs/shadow_predictions.jsonl, 36 model-stage keys, n>=30): 4 emit ONE score for every row -- execution-quality-baseline-v0 (n=2656, -0.2017), setup-quality-audit-baseline-v0 (n=2656, -0.0572), mes-setup-quality-baseline-v0 (n=268, 0.8378), mes-trade-outcome-winrate-baseline-v0 (n=268, 0.6667). Reporting is fixed in this lane (shadow stats score_read_state, ModelAttribution.constant_scorer, live_agreement gate = insufficient_data); the cause is NOT fixed: the audit baseline keys on audit_pattern (never served), execution-quality's per_group_rate table matches no live strategy, the MES pair is not diagnosed. Stages untouched (Sunday ML review owns them)."
+}

@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "the cause of the gap is named from the decision log (predictions below tau, or a defect fixed)",
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125, manager session_01AFoLuKKEyjyRMDSxQ1prHf); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/order-packages?since=2026-11-24T13:00:00Z&limit=200&include_paper=true&strategy=ml_entry'"
+  },
+  "owner": "health-review",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "state": "queued",
+  "tier": 2,
+  "what": "[health][real-money] ml_entry has emitted ZERO crypto order packages on any account since 2026-11-24 12:03Z (~30 h at 2026-11-25 18:30Z): /api/bot/order-packages?strategy=ml_entry since 11-24T13 returns 1 package (USO, alpaca_paper); journal trades confirm none on bybit_2/bybit_portfolio/prop. config/strategies.yaml ml_entry enabled, execution live; strategy_liveness says LIVE. Before 11-24 it emitted 2-5 crypto packages per 4h bar on most bars. Cause unread: tau 0.10 not cleared by v1r20261122 in this tape, a serving hole, or a refusal before journaling. A silent leg is a performance read that cannot accrue."
+}

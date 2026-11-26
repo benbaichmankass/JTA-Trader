@@ -541,6 +541,27 @@ levers:
       fold_stability: 1.0
       reading: no response at the tested values
   other:
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-05
+        window: 2020-11-19..2026-11-25
+        n: 47
+        net_r: 9.6102
+        baseline_n: 47
+        baseline_net_r: 9.5256
+        delta_net_r: 0.0846
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 6.1587
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: 0.0018
+      fold_stability: 0.75
+      reading: no response at the tested values
     momentum_stale_bars:
       tests:
       - value: '12'
