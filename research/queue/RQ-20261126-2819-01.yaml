@@ -44,7 +44,7 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'MEASURED + ESTIMATE. 60 symbols x tail 40,000 1h rows = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4),
+  basis: 'MEASURED + ESTIMATE. 60 symbols x tail 40,000 1h rows (the dataset holds 2020-07 onward; the tail keeps the newest ~4.6 years per symbol, as 9e72-01) = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4),
     so ~1.4M paired OOS rows. The bootstrap resamples whole calendar days (block_rows 1440 = 24 h x 60 symbols), so the effective n is
     the ~1,000 OOS days, not 1.4M rows. MEASURED 2026-11-26: a local CPU smoke of this exact spec on 3 real bp2 symbols (ADA/BTC/DOGE,
     72,000 OOS rows, 1-day blocks of 72 rows; cut-down GRU budget: 4 epochs, hidden 32, 1 layer, 60k windows; n_boot 200) gave a

@@ -26,7 +26,7 @@ other 57) so a pooled read is one venue end to end.
 What is NOT claimed: no Bybit basis is measured; the bp2 universe is the frozen ml_decision_entry manifest list; a symbol the
 archive cannot serve is recorded could_not_look in STAGE_REPORT.json and absent from the shards, never invented.
 
-    python3 scripts/research/market_data_bp2.py stage --out DIR [--symbols A,B] [--years 5] [--workers 8]
+    python3 scripts/research/market_data_bp2.py stage --out DIR [--symbols A,B] [--start 2020-07-01] [--workers 8]
     python3 scripts/research/market_data_bp2.py self-test
 
 Tier-1 tooling: market data only, writes only --out. No config, model, registry or order path.
@@ -41,7 +41,7 @@ import sys
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -51,6 +51,9 @@ for _p in (_REPO, _REPO / "scripts" / "ops", _REPO / "scripts" / "research"):
         sys.path.insert(0, str(_p))
 
 VERSION = "v102"
+#: History start = ml_decision_entry.START (2020-07-01), so the blocked D3 learner units (RQ-20261118-f7c1-06, -dbf8-02), whose
+#: harness trains from that date over this universe, find their whole window here. Wider than the trainer's rolling 5 years.
+DEFAULT_START = "2020-07-01"
 TIMEFRAME = "1h"
 SOURCE = "binance_vision_um_perp_klines"
 #: The trainer's market_features params (build_trainer_datasets.sh::build_bybit_features). They DEFINE regime_label.
@@ -150,10 +153,10 @@ def build_symbol(sym: str, csv: Path, out: Path) -> Dict[str, Any]:
     return {"raw_rows": raw_facts["rows"], "feature_rows": f["rows"], "dropped_columns": len(f["dropped"])}
 
 
-def stage(out: Path, symbols: List[str], years: float = 5.0, workers: int = 8, now: Optional[datetime] = None,
+def stage(out: Path, symbols: List[str], start: str = DEFAULT_START, workers: int = 8, now: Optional[datetime] = None,
           fetcher: Callable[[str, Path, datetime, datetime], Dict[str, Any]] = fetch_csv) -> Dict[str, Any]:
     now = now or datetime.now(timezone.utc)
-    start = (now - timedelta(days=int(365.25 * years))).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)   # the archive clamps to each symbol's listing
     work = out / "_work"
     t0 = time.time()
 
@@ -233,14 +236,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     st = sub.add_parser("stage")
     st.add_argument("--out", required=True)
     st.add_argument("--symbols", default="", help="comma list; default = the bp2 universe")
-    st.add_argument("--years", type=float, default=5.0, help="history depth (trainer default: rolling 5 years)")
+    st.add_argument("--start", default=DEFAULT_START, help="first bar date (default = ml_decision_entry.START)")
     st.add_argument("--workers", type=int, default=int(os.environ.get("BP2_FETCH_WORKERS", "8")))
     a = ap.parse_args(argv)
     if a.cmd == "self-test":
         return _self_test()
     if a.cmd == "stage":
         syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] or universe()
-        s = stage(Path(a.out), syms, years=a.years, workers=a.workers)
+        s = stage(Path(a.out), syms, start=a.start, workers=a.workers)
         print(json.dumps({k: s[k] for k in ("n_symbols", "n_built", "not_built", "seconds", "start")}))
         return 0 if s["n_built"] else 1
     ap.print_help()
