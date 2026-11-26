@@ -379,7 +379,7 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
         elif live and d["action"] == "land" and land and token:
             try:
                 ok, why = land_max(repo_slug, n, ref, d, token)
-            except Exception as e:  # noqa: BLE001  # contained per PR: one failing land never stops the rest of the triage
+            except Exception as e:  # noqa: BLE001  # allow-silent: not silent, the failure is published as `land_failed: <why>` on this PR's row and in the run log, and one failing land must never stop the triage of the other PRs (no-halting rule)
                 ok, why = False, f"{type(e).__name__}: {str(e)[:120]}"
             row["done"] = "landed" if ok else f"land_failed: {why}"
             if ok:
