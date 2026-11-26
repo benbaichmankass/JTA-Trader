@@ -61,3 +61,39 @@ def test_cboe_source_zero_is_absent(tmp_path):
     assert rec["rows"] == 2 and rec["feed"] == "cboe_delayed"
     df = __import__("pandas").read_parquet(tmp_path / "SPY" / "2026-11-02.parquet")
     assert df["iv"].isna().sum() == 1 and df["open_interest"].tolist() == [7.0, 9.0]
+
+
+# ── option A probe (CBOE-OPTIONS-SOURCE-BLOCKED): the shapes open interest and volume must come from are MEASURED, never assumed ──
+def _probe_get(path, params):
+    if "trades/latest" in path:
+        return {"trade": {"p": 500.0}}
+    if "snapshots" in path:
+        s = _snap()
+        s["dailyBar"] = {"o": 1.0, "h": 1.2, "l": 0.9, "c": 1.1, "v": 321, "n": 7, "vw": 1.05, "t": "2026-11-02T05:00:00Z"}
+        return {"snapshots": {"SPY261102C00500000": s, "SPY261102P00500000": _snap(iv=None)}}
+    if "bars" in path:
+        return {"bars": {params["symbols"]: [{"t": "2026-11-02T05:00:00Z", "v": 321, "c": 1.1}]}}
+    raise AssertionError(path)
+
+
+def _probe_tget(path, params):
+    assert path == "/v2/options/contracts" and params["underlying_symbols"] == "SPY"      # a listing GET, nothing else
+    return {"option_contracts": [{"symbol": "SPY261102C00500000", "open_interest": "1234", "open_interest_date": "2026-11-01"},
+                                 {"symbol": "SPY261102P00500000", "open_interest": None, "open_interest_date": None}],
+            "next_page_token": None}
+
+
+def test_probe_shapes_reports_where_volume_and_open_interest_live():
+    rows = {r["shape"]: r for r in c.probe_shapes(_probe_get, _probe_tget, TODAY)}
+    assert rows["snapshot"]["with_dailyBar"] == 1 and rows["snapshot"]["dailyBar"]["v"] == 321
+    assert rows["contracts"]["n_page"] == 2 and rows["contracts"]["with_open_interest"] == 1
+    assert rows["contracts"]["oi_dates"] == ["2026-11-01"] and "open_interest" in rows["contracts"]["keys"]
+    assert rows["bars"]["newest"]["v"] == 321
+
+
+def test_probe_shapes_never_raises_a_refused_call_is_a_finding():
+    def boom(path, params):
+        raise RuntimeError("HTTP 403 " + path)
+    rows = {r["shape"]: r for r in c.probe_shapes(lambda p, q: {"trade": {"p": 500.0}} if "trades" in p else boom(p, q), boom, TODAY)}
+    assert rows["snapshot"]["status"] == "error" and rows["contracts"]["status"] == "error" and "403" in rows["contracts"]["error"]
+    assert "bars" not in rows                                                         # no symbol to ask about

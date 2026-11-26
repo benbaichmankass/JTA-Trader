@@ -37,6 +37,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import data_universe as du  # noqa: E402
 
 DATA_URL = os.environ.get("ALPACA_DATA_URL", "https://data.alpaca.markets").rstrip("/")
+# The option CONTRACTS listing (open_interest, open_interest_date) lives on the Trading API, not the data API. READ-ONLY: this module
+# only ever issues GETs against it (a contract listing: no account, order or position endpoint). Same Alpaca key as the data calls.
+TRADING_URL = os.environ.get("ALPACA_TRADING_URL", "https://api.alpaca.markets").rstrip("/")
 _OCC = re.compile(r"^([A-Z0-9]{1,8}?)(\d{6})([CP])(\d{8})$")  # CBOE prefixes some roots ("B1SPY...")
 COLS = ["asof_date", "captured_at", "underlying", "spot", "symbol", "expiry", "cp", "strike", "bid", "ask", "bid_size",
         "ask_size", "quote_ts", "last", "last_ts", "iv", "delta", "gamma", "theta", "vega", "rho", "open_interest", "volume", "feed"]
@@ -61,8 +64,9 @@ def make_cboe_getter() -> Getter:
     return get
 
 
-def make_getter() -> Getter:
+def make_getter(base: Optional[str] = None) -> Getter:
     import requests
+    base = base or DATA_URL
 
     k, s = os.environ.get("ALPACA_API_KEY_ID_LIVE"), os.environ.get("ALPACA_API_SECRET_KEY_LIVE")
     if not (k and s):
@@ -72,7 +76,7 @@ def make_getter() -> Getter:
 
     def get(path: str, params: Dict[str, Any]) -> Any:
         for attempt in range(8):
-            r = sess.get(DATA_URL + path, params=params, timeout=60)
+            r = sess.get(base + path, params=params, timeout=60)
             if r.status_code == 429 or r.status_code >= 500:
                 time.sleep(min(60, 2 ** attempt))
                 continue
@@ -82,6 +86,49 @@ def make_getter() -> Getter:
         raise RuntimeError(f"HTTP retries exhausted {path}")
 
     return get
+
+
+def probe_shapes(get: Getter, tget: Getter, today: date, und: str = "SPY") -> List[Dict[str, Any]]:
+    """MEASURE the response shapes option A depends on, one JSON-able dict per finding, never raising: a refused call is a finding.
+    (1) a data-API option snapshot: its keys and whether it carries a dailyBar (volume `v`); (2) the Trading API contracts listing, one
+    page for the capture window: the keys, how many contracts carry open_interest, and its date(s); (3) one daily option bar."""
+    out: List[Dict[str, Any]] = []
+    spot = spot_price(get, und) or 0.0
+    lo, hi = round(spot * 0.94, 2), round(spot * 1.06, 2)
+    sym = None
+    try:
+        j = get(f"/v1beta1/options/snapshots/{und}", {"feed": "indicative", "limit": 50, "strike_price_gte": lo, "strike_price_lte": hi,
+                                                      "expiration_date_gte": today.isoformat(),
+                                                      "expiration_date_lte": (today + timedelta(days=14)).isoformat()})
+        snaps = j.get("snapshots") or {}
+        with_daily = sum(1 for v in snaps.values() if v.get("dailyBar"))
+        sym, one = next(iter(snaps.items()), (None, {}))
+        out.append({"shape": "snapshot", "status": "ok", "n": len(snaps), "with_dailyBar": with_daily, "symbol": sym,
+                    "keys": sorted(one.keys()), "dailyBar": one.get("dailyBar"), "prevDailyBar": one.get("prevDailyBar")})
+    except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+        out.append({"shape": "snapshot", "status": "error", "error": str(e)[:200]})
+    try:
+        j = tget("/v2/options/contracts", {"underlying_symbols": und, "limit": 1000, "strike_price_gte": lo, "strike_price_lte": hi,
+                                           "expiration_date_gte": today.isoformat(),
+                                           "expiration_date_lte": (today + timedelta(days=45)).isoformat()})
+        cs = j.get("option_contracts") or []
+        with_oi = [c for c in cs if c.get("open_interest") not in (None, "")]
+        out.append({"shape": "contracts", "status": "ok", "n_page": len(cs), "with_open_interest": len(with_oi),
+                    "oi_dates": sorted({str(c.get("open_interest_date")) for c in with_oi})[:5], "next_page_token": bool(j.get("next_page_token")),
+                    "keys": sorted(cs[0].keys()) if cs else [], "example": ({k: cs[0].get(k) for k in ("symbol", "open_interest", "open_interest_date", "status", "tradable",
+                                                                                                    "expiration_date", "strike_price", "type")} if cs else None)})
+    except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+        out.append({"shape": "contracts", "status": "error", "error": str(e)[:200]})
+    if sym:
+        try:
+            j = get("/v1beta1/options/bars", {"symbols": sym, "timeframe": "1Day", "start": (today - timedelta(days=7)).isoformat(),
+                                              "limit": 5, "sort": "desc"})
+            b = (j.get("bars") or {}).get(sym) or []
+            out.append({"shape": "bars", "status": "ok", "symbol": sym, "n": len(b), "keys": sorted(b[0].keys()) if b else [],
+                        "newest": b[0] if b else None})
+        except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+            out.append({"shape": "bars", "status": "error", "error": str(e)[:200]})
+    return out
 
 
 def parse_occ(sym: str) -> Optional[Dict[str, Any]]:
@@ -254,6 +301,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps({"hist_option_bars": sym, "status": "ok", "earliest": b[0]["t"] if b else None, "n_first_page": len(b)}))
             except RuntimeError as e:
                 print(json.dumps({"hist_option_bars": sym, "status": "refused", "error": str(e)[:160]}))
+        for row in probe_shapes(get, make_getter(TRADING_URL), now.date()):   # option A: where do open interest and volume live?
+            print(json.dumps(row, default=str))
         return 0
     manifest_p = root / "MANIFEST.json"
     manifest = json.loads(manifest_p.read_text()) if manifest_p.exists() else {"underlyings": {}}
