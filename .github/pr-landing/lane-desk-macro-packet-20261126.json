@@ -2,6 +2,6 @@
   "tier": 1,
   "landing": "hold",
   "hold_reason": "operator_asked_to_hold",
-  "hold_text": "Manager 26a dispatch (DESK-MACRO-DAILY, high priority): the manager merges. Advice-only tooling: a packet builder, a stricter brief validator, the trading-desk SKILL section 7b, and a committed sample packet + brief under docs/. No order path, config, service or timer.",
-  "why": "The operator rejected the 11-26 macro brief (0 trades, 5 sources): 'it needs to be proposing trades'. This adds the wide input packet and makes the writer refuse an empty trade list unless the packet shows the price panel could not be read."
+  "hold_text": "Manager 26a dispatch (DESK-MACRO-DAILY v1): the manager merges. Advice-only shadow trades: packet builder (rostered panel, screen, tradability, in-run fetch), writer (any venue-tradable symbol with data, required management handoff, refuses empty trades unless prices could_not_look), outcomes handoff log, trading-desk 7b + live-trade-review Step 3, a sample under docs/. One READ-ONLY web-API change: src/web/api/routers/candles.py routes unprofiled equities' candles to Alpaca and adds GET /api/bot/tradable; deploying it restarts ict-web-api. No order path, config, strategy, timer or DB write.",
+  "why": "Operator 2026-11-26: the macro brief must take wide inputs, propose trades on any symbol we can trade if the data supports it, and hand each trade's management plan to the LTR sessions. Revert: git revert the merge."
 }
