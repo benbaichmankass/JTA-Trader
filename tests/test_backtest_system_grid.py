@@ -89,9 +89,43 @@ def test_open_stamped_htf_is_the_positive_control(monkeypatch):
 
 def test_the_signal_cache_key_carries_the_grid():
     a = bs._cache_key("trend_donchian", "x", None, None, {})
-    assert bs.GRID == "open-stamped-v2" and a.name.startswith("trend_donchian_")
+    assert bs.GRID == "open-stamped-v3-sidefilter" and a.name.startswith("trend_donchian_")
     import hashlib
     import json
     old = hashlib.sha1(json.dumps(["trend_donchian", "x", "None", "None", {}], sort_keys=True,
                                   default=str).encode()).hexdigest()[:12]
     assert old not in a.name, "a stream cached under the right/right grid must not be reused"
+
+
+# --- XRP-BACKTEST-HOLD-FIDELITY (2026-11-26): native-frame monitor() + live side_filter -------------------------------
+def test_monitor_gets_native_tf_frame_and_side_filter_is_applied(monkeypatch):
+    import types
+
+    seen = {"spacing": set(), "calls": 0}
+    mod = types.ModuleType("zz_stub_leg")
+
+    def order_package(cfg, candles_df=None):
+        c = float(candles_df["close"].iloc[-1])
+        # alternate direction by bar parity so both sides are offered; entry/sl/tp are plausible for either side
+        long_ = (len(candles_df) % 2 == 0)
+        return {"direction": "long" if long_ else "short", "entry": c,
+                "sl": c * (0.99 if long_ else 1.01), "tp": c * (1.5 if long_ else 0.5), "confidence": 1.0,
+                "meta": {"timeframe": "1h"}}
+
+    def monitor(cfg, candles_df, open_pkg):
+        seen["calls"] += 1
+        d = candles_df["timestamp"].diff().dropna().unique()
+        seen["spacing"].update(pd.Timedelta(x) for x in d)
+        return None
+
+    mod.order_package, mod.monitor = order_package, monitor
+    monkeypatch.setitem(sys.modules, "zz_stub_leg", mod)
+    monkeypatch.setitem(bs.ROSTER, "zz_stub", {"module": "zz_stub_leg", "tf": "1h"})
+    monkeypatch.setattr(bs, "_load_strategy_cfg", lambda name: {"side_filter": "short"})
+    out = bs.run_system_backtest(_five(hours=400), roster=["zz_stub"], start=None, end=None, initial_balance=10_000.0,
+                                 risk_pct=1.0, daily_loss_pct=50.0, signal_ttl_bars=1, overrides={}, refresh=True,
+                                 clock_tf="15m", attach_full=True, symbol="XRPUSDT")
+    assert seen["calls"] > 0
+    assert seen["spacing"] == {pd.Timedelta("1h")}, seen["spacing"]            # native frame, not the 15m clock
+    sides = {t.side for t in out["closed_trades"]}
+    assert sides == {"short"}, sides                                           # the live directional gate applies
