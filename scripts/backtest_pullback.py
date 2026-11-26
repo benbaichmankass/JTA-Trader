@@ -278,6 +278,12 @@ def _forming_bar_entries():
     return mod
 
 
+def _fill_bar_stopped(direction: str, high: float, low: float, stop: float) -> bool:
+    """PULLBACK-ENTRY-MODE-LIMIT: was the stop touched inside the bar a limit order filled on? Named helper so the
+    exit loop keeps its ONE intrabar SL-first site per direction (tests/test_backtest_trend_live_tp.py pins that)."""
+    return low <= stop if direction == "long" else high >= stop
+
+
 def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: int,
                  pullback_frac: float, atr_period: int, atr_stop_mult: float,
                  trail_mult: float, timeout_bars: int, cooldown_bars: int,
@@ -1033,7 +1039,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         if _limit_fill and _rest_hit is None:
             # Fill bar: the order filled inside it, so only the STOP is tested (SL-first, conservative); no TP.
             _fb_hi, _fb_lo = float(df["high"].iloc[_i0]), float(df["low"].iloc[_i0])
-            if (direction == "long" and _fb_lo <= trail) or (direction == "short" and _fb_hi >= trail):
+            if _fill_bar_stopped(direction, _fb_hi, _fb_lo, trail):
                 _rest_hit = (trail, "stop")
         for j in range(_i0 + 1, min(_i0 + timeout_bars + 1, n)) if _rest_hit is None else ():
             if _prec is not None:

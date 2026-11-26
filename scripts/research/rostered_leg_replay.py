@@ -93,6 +93,16 @@ RULE_ADX = dict(RULE_MS, id="RULE-HTF-ADX-CELL-REMOVAL-20261126")
 RULE_MS_EQ = dict(RULE_MS, id="RULE-REGIME-METASTATE-EQ-20261126")
 EQ_ANCHOR = {"symbols": ["SPY"], "timeframe": "1d"}
 NON_CRYPTO_SOURCE = "auto"
+# EVENT-DAY ENTRY CONDITIONING (--mode eventday, unit RQ-20261126-d3a5-01; DESK-MACRO-DAILY step 3a): do the rostered legs' trades ENTERED within
+# EV_WINDOW_H hours of a scheduled US release (fomc_decision / cpi / nfp, comms/research/event_span_history/us_releases.jsonl) differ in net R from
+# their other trades? ENTRY-conditioned on purpose: a5b3-01's spanning-vs-not report is confounded by hold length (a trade that spans a release is a
+# longer hold, and long holds are the trend winners). Two-sided, with an equivalence bound, so a FAIL is a measured "no material effect".
+EV_RELEASES = REPO / "comms/research/event_span_history/us_releases.jsonl"
+EV_CLASSES = ("fomc_decision", "cpi", "nfp")
+EV_WINDOW_H = 24.0
+EV_PLACEBO_SHIFT_DAYS = (5, 15)
+RULE_EV = {"id": "RULE-DESK-3A-EVENTDAY-20261126", "min_abs_diff_r": 0.10, "equivalence_r": 0.10, "max_placebo_share": 0.05,
+           "min_flagged": 200, "n_boot": 1000, "n_placebo": 200}
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
 
@@ -151,6 +161,86 @@ def grade_adxcell(tr: pd.DataFrame, bars: Dict[str, pd.DataFrame], tf: Dict[str,
     g["per_cell_reported"] = per_cell
     g["regime_unknown_trades"] = int((rk == "unknown").sum())
     return {"arms": {"remove_cells": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
+def load_releases(path: Path = EV_RELEASES, classes=EV_CLASSES) -> pd.DataFrame:
+    """The committed point-in-time US release history: one row per graded release (class, release_utc)."""
+    rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    df = pd.DataFrame([{"cls": r.get("class"), "t": r.get("release_utc")} for r in rows if r.get("class") in classes and r.get("release_utc")])
+    df["t"] = pd.to_datetime(df.t, utc=True, errors="coerce")
+    return df.dropna(subset=["t"]).sort_values("t").reset_index(drop=True)
+
+
+def event_flags(ts: pd.Series, rel: pd.Series, window_h: float = EV_WINDOW_H) -> np.ndarray:
+    """True where an entry time lies within +-window_h of any release time in ``rel``."""
+    r = np.sort(pd.DatetimeIndex(pd.to_datetime(rel.dropna(), utc=True)).as_unit("ns").asi8)
+    x = pd.DatetimeIndex(pd.to_datetime(ts, utc=True)).as_unit("ns").asi8
+    if len(r) == 0:
+        return np.zeros(len(x), dtype=bool)
+    w = int(window_h * 3600 * 1e9)
+    i = np.searchsorted(r, x)
+    lo = np.abs(x - r[np.clip(i - 1, 0, len(r) - 1)])
+    hi = np.abs(r[np.clip(i, 0, len(r) - 1)] - x)
+    return np.minimum(lo, hi) <= w
+
+
+def _diff_ci(net: np.ndarray, flag: np.ndarray, weeks: np.ndarray, rng: np.random.Generator, n_boot: int) -> Tuple[float, List[float]]:
+    """mean(flagged) - mean(unflagged), and its 95% CI from a week-cluster bootstrap."""
+    d = float(net[flag].mean() - net[~flag].mean())
+    uw = np.unique(weeks)
+    idx = {w: np.flatnonzero(weeks == w) for w in uw}
+    bs = []
+    for _ in range(n_boot):
+        take = np.concatenate([idx[w] for w in rng.choice(uw, size=len(uw), replace=True)])
+        f = flag[take]
+        if f.any() and (~f).any():
+            bs.append(net[take][f].mean() - net[take][~f].mean())
+    return d, [float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))] if bs else [float("nan"), float("nan")]
+
+
+def grade_eventday(tr: pd.DataFrame, rel: pd.DataFrame, rule: Dict[str, Any] = RULE_EV, seed: int = RR.SEED) -> Dict[str, Any]:
+    """Per class and pooled ANY: event-entry vs other trades (net R), week-cluster bootstrap CI, and a placebo that shifts every release of the class
+    by a random +-5..15 days (seeded per draw); placebo share = share of placebo |diff| >= the actual |diff|. Decided on the pooled ANY class."""
+    rng = np.random.default_rng(seed)
+    lo_cov, hi_cov = rel.t.min().floor("D"), rel.t.max().ceil("D")
+    t = tr[(tr.ts >= lo_cov) & (tr.ts <= hi_cov)].reset_index(drop=True)
+    net = t.net_r.to_numpy(dtype=float)
+    weeks = t.ts.dt.tz_convert(None).dt.to_period("W").astype(str).to_numpy()
+    out: Dict[str, Any] = {"covered_window": [str(lo_cov.date()), str(hi_cov.date())], "n_trades": int(len(t)),
+                           "excluded_outside_history": int(len(tr) - len(t)), "classes": {}}
+    for cls in EV_CLASSES + ("any",):
+        r = rel.t if cls == "any" else rel[rel.cls == cls].t
+        flag = event_flags(t.ts, r)
+        nf = int(flag.sum())
+        if nf < 2 or nf > len(t) - 2:
+            out["classes"][cls] = {"n_flagged": nf, "read_state": "could_not_compute"}
+            continue
+        d, ci = _diff_ci(net, flag, weeks, rng, rule["n_boot"])
+        pl = []
+        for _ in range(rule["n_placebo"]):
+            sh = pd.to_timedelta(rng.integers(EV_PLACEBO_SHIFT_DAYS[0], EV_PLACEBO_SHIFT_DAYS[1] + 1, size=len(r)) * rng.choice([-1, 1], size=len(r)), unit="D")
+            pf = event_flags(t.ts, pd.Series(r.to_numpy()) + sh)
+            if pf.any() and (~pf).any():
+                pl.append(abs(net[pf].mean() - net[~pf].mean()))
+        share = float(np.mean([p >= abs(d) for p in pl])) if pl else None
+        by_leg = {}
+        for leg, g in t.groupby("family"):
+            f = event_flags(g.ts, r)
+            if f.sum() >= 5 and (~f).sum() >= 5:
+                by_leg[leg] = {"n_flagged": int(f.sum()), "n_other": int((~f).sum()), "diff_r": round(float(g.net_r[f].mean() - g.net_r[~f].mean()), 4)}
+        out["classes"][cls] = {"n_flagged": nf, "n_other": int(len(t) - nf), "mean_flagged": round(float(net[flag].mean()), 4),
+                               "mean_other": round(float(net[~flag].mean()), 4), "diff_r": round(d, 4), "ci95": [round(ci[0], 4), round(ci[1], 4)],
+                               "placebo_share": share, "placebo_draws": len(pl), "by_leg_reported": by_leg, "read_state": "measured"}
+    a = out["classes"].get("any", {})
+    if a.get("read_state") != "measured" or a["n_flagged"] < rule["min_flagged"]:
+        verdict, why = "indeterminate", f"pooled ANY: n_flagged {a.get('n_flagged')} < {rule['min_flagged']} or not computable"
+    elif abs(a["diff_r"]) >= rule["min_abs_diff_r"] and (a["ci95"][0] > 0 or a["ci95"][1] < 0) and a["placebo_share"] is not None \
+            and a["placebo_share"] <= rule["max_placebo_share"]:
+        verdict, why = "pass", f"event-entry trades differ by {a['diff_r']:+.4f} R (CI {a['ci95']}, placebo share {a['placebo_share']})"
+    elif -rule["equivalence_r"] < a["ci95"][0] and a["ci95"][1] < rule["equivalence_r"]:
+        verdict, why = "fail", f"no material effect: CI {a['ci95']} inside +-{rule['equivalence_r']} R"
+    else:
+        verdict, why = "indeterminate", f"diff {a['diff_r']:+.4f} R, CI {a['ci95']}, placebo share {a['placebo_share']}: not separable, not ruled out"
+    out.update({"verdict": verdict, "why": why})
+    return out
 
 
 def rostered_legs(root: Path = REPO, universe: str = "crypto") -> Dict[str, Dict[str, Any]]:
@@ -527,10 +617,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--work", default="")
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
-    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter", "adxcell"], default="book")
+    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter", "eventday", "adxcell"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
-    ap.add_argument("--universe", choices=["crypto", "equities"], default="crypto",
+    ap.add_argument("--universe", choices=["crypto", "equities", "all"], default="crypto",
                     help="equities: the rostered non-crypto legs, Dukascopy candles, SPY as the market anchor (filter / metastate; RULE_FILTER_EQ / RULE_MS_EQ)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
@@ -542,11 +632,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     work = Path(a.work) if a.work else out / "work"
     global NON_CRYPTO_SOURCE
     eq = a.universe == "equities"
+    if a.universe == "all" and a.mode != "eventday":
+        ap.error("--universe all is defined for --mode eventday only")
+    if a.mode == "eventday" and a.population != "rostered":
+        ap.error("--mode eventday is defined for --population rostered only")
+    if a.universe == "all":
+        NON_CRYPTO_SOURCE = "dukascopy"
     if eq:
         if a.mode not in ("metastate", "filter") or a.population != "rostered":
             ap.error("--universe equities is defined for --mode metastate / filter on --population rostered only")
         NON_CRYPTO_SOURCE = "dukascopy"
-    cfgs = rostered_legs(universe=a.universe)
+    cfgs = ({**rostered_legs(universe="crypto"), **rostered_legs(universe="equities")} if a.universe == "all"
+            else rostered_legs(universe=a.universe))
     anchor_sym = "SPY" if eq else "BTCUSDT"
     btc_cfg = EQ_ANCHOR if eq else next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
     if a.population in ("fresh", "fresh2"):
@@ -586,6 +683,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         tfs = {leg: tf_seconds(cfgs[leg]["cfg"].get("timeframe")) for leg in meas}
         m = grade_adxcell(tr, bars, tfs, load_cells()) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_ADX
+    elif a.mode == "eventday":
+        m = grade_eventday(tr, load_releases()) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_EV
     elif a.mode in ("metastate", "filter"):
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
         btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == anchor_sym and str(cfgs[leg]["cfg"].get("timeframe")) == "1d"),
@@ -604,11 +704,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     legs_report = {k: {x: v[x] for x in v if x != "trades"} | {"book": cfgs[k]["book"], "harness": cfgs[k]["harness"]} for k, v in per.items()}
     fsyms = {"fresh": FRESH_SYMBOLS, "fresh2": FRESH_SYMBOLS_2}.get(a.population)
     what = (f"rostered crypto leg configs on the FRESH symbols {'/'.join(fsyms)} (leg@symbol)" if fsyms
-            else ("rostered NON-crypto legs (ETFs / micro futures; Dukascopy candles, proxies recorded per leg; anchor SPY daily)" if eq else "rostered crypto legs"))
+            else ("rostered NON-crypto legs (ETFs / micro futures; Dukascopy candles, proxies recorded per leg; anchor SPY daily)" if eq
+                  else ("ALL rostered legs (crypto via the evidence builder's feed + non-crypto via Dukascopy)" if a.universe == "all" else "rostered crypto legs")))
     pop = (f"{sum(1 for v in per.values() if v.get('state') == 'measured')} of {len(per)} {what} ({'/'.join(FAMILIES)} harnesses) "
            f"replayed with DECLARED params over {WINDOW[0]}..{WINDOW[1]} ({len(tr)} trades, harness net_r full cost stack); books = leg x direction; "
            f"test weeks {RR.TEST_START}..{WINDOW[1]}")
     why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']} share {g['random']['share_ge_arm']}" for k, g in (m.get("arms") or {}).items())
+    if not why and m.get("why"):
+        why = str(m["why"])
     summ = {"schema": "rostered_leg_replay/1", "unit": a.unit, "mode": a.mode, "population_kind": a.population, "universe": a.universe, "verdict": m["verdict"], "why": why, "rule": rule_used, "population": pop,
             "window": WINDOW, "legs": legs_report, "measurement": m, "git_sha": RR._git_sha(), "elapsed_s": round(time.time() - t0), "read_state": "measured"}
     (out / "summary.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
