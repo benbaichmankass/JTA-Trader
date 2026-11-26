@@ -1,0 +1,14 @@
+Fetching SPY 60 candles 2020-08-09 -> 2026-11-26 (source=dukascopy) …
+  dukascopy: SPY -> INSTRUMENT_ETF_CFD_US_SPY_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-25T20:00:00
+Wrote 11027 rows (2020-08-10 -> 2026-11-25) to /tmp/exit_lever_ablation_dj83bgny/spy_pullback_1h__data.csv
+Traceback (most recent call last):
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 1662, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 1262, in main
+    edges = fold_edges(csv, a.start, a.end)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/JTA-Trader/JTA-Trader/scripts/research/exit_lever_ablation.py", line 411, in fold_edges
+    raise ValueError(f"empty window: {lo} .. {hi}")
+ValueError: empty window: 2020-08-10 13:00:00+00:00 .. 2018-05-31 23:59:00+00:00
