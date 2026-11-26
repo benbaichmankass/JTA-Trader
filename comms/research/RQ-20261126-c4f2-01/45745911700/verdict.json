@@ -1,0 +1,41 @@
+{
+ "schema": "regime_veto_counterfactual/1",
+ "rule_id": "RULE-REGIME-LIVE-VETO-CF-20261126",
+ "verdict": "fail",
+ "read_state": "measured",
+ "population": "247 unique live signals (strategy, symbol, bar) of the strategies the live regime_hard_gate dropped, 2026-09-01T00:34:16.636722+00:00..2026-11-25T23:35:03.459843+00:00; 198 replayed on Binance Vision USD-M klines, market fill at the next bar open, emitted SL/TP, 48-bar horizon, net of the full cost stack",
+ "n_replayed": 198,
+ "axes": {
+  "ml_vol": {
+   "verdict": "indeterminate",
+   "label": "underpowered",
+   "n": 1,
+   "mean_r": 2.831966689798683,
+   "n_mixed_signals": 11
+  },
+  "trend": {
+   "verdict": "fail",
+   "label": "veto_cost_money",
+   "n": 29,
+   "mean_r": 0.6999,
+   "sum_r_avoided": -20.298,
+   "ci90": [
+    0.2235,
+    1.1675
+   ],
+   "control_mean_r": 0.1425,
+   "p_control_le": 0.9645,
+   "by_strategy": {
+    "fvg_range_15m": {
+     "n": 7,
+     "mean_r": -0.4995
+    },
+    "htf_pullback_trend_2h": {
+     "n": 22,
+     "mean_r": 1.0816
+    }
+   },
+   "n_mixed_signals": 147
+  }
+ }
+}
