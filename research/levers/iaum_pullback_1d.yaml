@@ -1042,6 +1042,27 @@ levers:
       best_delta_r_per_trade: -0.0731
       fold_stability: 0.5
       reading: every tested value is worse than the baseline
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-06
+        window: 2021-07-01..2026-11-25
+        n: 42
+        net_r: 24.0813
+        baseline_n: 40
+        baseline_net_r: 25.3683
+        delta_net_r: -1.287
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 4.2654
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0322
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
 manifest_notes:
   proxy_duplicate_2026_11_23: 'IAUM resolves to the GLD CFD (a REL_PROXY mapping in scripts/ops/dukascopy_instruments.py), so every ablation unit
     on iaum_pullback_1d that shares a command with its gld_pullback_1d twin reads GLD candles under an IAUM label and is NOT an independent read.

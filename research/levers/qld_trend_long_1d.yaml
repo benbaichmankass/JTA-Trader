@@ -342,3 +342,25 @@ levers:
       best_delta_r_per_trade: -0.0034
       fold_stability: 0.5
       reading: no response at the tested values
+  other:
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-12
+        window: 2019-08-16..2026-11-25
+        n: 42
+        net_r: 16.153
+        baseline_n: 42
+        baseline_net_r: 18.2522
+        delta_net_r: -2.0992
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 3.4745
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.05
+      fold_stability: 0.0
+      reading: every tested value is worse than the baseline

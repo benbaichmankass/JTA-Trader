@@ -485,8 +485,36 @@ levers:
         max_drawdown_r: 9.2659
         verdict: fail
         joint_change: false
+      - value: '3.125'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261126-165
+        window: 2024-01-16..2026-11-25
+        n: 99
+        net_r: 2.8275
+        baseline_n: 115
+        baseline_net_r: 3.4751
+        delta_net_r: -0.6476
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 13.7038
+        verdict: fail
+        joint_change: false
+      - value: '1.875'
+        baseline_value: '2.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261126-165
+        window: 2024-01-16..2026-11-25
+        n: 130
+        net_r: 0.6307
+        baseline_n: 115
+        baseline_net_r: 3.4751
+        delta_net_r: -2.8444
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 19.8356
+        verdict: fail
+        joint_change: false
       shape: peaked
-      points: 5
+      points: 7
       best_delta_r_per_trade: 0.1834
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
@@ -567,6 +595,41 @@ levers:
       best_delta_r_per_trade: 0.0324
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    tp_r:
+      tests:
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261126-165
+        window: 2024-01-16..2026-11-25
+        n: 115
+        net_r: 3.4751
+        baseline_n: 115
+        baseline_net_r: 3.4751
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 18.3619
+        verdict: fail
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261126-165
+        window: 2024-01-16..2026-11-25
+        n: 115
+        net_r: 3.4751
+        baseline_n: 115
+        baseline_net_r: 3.4751
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 18.3619
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
     stale_exit_bars:
       tests:
       - value: '12'

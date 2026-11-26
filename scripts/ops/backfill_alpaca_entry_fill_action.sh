@@ -11,8 +11,8 @@
 # restarts a service. Idempotent (corrected rows are labelled alpaca_order_status and skipped).
 #
 # Two invocations in one run for a self-documenting audit trail:
-#   1. dry-run (default) -> prints every row it would change (old vs venue entry, pnl delta), no write.
-#   2. --apply           -> commits the UPDATEs.
+#   1. dry-run (always) -> prints every row it would change (old vs venue entry, pnl delta), no write.
+#   2. --apply          -> commits the UPDATEs, ONLY when the issue body says `apply: true`.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,6 +48,18 @@ if [ "${dry_code}" -ne 0 ]; then
         "{\"phase\": \"dry-run\", \"exit_code\": ${dry_code}}" >/dev/null || true
     exit "${dry_code}"
 fi
+
+# apply is an explicit opt-in (issue body `apply: true`), the same gate as the sibling money-DB wrappers
+# (rebuild-pnl-from-bybit, backfill-monitor-closed-pnl; FIX-CA-14). Without it this run is the dry-run
+# above and nothing is written, so the row list can be checked before the write (manager 26a, 2026-11-26).
+case "${ACTION_APPLY:-}" in
+    true|True) ;;
+    *)
+        log "DRY-RUN only (no 'apply: true' in the issue body): nothing written."
+        record_audit "backfill-alpaca-entry-fill" "ok" "{\"db\": \"${DB_PATH}\", \"phase\": \"dry-run\"}" >/dev/null || true
+        exit 0
+        ;;
+esac
 
 echo
 echo "===== backfill_alpaca_entry_fill.py --apply (COMMIT) ====="
