@@ -57,6 +57,9 @@ def test_every_strategy_module_is_in_the_closure(live):
 #    state, "ml.trainers.*" -- ml/ is outside src/ and scripts/, so ANY ml/ .py
 #    change restarts the trader regardless (rule c).
 KNOWN_DYNAMIC_SITES = {
+    # Joined the closure 2026-11-26 (files loaded by path, desk_packet_wake): importlib.import_module(
+    # f"src.units.strategies.{u}") -- the same literal prefix as coordinator, already whole-package in the closure.
+    "scripts/ops/desk_near_signals.py",
     # Evaluator._resolve_predictor imports a trainer class by its stored
     # qualname — the same load runner.py's _resolve_callable makes. Reached
     # since the cost-net gate (ML-TRAINING-PRINCIPLES-GAPS) scores predictions
@@ -169,3 +172,42 @@ def test_gate_registry_is_not_in_the_trader_closure():
     committed = {ln.strip() for ln in (root / "config" / "trader_import_closure.txt").read_text().splitlines()
                  if ln.strip() and not ln.startswith("#")}
     assert "src/runtime/gate_registry.py" not in committed
+
+
+def test_walk_follows_files_loaded_by_path(tmp_path):
+    """DEPLOY-TRADER-SKIPPED-RUNTIME-CHANGE (2026-11-25): src/runtime/live_review_wake_post.py loads
+    scripts/ops/live_review_wake.py with spec_from_file_location(ROOT / "scripts" / "ops" / ...). No import
+    statement exists, so the walk missed it and a change to it SKIPPED the trader restart (and restart_pending
+    read false). A literal path chain that names a repo .py file is now followed, and so are that file's imports."""
+    cl = _tree(tmp_path, {
+        "src/__init__.py": "",
+        "src/main.py": (
+            "from pathlib import Path\n"
+            "ROOT = Path('.')\n"
+            "A = ROOT / 'scripts' / 'ops' / 'by_chain.py'\n"
+            "B = Path('scripts', 'ops', 'by_path_args.py')\n"
+            "C = ROOT / 'scripts' / 'ops' / 'not_a_repo_file.py'\n"
+            "D = 'scripts/ops/bare_string.py'\n"
+        ),
+        "scripts/ops/by_chain.py": "import src.helper\n",
+        "scripts/ops/by_path_args.py": "",
+        "scripts/ops/bare_string.py": "",
+        "scripts/ops/unrelated.py": "",
+        "src/helper.py": "",
+    })
+    for f in ("scripts/ops/by_chain.py", "scripts/ops/by_path_args.py", "src/helper.py"):
+        assert f in cl.files, f
+    # a bare string is not followed (it floods the closure), nor is a file nothing names
+    assert "scripts/ops/bare_string.py" not in cl.files
+    assert "scripts/ops/unrelated.py" not in cl.files
+    assert "scripts/ops/not_a_repo_file.py" not in cl.files
+    assert tic.decide(["scripts/ops/by_chain.py"], cl.files)[0] == tic.RESTART
+    assert tic.decide(["scripts/ops/unrelated.py"], cl.files)[0] == tic.SKIP
+
+
+def test_in_process_script_loads_are_in_the_closure(live):
+    """The scripts the trader loads in-process by path must be in the committed closure (the diag
+    restart_pending read shares this closure, so it flags them too)."""
+    for f in ("scripts/ops/live_review_wake.py", "scripts/ops/desk_wake_marker.py"):
+        assert f in live.files, f
+    assert tic.decide(["scripts/ops/live_review_wake.py"], live.files)[0] == tic.RESTART

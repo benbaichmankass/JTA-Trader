@@ -19,7 +19,8 @@ This module decides, for one deploy, whether the TRADER must restart:
 Only a ``src/**.py`` or ``scripts/**.py`` file outside the closure lets the
 trader stay up. Every other unit keeps the deploy's existing rule.
 
-THE CLOSURE is an AST walk from ``src/main.py``: every ``import`` /
+THE CLOSURE is an AST walk from ``src/main.py``: files loaded BY PATH (``spec_from_file_location(..,
+ROOT / "scripts" / "ops" / "x.py")``) via literal path chains, plus every ``import`` /
 ``from … import`` anywhere in a file (module level, inside functions, inside
 ``try`` and ``if TYPE_CHECKING``), relative imports, ``importlib.import_module``
 / ``__import__`` with a literal name, and the ``__init__.py`` of every package
@@ -313,6 +314,43 @@ def _imports_of(rel: str, tree: ast.AST) -> Tuple[List[Tuple[str, List[str]]], L
     return found, dynamic
 
 
+def _path_refs(tree: ast.AST) -> List[str]:
+    """Repo-relative ``.py`` paths a file names as literals, for files it loads BY PATH
+    (``spec_from_file_location(..., ROOT / "scripts" / "ops" / "x.py")``,
+    ``runpy.run_path("scripts/x.py")``) -- no ``import`` statement exists to follow.
+    Two shapes: a ``/``-joined chain of string literals (``ROOT / "a" / "b.py"``)
+    and ``Path("a", "b.py")``. A bare string is NOT followed (it floods the closure). Conservative: a
+    candidate that is not a repo file is dropped by the caller; one that is costs a
+    restart, never a skip (DEPLOY-TRADER-SKIPPED-RUNTIME-CHANGE, 2026-11-25)."""
+    out: List[str] = []
+
+    def chain(node) -> List[str]:
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            return chain(node.left) + chain(node.right)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        return []
+
+    seen_inner: Set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div) and id(node) not in seen_inner:
+            for sub in ast.walk(node):
+                if sub is not node and isinstance(sub, ast.BinOp):
+                    seen_inner.add(id(sub))
+            parts = chain(node)
+            if len(parts) >= 2 and parts[-1].endswith(".py"):
+                out.append("/".join(p.strip("/") for p in parts))
+        elif isinstance(node, ast.Call):
+            fn = node.func
+            name = fn.attr if isinstance(fn, ast.Attribute) else getattr(fn, "id", None)
+            if name == "Path" and len(node.args) >= 2 and all(
+                    isinstance(a, ast.Constant) and isinstance(a.value, str) for a in node.args):
+                joined = "/".join(a.value.strip("/") for a in node.args)  # type: ignore[attr-defined]
+                if joined.endswith(".py"):
+                    out.append(joined)
+    return out
+
+
 def compute_closure(src, entry: str = ENTRY_FILE) -> Closure:
     """Static import closure of ``entry`` over ``src`` (an Fs/GitTree source)."""
     out = Closure()
@@ -338,6 +376,10 @@ def compute_closure(src, entry: str = ENTRY_FILE) -> Closure:
         found, dynamic = _imports_of(rel, tree)
         out.dynamic_sites.extend(dynamic)
         near = rel.rsplit("/", 1)[0] if "/" in rel else None
+        # files loaded by path (no import statement): follow them too
+        for ref in _path_refs(tree):
+            if ref not in out.files and src.is_file(ref):
+                todo.append(ref)
         for dotted, names in found:
             if names == [PACKAGE_PREFIX]:
                 dotted = dotted.rstrip(".")

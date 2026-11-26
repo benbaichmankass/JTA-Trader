@@ -1,0 +1,117 @@
+# Hand-authored 2026-11-26 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV), Manager Session 2026-11-26a 18:18Z: "Do the TabICL
+# tooling fix and the 1-window probe first ... Then re-register as dbf8-04 if the probe says a full run fits on a T4. If it doesn't fit,
+# close TabICL-at-full-n as infeasible-on-T4 with the probe numbers, and name RunPod as the alternative backend." A FEASIBILITY probe:
+# it grades no edge. Rule registered before the run. Gates this adds or changes: none.
+id: RQ-20261126-1e75-04
+title: 'D3 TabICL FEASIBILITY PROBE on a Kaggle T4: does ONE full-n TabICLv2 window (the first of the 13 dbf8-03 refits) fit, and does the slowest
+  probed window x 13 fit the 290-min GPU budget and peak GPU memory fit 14,500 MB?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'T2 (docs/reference/trading-and-model-practice-principles.md): measure the cost of an experiment before committing the budget; a
+  1-window probe before a 13-window run.'
+question: On the Kaggle T4, with the dbf8-03 command unchanged except --max-windows 1, what are the first window's TabICL fit / predict seconds and peak
+  GPU memory at full n, and does the projection fit a full run?
+why_this_matters: 'RQ-20261126-dbf8-03 (run 45818155714) timed out at 19,803 s with NO per-window record (the deadline was checked only at a window
+  start and stdout was lost at the kill), so whether TabICL at full n can run on a T4 at all is unknown. PASS -> re-register the edge unit as dbf8-04
+  (same rule word for word). FAIL -> close TabICL-at-full-n as infeasible on a T4 with these numbers; the alternative backend is RunPod.'
+evidence_class:
+  holdout: none
+  claim: measurement
+power:
+  expected_n: 1
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'A cost measurement on one window, not a statistical test; n = 1 probed window by design.'
+  feasibility:
+    source: none
+    accrual_basis: Replays published Binance history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261126-1e75-04-TABICL-T4-FEASIBILITY
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: none (a feasibility measurement)
+  statistic: 'verdict.json measurement.probe: projected_full_gpu_s[tabicl] = the slowest probed window''s total_s x 13 (the full run''s window count;
+    later windows train on MORE rows, so this is a LOWER bound), peak_gpu_mb[tabicl] (torch.cuda.max_memory_allocated), oom.'
+  rule: 'PASS (fits) iff the probed window completed AND projected_full_gpu_s <= 17,400 s (290 min) AND peak_gpu_mb <= 14,500. FAIL (infeasible on a T4)
+    iff the window ran out of GPU memory, OR the projection or the peak exceeds its bound. INDETERMINATE iff the window failed for another reason or a
+    timing / memory read is missing; producer_failed is a route fault. Thresholds are not changed after a result.'
+  pass_action: re-register RQ-20261126-dbf8-03's edge rule word for word as dbf8-04 with these per-window numbers in routing.basis.
+  fail_action: close TabICL-at-full-n as infeasible on a Kaggle T4 (families.tabular_foundation_model history, with the probe numbers); name RunPod as
+    the alternative GPU backend; the family is NOT retired.
+  what_it_does_not_do: Grades no edge (the edge rule needs 10 paired windows). Changes no model or config.
+  min_n: 1 probed window
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.08
+  basis: as dbf8-03 (stand-in); the probe decides whether that unit can run at all.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
+  peak_memory_gb: 16.0
+  est_minutes: 60
+  why_runner: Kaggle GPU; the kernel has no internet, so the klines come from the published metis-market-bp2 market_raw (--cache-source published).
+  basis: 'ESTIMATE: table build ~5 min (dbf8-03 reached the arm loop) + one full-n TabICL window, unknown (what this measures). --gpu-arm-budget-min 150
+    and the new budget-aware skip keep the command inside the 180-min timeout; every GPU window prints a flushed WINDOW_TIMING line.'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,tabicl
+  - --cache
+  - /tmp/ml_entry_klines
+  - --cache-source
+  - published
+  - --gpu-arm-budget-min
+  - '150'
+  - --max-windows
+  - '1'
+  - --probe-budget-min
+  - '290'
+  - --probe-peak-mb
+  - '14500'
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - kaggle
+  - --rule-id
+  - RULE-RQ20261126-1e75-04-TABICL-T4-FEASIBILITY
+  - --registered-at
+  - '2026-11-26'
+  bundle_paths:
+  - comms/research/broad_paths/bp2-f4271084b120
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261126-1e75-04
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether the TabICL edge unit (dbf8-04) can run on a T4 at all; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261126-dbf8-03
+- RQ-20261118-dbf8-02
+population: The first non-empty 28-day window of RQ-20261118-dbf8-01's 13 monthly refits, full training rows.
