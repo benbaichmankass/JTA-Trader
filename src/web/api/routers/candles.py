@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
@@ -66,11 +67,55 @@ _CACHE_TTL_S = 10.0
 _CONNECTOR_CACHE: Dict[str, Any] = {}
 
 
+_CRYPTO_SUFFIXES = ("USDT", "USDC", "PERP")
+_EQUITY_RE = re.compile(r"^[A-Z]{1,5}(\.[A-Z])?$")
+_FUTURES_MONTH_RE = re.compile(r"^([A-Z]{2,})([FGHJKMNQUVXZ]\d{1,2})$")
+
+
+def _profiles() -> Dict[str, Any]:
+    try:
+        from src.core.profile_loader import load_instrument_profiles
+        return load_instrument_profiles() or {}
+    except Exception:  # noqa: BLE001  # allow-silent: no profiles -> every symbol is classified by its shape alone
+        return {}
+
+
+def classify(symbol: str, profiles: Optional[Dict[str, Any]] = None) -> Dict[str, Optional[str]]:
+    """Which venue answers for *symbol*: its instrument profile's exchange, else its shape.
+
+    DESK-MACRO-DAILY (operator 2026-11-26: the macro brief may "recommend trades on any symbols that we are able to
+    trade"): an equity/ETF with no instrument profile used to fall through to the process default (Bybit) and read
+    ``no_data``; it now routes to Alpaca. Crypto-suffixed symbols route to Bybit, a futures contract month to its
+    profiled root. Read-only: nothing here can place an order.
+    """
+    s = str(symbol or "").strip().upper()
+    profiles = _profiles() if profiles is None else profiles
+    prof = profiles.get(s)
+    if prof is None:
+        m = _FUTURES_MONTH_RE.match(s)
+        if m and m.group(1) in profiles:
+            prof = profiles[m.group(1)]
+    if prof is not None:
+        return {"exchange": getattr(prof, "exchange", None), "basis": "instrument_profile"}
+    if s.endswith(_CRYPTO_SUFFIXES):
+        return {"exchange": "bybit", "basis": "crypto_suffix"}
+    if _EQUITY_RE.match(s):
+        return {"exchange": "alpaca", "basis": "equity_shape_unprofiled"}
+    return {"exchange": None, "basis": "unrecognised"}
+
+
+def _routed_settings(symbol: str, settings: Dict[str, Any]) -> Dict[str, Any]:
+    c = classify(symbol)
+    if c["basis"] == "equity_shape_unprofiled":
+        return dict(settings, EXCHANGE="alpaca")
+    return settings
+
+
 def _connector(symbol: str, settings: Dict[str, Any]):
     client = _CONNECTOR_CACHE.get(symbol)
     if client is None:
         from src.runtime.market_data import connector_for_symbol
-        client = connector_for_symbol(symbol, settings)  # may raise (e.g. IB w/o ib_port)
+        client = connector_for_symbol(symbol, _routed_settings(symbol, settings))  # may raise (e.g. IB w/o ib_port)
         _CONNECTOR_CACHE[symbol] = client
     return client
 
@@ -213,3 +258,82 @@ async def get_candles(
         "count": len(candles),
         "error": None if candles else "no_data",
     }
+
+
+# ---- GET /api/bot/tradable (DESK-MACRO-DAILY): is a symbol tradable on the venue that would fill it? Read-only. ------
+_TRADABLE_CACHE: Dict[str, tuple[float, Dict[str, Any]]] = {}
+_TRADABLE_TTL_S = 6 * 3600.0
+_BYBIT_INSTRUMENTS = "https://api.bybit.com/v5/market/instruments-info"
+MAX_TRADABLE_SYMBOLS = 60
+
+
+def parse_bybit_instrument(symbol: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    rows = ((payload or {}).get("result") or {}).get("list") or []
+    row = next((r for r in rows if str(r.get("symbol")) == symbol), None)
+    if payload.get("retCode") not in (0, None):
+        return {"read_state": "could_not_look", "exchange": "bybit", "tradable": None, "reason": f"retCode {payload.get('retCode')}"}
+    if row is None:
+        return {"read_state": "measured", "exchange": "bybit", "tradable": False, "reason": "not listed (linear)"}
+    return {"read_state": "measured", "exchange": "bybit", "tradable": row.get("status") == "Trading", "status": row.get("status")}
+
+
+def parse_alpaca_asset(status_code: int, payload: Dict[str, Any]) -> Dict[str, Any]:
+    if status_code == 404:
+        return {"read_state": "measured", "exchange": "alpaca", "tradable": False, "reason": "asset not found"}
+    if status_code != 200:
+        return {"read_state": "could_not_look", "exchange": "alpaca", "tradable": None, "reason": f"HTTP {status_code}"}
+    return {"read_state": "measured", "exchange": "alpaca", "tradable": bool(payload.get("tradable")) and payload.get("status") == "active",
+            "shortable": payload.get("shortable"), "fractionable": payload.get("fractionable"), "asset_class": payload.get("class")}
+
+
+def _tradable_one(symbol: str) -> Dict[str, Any]:
+    import requests
+    c = classify(symbol)
+    ex = c["exchange"]
+    try:
+        if ex == "bybit":
+            r = requests.get(_BYBIT_INSTRUMENTS, params={"category": "linear", "symbol": symbol}, timeout=15)
+            out = parse_bybit_instrument(symbol, r.json())
+        elif ex == "alpaca":
+            base = os.environ.get("ALPACA_TRADING_READ_URL", "https://paper-api.alpaca.markets").rstrip("/")
+            r = requests.get(f"{base}/v2/assets/{symbol}", timeout=15, headers={
+                "APCA-API-KEY-ID": os.environ.get("ALPACA_API_KEY_ID", ""),
+                "APCA-API-SECRET-KEY": os.environ.get("ALPACA_API_SECRET_KEY", "")})
+            out = parse_alpaca_asset(r.status_code, r.json() if r.content else {})
+        elif ex in ("interactive_brokers", "ib"):
+            out = {"read_state": "measured", "exchange": "interactive_brokers", "tradable": True,
+                   "reason": "configured futures instrument profile (no contract lookup)"}
+        else:
+            out = {"read_state": "not_applicable", "exchange": ex, "tradable": None, "reason": f"no venue check for basis {c['basis']}"}
+    except Exception as exc:  # allow-silent: per-symbol could_not_look with the reason; never a False
+        logger.warning("tradable: %s check failed: %s", symbol, exc)
+        out = {"read_state": "could_not_look", "exchange": ex, "tradable": None, "reason": f"{type(exc).__name__}"}
+    out["basis"] = c["basis"]
+    return out
+
+
+def _tradable_many(symbols: List[str]) -> Dict[str, Dict[str, Any]]:
+    now, out = time.time(), {}
+    for s in symbols:
+        hit = _TRADABLE_CACHE.get(s)
+        if hit is not None and now - hit[0] < _TRADABLE_TTL_S:
+            out[s] = dict(hit[1], cached=True)
+            continue
+        res = _tradable_one(s)
+        if res["read_state"] == "measured":
+            _TRADABLE_CACHE[s] = (now, res)
+        out[s] = res
+    return out
+
+
+@router.get("/tradable")
+async def get_tradable(symbols: str = Query(..., max_length=2000)) -> Dict[str, Any]:
+    """Per symbol: the venue that would fill it and whether it is tradable there now.
+
+    Wire shape: ``{symbols: {SYM: {read_state, exchange, tradable, basis, ...}}, n, as_of}``. ``tradable`` is null
+    (never false) when the venue could not be read. Tier 1: read-only, no secrets in the response, cached 6 h.
+    """
+    syms = [x.strip().upper() for x in symbols.split(",") if x.strip()][:MAX_TRADABLE_SYMBOLS]
+    loop = asyncio.get_running_loop()
+    res = await loop.run_in_executor(None, _tradable_many, syms)
+    return {"symbols": res, "n": len(res), "as_of": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}

@@ -1,19 +1,22 @@
 {
  "schema": "desk_macro_brief/1",
- "brief_id": "DMB-20261126T1550Z",
- "judged_at": "2026-11-26T15:50:00Z",
- "info_cutoff_at": "2026-11-26T15:41:54Z",
+ "brief_id": "DMB-20261126T1610Z",
+ "judged_at": "2026-11-26T16:10:00Z",
+ "info_cutoff_at": "2026-11-26T15:59:47Z",
  "model": "opus-tier",
  "skill_sha": "sample",
- "packet_sha": "965084d192a1a2368849e2bc579f5efac03d55bc5d468ecb49089da354cf4210",
- "packet_path": "docs/research/desk-macro-samples/2026-11-26/packet-20261126T1541Z.json",
+ "packet_sha": "5e8f9984ca5eaac7f0d05c3ba5bb253cba7512f88b2b4d00220934dba1cf849b",
+ "packet_path": "docs/research/desk-macro-samples/2026-11-26/20261126T1559Z.json",
+ "fetch_paths": [
+  "docs/research/desk-macro-samples/2026-11-26/fetch-20261126T160030Z.json"
+ ],
  "sources": [
   {
    "source_id": "S1",
    "kind": "desk_packet",
-   "ref": "docs/research/desk-macro-samples/2026-11-26/packet-20261126T1541Z.json",
-   "retrieved_at": "2026-11-26T15:41:54Z",
-   "content_sha256": "965084d192a1a2368849e2bc579f5efac03d55bc5d468ecb49089da354cf4210",
+   "ref": "docs/research/desk-macro-samples/2026-11-26/20261126T1559Z.json",
+   "retrieved_at": "2026-11-26T15:59:47Z",
+   "content_sha256": "5e8f9984ca5eaac7f0d05c3ba5bb253cba7512f88b2b4d00220934dba1cf849b",
    "influence": "decisive",
    "summary": "the desk macro packet: closed daily bars + ATR14 for all 14 symbols, 14d calendar, COT (stale), valuation, crypto OI, outcomes"
   },
@@ -164,6 +167,67 @@
  ],
  "trades": [
   {
+   "management": {
+    "design": "Sell a +0.5 ATR bounce in the weakest major: 20d -24%, -1.75 ATR under SMA20, spot-ETH ETFs bleeding and stablecoin float shrinking (S2). TP sits just above the 1,536 20d low, so it needs a retest, not a new low.",
+    "expected_path": "Should fill on a holiday-thin bounce within 3 sessions and drift lower into the Dec 4 NFP; chop between 1,700 and 1,800 is fine.",
+    "watch_for": [
+     {
+      "signal": "Daily spot-ETH ETF flows: two straight days of net inflow is a regime change for this trade",
+      "source_ids": [
+       "S2"
+      ]
+     },
+     {
+      "signal": "Daily close above 1,820 (above the SMA20 band) means the bounce is becoming a trend",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 1820.0
+      }
+     },
+     {
+      "signal": "Stablecoin supply turning up week-on-week",
+      "source_ids": [
+       "S2"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z Nonfarm Payrolls",
+     "2026-12-09T19:00:00Z FOMC decision (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close below 1,640 before NFP: move the stop to entry",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 1640.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Two consecutive closes above 1,820",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 1820.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not trail inside 1 ATR (~110) before the Dec 4 NFP",
+     "Do not add on a flush below 1,600: the TP is above the low"
+    ],
+    "thesis_invalidated_by": "Daily close above 1,870 or two consecutive days of net spot-ETH-ETF inflows"
+   },
    "proposal": {
     "symbol": "ETHUSDT",
     "venue_class": "perp",
@@ -199,6 +263,60 @@
    ]
   },
   {
+   "management": {
+    "design": "Liquidity drain (US spot ETF outflows ~$5.1bn in 30d, stablecoin supply -5.6%, S2) plus a near-certain Dec hike; sell the bounce at +0.75 ATR, target 0.6 ATR above the 55,147 cycle low (S3).",
+    "expected_path": "Fill on a relief bounce in 1-3 sessions; the edge is the drift back toward the low over 5-8 sessions.",
+    "watch_for": [
+     {
+      "signal": "A daily close back above 64,000 (about -1 ATR from SMA20)",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 64000.0
+      }
+     },
+     {
+      "signal": "Glassnode supply-in-profit recovering above the FTX-cycle low (S3)",
+      "source_ids": [
+       "S3"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z Nonfarm Payrolls",
+     "2026-12-09T19:00:00Z FOMC decision (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close below 59,000 after fill: stop to breakeven",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 59000.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Close above 64,500",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 64500.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not hold through the FOMC press conference if the trade is not in profit by Dec 8"
+    ],
+    "thesis_invalidated_by": "Daily close above 65,850 or stablecoin supply turning up week-on-week"
+   },
    "proposal": {
     "symbol": "BTCUSDT",
     "venue_class": "perp",
@@ -235,6 +353,49 @@
    ]
   },
   {
+   "management": {
+    "design": "Hot core PCE (3.3% y/y, S4) + 4.3% GDP keep hikes coming into 2027 while AI-led tech is the market's weak spot (S9); short a holiday-week bounce to 645 for a retest of the 606 20d low.",
+    "expected_path": "Bounce to 645 within 3 sessions, then roll over into NFP; a gap through 655 before fill means skip it.",
+    "watch_for": [
+     {
+      "signal": "NFP Dec 4: a print under +50k pulls the Dec hike odds down and helps tech",
+      "source_ids": [
+       "S5"
+      ]
+     },
+     {
+      "signal": "Daily close above 655",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 655.0
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z Nonfarm Payrolls",
+     "2026-12-09T19:00:00Z FOMC decision (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [],
+    "exit_early_if": [
+     {
+      "signal": "Close above 660 before NFP",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 660.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not short into the Dec 1 ISM print without the fill: wait for the limit"
+    ],
+    "thesis_invalidated_by": "A close above 667 or a soft NFP (<+50k) that pulls the Dec hike odds below 80%"
+   },
    "proposal": {
     "symbol": "QQQ",
     "venue_class": "etf",
@@ -272,6 +433,61 @@
    ]
   },
   {
+   "management": {
+    "design": "The long end rallied on the hot print (10y 4.87%, -3.6bp, S6): a fully priced hike plus growth fear caps yields; buy a pullback to 82.0 for the late-October high area.",
+    "expected_path": "Fill on a 0.3 ATR dip within 3 sessions; work toward 84 over 5-10 sessions, faster on a weak ISM.",
+    "watch_for": [
+     {
+      "signal": "10-year yield back above 5.00% (S6 context)",
+      "source_ids": [
+       "S6"
+      ]
+     },
+     {
+      "signal": "Daily close below 81.3",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 81.3
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM Manufacturing",
+     "2026-12-04T13:30:00Z Nonfarm Payrolls",
+     "2026-12-09T19:00:00Z FOMC decision (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close above 83.3: stop to entry",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 83.3
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Close below 81.0",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 81.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not tighten inside 0.8 (1 ATR) before NFP"
+    ],
+    "thesis_invalidated_by": "10y back above 5.00% on a closing basis"
+   },
    "proposal": {
     "symbol": "TLT",
     "venue_class": "etf",
@@ -307,6 +523,49 @@
    ]
   },
   {
+   "management": {
+    "design": "Gold is the funding asset in the AI-stock deleveraging (S9) and pays nothing into rising real yields; sell a retrace to 335. Weakest prior: -3.2 ATR extended, and central-bank buying (321t in Q3, S7) is real support.",
+    "expected_path": "Needs a bounce first; if no fill within 3 sessions the trade expires and that is fine.",
+    "watch_for": [
+     {
+      "signal": "Daily close above the SMA20 (~354)",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 354.0
+      }
+     },
+     {
+      "signal": "Central-bank / official-sector buying headlines",
+      "source_ids": [
+       "S7"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z Nonfarm Payrolls",
+     "2026-12-09T19:00:00Z FOMC decision (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [],
+    "exit_early_if": [
+     {
+      "signal": "Close above 342",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 342.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not chase below 320: the move is already -3 ATR"
+    ],
+    "thesis_invalidated_by": "A close above 345 or a close back above the SMA20"
+   },
    "proposal": {
     "symbol": "GLD",
     "venue_class": "etf",
@@ -340,6 +599,93 @@
     "S7",
     "S8",
     "S9"
+   ]
+  },
+  {
+   "management": {
+    "design": "The US proposed 20% tariffs on China with measures on 13 partners (S8); FXI is -3.6 ATR under SMA20 with a 5d -3.4%. Sell a +1 ATR bounce to 31.8 for a break of the 30.455 20d low.",
+    "expected_path": "Should fill within 2-3 sessions on any tariff-relief headline; works over 5-8 sessions as the tariff path firms.",
+    "watch_for": [
+     {
+      "signal": "Any Beijing retaliation or concession headline (direction matters: concession = exit)",
+      "source_ids": [
+       "S8"
+      ]
+     },
+     {
+      "signal": "Daily close above 32.3",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 32.3
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "Tariff decision date: unknown (search before trading)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close below 30.8: stop to entry",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 30.8
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "A US-China talks headline with a date, or a close above 32.3",
+      "source_ids": [
+       "S8"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 32.3
+      }
+     }
+    ],
+    "do_not": [
+     "Do not hold a full stop through an announced US-China meeting"
+    ],
+    "thesis_invalidated_by": "Close above 32.6 or the tariff proposal withdrawn"
+   },
+   "proposal": {
+    "symbol": "FXI",
+    "venue_class": "etf",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 8,
+    "entry": {
+     "type": "limit",
+     "level": 31.8,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 32.6,
+     "basis": "1.6 ATR above entry, above the 5-day range"
+    },
+    "tp": {
+     "level": 30.3,
+     "basis": "just under the 30.455 20d low",
+     "p_hit": 0.35
+    },
+    "expected_r_net": 0.0,
+    "thesis": "Tariff escalation on China (S8) with FXI already breaking down; sell the relief bounce.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.35,
+   "catalyst": "us_china_tariff_proposal_2026-11",
+   "invalidation": "close above 32.6 or the tariff proposal withdrawn",
+   "source_ids": [
+    "S1",
+    "S8"
    ]
   }
  ],

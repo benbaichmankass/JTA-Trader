@@ -1,0 +1,64 @@
+{
+ "schema": "desk_macro_fetch/1",
+ "fetch_id": "DMF-20261126T160030Z",
+ "retrieved_at": "2026-11-26T16:00:30Z",
+ "packet_id": "DMP-20261126T1559Z",
+ "packet_sha": "5e8f9984ca5eaac7f0d05c3ba5bb253cba7512f88b2b4d00220934dba1cf849b",
+ "prices": {
+  "read_state": "partial",
+  "source": "https://ict-bot.duckdns.org/api/bot/candles?interval=1d",
+  "n_measured": 1,
+  "n_symbols": 2,
+  "symbols": {
+   "HYPEUSDT": {
+    "read_state": "measured",
+    "last_bar": "2026-11-25T00:00:00Z",
+    "last_close": 61.695,
+    "n_closed_bars": 119,
+    "atr14": 5.550677,
+    "atr14_pct": 8.997,
+    "ret_1d_pct": 2.9709,
+    "ret_5d_pct": 1.1062,
+    "ret_20d_pct": -19.4656,
+    "realised_vol_20d_ann_pct": 66.28,
+    "high_20d": 79.626,
+    "low_20d": 55.8,
+    "range_last_atr": 1.096,
+    "dist_sma20_atr": -1.238,
+    "dist_sma50_atr": -2.702,
+    "levels_1atr": {
+     "long": {
+      "stop": 56.144323,
+      "tp_2r": 72.796355
+     },
+     "short": {
+      "stop": 67.245677,
+      "tp_2r": 50.593645
+     }
+    }
+   },
+   "NVDA": {
+    "read_state": "could_not_look",
+    "reason": "only 0 closed daily bars (need >= 21)",
+    "retried": true
+   }
+  }
+ },
+ "tradability": {
+  "read_state": "partial",
+  "venue_route": "could_not_look: HTTPError: 404 Client Error: Not Found for url: https://ict-bot.duckdns.org/api/bot/tradable?symbols=HYPEUSDT%2CNVDA",
+  "roster": "measured",
+  "source": "https://ict-bot.duckdns.org/api/bot/tradable",
+  "symbols": {
+   "HYPEUSDT": {
+    "rostered_on": [],
+    "venue": null
+   },
+   "NVDA": {
+    "rostered_on": [],
+    "venue": null
+   }
+  }
+ },
+ "fetch_sha": "ee3576d36edbc0b3cdb55e22f3170edeb8fa284d4a1c50d46a6de7229f078795"
+}

@@ -12,8 +12,10 @@ def test_desk_macro_packet_self_test():
 
 
 def test_sha_ok_detects_an_edit():
+    import hashlib
+    import json
+
     from scripts.ops import desk_macro_packet as P
-    import hashlib, json
     pkt = {"schema": P.SCHEMA, "built_at": "2026-11-26T13:00:00Z", "parts": {"prices": {"read_state": "measured"}}}
     pkt["packet_sha"] = hashlib.sha256(json.dumps(pkt, sort_keys=True, default=str).encode()).hexdigest()
     assert P.sha_ok(pkt) and not P.prices_could_not_look(pkt)
