@@ -1,0 +1,2662 @@
+{
+ "schema_version": 1,
+ "research_unit": "RQ-20261125-cf48-04",
+ "read_state": "measured",
+ "verdict": "pass",
+ "note": "exit_now judge: head +0.0524 R/trade >= 0.05 and > control p95 -0.0365",
+ "n": 9590,
+ "population": "BACKTEST-SOURCE ROWS ONLY (rebuilt in-run from Binance USD-M perp 4h candles (metis-research-candles, else data.binance.vision); no journal trades) -- OOS harness trades of ['trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h', 'trend_donchian_eth_4h'] (4h), 5-fold sequential walk-forward on POOLED entry times, one head per target retrained per fold on pooled rows.jsonl (n 335051) bar_t <= fold start - 7.0 d; paired per-trade replayed R vs the holding_pays champion",
+ "decision_rule": {
+  "id": "RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED",
+  "registered_at": "2026-11-25",
+  "registered_before_run": true
+ },
+ "measurement": {
+  "judge": {
+   "verdict": "fail",
+   "chosen": null,
+   "why": "every arm's deflated CI upper bound < +0.01 R/trade",
+   "arms": {
+    "holding_pays_neg25": {
+     "n": 9590,
+     "mean": 0.0085,
+     "se": 0.00635,
+     "ci": [
+      -0.00396,
+      0.02096
+     ],
+     "z": 1.96
+    }
+   }
+  },
+  "arm_dr_vs_hold_context": {
+   "holding_pays": {
+    "n": 9590,
+    "mean": 0.05239,
+    "se": 0.01058,
+    "ci": [
+     0.03165,
+     0.07312
+    ],
+    "z": 1.96
+   },
+   "holding_pays_neg25": {
+    "n": 9590,
+    "mean": 0.06089,
+    "se": 0.00905,
+    "ci": [
+     0.04315,
+     0.07863
+    ],
+    "z": 1.96
+   }
+  },
+  "fired": {
+   "holding_pays": 6140,
+   "holding_pays_neg25": 3047
+  },
+  "target_coverage": {
+   "holding_pays_neg25": 1.0
+  },
+  "arm_features": {
+   "holding_pays": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long"
+   ],
+   "holding_pays_neg25": [
+    "age_bars",
+    "open_r",
+    "mfe_r",
+    "mae_r",
+    "giveback_r",
+    "chop_frac_so_far",
+    "stagnation_run",
+    "dist_to_stop_r",
+    "vol_ratio_vs_entry",
+    "atr_ratio_vs_entry",
+    "donchian_mid_dist_atr",
+    "hour_of_day",
+    "dayofweek",
+    "is_long"
+   ]
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+   "ADAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BCHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ETCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ETHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LINKUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LTCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "TRXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "XLMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "XRPUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ATOMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BATUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BNBUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DASHUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "IOSTUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "IOTAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "NEOUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ONTUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "QTUMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "VETUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "XMRUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "XTZUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ZECUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "THETAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ALGOUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "COMPUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "KNCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ZILUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ZRXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BANDUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DOGEUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "KAVAUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "OMGUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "RLCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DEFIUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "DOTUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "MKRUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SNXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "WAVESUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "YFIUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "AVAXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BALUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "BLZUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "CRVUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "EGLDUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ENJUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "FLMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "FTMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "ICXUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "RUNEUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SOLUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "STORJUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "SUSHIUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "TRBUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "UNIUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "AAVEUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "FILUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "KSMUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "LRCUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   },
+   "NEARUSDT": {
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0
+   }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+   "ADAUSDT": 5700,
+   "BCHUSDT": 6056,
+   "BTCUSDT": 6564,
+   "ETCUSDT": 5796,
+   "ETHUSDT": 6646,
+   "LINKUSDT": 6382,
+   "LTCUSDT": 5770,
+   "TRXUSDT": 5032,
+   "XLMUSDT": 5893,
+   "XRPUSDT": 4327,
+   "ATOMUSDT": 5442,
+   "BATUSDT": 5275,
+   "BNBUSDT": 5033,
+   "DASHUSDT": 5979,
+   "IOSTUSDT": 5932,
+   "IOTAUSDT": 6551,
+   "NEOUSDT": 6538,
+   "ONTUSDT": 6097,
+   "QTUMUSDT": 5891,
+   "VETUSDT": 6075,
+   "XMRUSDT": 4289,
+   "XTZUSDT": 5479,
+   "ZECUSDT": 5445,
+   "THETAUSDT": 6297,
+   "ALGOUSDT": 6379,
+   "COMPUSDT": 5670,
+   "KNCUSDT": 5344,
+   "ZILUSDT": 5720,
+   "ZRXUSDT": 5503,
+   "BANDUSDT": 6139,
+   "DOGEUSDT": 4852,
+   "KAVAUSDT": 5683,
+   "OMGUSDT": 4733,
+   "RLCUSDT": 5087,
+   "DEFIUSDT": 5264,
+   "DOTUSDT": 6081,
+   "MKRUSDT": 3847,
+   "SNXUSDT": 6484,
+   "WAVESUSDT": 3481,
+   "YFIUSDT": 4850,
+   "AVAXUSDT": 6268,
+   "BALUSDT": 4306,
+   "BLZUSDT": 4107,
+   "CRVUSDT": 5788,
+   "EGLDUSDT": 5809,
+   "ENJUSDT": 5886,
+   "FLMUSDT": 5066,
+   "FTMUSDT": 4385,
+   "ICXUSDT": 5329,
+   "RUNEUSDT": 6838,
+   "SOLUSDT": 6279,
+   "STORJUSDT": 5058,
+   "SUSHIUSDT": 6901,
+   "TRBUSDT": 4803,
+   "UNIUSDT": 6337,
+   "AAVEUSDT": 5916,
+   "FILUSDT": 5274,
+   "KSMUSDT": 6212,
+   "LRCUSDT": 4659,
+   "NEARUSDT": 6224
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 335051,
+  "z": 1.96,
+  "pass_dr": 0.05,
+  "legs": [
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ADAUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ADAUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 223
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BCHUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BCHUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 214
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BTCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BTCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 203
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ETCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ETCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 197
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ETHUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ETHUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 204
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LINKUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/LINKUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 193
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LTCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/LTCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 211
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "TRXUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/TRXUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 254
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XLMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/XLMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 213
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XRPUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/XRPUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 243
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ATOMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ATOMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 213
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BATUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BATUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 183
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BNBUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BNBUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 230
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DASHUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/DASHUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 197
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "IOSTUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/IOSTUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 209
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "IOTAUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/IOTAUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 208
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "NEOUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/NEOUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 204
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ONTUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ONTUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 208
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "QTUMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/QTUMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 210
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "VETUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/VETUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 204
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XMRUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/XMRUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 208
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XTZUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/XTZUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 208
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZECUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ZECUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14178
+    },
+    "read_state": "pooled",
+    "n_total_trades": 205
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "THETAUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/THETAUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14208
+    },
+    "read_state": "pooled",
+    "n_total_trades": 196
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ALGOUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ALGOUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14116
+    },
+    "read_state": "pooled",
+    "n_total_trades": 199
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "COMPUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/COMPUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14032
+    },
+    "read_state": "pooled",
+    "n_total_trades": 195
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KNCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/KNCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14050
+    },
+    "read_state": "pooled",
+    "n_total_trades": 210
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZILUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ZILUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14074
+    },
+    "read_state": "pooled",
+    "n_total_trades": 198
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZRXUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ZRXUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 14068
+    },
+    "read_state": "pooled",
+    "n_total_trades": 215
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BANDUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BANDUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13859
+    },
+    "read_state": "pooled",
+    "n_total_trades": 175
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DOGEUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/DOGEUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13972
+    },
+    "read_state": "pooled",
+    "n_total_trades": 215
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KAVAUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/KAVAUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13865
+    },
+    "read_state": "pooled",
+    "n_total_trades": 190
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "OMGUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/OMGUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13990
+    },
+    "read_state": "pooled",
+    "n_total_trades": 135
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "RLCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/RLCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13817
+    },
+    "read_state": "pooled",
+    "n_total_trades": 194
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DEFIUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/DEFIUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13679
+    },
+    "read_state": "pooled",
+    "n_total_trades": 155
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DOTUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/DOTUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13715
+    },
+    "read_state": "pooled",
+    "n_total_trades": 179
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "MKRUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/MKRUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13739
+    },
+    "read_state": "pooled",
+    "n_total_trades": 162
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SNXUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/SNXUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13763
+    },
+    "read_state": "pooled",
+    "n_total_trades": 189
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "WAVESUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/WAVESUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13745
+    },
+    "read_state": "pooled",
+    "n_total_trades": 122
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "YFIUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/YFIUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13631
+    },
+    "read_state": "pooled",
+    "n_total_trades": 187
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "AVAXUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/AVAXUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13523
+    },
+    "read_state": "pooled",
+    "n_total_trades": 199
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BALUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BALUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13655
+    },
+    "read_state": "pooled",
+    "n_total_trades": 140
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BLZUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/BLZUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13559
+    },
+    "read_state": "pooled",
+    "n_total_trades": 121
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "CRVUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/CRVUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13655
+    },
+    "read_state": "pooled",
+    "n_total_trades": 185
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "EGLDUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/EGLDUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13577
+    },
+    "read_state": "pooled",
+    "n_total_trades": 190
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ENJUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ENJUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13487
+    },
+    "read_state": "pooled",
+    "n_total_trades": 194
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FLMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/FLMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13457
+    },
+    "read_state": "pooled",
+    "n_total_trades": 147
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FTMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/FTMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13487
+    },
+    "read_state": "pooled",
+    "n_total_trades": 134
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ICXUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/ICXUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13571
+    },
+    "read_state": "pooled",
+    "n_total_trades": 188
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "RUNEUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/RUNEUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13637
+    },
+    "read_state": "pooled",
+    "n_total_trades": 202
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SOLUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/SOLUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13547
+    },
+    "read_state": "pooled",
+    "n_total_trades": 185
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "STORJUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/STORJUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13535
+    },
+    "read_state": "pooled",
+    "n_total_trades": 187
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SUSHIUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/SUSHIUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13607
+    },
+    "read_state": "pooled",
+    "n_total_trades": 174
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "TRBUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/TRBUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13613
+    },
+    "read_state": "pooled",
+    "n_total_trades": 193
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "UNIUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/UNIUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13553
+    },
+    "read_state": "pooled",
+    "n_total_trades": 194
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "AAVEUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/AAVEUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13385
+    },
+    "read_state": "pooled",
+    "n_total_trades": 180
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FILUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/FILUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13355
+    },
+    "read_state": "pooled",
+    "n_total_trades": 207
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KSMUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/KSMUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13367
+    },
+    "read_state": "pooled",
+    "n_total_trades": 168
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LRCUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/LRCUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13337
+    },
+    "read_state": "pooled",
+    "n_total_trades": 176
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "NEARUSDT",
+    "candle_source": {
+     "path": "/tmp/exithead_kaggle_v0dljq2f/candles/NEARUSDT_4h.csv",
+     "resampled_to": null,
+     "bars": 13360
+    },
+    "read_state": "pooled",
+    "n_total_trades": 189
+   },
+   {
+    "leg": "POOLED",
+    "symbol": "*",
+    "read_state": "measured",
+    "n_total_trades": 11511,
+    "block_n": 1918,
+    "folds": [
+     {
+      "fold_index": 1,
+      "n_test_trades": 1918,
+      "train_rows_n": 46201,
+      "test_symbols": 60,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 1249,
+       "holding_pays_neg25": 558
+      }
+     },
+     {
+      "fold_index": 2,
+      "n_test_trades": 1918,
+      "train_rows_n": 103641,
+      "test_symbols": 60,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 1149,
+       "holding_pays_neg25": 521
+      }
+     },
+     {
+      "fold_index": 3,
+      "n_test_trades": 1918,
+      "train_rows_n": 168136,
+      "test_symbols": 60,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 1249,
+       "holding_pays_neg25": 674
+      }
+     },
+     {
+      "fold_index": 4,
+      "n_test_trades": 1918,
+      "train_rows_n": 219488,
+      "test_symbols": 59,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 1182,
+       "holding_pays_neg25": 619
+      }
+     },
+     {
+      "fold_index": 5,
+      "n_test_trades": 1918,
+      "train_rows_n": 278546,
+      "test_symbols": 53,
+      "read_state": "measured",
+      "arms_trained": [
+       "holding_pays",
+       "holding_pays_neg25"
+      ],
+      "n_fired": {
+       "holding_pays": 1311,
+       "holding_pays_neg25": 675
+      }
+     }
+    ],
+    "random_control": {
+     "n_oos": 9590,
+     "draws": 500,
+     "head_mean_dr_per_trade": 0.05239,
+     "control_p50": -0.05653,
+     "control_p95": -0.03653,
+     "head_beats_share": 1.0,
+     "design": "causal: per fold, matched count of trades closed at an age drawn from the head's fold-level close ages; a trade shorter than the age keeps its declared exit"
+    }
+   }
+  ],
+  "rows_source": "harness_only (backtest-source rows; NO journal trades: nothing OURS is read or published)",
+  "published_shard_spans": {
+   "ADAUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BCHUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BTCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ETCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ETHUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "LINKUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "LTCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "TRXUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "XLMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "XRPUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ATOMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BATUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BNBUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "DASHUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "IOSTUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "IOTAUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "NEOUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ONTUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "QTUMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "VETUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "XMRUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "XTZUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ZECUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14178,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "THETAUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14208,
+    "first_ts": "2020-06-01T00:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ALGOUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14116,
+    "first_ts": "2020-06-16T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "COMPUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14032,
+    "first_ts": "2020-06-30T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "KNCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14050,
+    "first_ts": "2020-06-22T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ZILUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14074,
+    "first_ts": "2020-06-18T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ZRXUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 14068,
+    "first_ts": "2020-06-24T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BANDUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13859,
+    "first_ts": "2020-07-29T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "DOGEUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13972,
+    "first_ts": "2020-07-10T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "KAVAUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13865,
+    "first_ts": "2020-07-28T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "OMGUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13990,
+    "first_ts": "2020-07-02T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "RLCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13817,
+    "first_ts": "2020-07-31T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "DEFIUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13679,
+    "first_ts": "2020-08-28T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "DOTUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13715,
+    "first_ts": "2020-08-22T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "MKRUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13739,
+    "first_ts": "2020-08-13T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "SNXUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13763,
+    "first_ts": "2020-08-14T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "WAVESUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13745,
+    "first_ts": "2020-08-12T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "YFIUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13631,
+    "first_ts": "2020-08-31T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "AVAXUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13523,
+    "first_ts": "2020-09-23T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BALUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13655,
+    "first_ts": "2020-09-01T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "BLZUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13559,
+    "first_ts": "2020-09-17T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "CRVUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13655,
+    "first_ts": "2020-09-01T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "EGLDUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13577,
+    "first_ts": "2020-09-14T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ENJUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13487,
+    "first_ts": "2020-09-29T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "FLMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13457,
+    "first_ts": "2020-09-29T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "FTMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13487,
+    "first_ts": "2020-09-24T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "ICXUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13571,
+    "first_ts": "2020-09-15T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "RUNEUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13637,
+    "first_ts": "2020-09-04T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "SOLUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13547,
+    "first_ts": "2020-09-14T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "STORJUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13535,
+    "first_ts": "2020-09-16T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "SUSHIUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13607,
+    "first_ts": "2020-09-04T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "TRBUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13613,
+    "first_ts": "2020-09-03T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "UNIUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13553,
+    "first_ts": "2020-09-18T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "AAVEUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13385,
+    "first_ts": "2020-10-16T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "FILUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13355,
+    "first_ts": "2020-10-16T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "KSMUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13367,
+    "first_ts": "2020-10-14T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "LRCUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13337,
+    "first_ts": "2020-10-19T04:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   },
+   "NEARUSDT": {
+    "source": "candle_dataset (metis-research-candles) else binance_vision",
+    "read_state": "measured",
+    "bars": 13360,
+    "first_ts": "2020-10-15T08:00:00Z",
+    "last_ts": "2026-11-24T20:00:00Z",
+    "has_volume": true,
+    "served_by": "binance_vision",
+    "dataset_miss": "feed not in the mounted dataset"
+   }
+  },
+  "harness_legs": [
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ADAUSDT",
+    "read_state": "measured",
+    "n_trades": 223,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BCHUSDT",
+    "read_state": "measured",
+    "n_trades": 214,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BTCUSDT",
+    "read_state": "measured",
+    "n_trades": 203,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ETCUSDT",
+    "read_state": "measured",
+    "n_trades": 197,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ETHUSDT",
+    "read_state": "measured",
+    "n_trades": 204,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LINKUSDT",
+    "read_state": "measured",
+    "n_trades": 193,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LTCUSDT",
+    "read_state": "measured",
+    "n_trades": 211,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "TRXUSDT",
+    "read_state": "measured",
+    "n_trades": 254,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XLMUSDT",
+    "read_state": "measured",
+    "n_trades": 213,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XRPUSDT",
+    "read_state": "measured",
+    "n_trades": 243,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ATOMUSDT",
+    "read_state": "measured",
+    "n_trades": 213,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BATUSDT",
+    "read_state": "measured",
+    "n_trades": 183,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BNBUSDT",
+    "read_state": "measured",
+    "n_trades": 230,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DASHUSDT",
+    "read_state": "measured",
+    "n_trades": 197,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "IOSTUSDT",
+    "read_state": "measured",
+    "n_trades": 209,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "IOTAUSDT",
+    "read_state": "measured",
+    "n_trades": 208,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "NEOUSDT",
+    "read_state": "measured",
+    "n_trades": 204,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ONTUSDT",
+    "read_state": "measured",
+    "n_trades": 208,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "QTUMUSDT",
+    "read_state": "measured",
+    "n_trades": 210,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "VETUSDT",
+    "read_state": "measured",
+    "n_trades": 204,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XMRUSDT",
+    "read_state": "measured",
+    "n_trades": 208,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "XTZUSDT",
+    "read_state": "measured",
+    "n_trades": 208,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZECUSDT",
+    "read_state": "measured",
+    "n_trades": 205,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "THETAUSDT",
+    "read_state": "measured",
+    "n_trades": 196,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ALGOUSDT",
+    "read_state": "measured",
+    "n_trades": 199,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "COMPUSDT",
+    "read_state": "measured",
+    "n_trades": 195,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KNCUSDT",
+    "read_state": "measured",
+    "n_trades": 210,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZILUSDT",
+    "read_state": "measured",
+    "n_trades": 198,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ZRXUSDT",
+    "read_state": "measured",
+    "n_trades": 215,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BANDUSDT",
+    "read_state": "measured",
+    "n_trades": 175,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DOGEUSDT",
+    "read_state": "measured",
+    "n_trades": 215,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KAVAUSDT",
+    "read_state": "measured",
+    "n_trades": 190,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "OMGUSDT",
+    "read_state": "measured",
+    "n_trades": 135,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "RLCUSDT",
+    "read_state": "measured",
+    "n_trades": 194,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DEFIUSDT",
+    "read_state": "measured",
+    "n_trades": 155,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "DOTUSDT",
+    "read_state": "measured",
+    "n_trades": 179,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "MKRUSDT",
+    "read_state": "measured",
+    "n_trades": 162,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SNXUSDT",
+    "read_state": "measured",
+    "n_trades": 189,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "WAVESUSDT",
+    "read_state": "measured",
+    "n_trades": 122,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "YFIUSDT",
+    "read_state": "measured",
+    "n_trades": 187,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "AVAXUSDT",
+    "read_state": "measured",
+    "n_trades": 199,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BALUSDT",
+    "read_state": "measured",
+    "n_trades": 140,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "BLZUSDT",
+    "read_state": "measured",
+    "n_trades": 121,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "CRVUSDT",
+    "read_state": "measured",
+    "n_trades": 185,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "EGLDUSDT",
+    "read_state": "measured",
+    "n_trades": 190,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ENJUSDT",
+    "read_state": "measured",
+    "n_trades": 194,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FLMUSDT",
+    "read_state": "measured",
+    "n_trades": 147,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FTMUSDT",
+    "read_state": "measured",
+    "n_trades": 134,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "ICXUSDT",
+    "read_state": "measured",
+    "n_trades": 188,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "RUNEUSDT",
+    "read_state": "measured",
+    "n_trades": 202,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SOLUSDT",
+    "read_state": "measured",
+    "n_trades": 185,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "STORJUSDT",
+    "read_state": "measured",
+    "n_trades": 187,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "SUSHIUSDT",
+    "read_state": "measured",
+    "n_trades": 174,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "TRBUSDT",
+    "read_state": "measured",
+    "n_trades": 193,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "UNIUSDT",
+    "read_state": "measured",
+    "n_trades": 194,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "AAVEUSDT",
+    "read_state": "measured",
+    "n_trades": 180,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "FILUSDT",
+    "read_state": "measured",
+    "n_trades": 207,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "KSMUSDT",
+    "read_state": "measured",
+    "n_trades": 168,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "LRCUSDT",
+    "read_state": "measured",
+    "n_trades": 176,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   },
+   {
+    "leg": "trend_donchian_eth_4h",
+    "symbol": "NEARUSDT",
+    "read_state": "measured",
+    "n_trades": 189,
+    "cost_basis": {
+     "fee_bps_roundtrip": 7.5,
+     "slippage_bps_roundtrip": 3.0,
+     "funding_bps_per_window": 1.0,
+     "funding_window_hours": 8.0
+    }
+   }
+  ],
+  "rows_build": {
+   "rc": 0,
+   "rows_path": "/tmp/exithead_kaggle_v0dljq2f/rows/donchian/rows.jsonl",
+   "rows_exist": true,
+   "rows_by_source": {
+    "harness": 335051
+   },
+   "build_report": {
+    "generated_at": "2026-11-26T01:02:54.355444+00:00",
+    "tf": "4h",
+    "trades_in": 11511,
+    "skipped": {
+     "no_candles": 0,
+     "unresolvable": 747
+    },
+    "entry_alignment": "live_fill_bar_v2",
+    "skipped_at_load": {},
+    "rows_seen_at_load": 11511,
+    "rows_loaded_at_load": 11511,
+    "per_family_load": {
+     "donchian": {
+      "seen": 11511,
+      "loaded": 11511
+     }
+    },
+    "families_starved": [],
+    "holding_pays_threshold_r": 0.25,
+    "families": {
+     "donchian": {
+      "rows": 335051,
+      "trades": {
+       "harness": 10764
+      },
+      "holding_pays_pos": 108546,
+      "holding_pays_rate": 0.324,
+      "rows_by_source": {
+       "harness": 335051
+      },
+      "rows_by_year": {
+       "2020": 22624,
+       "2021": 49306,
+       "2022": 64464,
+       "2023": 46365,
+       "2024": 60139,
+       "2025": 50540,
+       "2026": 41613
+      }
+     }
+    }
+   }
+  }
+ },
+ "generated_at": "2026-11-26T01:20:12Z",
+ "produced_by": {
+  "tool": "python3 scripts/research/exit_head_kaggle_bakeoff.py (-> exit_head_label_bakeoff.py)"
+ },
+ "label_arm_judge_note": "every arm's deflated CI upper bound < +0.01 R/trade"
+}
