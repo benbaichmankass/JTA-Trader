@@ -1,0 +1,63 @@
+{
+  "unit": "RQ-20261126-a1f0-02",
+  "symbol": "ETHUSDT",
+  "legs": [
+    "trend_donchian_eth_4h",
+    "trend_donchian_eth_prop"
+  ],
+  "accounts": [
+    "bybit_1"
+  ],
+  "n_by_arm": {
+    "solo:trend_donchian_eth_4h": 101,
+    "solo:trend_donchian_eth_prop": 275,
+    "together": 288
+  },
+  "arms": {
+    "solo:trend_donchian_eth_4h": {
+      "n_oos": 101,
+      "n_skipped_zero_risk": 0,
+      "net_r": 18.843,
+      "capital_days": 195.4479,
+      "net_r_per_capital_day": 0.096409
+    },
+    "solo:trend_donchian_eth_prop": {
+      "n_oos": 275,
+      "n_skipped_zero_risk": 0,
+      "net_r": 10.8139,
+      "capital_days": 146.4063,
+      "net_r_per_capital_day": 0.073862
+    },
+    "together": {
+      "n_oos": 288,
+      "n_skipped_zero_risk": 0,
+      "net_r": 3.1711,
+      "capital_days": 186.0104,
+      "net_r_per_capital_day": 0.017048
+    }
+  },
+  "cost_policy": {
+    "source": "execution_costs.resolve_cost_policy",
+    "symbol": "ETHUSDT",
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0,
+    "term_sources": {
+      "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+      "funding": "venue_default",
+      "slippage": "venue_default"
+    },
+    "fee_only_arm_declared": false,
+    "prop_declared": {}
+  },
+  "risk_pct": 0.75,
+  "oos_start": "2025-01-01",
+  "verdict": "pass",
+  "reason": "all arms measured; per-leg inputs reported, no exclusion",
+  "per_leg_net_r_per_capital_day": {
+    "trend_donchian_eth_4h": 0.096409,
+    "trend_donchian_eth_prop": 0.073862
+  },
+  "combined_book_net_r_per_capital_day": 0.017048
+}
