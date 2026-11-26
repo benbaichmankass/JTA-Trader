@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Order path (Tier 2): trailing-stop window and the max-hold time stop anchor on the fill (latest of meta.entry_time and created_at) instead of the signal bar's open. Changes live stop placement TOWARD the backtest evidence. The manager decides, merges and deploys.",
+  "why": "LTR-FUNCTION-CORRECTNESS-AUDIT check 1: every candle strategy stamps entry_time = the signal bar's open, so live trails could anchor on a pre-fill wick (tighter than the backtest) and ml_entry's 24h time stop fired ~1 bar early. Revert: git revert."
+}
