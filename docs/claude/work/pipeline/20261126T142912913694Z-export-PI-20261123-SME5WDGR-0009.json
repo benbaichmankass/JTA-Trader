@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the mode lands with a self-test (refuses a window overlapping training, records the read) and the three units are git-mv'd back with status queued",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261123-SME5WDGR-0009",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the blocked iteration units",
+    "rerun": "grep -c 'holdout-read\\|holdout_read' scripts/research/edge_portfolio_discovery.py scripts/research/edge_etf_tsmom.py"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane, now re-owned by the manager) [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane QUEUE-FILL-STANDING-W48 2026-11-23, manager GO triage of the bloc; routing-alarm rule]",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[owner: edge / macro programme (row EDGE-HOLDOUT-READ-MODE)] One build blocks three units: a --holdout-read / --arm mode in edge_portfolio_discovery.py and edge_etf_tsmom.py. Verified 2026-11-23: neither script declares it (grep of holdout-read/holdout_read returns 0 in both). Units: RQ-20261101-d1f3-07, RQ-20261117-617c-02, RQ-20261117-617c-03. Population: the 41 research/queue/blocked/*.yaml units that carry an iteration block, read 2026-11-23 on origin/main; 0 of 41 can be re-armed mechanically today (cause verified for each in this item)."
+}

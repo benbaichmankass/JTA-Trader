@@ -2,7 +2,7 @@
   "id": "PKG-META-EXEC-DELTA-PER-ACCOUNT",
   "title": "order_packages.meta.execution_delta is one key overwritten by every account in the multi_account_execute loop (only the last account's delta survives)",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
   "lane": null,
   "model": null,
   "tier": 2,
@@ -13,9 +13,9 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-26",
-  "note": "Found 2026-11-12 by lane session_01AFoLuJqeJcceGxEK7itN3y (PKG-SIZED-QTY-2X-PLACED-BYBIT1). MEASURED: across the newest 400 order_packages, 78 had sized_qty_by_account for more than one account. On those, slice_admission (now also kept per account in slice_admission_by_account, #25294) and execution_delta held ONE account's value; e.g. pkg-ed61482e66184c7d's bybit_2 entry showed another account's 31669.2. execution_delta is still single-key on main. Fix (Tier 2, meta only, same pattern as #25294): add execution_delta_by_account[account.name] beside the existing key in src/core/coordinator.py where pkg.meta['execution_delta'] is set, plus a two-account test like tests/test_sized_qty_meta_placed.py::test_two_slice_accounts_each_keep_their_admission. Readers of execution_delta that assume it describes a specific account are wrong on multi-account packages until then.",
+  "due_by": "2026-12-04",
+  "note": "Found 2026-11-12 by lane session_01AFoLuJqeJcceGxEK7itN3y (PKG-SIZED-QTY-2X-PLACED-BYBIT1). MEASURED: across the newest 400 order_packages, 78 had sized_qty_by_account for more than one account. On those, slice_admission (now also kept per account in slice_admission_by_account, #25294) and execution_delta held ONE account's value; e.g. pkg-ed61482e66184c7d's bybit_2 entry showed another account's 31669.2. execution_delta is still single-key on main. Fix (Tier 2, meta only, same pattern as #25294): add execution_delta_by_account[account.name] beside the existing key in src/core/coordinator.py where pkg.meta['execution_delta'] is set, plus a two-account test like tests/test_sized_qty_meta_placed.py::test_two_slice_accounts_each_keep_their_admission. Readers of execution_delta that assume it describes a specific account are wrong on multi-account packages until then. 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'risk/accounting'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-04 with NO substantive progress read this pass -- dispatch or kill at that date.",
   "phase": null,
-  "updated_at": "2026-11-12T23:02:24Z",
-  "updated_by": "session_01AFoLuJqeJcceGxEK7itN3y"
+  "updated_at": "2026-11-26T06:12:37Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6"
 }

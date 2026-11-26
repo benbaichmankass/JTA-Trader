@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "a unit has graded tlt_pullback_1h's declared config on the 8-year window at 26 and 53 bps",
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125, manager session_01AFoLuKKEyjyRMDSxQ1prHf); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "ls research/results/RQ-20261119-f2a4-07 research/results/RQ-20261119-e11f-02"
+  },
+  "owner": "perf-followup (PERF-FOLLOWUP-20261125)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "state": "queued",
+  "tier": 3,
+  "what": "[performance][real-money][cost][tier-3 proposal pending data] tlt_pullback_1h (alpaca_live + alpaca_portfolio) FAILS its cost reprice at the MEASURED Alpaca cost: RQ-20261119-f2a4-07 S26 net R -26.24, 0/4 folds positive (rule: FAIL closes it). RQ-20261119-e11f-02 PASSES the same declared config on a disjoint 8-year window (net +51.19 R, 4/4 folds) but at that arm's own cost stack, not 26 bps. slv_trend_1h at S26 (f2a4-06): net +25.55 R but 2/4 folds -> FAIL on the fold rule. The data leaves the demotion open on one point only: e11f-02 at 26 and 53 bps. Unit: re-run e11f-02's arm at S26/S53 (same window, same rule). Registered action: if tlt fails at S26 on the 8-year window too, the next review files the demotion proposal (diagnosis cause=cost) to the operator; if it passes, the S26 one-window FAIL is regime and no proposal."
+}

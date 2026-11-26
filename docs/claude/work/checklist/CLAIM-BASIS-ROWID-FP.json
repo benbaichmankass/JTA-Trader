@@ -2,8 +2,8 @@
   "id": "CLAIM-BASIS-ROWID-FP",
   "title": "claim-basis-guard reads a hyphenated row id ending in a digit and R as an R-figure claim; add a lookbehind so a figure glued to a preceding letter or digit is not a claim",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "tier": 1,
   "roadmap": [
@@ -14,10 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-09",
   "_seq": 693,
   "note": "Found 2026-10-25 by manager 01MdQiC8. guards failed on PR #20145 because rows DESK-2/DESK-3 had titles citing the apply-path row id. Fix, validated locally then reverted (manager-scope-guard puts scripts/ and tests/ off-limits): in scripts/check_claim_basis.py _CLAIM_RE, prefix the R alternative with the lookbehind (?<![A-Za-z0-9]). Add 2 tests: a hyphenated row id passes, and a parenthesised minus-four-R claim still fails. The 19 tests passed and the --self-test passed with the change. Workaround on #20145: titles reworded.",
   "phase": null,
-  "updated_at": "2026-11-02T07:33:58Z",
-  "updated_by": "session_01AFoLuL5qrtXsc8bv7JrN4Z",
+  "updated_at": "2026-11-26T06:11:35Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

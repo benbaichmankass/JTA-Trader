@@ -1,0 +1,22 @@
+{
+  "id": "ML-ENTRY-SILENT-1124",
+  "title": "ml_entry silent since 11-24 16:01Z: model or plumbing?",
+  "state": "done",
+  "owner": "ML-ENTRY-SILENT-1124",
+  "lane": "ML-ENTRY-SILENT-1124",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "ANSWER: MODEL, not plumbing. Window 2026-11-24T16:01Z..2026-11-25T16:03Z (log_file audit, read_state complete, 452,227 lines scanned; cross-checked vs journalctl ml_entry_decision lines, complete, 322,629 scanned). Served model ml-decision-entry-v1r20261122 (ENTRY_SERVED.json; model_id stamped on the 16:01Z signal), tau=0.1000 (artifact meta + every decision line). Decisions logged with p_long/p_short: 73 = 72 below_tau + 1 evaluated. n>=tau among below_tau rows: 0 by construction; the 1 evaluated = USO long p_long=0.172 (above tau) -> package dispatched to alpaca_paper only (16:01Z) - that is the last package, and it is NOT a crypto/real-money package. Crypto (the 5 pooled symbols; bybit_2/bybit_portfolio/bybit_1 trade these): 35 decisions (7 four-hourly bars x 5 symbols, every bar complete, none missing), 0 >= tau, max(pred_long,pred_short) range -0.0791..+0.0844 (top ADA 0.0844 at 04Z, ETH 0.0801 at 16Z, SOL 0.0766) vs tau 0.10. Equities (alpaca_paper, 13 symbols): 37 below_tau decisions, 0 >= tau, max 0.0544 (IAUM), + the 1 USO package. Pre-window baseline (same audit file, retention-limited, n=106 below_tau rows 11-21..11-24) also below tau. Process alive/decisions NOT stopped: trader restarted between the 11-24 and 11-25 logs (pid changed) and kept deciding at every 4h bar. SIDE FLAG (not the cause): 146 WARNING lines in window \"intent_multiplexer: strategy ml_entry raised ml_entry: no candle data for symbol=X - skipping this tick\" (fetch_candles returned None; crypto ADA/XRP/SOL/ETH/BTC + a few ETFs, retried on later ticks; all 7 decision bars still got all 5 symbols decided) - worth a data-feed look but it did not silence anything in this window. Also ml_entry_refs: have=52/60, gave_up on 8 delisted refs (BAL,BLZ,DEFI,FLM,FTM,ICX,MKR,OMG) vs min_reference_symbols 40: fine. Limits: per-decision p values come from signal_audit below_tau rows (the only per-decision p record); ml_entry (crypto) emits no INFO refusal line with pred in the journal, so the audit file is the sole source. Nothing changed, nothing placed. No manager wake needed for plumbing; informational wake sent.",
+  "phase": "now",
+  "updated_at": "2026-11-25T19:14:55Z",
+  "updated_by": "session_01AFoLuLxz8zVnp7WJ66xhJC"
+}

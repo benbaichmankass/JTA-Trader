@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "each of the 14 units is either unblocked (its harness accepts every flag it passes, and abab-12/18/19 baseline is corrected) or retired with a stated reason; python3 scripts/ci/check_queue_harness_flags.py --audit lists none of them",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261119-FILLW47B-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W47b 2026-11-19; manager asked which other harnesses/units the guard gap affects",
+    "rerun": "python3 scripts/ci/check_queue_harness_flags.py --audit   # on a checkout that has PR #27200"
+  },
+  "owner": "QUEUE-FILL-STANDING-W47b",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane) -- routed by BACKLOG-TRIAGE-W48 2026-11-25: item was unrouted (queued, due, origin lane QUEUE-FILL-STANDING-W47b archived); topic is research-queue lever-flag parity, the W48 queue-fill lane owns it",
+  "state": "routed",
+  "what": "LEVER-FLAG PARITY: 14 queued ablation units (RQ-20261118-abab-05/06/07/10/11/12/14/15/16/17/18/19/45/46) pass lever flags their harness does not declare, so each would die at argparse (producer_failed); abab-18 and abab-19 already did. Found by scripts/ci/check_queue_harness_flags.py --audit (PR #27200, population: 384 queued units on origin/main). Missing flags by harness: backtest_fade.py: --be-floor-r, --side-filter, --skip-hours, --stale-exit-bars, --trail-adx-below, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_fvg_range.py: --side-filter, --skip-hours, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_ict_scalp.py: --be-floor-r, --trail-adx-below, --skip-hours (PI-20261119-FILLW47B-0002); backtest_squeeze.py: --adx-max, --side-filter, --skip-hours, --trail-adx-below, --vol-skip-above-pctl, --vol-skip-below-pctl; backtest_turtle_soup.py: --adx-max, --vol-skip-above-pctl, --vol-skip-below-pctl. abab-12, 18 and 19 ALSO pass --baseline mid while declaring arms that do not include it (exit_lever_ablation: \"arm 'mid' is not declared\"): correct to the declared baseline A, which the unit question names, when unblocking. Each flag is a harness BUILD (default byte-identical, golden test, parity with the live gate where one exists, like --side-filter in #27149), so decide per flag whether it is worth building before building all; a lever the live strategy cannot express has no live producer for a PASS."
+}

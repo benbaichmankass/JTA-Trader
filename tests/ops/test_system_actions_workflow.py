@@ -122,6 +122,7 @@ EXPECTED_ACTIONS = {
     # Slice B / B0 — promote the entry orderId from notes.trade_id to the
     # first-class trades.broker_order_id join key (MB-20260629-ALLOC-COSTCAP).
     "backfill-broker-order-id": "backfill_broker_order_id_action.sh",
+    "backfill-alpaca-entry-fill": "backfill_alpaca_entry_fill_action.sh",
     # Slice B / B2 — FIFO-attribute broker-truth round-trip fees (join by
     # broker_order_id + fills store) onto cleanly-attributable closed trades.
     "backfill-broker-truth-costs": "backfill_broker_truth_costs_action.sh",
@@ -468,6 +469,7 @@ TIER_2_ACTIONS = {
     "backfill-closed-at",
     "backfill-trade-costs",
     "backfill-broker-order-id",
+    "backfill-alpaca-entry-fill",
     "backfill-broker-truth-costs",
     "backfill-fabricated-exits",
     "backfill-exit-labels",

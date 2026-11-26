@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261125-RC8ZZART-0014",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane RND-TOOLBOX-AUDIT-20261125 (session_01AFoLuK2nGoSCVERC8zzaRt), audit section 5.3 and G4/G13",
+    "rerun": "grep -n 'exit_head_action' config/strategies.yaml; grep -n -A3 'exit-head-donchian-1h-v1' ml/served/SERVED_MODELS.yaml; python3 scripts/ops/work.py get AM-RISK-ADJUSTED-RULE"
+  },
+  "state": "queued",
+  "what": "DOC / RECORD DRIFT seen by lane RND-TOOLBOX-AUDIT-20261125 on 2026-11-25 (Tier-1 one-line fixes for a doc-freshness pass; no gate): (1) ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1 stage_basis says 'close applied on trend_donchian_eth/_sol' while all three exit_head_action fields in config/strategies.yaml read annotate (field beats comment); (2) AM-RISK-ADJUSTED-RULE is blocked_on BOOK-SIM-REAL-SIZER, which reads done, and docs/ARCHITECTURE-CANONICAL.md § Active management still says no harness simulates the book at real size although scripts/research/cf_booksim.py exists; (3) CLAUDE.md names scripts/ops/checklist.py as the only row writer while writes now go through scripts/ops/work.py to the live store; (4) CLAUDE.md gives weekly-audit as Mon 06:07Z, the skill and config/reset_protocol.yaml as Wednesday 18:31Z (sub-agent read, not re-checked); (5) the research SLO's survivors_per_month 40 / trials_per_survivor 63.1 and the trial ledger's 1 survivor of 4,432 configs are two definitions of 'survivor' on the same operator page."
+}

@@ -1,0 +1,23 @@
+{
+  "id": "LIVE-BAR-KEY-BY-CONFIG",
+  "title": "live_bar.py pools every served model/config of a leg under strategy_name; OPERATING-PLAN says 'the SAME leg configuration'",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "Added 2026-11-25 (manager relay of PERF-REVIEW-PREP-20261125 #28862, PI-20261125-PREP1125-0001; confirmed from the code): live_bar groups by strategy_name across ALL accounts, so a mirror copy and each prop copy of one decision count as separate trades, and repeated-entry fragments do too. That inflates n and narrows the LCB80. Fix: count one decision per order package / entry bar per leg configuration. #28862 says slv_trend_1h, ada_pullback_2h (real money) and ict_scalp_sol_15m go from PASS to FAIL once de-duplicated. Any resulting roster change goes to the operator.",
+  "phase": null,
+  "updated_at": "2026-11-25T19:08:50Z",
+  "updated_by": "session_01AFoLuLQx4b4w8jWqXS8bUY"
+}

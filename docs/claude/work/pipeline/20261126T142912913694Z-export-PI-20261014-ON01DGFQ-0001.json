@@ -1,0 +1,27 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261014-ON01DGFQ-0001",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "python3 -c \"import scripts.research.queue_replenish as q;print(q.plan(q._REPO,day='2030-01-01',target=99)['candidates'])\"; python3 scripts/ci/check_research_queue_throughput.py --json",
+    "what": "candidates per family and runnable count"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane RESEARCH-PIPE-UNSTICK session_01DgFqpxgeEDe9nKf1aRiomG, 2026-10-14, PR #17950",
+    "rerun": "python3 -c \"import scripts.research.queue_replenish as q;print(q.plan(q._REPO,day='2030-01-01',target=99)['candidates'])\""
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent RESEARCH-GRIDS-EXTEND state dropped: OPS)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, RESEARCH-GRIDS-EXTEND, is dropped in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist row RESEARCH-GRIDS-EXTEND (DUE-ROUTE-20261015)",
+  "state": "routed",
+  "what": "Research template grids are EXHAUSTED: queue_replenish plan() offers 1 candidate (e35-bracket xrp_pullback_2h), 0 for m20-exit-lever, macro-valuation, prop-fit-breakout, roster-walkforward. Runnable is 14 vs floor 25 on main (2026-10-14) and templates can no longer close the gap; it needs authored units (research-ops step E) and/or new grid axes (template edit = landing-machinery hold). Decide: extend the grids with pre-registered axes, or lower the floor given fired_24h=55."
+}

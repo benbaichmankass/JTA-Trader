@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "The netting-attribution reconciler (or an equivalent detector) runs on a schedule against interactive_brokers accounts and reports journal-vs-venue quantity agreement/divergence for IB positions the same way broker-bracket-reconcile.yml already does for protective-leg coverage — i.e. a scheduled, unattended IB quantity-divergence check exists and has run at least once.",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20260928-DEUTUJ78-0001",
+  "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-25",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "operator",
+    "ref": "operator popup to manager 2026-09-28~11:45Z on OI-20260826-MGC-JOURNAL-QTY-DIVERGENT-UNOWNED, relayed to lane MGC-FIX",
+    "rerun": "grep -n 'ib_paper\\|ib_live' scripts/ops/reconcile_netting_rows.py scripts/ops/reconcile_netting_rows_action.sh; ls .github/workflows/broker-bracket-reconcile.yml"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent PROV-IB state landed_unproven: OPS backl)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row PROV-IB is landed_unproven (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "PROV-IB | BACKLOG-BURNDOWN-2 2026-10-05 re-read at HEAD: live-read triage 2026-10-05: still applies — scripts/ops/account_broker_reconcile.py has 0 mentions of ib_paper/ib_live/interactive_brokers; reconcile_netting_rows.py none; account-broker-reconcile.yml covers alpaca_live, breakout_1, bybit_",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "Build an IB-side journal-vs-venue quantity divergence detector: extend the netting-attribution reconciler (scripts/ops/reconcile_netting_rows.py, dispatched via the reconcile-netting-rows system-action) — currently exercised on bybit one-way-netting — to also cover interactive_brokers accounts (ib_paper, ib_live), and wire a scheduled caller mirroring .github/workflows/broker-bracket-reconcile.yml's pattern (fixed-cadence GET against /api/diag/ib_open_orders + /api/bot/positions, a tracking issue rewritten every run, a comment only on fingerprint change) so a journal-declared MGC/MHG/MES quantity that diverges from the live IB position/order state is caught automatically instead of only being found when a session happens to look. Raised from OI-20260826-MGC-JOURNAL-QTY-DIVERGENT-UNOWNED clause (b), which this item does NOT itself clear — filed per the operator's instruction to QUEUE the detector, not build it, in this lane (MGC-FIX)."
+}

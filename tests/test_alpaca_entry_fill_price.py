@@ -101,9 +101,11 @@ def test_journal_without_fill_keeps_package_entry(tmp_path, monkeypatch):
     assert row["entry_price"] == 43.48
     # ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, condition 3): every row now SAYS where entry_price came from.
     # Without a venue fill the plan is still booked, labelled "plan" with the reason (it used to carry no label at all).
+    # ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26): the reason is now fill_pending_writeback, so the monitor's entry
+    # sweep reads the order's late fill by id (it was "no_venue_fill_read", and the plan stayed for good).
     notes = json.loads(row["notes"])
     assert notes["entry_price_source"] == "plan"
-    assert notes["entry_price_source_reason"] == "no_venue_fill_read"
+    assert notes["entry_price_source_reason"] == "fill_pending_writeback"
     assert "package_entry" not in notes
 
 
