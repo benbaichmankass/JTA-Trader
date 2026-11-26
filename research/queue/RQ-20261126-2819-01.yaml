@@ -44,12 +44,14 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'ESTIMATE: 60 symbols x tail 40,000 1h rows = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4), so ~1.4M
-    paired OOS rows. The rows are not independent: the 60 symbols co-move within an hour and labels overlap across hours. The bootstrap
-    resamples whole calendar days (block_rows 1440 = 24 h x 60 symbols), so the effective n is about the ~1,000 OOS days, not 1.4M rows.
-    A per-row difference sd ~0.3 nats (the 9e72-01 basis) with a design effect of ~150 gives se ~0.0018, so MDE ~0.005 nats/row at
-    80% power. A local CPU smoke on 3 real symbols (2026-11-26) measured the run end to end; the 60-symbol CI width is not measured until
-    the run. INDETERMINATE is possible and stated now.'
+  basis: 'MEASURED + ESTIMATE. 60 symbols x tail 40,000 1h rows = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4),
+    so ~1.4M paired OOS rows. The bootstrap resamples whole calendar days (block_rows 1440 = 24 h x 60 symbols), so the effective n is
+    the ~1,000 OOS days, not 1.4M rows. MEASURED 2026-11-26: a local CPU smoke of this exact spec on 3 real bp2 symbols (ADA/BTC/DOGE,
+    72,000 OOS rows, 1-day blocks of 72 rows; cut-down GRU budget: 4 epochs, hidden 32, 1 layer, 60k windows; n_boot 200) gave a
+    bootstrap sd of the GRU-minus-LightGBM log-loss delta of 0.00176 nats/row over the same ~1,000 day-blocks. ESTIMATE: averaging 60
+    symbols per day instead of 3 lowers the per-block variance (cross-sectional correlation ~0.3 assumed), so sd ~0.0014 and MDE ~2.8 x sd
+    ~0.004; 0.005 is declared to leave margin. The smoke is NOT a result of this unit (3 symbols, reduced GRU). INDETERMINATE is
+    possible and stated now.'
   feasibility:
     source: none
     accrual_basis: Published market shards (metis-market-bp2, built from public data.binance.vision klines); nothing accrues.
@@ -113,6 +115,9 @@ routing:
   est_minutes: 90
   basis: 'ESTIMATE: reading 60 x 29 MB of JSONL (~2 min). Per fold, one GRU on <= 1,000,000 windows of 48 x 10 for <= 30 epochs with
     patience 3 on a T4, plus LightGBM on <= 2M rows. Train windows take ~1.9 GB in memory. Re-declare from the first run.'
+# not_before: the dataset metis-market-bp2 is first published by ml-data-export-bp2-kaggle.yml AFTER this PR merges (~30-40 min run);
+# firing earlier would spend one of the 2 non-verdict retries on a missing mount.
+not_before: '2026-11-26T04:00:00+00:00'
 lands:
   store: research/results/
   assert_field: read_state
