@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-11-06",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "bybit_1/xrp_pullback_2h"
+    }
+  },
+  "id": "PI-SOAK-20261122-bybit_1-xrp_pullback_2h",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "state": "killed",
+  "terminal_reason": "BACKLOG-TRIAGE-W48 rule (a): soak-tracking item retired (operator popup 2026-11-25 ~18:00Z 'Approve all'). The soak step was retired 2026-11-12 (config/mandates.yaml MD-PROMOTE-S1-S2 soak_step: retired; operator 'Absolutely no steps'), so no promotion waits on this item. DATA: soak_report.py build 2026-11-25 grades bybit_1/xrp_pullback_2h as 'ready' (mechanical soak passed — the leg is a promotion candidate (MD-PROMOTE-S1-S2)); soak start <=2026-11-25. STAGE-0 RECORD comms/strategy_evidence/xrp_pullback_2h.json: coverage measured, fidelity faithful, net_r_oos 6.5558 over n=53 OOS trades, folds_positive 2/4, window 365d (full cost stack, RULE-D1-STAGE0-NET-OF-FULL-COST) -- carried to the promotion-candidate list in docs/plans/planning-2026-W48-open-items.md. Per-trade mechanics keep being recorded by mechanics_fault_intake.py (CSINTAKE items), so no monitoring is lost; edge for promotion is read from the Stage-0 record, not from a soak.",
+  "what": "SOAK (stage1): bybit_1/xrp_pullback_2h — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing."
+}

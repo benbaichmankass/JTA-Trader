@@ -1,0 +1,25 @@
+{
+  "id": "CI-BRIEF-RENDER-TIMEOUT",
+  "title": "tests/test_deploy_pull_restart_runtime_gate.py::test_every_scripts_research_module_the_brief_loads_is_runtime times out at its 180 s subprocess limit on CI runners (2 occurrences 2026-11-26: #29083 run 45772524248, #29091) while passing locally in 85-90 s; suspected cause: daily-brief build cost grows with the research queue (~3.1k units). Fix the brief build cost or the test's measurement; never raise the timeout to clear it without a stated reason.",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": "session_01AFoLuLpCY5gABbqk3EBUeV",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "CI health; map at weekly pass",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    29109
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-11-27",
+  "note": "2026-11-26 09:00Z ML-PRIMARY: cause MEASURED (cProfile of render_daily_brief.build on main): 12,905 yaml.safe_load calls = 255 s of a 269 s build (90 s unprofiled); the 3,123-unit queue is parsed ~4x/build with the pure-Python loader (queue_throughput 2x existing_units 142 s, queue_grade.health 82 s, atm_view 63 s, blocker_watch.load_units 54 s). Fix in held Tier-1 draft PR #29109: those readers parse through libyaml (pure-loader fallback keeps error text). Build+render 90 s -> 23 s locally; existing_units identical over all 3,123 files; timeout NOT raised. Next lever if the queue keeps growing: cache unit parses across callers within one build. 2026-11-26 08:55Z: third hit -- #29094 pytest-run 45776339423 timed out on the same test (31,142 passed). Once #29109 merges: merge main into #29094 (and #29091 if its re-run also times out). 2026-11-26 09:57Z ML-PRIMARY: #29109 MERGED. Observed locally after merging main into #29091: test_every_scripts_research_module_the_brief_loads_is_runtime passes inside a 20 s run (was ~90 s alone; CI timed out at 180 s on #29083/#29091/#29094). Main merged into #29091 (86a5d2f4d) and #29094 (457e2667b) so their pytest-run re-runs against the fix. Closes when a full CI pytest-run passes that test (the next pytest-run on either PR).",
+  "updated_at": "2026-11-26T09:55:48Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

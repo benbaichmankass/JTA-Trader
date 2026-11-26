@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v6",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "data/ candles for the M21 legs reach within 2 days of now on the trainer (or resolve_data reads a maintained source) AND RQ-20261118-04a5-01 is re-armed and graded; or killed with a reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261118-MANAYJZO-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-6 grading RQ-20261118-04a5-01",
+    "rerun": "git show origin/main:research/results/RQ-20261118-04a5-01/44383743409.jsonl | python3 -c \"import sys,json;[print(k,v.get(\\\"data_last_bar\\\")) for l in sys.stdin for k,v in json.loads(l)[\\\"measurement\\\"][\\\"per_leg\\\"].items()]\""
+  },
+  "owner": "ML-PRIMARY-6 (session_01AFoLuKqj3MDj1RMaNAYJZo)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane, now re-owned by the manager) [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane ML-PRIMARY-6 grading RQ-20261118-04a5-01; routing-alarm rule]",
+  "severity": "medium",
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "[research/data] STALE TRAINER CANDLES under data/ (the M20/M21 resolver m20_fleet_exit_sweep.resolve_data reads data/{SYMBOL}_{grain}.csv): RQ-20261118-04a5-01 run 44383743409 recorded data_last_bar BTCUSDT 1h = 2026-07-10T23:45Z and AVAXUSDT 4h = 2026-06-18T07:15Z, so its fresh window (2026-07-14+) had 0 trades on both legs -> INDETERMINATE by rule (operator D5 Donchian 0.70 vs 0.60 re-test still unanswered; 0.70 unchanged). Every M20/M21 sweep on the trainer silently ends 4-5 months ago. Fix: refresh data/ candles (or point resolve_data at the maintained source) and re-arm 04a5-01."
+}

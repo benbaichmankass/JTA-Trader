@@ -1,42 +1,42 @@
 {
   "id": "REAL-TP-COMPRESSED-ETH4H",
   "title": "Real-money ETH 4h package got a 0.26R TP (donchian_measured_move anchored pre-breakout on a forming entry bar)",
-  "phase": "building",
   "state": "landed_unproven",
   "owner": "lane REAL-TP-COMPRESSED-ETH4H",
   "lane": null,
   "model": null,
-  "ceiling_usd": null,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "Root cause: tp_revision donchian_measured_move anchors on the last closed bar when the entry bar is still forming (entry_bar_closed=false); fix = no closed entry bar => could-not-look. Closes when merged+deployed and next forming-bar ETH 4h entry keeps its resting TP. roadmap L-OPS. [2026-10-29 mirror 6787] pnl NULL at ~12 min is the PENDING state, not a defect: bybit_portfolio is a Bybit-reader account, so its exit price comes from the hourly ict-exchange-fills-pull + fills resolver (exchange_fill), and the local fallback only fills after close+6h (_LOCAL_PNL_BROKER_DEFER_MS). Its 12 sibling mirror closes since 10-15 all resolved (exchange_fill / local_compute). CLOSES: 6787 pnl non-null with exit_price_source exchange_fill; if still NULL at 2026-10-30T02:50Z (close+6h+grace) it is a real bug -> reopen. Not the same root cause as the 0.26R TP; the restart race cannot be established (journal window starts 20:50:35Z). 2026-11-05 CHECKLIST-STATE-TRUTH sweep: fix code present on main: src/runtime/tp_revision.py:286 handles entry_bar_closed=false (could-not-look). PR number not traced by this sweep; no lane. The 6787 pnl-NULL question: not re-checked.",
-  "priority_rank": 1,
-  "updated_at": "2026-11-05T09:32:31Z",
-  "updated_by": "session_01AFoLuMS3KAfkdSSB4xiqmg",
   "roadmap": [
     "L-OPS"
   ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-30",
+  "_seq": 826,
   "lane_history": [
     {
-      "lane": "REAL-TP-COMPRESSED-ETH4H",
-      "archived_at": "2026-11-05T09:20:55Z"
+      "archived_at": "2026-11-05T09:20:55Z",
+      "lane": "REAL-TP-COMPRESSED-ETH4H"
     }
   ],
-  "due_by": "2026-11-12",
-  "observe": {
-    "when": "2026-11-12",
-    "how": "next forming-bar ETH 4h entry keeps its resting TP (journal order_packages tp_r > 0.26); and trade 6787 pnl non-null with exit_price_source exchange_fill"
-  },
+  "note": "Root cause: tp_revision donchian_measured_move anchors on the last closed bar when the entry bar is still forming (entry_bar_closed=false); fix = no closed entry bar => could-not-look. Closes when merged+deployed and next forming-bar ETH 4h entry keeps its resting TP. roadmap L-OPS. [2026-10-29 mirror 6787] pnl NULL at ~12 min is the PENDING state, not a defect: bybit_portfolio is a Bybit-reader account, so its exit price comes from the hourly ict-exchange-fills-pull + fills resolver (exchange_fill), and the local fallback only fills after close+6h (_LOCAL_PNL_BROKER_DEFER_MS). Its 12 sibling mirror closes since 10-15 all resolved (exchange_fill / local_compute). CLOSES: 6787 pnl non-null with exit_price_source exchange_fill; if still NULL at 2026-10-30T02:50Z (close+6h+grace) it is a real bug -> reopen. Not the same root cause as the 0.26R TP; the restart race cannot be established (journal window starts 20:50:35Z). 2026-11-05 CHECKLIST-STATE-TRUTH sweep: fix code present on main: src/runtime/tp_revision.py:286 handles entry_bar_closed=false (could-not-look). PR number not traced by this sweep; no lane. The 6787 pnl-NULL question: not re-checked.",
   "observation": {
-    "what": "State unproven since landing; closes on the observation named in how_to_check",
+    "due_by": "2026-11-12",
     "how_to_check": "next forming-bar ETH 4h entry keeps its resting TP (journal order_packages tp_r > 0.26); and trade 6787 pnl non-null with exit_price_source exchange_fill",
-    "due_by": "2026-11-12"
+    "what": "State unproven since landing; closes on the observation named in how_to_check"
   },
+  "observe": {
+    "how": "next forming-bar ETH 4h entry keeps its resting TP (journal order_packages tp_r > 0.26); and trade 6787 pnl non-null with exit_price_source exchange_fill",
+    "when": "2026-11-12"
+  },
+  "phase": "building",
+  "updated_at": "2026-11-25T18:47:17Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
-    "roadmap": "none: register state correction by the CHECKLIST-STATE-TRUTH sweep; no milestone changed",
-    "arch": "none: no component changed"
-  },
-  "_seq": 826
+    "arch": "none: no component changed",
+    "roadmap": "none: register state correction by the CHECKLIST-STATE-TRUTH sweep; no milestone changed"
+  }
 }

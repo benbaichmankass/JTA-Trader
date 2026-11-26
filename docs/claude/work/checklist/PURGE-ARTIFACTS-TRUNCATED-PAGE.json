@@ -2,8 +2,8 @@
   "id": "PURGE-ARTIFACTS-TRUNCATED-PAGE",
   "title": "purge-artifacts workflow has crashed daily since 11-03: 'HttpError: Unexpected end of JSON input' while listing actions/artifacts page=3; artifact storage is not being pruned",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "tier": 1,
   "roadmap": [
@@ -14,11 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-09",
   "_seq": 944,
   "note": "[Manager 2026-11-05a] MEASURED: scheduled runs 2026-11-03 10:31Z, 11-04 10:34Z, 11-05 10:27Z all failure; 10-29..11-02 all success. Run 42010851376 dies at 10:30:06Z on GET /repositories/1191866879/actions/artifacts?per_page=100&page=3 with 'RequestError [HttpError]: Unexpected end of JSON input', an unhandled throw that aborts the whole purge. FIX (Tier 1 CI): retry the list call on a parse or 5xx error (2-3 tries with backoff), skip a page that still fails while continuing, and keep the run red only if nothing was deleted. Done when the next scheduled run is green with deleted > 0.",
   "phase": null,
-  "updated_at": "2026-11-05T14:06:42Z",
-  "updated_by": "session_01AFoLuLmhUKeUzHC6CHz2uP",
+  "updated_at": "2026-11-26T06:11:35Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

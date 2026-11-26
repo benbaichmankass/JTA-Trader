@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-12-03",
+    "kind": "date"
+  },
+  "id": "PI-20261125-RC8ZZART-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane RND-TOOLBOX-AUDIT-20261125 (session_01AFoLuK2nGoSCVERC8zzaRt), R&D toolbox audit 2026-11-25; R5",
+    "rerun": "python3 scripts/ops/work.py get AM-RISK-ADJUSTED-RULE; python3 scripts/ops/work.py get BOOK-SIM-REAL-SIZER; ls scripts/research/cf_booksim.py"
+  },
+  "routed_to": "AM-RISK-ADJUSTED-RULE",
+  "state": "routed",
+  "what": "[RND-AUDIT R5] PROPOSAL FOR THURSDAY (no gate; a record question first): join the book simulation to RULE-AM-RISK-ADJUSTED-V1. scripts/research/cf_booksim.py exists and rows BOOK-SIM-REAL-SIZER / CF-D3-BOOKSIM / AM-REGRADE-BOOKSIM read done, yet AM-RISK-ADJUSTED-RULE is still blocked_on BOOK-SIM-REAL-SIZER, ARCHITECTURE-CANONICAL says no such harness exists, and every AM v2 unit records 'a per-trade-R screen, never a graduation'. Also add a gap-adjusted stop fill and trade-through TP fill as a sensitivity arm. First step: manager reads the three rows and decides whether cf_booksim is the measurement of record. Full text: docs/plans/rnd-toolbox-audit-2026-11-25.md section 4."
+}

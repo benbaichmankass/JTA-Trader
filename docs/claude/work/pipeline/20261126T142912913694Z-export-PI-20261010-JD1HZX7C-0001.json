@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261010-JD1HZX7C-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "ML-RESEARCH-W41 / RQ-20261008-900",
+    "rerun": "python3 -c \"import json;print([json.loads(l)['verdict'] for l in open('research/results/RQ-20261008-900/38059199318.jsonl')])\" and grep ict_scalp_xrp_15m docs/research/exit-refinement-coverage.json to see whether the retirement is recorded"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent PIPELINE-ROUTE-1017 state dropped: OPS b)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, PIPELINE-ROUTE-1017, is dropped in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_2026_10_17": "[RESEARCH-AUTHOR-GRADE-1017] routed to checklist row PIPELINE-ROUTE-1017; due moved to 2026-10-24.",
+  "routed_to": "WEEKLY-PLANNING (live checklist row, manager; W48 planning disposition) -- BACKLOG-TRIAGE-W48 2026-11-25 re-route: previous owner row PIPELINE-ROUTE-1017 is dropped in the work store (manager request, ML-FRONTIER-PREP-20261125 P-7); item left open, not closed. | was: PIPELINE-ROUTE-1017",
+  "state": "routed",
+  "what": "RQ-20261008-900 graded FAIL (k=1 of 3 folds positive, pooled R -1.938; 5-fold table 2 of 5 positive). Rule: retire the exit-head lever for ict_scalp XRP. Follow-through: mark ict_scalp_xrp_15m exit-head as retired in docs/research/exit-refinement-coverage.json (and any M19-S2EXIT note) citing research/results/RQ-20261008-900/38059199318.jsonl; free the trainer time for trend_donchian."
+}

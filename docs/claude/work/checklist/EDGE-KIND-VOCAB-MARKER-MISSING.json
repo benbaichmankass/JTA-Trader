@@ -1,0 +1,22 @@
+{
+  "id": "EDGE-KIND-VOCAB-MARKER-MISSING",
+  "title": "check_edge_kind_vocabulary.py is silently disabled: docs/claude/work/README.md lacks its blocked_on vocabulary marker",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "tooling hygiene: a self-disabling guard",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26 06:30Z by ML-PRIMARY. Run on main (ee1aa6c0b): 'edge-kind-vocabulary: 1 finding(s) - docs/claude/work/README.md: no blocked_on kind vocabulary could be read (marker \"`blocked_on` is a typed edge\"). This check is silently disabled without it'. No .github/workflows file invokes the script (grep), so CI does not surface it. Fix: restore the vocabulary section in the README (git log -S on the marker finds no prior commit in the squashed history; the README's first commit is d60255940, 2026-11-24) or point the check at where the vocabulary now lives; then wire it into a guard job.",
+  "phase": "tooling",
+  "updated_at": "2026-11-26T06:22:31Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

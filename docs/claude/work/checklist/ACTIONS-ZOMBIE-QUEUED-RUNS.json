@@ -1,0 +1,23 @@
+{
+  "id": "ACTIONS-ZOMBIE-QUEUED-RUNS",
+  "title": "~390 GitHub Actions runs sit in status queued forever (267 issue-event runs created 2026-11-11; others back to 2026-05-15); measured 2026-11-25 20:12Z; they inflate the 'queued' count (455 total, only ~65 from today) but do not consume runners. Bulk cancel is an operator-approved action only (auto-mode classifier refused the manager dispatching it).",
+  "state": "dropped",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "[2026-11-25 23:09Z housekeeping lane] #28934 MERGED (cancel-queued-runs.yml: only queued runs older than min_age_hours, default 24; before/after counts; limit 1000). Plain cancel returns 409 for these zombies (tested on 2 ids), so the workflow's force-cancel fallback is the path. DISPATCHED run 45719013094 at 23:08:38Z (workflow_dispatch, min_age_hours=24); it is itself queued behind runner capacity, result to follow. [2026-11-25 23:00Z housekeeping lane] BEFORE: GitHub Actions runs with status=queued = 404 (list_workflow_runs status=queued, total_count 404/405 across 5 pages at ~22:58Z). Of these, 390 were created >24 h before 23:00Z (oldest ~4,671 h, 2026-05-15; the 16 pytest-run, 16 Guards, 15 pytest-collect, 7 vm-web-api-recover, 7 claude-pr-automerge, ... top names), 13 younger than 24 h (left alone). Scope per the operator decision on this row: >24 h only, never in_progress, never <24 h. Cancelling the 390 via cancel_workflow_run; the id list is in the lane's scratchpad. AFTER count to be recorded here. Operator decision 2026-11-25 ~22:40Z, W48 planning decision doc (https://claude.ai/artifact/QKm88J2sU91vk4KqvzKQXc) Q11, verbatim choice: \"Approve both (Recommended)\" \u2014 covers (b) the bulk cancel of ~390 zombie queued Actions runs. Scope set by Manager 2026-11-25b: only runs queued >24 h, list + counts before/after, never in_progress or <24 h. 2026-11-25 23:30Z run 45719013094 (cancel-queued-runs, min_age_hours=24, #28934) completed success: queued BEFORE 412, AFTER 408, cancelled 1 (MEASURED from the job log). Nearly all older-than-24h runs returned HTTP 409 'Cannot cancel a workflow run that has not been queued yet' even via the force-cancel path, so the zombies are NOT cancellable through the API from this workflow. Not done: ~389 of the 390 stay queued. Next options: delete the runs (DELETE /actions/runs/{id}, needs a separate operator OK, it removes run history) or leave them (they hold no runner). Not closing; decision for manager/operator.",
+  "phase": null,
+  "updated_at": "2026-11-26T00:08:00Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
+}

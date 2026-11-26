@@ -1,0 +1,25 @@
+{
+  "id": "RESEARCH-LEVER-FAMILY-REACH",
+  "title": "Iteration loop cannot reach 6 of 9 lever families: lever_design.next_lever only picks families with a numeric config key or a declared: entry, so timeframe, symbol_set, sizing_vs_cost, session, regime_gating and direction are never swept by the weekly generator; 16 of 39 overdue testing legs have only those families left",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28970,
+    28976,
+    29006
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-09",
+  "note": "Filed by PROGRAMME-REVIEW-20261125. Evidence: scripts/research/lever_design.py design_block (available = families in config_levers or declared_levers) + next_lever (candidates restricted to available). iteration_orphans 2026-11-25: 39 strategy legs overdue; remaining families across them: timeframe 34, symbol_set 28, sizing_vs_cost 26, entry 22, session 16, regime_gating 15, direction 7; 16 legs have ONLY non-config families left, so their weekly unit keeps re-sweeping entry/exit (35 units titled 'next lever entry', 12 'next lever exit' since 11-05/11-06). exit_lever_ablation.py already accepts --timeframe/--symbol per run (_TF_MIN), but not per arm. Build: (1) per-arm timeframe and symbol tokens in exit_lever_ablation (or a sibling-unit mode as macro-valuation uses), (2) declared: blocks in research/levers/<leg>.yaml for session/regime_gating/direction values the harnesses already take (skip_hours, side_filter, adx cells), (3) lever_design picks them. Done when: the next weekly emit for avax_pullback_2h (remaining: symbol_set only) names symbol_set as its lever. CLOSED 2026-11-26 against an OBSERVATION, not a PR: after #28970 (direction default lever) and #28976 (twin generator, symbol+timeframe) merged, ONE scoped manual queue_replenish dispatch (--target 60; the other 40 planned units deleted) emitted RQ-20261126-008 (avax_pullback_2h symbol twin, ADAUSDT) and RQ-20261126-014 (avax_pullback_2h direction lever, side_long/side_short); #29006 merged (squash 637390fea6) and both files are on origin/main (git cat-file verified), queue_replenish --verify OK. State of evidence: emitted and queued, NOT yet run or graded. The generator stays off by default (cron target 0), so further reach needs a manual dispatch or a plan-authored unit; sizing_vs_cost stays a per-venue by-hand reprice and the session family is row LEVER-SESSION-HOURS-PER-VENUE (manager-confirmed deviations).",
+  "phase": "research",
+  "updated_at": "2026-11-26T02:56:38Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

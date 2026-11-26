@@ -1,0 +1,21 @@
+{
+  "id": "ALPACA-PARTIAL-ENTRY-CANCELLED-WRONG-SIZE",
+  "title": "Three alpaca_paper SPY entries (7583/7584/7585, 2026-11-16) were sent as market orders before the US open, partly filled at the open and were then cancelled; the journal kept the full requested size, the package entry, and closed them with no exit or P&L",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26T12:54Z by ML-PRIMARY on manager 26a's instruction. Same family as ALPACA-ENTRY-FILL-PRICE-UNSYNCED (late fill kept the package price) and ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125 (a close left a working entry order). MEASURED (diag journal + /api/diag/alpaca_order_history by order id): 7583: journal qty 101, entry 749.66; venue market GTC order submitted 14:07:17Z (pre-open, US open 14:30Z), filled 24 of 101 at 748.23 by 14:32:25Z, CANCELED 14:32:33Z. 7584: journal qty 12 vs filled 1 at 748.28, submitted 14:16Z, canceled 14:32:33Z. 7585: journal qty 2 vs filled 1 at 747.59, submitted 14:25Z, canceled 14:32:33Z. All three closed by position_snapshot_reconciler with exit_reason exchange_flat_reconciled, exit_price NULL, pnl NULL, pnl_basis NULL. The 26 filled shares' exit, and who cancelled the three orders at the same second, are not established. QUESTIONS for the owner: (1) what cancelled all three at 14:32:33Z (our close path cancelling the working entry, cf. #29091, or the venue)? (2) how were the 26 filled shares closed, and at what price (the venue fills for that window)? (3) should the journal rows carry the FILLED size and fill price, as set-journal-trade-qty does for other venues? (4) should pre-open market orders be sent at all (a GTC market order queued before the open)? The backfill in PR #29165 deliberately skips these rows (entry_order_canceled); they need their own correction once (1)-(3) are known. Tier 2 (journal size/P&L rewrite + possibly order-path timing).",
+  "phase": "observability",
+  "updated_at": "2026-11-26T12:54:09Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}
