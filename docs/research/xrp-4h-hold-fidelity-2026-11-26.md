@@ -1,5 +1,7 @@
 # trend_donchian_xrp_4h: the book engine mis-simulates holds; the Stage-0 record is not wrong (2026-11-26)
 
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+
 Lane `XRP-BACKTEST-HOLD-FIDELITY` (Tier 1, diagnostic; no config/runtime touched). Pipeline item `PI-20261120-D3GR4UKX-0003`.
 Gates this adds or changes: none.
 
