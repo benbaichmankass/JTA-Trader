@@ -1,0 +1,150 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row REGIME-LIVE-VETO-COUNTERFACTUAL; ITERATION 3 of the ml-btc-router-cells orphan, handed over by
+# QUEUE-FILL-STANDING-W49). Decision rule registered BEFORE any run; drop and signal COUNTS were read to state power, no outcome was computed.
+# Gates this adds or changes: none (a research unit; no config, regime cell, filter or order path).
+id: RQ-20261126-c4f2-01
+title: 'ITERATION 3 of ml-btc-router-cells: did the LIVE regime_hard_gate drops (2026-09-01..11-26) save money? Replay every dropped live signal as emitted and
+  compare its net R with matched random signals of the same strategies the gate let through, split by axis (ML vol vs ADX trend).'
+status: queued
+cadence: once
+theme: regime
+priority: 2
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+origin: new_hypothesis
+iteration:
+  subject: ml-btc-router-cells
+  subject_kind: ml_model
+  from_result: RQ-20261113-b819-01/43462233659
+  verdict_read: fail
+  diagnosis: 'b819-01 FAILED on money: under REPLAYED labels the 8 BTC trend_vol OFF-cells added +6.9 R over 250 dropped harness trades but control_p 0.55 (no
+    better than random drops), with trend_donchian -1.05 R. bcd2-01 also failed, and aadc-01 measured replay-vs-live label agreement at kappa 0.24. So
+    every money grade so far was on labels the live trader did not use. The cells still drop live intents every day (vol_enforced=true rows on
+    trend_donchian, squeeze_breakout_4h and ict_scalp_5m). Competing hypotheses: (a) the cells are cosmetic, and the live drops are no worse than random signals
+    of the same leg; (b) the live ML labels, not the replayed ones, carve out a real losing slice that the replay could not see. The live drop rows plus the
+    strategy eval rows (entry/SL/TP as emitted) price the actual vetoes without needing label parity.'
+  hypothesis: the live ML-vol drops are not worse than matched random signals of the same strategies (veto not separable or costly), so the cells are cosmetic
+  attempt: 3
+  due_by: '2026-12-02'
+  map_entries:
+  - research/levers/ml-btc-router-cells.yaml
+question: 'Over the live regime_hard_gate drops 2026-09-01..2026-11-26, replayed on Binance Vision USD-M klines exactly as emitted (market fill at the next bar
+  open, emitted SL/TP, 48-bar horizon, net of the full cost stack), is the mean net R of the ADX-trend-axis dropped signals (the deciding axis; the ML-vol axis, n=1, is reported) < 0 with its 90% bootstrap CI below 0
+  and at or below the 10th percentile of matched random same-strategy signals (PASS: the veto saved money), or is its CI above 0 (FAIL: the veto cost money)?'
+why_this_matters: 'The only regime veto with ML in the loop that enforces live has never been priced on the trades it actually removed. A FAIL or a
+  not-separable read joins b819-01 as the evidence for a data-backed Tier-3 removal proposal of the BTC trend_vol cells (regime-selectivity Rule 1,
+  no cosmetic cells), which gives the demo-floor legs back the signals the cells suppress. A PASS is the first live evidence that the ML router earns
+  its keep.'
+levers:
+- name: live_veto_money_test
+  values: [ML-vol-axis dropped signals, ADX-trend-axis dropped signals (reported), matched random same-strategy signals (2000 draws)]
+  hypothesised_effect: the ML-vol drops are no worse than random signals of the same strategies
+evidence_class:
+  holdout: none
+  claim: edge
+power:
+  expected_n: 37
+  min_detectable_effect: 0.55
+  effect_units: metric
+  sd: 1.2
+  design: one_sample
+  alpha: 0.10
+  power: 0.8
+  basis: 'MEASURED counts, read before any outcome was computed. Drop rows (diag audit_query regime_hard_gate, 2026-09-01..11-26): 236 vol_enforced
+    rows (trend_donchian 40, squeeze_breakout_4h 188, ict_scalp_5m 8) and ~2,000 ADX-trend rows (htf_pullback_trend_2h, gld_pullback_1h, fvg_range_15m).
+    The committed snapshot (2,282 drop rows + 11,000 eval rows) joins to 247 unique signals: 51 kept, 158 mixed, 38 dropped on every tick. Of the 38,
+    37 are trend-axis (htf_pullback_trend_2h 30, fvg_range_15m 7) and 1 is ML-vol (squeeze_breakout_4h); 11 ML-vol bars are mixed. ict_scalp_5m emits
+    no <strategy>_eval rows, so its 8 drop rows cannot be joined (stated, not hidden). gld_pullback_1h is not on Binance and counts in could_not_replay.
+    The DECIDING axis was therefore re-designated to trend before any outcome: n 37, sd 1.2 R (ESTIMATE), MDE = 2.8 x 1.2 / sqrt(37) = 0.55 R per dropped
+    signal; INDETERMINATE is the likely outcome. The ML-vol axis is underpowered by count (n=1); that count is itself the headline: the ML router
+    prevented about one trade in 3 months, so its money effect is bounded near zero whichever way it points.'
+  feasibility:
+    source: none
+    accrual_basis: A committed snapshot of the live audit rows with a fixed window; nothing accrues inside the unit. A re-run on a later snapshot widens n by
+      ~13 ML-vol episodes per month.
+ml_consumer:
+  consumer: research/levers/ml-btc-router-cells.yaml
+  decision: drop (veto) a BTC intent before routing when the advisory vol head's live label lands in an authored trend_vol OFF-cell
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+baseline:
+  definition: matched random signals - for each dropped signal, one signal drawn from all replayed live signals of the same strategy (dropped, kept or mixed),
+    2000 draws; and zero (not trading the dropped signal).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/regime_veto_counterfactual.py
+  - grade
+  - --snapshot
+  - comms/live_parity/regime_veto_20261126/snapshot.jsonl
+  - --out-dir
+  - '{out_dir}'
+  timeout_minutes: 60
+  inputs:
+    research_unit: RQ-20261126-c4f2-01
+decision_rule:
+  id: RULE-REGIME-LIVE-VETO-CF-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: matched random same-strategy live signals (2000 draws); zero
+  statistic: 'scripts/research/regime_veto_counterfactual.py grade (signals, replay_signal = desk_outcomes.replay unchanged, axis_verdict): per axis, mean net R
+    of the DROPPED signals (status dropped = every tick of the bar dropped; mixed bars excluded from the dropped set), its 90% bootstrap CI (2000 draws),
+    the matched random control mean and p_control_le = share of draws with mean <= the dropped mean; per-strategy n and mean reported; could_not_replay counted.'
+  rule: 'Decided on the trend axis (re-designated before any outcome: the ML-vol axis has 1 dropped signal). PASS iff mean < 0 AND CI90 upper < 0 AND p_control_le <= 0.10 (the veto saved money). FAIL iff CI90 lower > 0 (the veto
+    cost money). n < 5 dropped signals = INDETERMINATE (underpowered). Else INDETERMINATE (not separable). The ml_vol axis is graded by the same rule and
+    reported beside it with its mixed-bar count; it does not decide this unit.'
+  pass_action: 'Record the first live evidence for the cells; re-grade on a later snapshot (disjoint window, after 2026-11-26) before any claim that the router
+    adds money; no config change.'
+  fail_action: 'The trend-axis drops cost money: propose to the manager the data-backed Tier-3 REMOVAL of the ADX regime cells on the legs where they cost money
+    (htf_pullback_trend_2h, fvg_range_15m; regime-selectivity Rule 1). Separately, the ML-vol count (1 prevented trade in 3 months) plus b819-01 go to the
+    manager as the cosmetic-cell evidence for the BTC trend_vol cells. The operator or manager decides; no lane edits config/regime_policy.yaml.'
+  proposal_mapping: fail -> Tier-3 ADX-cell removal proposal; indeterminate -> joins b819-01 as cosmetic-cell evidence and the next iteration re-grades on a wider
+    live window; pass -> disjoint-window re-grade.
+  what_it_does_not_do: Changes no config, regime cell, filter or order path; adds no gate; reads a committed snapshot and the keyless Binance Vision archive,
+    writes only under --out-dir.
+  min_n: 5
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.2
+  basis: 'stand-in: ~13 ML-vol vetoed signals per month on demo-floor legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: one same-strategy live signal per dropped signal, drawn with replacement from all replayed live signals of that strategy; 2000 draws; the
+      dropped mean must sit at or below the 10th percentile
+    draws: 2000
+  hold_to_bracket: true
+  hold_to_bracket_note: 'every signal, dropped or kept, is replayed to the same emitted SL/TP bracket with a 48-bar horizon; no in-trade action on either arm'
+  best_static:
+    grid:
+    - no veto (trade every dropped signal) - the registered comparator
+    excludes_test_folds: true
+    note: one fixed rule; no threshold, horizon or window was searched
+  bootstrap_group: signal
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control (principles R5, M6, M13); the live-label grade the
+  aadc-01 kappa 0.24 finding called for.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: Keyless Binance Vision klines for 2-3 symbols x 4 timeframes over 3 months plus a committed snapshot; no model fit.
+  basis: 'ESTIMATE: ~500 signals, one bracket replay each; the kline download dominates (a few hundred small zips).'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/regime_veto_counterfactual.py
+- comms/live_parity/regime_veto_20261126/snapshot.jsonl
+- REGIME-LIVE-VETO-COUNTERFACTUAL
+- RQ-20261113-b819-01
+- RQ-20261112-bcd2-01
+- RQ-20261117-aadc-01
+- .claude/skills/regime-selectivity/SKILL.md
