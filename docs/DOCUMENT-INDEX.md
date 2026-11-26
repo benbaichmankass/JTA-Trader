@@ -904,6 +904,8 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/desk-event-calendar-scope-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-lifecycle-factorial-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-macro-daily-SPEC-2026-11-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/desk-macro-samples/2026-11-26/brief-DMB-20261126T1625Z.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/desk-macro-samples/ROUTINE-PROMPT-1300Z.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-maker-fills-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-packet-redesign-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/digest-cadence-carrier-2026-09-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

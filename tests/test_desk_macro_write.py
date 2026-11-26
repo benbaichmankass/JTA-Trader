@@ -14,4 +14,15 @@ def test_desk_macro_write_self_test():
 def test_good_brief_validates_against_the_real_universe():
     import desk_macro_write as W
     uni, legs = W.desk_universe()
-    assert W.problems(W.GOOD, uni, legs) == []
+    pkt = W._pkt()
+    assert W.problems(dict(W.GOOD, packet_sha=pkt["packet_sha"]), uni, legs, pkt) == []
+
+
+def test_empty_trades_refused_unless_packet_prices_could_not_look():
+    import desk_macro_write as W
+    uni, legs = W.desk_universe()
+    live, dead = W._pkt("measured"), W._pkt("could_not_look")
+    empty = dict(W.GOOD, trades=[], no_trade_reason="nothing compelling")
+    assert any("trades == [] is refused" in x for x in W.problems(dict(empty, packet_sha=live["packet_sha"]), uni, legs, live))
+    assert W.problems(dict(empty, packet_sha=dead["packet_sha"]), uni, legs, dead) == []
+

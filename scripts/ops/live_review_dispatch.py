@@ -579,8 +579,10 @@ def summarize(entry: Optional[Dict[str, Any]]) -> List[str]:
         aid = r.get("account_id")
         a = applied.get(aid) or {}
         ex = a.get("executor") or {}
+        # LTR-PROP-CLOSE-FALSE-APPLIED: a request queued at the ticket (prop VM / phone) is not a venue read-back.
+        state = ("QUEUED" if ex.get("venue_confirmed") is False else "APPLIED") if aid in applied else r.get("read")
         out.append(f">>> {aid} [{r.get('account_class')}]: "
-                   f"{'APPLIED' if aid in applied else r.get('read')} level={a.get('level')} "
+                   f"{state} level={a.get('level')} "
                    f"executor={ex.get('result')} venue_after={ex.get('venue_after', ex.get('sl'))} "
                    f"— {r.get('evidence')}")
     out.append(f">>> disposition {json.dumps(entry.get('disposition'), default=str)}")
