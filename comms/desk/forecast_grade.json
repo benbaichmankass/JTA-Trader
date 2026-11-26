@@ -130,7 +130,7 @@
     "expired": 154,
     "invalidation_first": 155,
     "no_data": 18,
-    "pending": 0,
+    "pending": 2,
     "target_first": 160,
     "tie_unresolved": 0
    },
@@ -138,27 +138,42 @@
     "n": 453,
     "rate": 0.4945
    },
-   "n": 487,
+   "n": 489,
    "n_graded": 469,
-   "n_packages": 168,
+   "n_packages": 170,
    "n_scored_with_p": 469,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-26T12:16:24Z",
+ "computed_at": "2026-11-26T16:31:53Z",
  "inventory": {
   "desk_entry": {
-   "no_trade_without_forecast": 212,
-   "records": 244,
+   "no_trade_without_forecast": 213,
+   "records": 245,
    "with_forecast": 32
   },
   "live_review": {
-   "records": 884,
-   "with_forecast": 487
+   "records": 886,
+   "with_forecast": 489
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
- "pending": [],
+ "pending": [
+  {
+   "fid": "LR-20261126T1606Z-pkg-000be1cf79924370",
+   "horizon_end": "2026-11-26T22:20:00Z",
+   "source": "live_review",
+   "symbol": "ADAUSDT",
+   "time_remaining_s": 20886
+  },
+  {
+   "fid": "LR-20261126T1606Z-pkg-6f152b3e407e4b64",
+   "horizon_end": "2026-11-26T22:20:00Z",
+   "source": "live_review",
+   "symbol": "XRPUSDT",
+   "time_remaining_s": 20886
+  }
+ ],
  "pooled": {
   "brier_by_class": {
    "expired": {
@@ -217,7 +232,7 @@
    "expired": 169,
    "invalidation_first": 161,
    "no_data": 18,
-   "pending": 0,
+   "pending": 2,
    "target_first": 171,
    "tie_unresolved": 0
   },
@@ -225,25 +240,25 @@
    "n": 483,
    "rate": 0.501
   },
-  "n": 519,
+  "n": 521,
   "n_graded": 501,
-  "n_packages": 168,
+  "n_packages": 170,
   "n_scored_with_p": 501,
   "unresolved_ties": 0
  },
- "population": "519 forecasts: live_review=487, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
+ "population": "521 forecasts: live_review=489, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
  "read_state": {
   "candles": "live /api/bot/candles (tf + 1m)",
   "desk": {
-   "branch": 244,
-   "main_decisions": 243,
-   "union": 244
+   "branch": 245,
+   "main_decisions": 245,
+   "union": 245
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
    "main_reviews": 844,
-   "rows_branch": 543,
-   "union": 884
+   "rows_branch": 545,
+   "union": 886
   },
   "null_means": "could-not-look (no_data / tie_unresolved), never 0",
   "packages_read": 1000
