@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-047
 title: 'Config-exact symbol twin of qld_trend_long_1d: IWM (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -132,3 +132,16 @@ generated:
     twin: IWM
     twin_key: symbol:IWM
 last_dispatched_at: '2026-11-26T07:26:10+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-TPL-LEG-TWIN-SYMBOL-STAGE0
+  evidence:
+  - research/results/RQ-20261126-047/45775339007.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 2 row(s), all measured, all indeterminate
+  rows: 2
+  verdict: indeterminate

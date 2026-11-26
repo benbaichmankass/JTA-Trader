@@ -1,0 +1,183 @@
+{
+  "leg": "trend_donchian",
+  "label": "stage0_edge",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 33.8087,
+    "n": 173,
+    "max_drawdown_r": 17.2615,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=33.8087 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0462,
+      "n": 173,
+      "net_r": 33.8087,
+      "net_r_fee_only": 43.863,
+      "max_drawdown_r": 17.2615,
+      "by_outcome": {
+        "stop": 96,
+        "trail_stop": 55,
+        "take_profit": 20,
+        "timeout": 2
+      },
+      "mean_bars_held": 28.751,
+      "net_r_per_capital_day": 0.0816,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.0,
+        "trail_mult": 5.0,
+        "min_confidence": 0.7,
+        "trail_decay_arm_r": 6.49,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5
+      },
+      "data_start": "2021-11-13 22:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 23:00:00+00:00",
+          "end": "2023-02-14 11:00:00+00:00",
+          "trades": 39,
+          "net_r": 3.5066
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:00:00+00:00",
+          "end": "2024-05-16 23:00:00+00:00",
+          "trades": 52,
+          "net_r": 24.4178
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:00:00+00:00",
+          "end": "2025-08-17 11:00:00+00:00",
+          "trades": 42,
+          "net_r": 10.4846
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 11:00:00+00:00",
+          "end": "2026-11-17 23:00:00+00:00",
+          "trades": 40,
+          "net_r": -4.6004
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.7",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-123/45827846546/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-123/45827846546/arms/A__bt.json",
+        "--long-only",
+        "--trail-decay-arm-r",
+        "6.49",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "60",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2021-11-13 23:00:00+00:00",
+      "2023-02-14 11:00:00+00:00",
+      "2024-05-16 23:00:00+00:00",
+      "2025-08-17 11:00:00+00:00",
+      "2026-11-17 23:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.7",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-123/45827846546/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-123/45827846546/arms/A__bt.json",
+        "--long-only",
+        "--trail-decay-arm-r",
+        "6.49",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar",
+        "exit_head_action",
+        "exit_head_model",
+        "exit_head_threshold"
+      ],
+      "routed_cfg_keys": []
+    }
+  }
+}

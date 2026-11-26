@@ -1,0 +1,7 @@
+candle dataset: served binance__ETHUSDT__60 (43921 rows, last 2026-11-17 23:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 4h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-130/45830433164/arms/A__trades.jsonl --json comms/research/RQ-20261126-130/45830433164/arms/A__bt.json --vol-skip-below-pctl 0.1 --tp-cap-pct 0.099 --tp-r 50.0
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=20.3469 > 0 with 4/4 positive folds at this arm's cost stack"
+}

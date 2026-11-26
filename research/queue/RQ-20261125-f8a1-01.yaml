@@ -3,7 +3,7 @@
 id: RQ-20261125-f8a1-01
 title: 'Cross-asset / macro state as an ML ENTRY feature (family F8: daily SPY/QQQ/TLT/GLD/UUP 1/5/20-day returns + 20-day realised vol, as of the last COMPLETED
   US close): does adding F8 to the 20-feature ENTRY baseline raise pooled net R per decision on the 8 DEV folds, past the seed-noise floor?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -121,3 +121,16 @@ practice_precedent: M4 (rule registered before the run), M6 (net of the full cos
 what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
 not_before: '2026-11-25T23:30:00+00:00'
 last_dispatched_at: '2026-11-25T23:57:42+00:00'
+grading:
+  attested: RULE-RQ-20261125-f8a1-01-MACRO-F8
+  auto: true
+  decision_rule_id: RULE-RQ-20261125-f8a1-01-MACRO-F8
+  evidence:
+  - research/results/RQ-20261125-f8a1-01/45725266118.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail
+  rows: 3
+  verdict: fail

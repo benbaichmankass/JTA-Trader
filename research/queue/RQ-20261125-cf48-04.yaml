@@ -5,7 +5,7 @@ id: RQ-20261125-cf48-04
 title: 'D8 Labrador exit-now head on the WIDENED POOLED donchian-4h corpus (trend_donchian_eth_4h twins on the 60-perp bp2 universe, 2020-06..now):
   does the learned exit-now head beat the declared exit by >= +0.05 R/trade out of sample AND beat a causal matched random exit at the 95th
   percentile?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -167,3 +167,14 @@ related:
 - scripts/research/exit_head_kaggle_bakeoff.py (--self-test)
 - scripts/research/exit_head_label_bakeoff.py (run_pooled, _causal_random_fold)
 last_dispatched_at: '2026-11-26T00:56:28+00:00'
+grading:
+  attested: RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED
+  auto: true
+  decision_rule_id: RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED
+  evidence:
+  - research/results/RQ-20261125-cf48-04/45732327300.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
