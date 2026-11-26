@@ -29,7 +29,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -37,9 +37,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import data_universe as du  # noqa: E402
 
 DATA_URL = os.environ.get("ALPACA_DATA_URL", "https://data.alpaca.markets").rstrip("/")
+# The option CONTRACTS listing (open_interest, open_interest_date) lives on the Trading API, not the data API. READ-ONLY: this module
+# only ever issues GETs against it (a contract listing: no account, order or position endpoint). Same Alpaca key as the data calls.
+TRADING_URL = os.environ.get("ALPACA_TRADING_URL", "https://api.alpaca.markets").rstrip("/")
 _OCC = re.compile(r"^([A-Z0-9]{1,8}?)(\d{6})([CP])(\d{8})$")  # CBOE prefixes some roots ("B1SPY...")
 COLS = ["asof_date", "captured_at", "underlying", "spot", "symbol", "expiry", "cp", "strike", "bid", "ask", "bid_size",
-        "ask_size", "quote_ts", "last", "last_ts", "iv", "delta", "gamma", "theta", "vega", "rho", "open_interest", "volume", "feed"]
+        "ask_size", "quote_ts", "last", "last_ts", "iv", "delta", "gamma", "theta", "vega", "rho", "open_interest", "volume",
+        "open_interest_date", "volume_date", "feed"]
 Getter = Callable[[str, Dict[str, Any]], Any]
 
 
@@ -61,8 +65,9 @@ def make_cboe_getter() -> Getter:
     return get
 
 
-def make_getter() -> Getter:
+def make_getter(base: Optional[str] = None) -> Getter:
     import requests
+    base = base or DATA_URL
 
     k, s = os.environ.get("ALPACA_API_KEY_ID_LIVE"), os.environ.get("ALPACA_API_SECRET_KEY_LIVE")
     if not (k and s):
@@ -72,7 +77,7 @@ def make_getter() -> Getter:
 
     def get(path: str, params: Dict[str, Any]) -> Any:
         for attempt in range(8):
-            r = sess.get(DATA_URL + path, params=params, timeout=60)
+            r = sess.get(base + path, params=params, timeout=60)
             if r.status_code == 429 or r.status_code >= 500:
                 time.sleep(min(60, 2 ** attempt))
                 continue
@@ -82,6 +87,49 @@ def make_getter() -> Getter:
         raise RuntimeError(f"HTTP retries exhausted {path}")
 
     return get
+
+
+def probe_shapes(get: Getter, tget: Getter, today: date, und: str = "SPY") -> List[Dict[str, Any]]:
+    """MEASURE the response shapes option A depends on, one JSON-able dict per finding, never raising: a refused call is a finding.
+    (1) a data-API option snapshot: its keys and whether it carries a dailyBar (volume `v`); (2) the Trading API contracts listing, one
+    page for the capture window: the keys, how many contracts carry open_interest, and its date(s); (3) one daily option bar."""
+    out: List[Dict[str, Any]] = []
+    spot = spot_price(get, und) or 0.0
+    lo, hi = round(spot * 0.94, 2), round(spot * 1.06, 2)
+    sym = None
+    try:
+        j = get(f"/v1beta1/options/snapshots/{und}", {"feed": "indicative", "limit": 50, "strike_price_gte": lo, "strike_price_lte": hi,
+                                                      "expiration_date_gte": today.isoformat(),
+                                                      "expiration_date_lte": (today + timedelta(days=14)).isoformat()})
+        snaps = j.get("snapshots") or {}
+        with_daily = sum(1 for v in snaps.values() if v.get("dailyBar"))
+        sym, one = next(iter(snaps.items()), (None, {}))
+        out.append({"shape": "snapshot", "status": "ok", "n": len(snaps), "with_dailyBar": with_daily, "symbol": sym,
+                    "keys": sorted(one.keys()), "dailyBar": one.get("dailyBar"), "prevDailyBar": one.get("prevDailyBar")})
+    except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+        out.append({"shape": "snapshot", "status": "error", "error": str(e)[:200]})
+    try:
+        j = tget("/v2/options/contracts", {"underlying_symbols": und, "limit": 1000, "strike_price_gte": lo, "strike_price_lte": hi,
+                                           "expiration_date_gte": today.isoformat(),
+                                           "expiration_date_lte": (today + timedelta(days=45)).isoformat()})
+        cs = j.get("option_contracts") or []
+        with_oi = [c for c in cs if c.get("open_interest") not in (None, "")]
+        out.append({"shape": "contracts", "status": "ok", "n_page": len(cs), "with_open_interest": len(with_oi),
+                    "oi_dates": sorted({str(c.get("open_interest_date")) for c in with_oi})[:5], "next_page_token": bool(j.get("next_page_token")),
+                    "keys": sorted(cs[0].keys()) if cs else [], "example": ({k: cs[0].get(k) for k in ("symbol", "open_interest", "open_interest_date", "status", "tradable",
+                                                                                                    "expiration_date", "strike_price", "type")} if cs else None)})
+    except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+        out.append({"shape": "contracts", "status": "error", "error": str(e)[:200]})
+    if sym:
+        try:
+            j = get("/v1beta1/options/bars", {"symbols": sym, "timeframe": "1Day", "start": (today - timedelta(days=7)).isoformat(),
+                                              "limit": 5, "sort": "desc"})
+            b = (j.get("bars") or {}).get(sym) or []
+            out.append({"shape": "bars", "status": "ok", "symbol": sym, "n": len(b), "keys": sorted(b[0].keys()) if b else [],
+                        "newest": b[0] if b else None})
+        except Exception as e:  # noqa: BLE001  # allow-silent: a refused/odd call is the finding, printed as one JSON line
+            out.append({"shape": "bars", "status": "error", "error": str(e)[:200]})
+    return out
 
 
 def parse_occ(sym: str) -> Optional[Dict[str, Any]]:
@@ -113,6 +161,38 @@ def fetch_chain(get: Getter, und: str, spot: float, today: date, moneyness: floa
             break
         params["page_token"] = tok
     return snaps
+
+
+def fetch_open_interest(tget: Getter, und: str, spot: float, today: date, moneyness: float, max_pages: int = 60) -> Dict[str, Any]:
+    """Open interest per contract from Alpaca's Trading-API option-CONTRACTS listing (READ-ONLY GETs; same key as the data calls).
+
+    Returns {"oi": {symbol: (int open_interest, "YYYY-MM-DD" open_interest_date)}, "contracts": n, "pages": n, "complete": bool}.
+    A contract whose open_interest is null is ABSENT from `oi` (unknown, never 0). The date is carried because the listing's open
+    interest is the OCC figure as of an earlier session (measured 2026-11-26: dated 2026-11-23), not today's. Raises on a failed
+    call: the caller records that as `oi_read_state: could_not_look`, never as zero open interest."""
+    params: Dict[str, Any] = {
+        "underlying_symbols": und, "limit": 1000,
+        "strike_price_gte": round(spot * (1 - moneyness), 2), "strike_price_lte": round(spot * (1 + moneyness), 2),
+        "expiration_date_gte": today.isoformat(), "expiration_date_lte": (today + timedelta(days=45)).isoformat(),
+    }
+    oi: Dict[str, Tuple[int, Optional[str]]] = {}
+    n = pages = 0
+    complete = False
+    while pages < max_pages:
+        j = tget("/v2/options/contracts", params)
+        pages += 1
+        for c in j.get("option_contracts") or []:
+            n += 1
+            v = c.get("open_interest")
+            if v in (None, ""):
+                continue
+            oi[str(c.get("symbol"))] = (int(float(v)), (str(c.get("open_interest_date")) if c.get("open_interest_date") else None))
+        tok = j.get("next_page_token")
+        if not tok:
+            complete = True
+            break
+        params["page_token"] = tok
+    return {"oi": oi, "contracts": n, "pages": pages, "complete": complete}
 
 
 def cboe_frame(und: str, j: Dict[str, Any], today: date, n_expiries: int, moneyness: float, now: datetime) -> pd.DataFrame:
@@ -147,7 +227,8 @@ def cboe_frame(und: str, j: Dict[str, Any], today: date, n_expiries: int, moneyn
     return pd.DataFrame(rows, columns=COLS).sort_values(["expiry", "cp", "strike"]).reset_index(drop=True)
 
 
-def to_frame(und: str, spot: float, snaps: Dict[str, Any], today: date, n_expiries: int, feed: str, now: datetime) -> pd.DataFrame:
+def to_frame(und: str, spot: float, snaps: Dict[str, Any], today: date, n_expiries: int, feed: str, now: datetime,
+             oi: Optional[Dict[str, Tuple[int, Optional[str]]]] = None) -> pd.DataFrame:
     parsed = {s: parse_occ(s) for s in snaps}
     expiries = sorted({p["expiry"] for p in parsed.values() if p and p["root"] == und and p["expiry"] >= today})[:n_expiries]
     rows: List[Dict[str, Any]] = []
@@ -156,19 +237,22 @@ def to_frame(und: str, spot: float, snaps: Dict[str, Any], today: date, n_expiri
         if not p or p["root"] != und or p["expiry"] not in expiries:
             continue
         q, t, g = snap.get("latestQuote") or {}, snap.get("latestTrade") or {}, snap.get("greeks") or {}
+        db = snap.get("dailyBar") or {}                     # the session's bar: volume `v` (measured 2026-11-26: 50 of 50 snapshots carry it)
+        o_v, o_d = (oi or {}).get(sym, (None, None))        # unknown stays None, never 0
         rows.append({
             "asof_date": today.isoformat(), "captured_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "underlying": und, "spot": spot,
             "symbol": sym, "expiry": p["expiry"].isoformat(), "cp": p["cp"], "strike": p["strike"],
             "bid": q.get("bp"), "ask": q.get("ap"), "bid_size": q.get("bs"), "ask_size": q.get("as"), "quote_ts": q.get("t"),
             "last": t.get("p"), "last_ts": t.get("t"), "iv": snap.get("impliedVolatility"),
             "delta": g.get("delta"), "gamma": g.get("gamma"), "theta": g.get("theta"), "vega": g.get("vega"), "rho": g.get("rho"),
-            "open_interest": None, "volume": None, "feed": feed})
+            "open_interest": o_v, "volume": db.get("v"), "open_interest_date": o_d,
+            "volume_date": (str(db["t"])[:10] if db.get("t") else None), "feed": feed})
     df = pd.DataFrame(rows, columns=COLS)
     return df.sort_values(["expiry", "cp", "strike"]).reset_index(drop=True)
 
 
 def capture(get: Getter, root: Path, und: str, today: date, n_expiries: int, moneyness: float, feed: str,
-            source: str = "alpaca") -> Dict[str, Any]:
+            source: str = "alpaca", tget: Optional[Getter] = None) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     if source == "cboe":
         df = cboe_frame(und, get(f"/api/global/delayed_quotes/options/{und}.json", {}), today, n_expiries, moneyness, now)
@@ -177,7 +261,15 @@ def capture(get: Getter, root: Path, und: str, today: date, n_expiries: int, mon
         spot = spot_price(get, und)
         if not spot:
             raise RuntimeError(f"{und}: no spot price")
-        df = to_frame(und, spot, fetch_chain(get, und, spot, today, moneyness, feed), today, n_expiries, feed, now)
+        oi_res: Optional[Dict[str, Any]] = None
+        oi_err: Optional[str] = None
+        if tget is not None:                                # open interest is its own read: a failure is published, never a zero
+            try:
+                oi_res = fetch_open_interest(tget, und, spot, today, moneyness)
+            except Exception as e:  # noqa: BLE001  # allow-silent: not silent, published as oi_read_state could_not_look in the record and as a FAIL line by main()
+                oi_err = f"{type(e).__name__}: {str(e)[:120]}"
+        df = to_frame(und, spot, fetch_chain(get, und, spot, today, moneyness, feed), today, n_expiries, feed, now,
+                      (oi_res or {}).get("oi"))
     if df.empty:
         raise RuntimeError(f"{und}: empty chain slice")
     p = root / und / f"{today.isoformat()}.parquet"
@@ -185,26 +277,40 @@ def capture(get: Getter, root: Path, und: str, today: date, n_expiries: int, mon
     tmp = p.with_suffix(".parquet.tmp")
     df.to_parquet(tmp, index=False)
     os.replace(tmp, p)
-    return {"underlying": und, "asof_date": today.isoformat(), "rows": int(len(df)), "expiries": int(df["expiry"].nunique()),
-            "iv_coverage": round(float(df["iv"].notna().mean()), 3), "quote_coverage": round(float(df["bid"].notna().mean()), 3),
-            "latest_quote_ts": str(df["quote_ts"].dropna().max()) if df["quote_ts"].notna().any() else None, "feed": feed}
+    rec = {"underlying": und, "asof_date": today.isoformat(), "rows": int(len(df)), "expiries": int(df["expiry"].nunique()),
+           "iv_coverage": round(float(df["iv"].notna().mean()), 3), "quote_coverage": round(float(df["bid"].notna().mean()), 3),
+           "latest_quote_ts": str(df["quote_ts"].dropna().max()) if df["quote_ts"].notna().any() else None, "feed": feed}
+    if source == "alpaca":                                  # option A: volume from the snapshot's dailyBar, open interest from the contracts listing
+        rec["volume_coverage"] = round(float(df["volume"].notna().mean()), 3)
+        if tget is None:
+            rec["oi_read_state"] = "not_requested"
+        elif oi_err is not None:
+            rec["oi_read_state"] = "could_not_look"
+            rec["oi_error"] = oi_err
+        else:
+            rec["oi_read_state"] = "ok" if (oi_res or {}).get("complete") else "partial"
+            rec["oi_coverage"] = round(float(df["open_interest"].notna().mean()), 3)
+            rec["oi_dates"] = sorted({str(d) for d in df["open_interest_date"].dropna().unique()})[:3]
+    return rec
 
 
 def verify(root: Path, unds: List[str], stale_days: float, now: datetime) -> int:
     bad: List[str] = []
-    print("| underlying | days | first | last | last_rows | iv_cov | age_d | status |\n|---|---|---|---|---|---|---|---|")
+    print("| underlying | days | first | last | last_rows | iv_cov | oi_cov | vol_cov | age_d | status |\n|---|---|---|---|---|---|---|---|---|---|")
     for und in unds:
         files = sorted((root / und).glob("*.parquet")) if (root / und).exists() else []
         if not files:
             bad.append(und)
-            print(f"| {und} | 0 | — | — | — | — | — | MISSING |")
+            print(f"| {und} | 0 | — | — | — | — | — | — | — | MISSING |")
             continue
         last = pd.read_parquet(files[-1])
         age = (now.date() - date.fromisoformat(files[-1].stem)).days
         stale = age > stale_days
         if stale:
             bad.append(und)
-        print(f"| {und} | {len(files)} | {files[0].stem} | {files[-1].stem} | {len(last)} | {last['iv'].notna().mean():.2f} | {age} | "
+        oi_cov = f"{last['open_interest'].notna().mean():.2f}" if "open_interest" in last else "—"
+        vol_cov = f"{last['volume'].notna().mean():.2f}" if "volume" in last else "—"
+        print(f"| {und} | {len(files)} | {files[0].stem} | {files[-1].stem} | {len(last)} | {last['iv'].notna().mean():.2f} | {oi_cov} | {vol_cov} | {age} | "
               f"{'STALE' if stale else 'ok'} |")
     print(f"underlyings={len(unds)} stale_or_missing={len(bad)} {bad}")
     return 1 if bad else 0
@@ -233,6 +339,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.mode == "verify":
         return verify(root, unds, a.stale_days, now)
     get = make_cboe_getter() if a.source == "cboe" else make_getter()
+    tget = make_getter(TRADING_URL) if (a.source == "alpaca" and a.mode == "capture") else None
     if a.mode == "probe":  # what does the plan serve? one SPY slice per feed, no store write
         for feed in ("opra", "indicative"):
             try:
@@ -254,15 +361,29 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(json.dumps({"hist_option_bars": sym, "status": "ok", "earliest": b[0]["t"] if b else None, "n_first_page": len(b)}))
             except RuntimeError as e:
                 print(json.dumps({"hist_option_bars": sym, "status": "refused", "error": str(e)[:160]}))
+        tget_probe = make_getter(TRADING_URL)
+        for row in probe_shapes(get, tget_probe, now.date()):   # option A: where do open interest and volume live?
+            print(json.dumps(row, default=str))
+        import tempfile                                          # the full capture path on REAL data, into a throwaway dir (never the store)
+        with tempfile.TemporaryDirectory() as td:
+            for und in ("SPY", "TLT"):
+                try:
+                    rec = capture(get, Path(td), und, now.date(), a.expiries, a.moneyness, a.feed, "alpaca", tget_probe)
+                    print(json.dumps({"shape": "capture_smoke", **rec}, default=str))
+                except Exception as e:  # noqa: BLE001  # allow-silent: a failure is the finding, printed as one JSON line
+                    print(json.dumps({"shape": "capture_smoke", "underlying": und, "status": "error", "error": str(e)[:200]}))
         return 0
     manifest_p = root / "MANIFEST.json"
     manifest = json.loads(manifest_p.read_text()) if manifest_p.exists() else {"underlyings": {}}
     failures: List[str] = []
     for und in unds:
         try:
-            rec = capture(get, root, und, now.date(), a.expiries, a.moneyness, a.feed, a.source)
+            rec = capture(get, root, und, now.date(), a.expiries, a.moneyness, a.feed, a.source, tget)
             manifest["underlyings"][und] = rec
             print(json.dumps(rec), flush=True)
+            if rec.get("oi_read_state") == "could_not_look":   # the quotes landed, but open interest could not be read: say so, never as 0
+                failures.append(f"{und}: open interest could_not_look ({rec.get('oi_error')})")
+                print(f"FAIL {und}: open interest could_not_look ({rec.get('oi_error')})", file=sys.stderr, flush=True)
         except Exception as e:  # contained per item
             failures.append(f"{und}: {str(e)[:160]}")
             print(f"FAIL {und}: {str(e)[:160]}", file=sys.stderr, flush=True)
