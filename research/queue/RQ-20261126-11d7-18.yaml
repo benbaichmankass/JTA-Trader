@@ -35,7 +35,7 @@ iteration:
   due_by: '2026-12-03'
   diagnosis: 'b18a-03 (MEASURED, 2026-11-22) read the static (SL x TP) surface on ada_pullback_2h and no cell beat the declared one: no bracket headroom on that leg. One leg
     is not the family: programme node P2-PR1125-D6-ceiling-two-legs asks the same registered grid on one trend leg and one more pullback leg before any learned-bracket unit
-    is authored. This unit is a second pullback leg on the money book (xrp_pullback_2h, XRPUSDT 2h).'
+    is authored. This unit is a second pullback leg, testing on the Stage-1 demo floor (xrp_pullback_2h, XRPUSDT 2h).'
   search: registered static grid, 2 levers (atr_stop_mult 1.0..3.0 x tp_r 3..6), 19 candidates plus the declared cell, one rule (the b18a-03 rule, bars unchanged)
   levers:
   - bracket
@@ -52,7 +52,7 @@ ml_consumer:
     passes'
   legs:
   - xrp_pullback_2h
-  book: money
+  book: demo_floor
 power:
   expected_n: 600
   min_detectable_effect: 0.03
@@ -167,7 +167,7 @@ value:
   bucket: ai_trader
   usd_at_stake_per_month: 150
   confidence: 0.15
-  basis: 'ESTIMATE: governs whether the D6 Pointer build proceeds on a money leg; not a measurement.'
+  basis: 'ESTIMATE: governs whether the D6 Pointer build proceeds on this leg; not a measurement.'
 why_this_matters: D6 Pointer (predicted SL/TP at entry) has no stage and flat reads. Its static ceiling on ada_pullback_2h was flat (b18a-03); this reads the same ceiling on
   a second family and leg, so the question 'does any money leg have bracket headroom a predictor could capture' has more than one data point. A PASS is a SELECTION (unconfirmed)
   and a Tier-3 candidate only after its own confirmation; a FAIL closes bracket headroom for this leg on this window, not the family.
