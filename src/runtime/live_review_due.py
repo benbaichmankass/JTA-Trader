@@ -234,6 +234,24 @@ def closed_market_event_skip(name: str, symbol: Any, order_package_id: Any, prio
             "state": SKIPPED_CLOSED, "reason": f"{why}; {seen}"}
 
 
+SKIPPED_TOO_YOUNG = "skipped_younger_than_one_bar"
+
+
+def package_younger_than_bar(row: Dict[str, Any], now: datetime, tf: int) -> Optional[str]:
+    """Why the package is younger than one leg bar (no judgement slot yet), else None.
+
+    LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26): the 16:00Z slot fired on the reopened ADA/XRP packages at
+    2 minutes old, with since_entry unreadable. The age is from the trade's own open time (``_trade_opened_at``,
+    joined from ``trades.timestamp``); an unreadable age does not skip (it is reported by the packet instead)."""
+    t = _parse_ts(row.get("_trade_opened_at") or row.get("opened_at"))
+    if t is None or tf <= 0:
+        return None
+    age = (now - t).total_seconds()
+    if 0 <= age < tf:
+        return f"package opened {int(age)}s ago, under one {tf}s bar: no judgement slot until a post-fill bar closes"
+    return None
+
+
 def judgement_cadence_event(prior: Dict[str, Any], cfg: Dict[str, Any], now: datetime,
                             tf: int, row: Optional[Dict[str, Any]] = None,
                             ctx: Optional[Dict[str, Any]] = None,
@@ -638,6 +656,10 @@ def candidate_events(row: Dict[str, Any], prior: Dict[str, Any],
         lvl = first + _bucket(open_r - first, step)
         out.append(("r_milestone", lvl, f"open_r {open_r:.2f} crossed +{lvl:g}R"))
 
+    # LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26): an excursion trigger (new_peak, giveback) fires only on a
+    # peak MEASURED over post-fill bars. thin_window / unanchored / no_risk = "we could not look", never a peak.
+    if row.get("peak_state") != "measured":
+        peak_r = giveback = None
     n = ev.get("new_peak") or {}
     if peak_r is not None and prior["peak"] is not None:
         if peak_r >= prior["peak"] + float(n.get("step_r", 0.5)):
@@ -1261,7 +1283,11 @@ def compute_due(rows: List[Dict[str, Any]], reviews: List[Dict[str, Any]],
             mk = mk + [(CADENCE_EVENT, slot, f"{cad['mandate']}: auto-apply review every {cad['minutes']} min")]
         # Only reviewed accounts (the daily_floor list, the wake's own account set), and never on a package
         # an auto mandate already reviews on its own cadence (mandate_cadence above).
-        jc = None if (cad or str(row.get("account_id")) not in floor_accounts) \
+        young = package_younger_than_bar(row, now, tf)
+        if young and not cad and str(row.get("account_id")) in floor_accounts:
+            skipped_slots.append({"order_package_id": pkg, "event": JUDGEMENT_EVENT, "symbol": row.get("symbol"),
+                                  "state": SKIPPED_TOO_YOUNG, "reason": young})
+        jc = None if (cad or young or str(row.get("account_id")) not in floor_accounts) \
             else judgement_cadence_event(prior, cfg, now, tf, row, (market or {}).get(pkg), skipped_slots)
         if jc:
             mk = mk + [jc]
@@ -1361,8 +1387,9 @@ def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
             conn.row_factory = sqlite3.Row
             pk = conn.execute("SELECT order_package_id, strategy_name, symbol, direction "
                               "FROM order_packages WHERE status = 'open'").fetchall()
+            _ts_col = ", timestamp" if "timestamp" in {c[1] for c in conn.execute("PRAGMA table_info(trades)")} else ""
             tr = conn.execute("SELECT id, order_package_id, strategy_name, symbol, direction, "
-                              "account_id FROM trades WHERE status = 'open' "
+                              f"account_id{_ts_col} FROM trades WHERE status = 'open' "
                               "AND order_package_id IS NOT NULL AND order_package_id != ''").fetchall()
         finally:
             conn.close()
@@ -1380,6 +1407,7 @@ def read_journal_open(db_path: Optional[str] = None) -> Dict[str, Any]:
             "symbol": r["symbol"], "direction": r["direction"], "source": "trades"})
         d["account_id"] = r["account_id"]
         d["trade_id"] = r["id"]
+        d["_trade_opened_at"] = r["timestamp"] if "timestamp" in r.keys() else None
         d["source"] = "order_packages+trades" if d.get("source") == "order_packages" else d["source"]
     return {"state": "read", "packages": list(out.values())}
 
