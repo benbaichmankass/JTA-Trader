@@ -172,11 +172,23 @@ def build_rows(emits: list[Path], candles: dict[str, Path], out: Path) -> dict[s
 
 def universe_legs(name: str, template: str) -> list[tuple[str, str]]:
     """TWIN legs: one config/strategies.yaml leg (`template`, its params unchanged) on every symbol of a frozen universe.
-    `bp2` = the 60-perp ML-DATA-BROAD-PATHS universe ml_decision_entry trades (comms/research/broad_paths/bp2-*)."""
-    if name != "bp2":
-        raise SystemExit(f"refused: unknown universe {name!r} (have: bp2)")
+    `bp2` = the 60-perp ML-DATA-BROAD-PATHS universe ml_decision_entry trades (comms/research/broad_paths/bp2-*).
+    `bp2_next60` = the NEXT 60 perps under the same frozen listing rule (broad_paths_corpus.select_universe, same END and
+    min-days, ordered by first month then symbol), minus every bp2 symbol: a population DISJOINT from bp2, for confirming
+    a bp2 result on symbols its grading never saw (operator 2026-11-23: a number measured only over the grading window
+    never promotes). Listed from data.binance.vision at run time; the harness records the symbols it used."""
     import ml_decision_entry as E
-    return [(template, sym) for sym in E.universe()]
+    if name == "bp2":
+        return [(template, sym) for sym in E.universe()]
+    if name == "bp2_next60":
+        return [(template, sym) for sym in next60(E.universe(), E.wide_universe())]
+    raise SystemExit(f"refused: unknown universe {name!r} (have: bp2, bp2_next60)")
+
+
+def next60(bp2: list[str], wide: list[str], n: int = 60) -> list[str]:
+    """The first `n` symbols of the listing-rule order `wide` that are not in `bp2`. Pure, so it is self-tested."""
+    seen = set(bp2)
+    return [s for s in wide if s not in seen][:n]
 
 
 def candle_dataset_candles(sym: str, dst: Path, start: str, end: str | None = None) -> dict[str, Any]:
@@ -393,6 +405,9 @@ def _self_test() -> int:
         # the router reads routing.published_paths
         from scripts.research import compute_router as cr
         assert cr.unit_dataset_paths({"routing": {"published_paths": [rel]}}) == [rel]
+        # bp2_next60 is disjoint from bp2 and keeps the listing-rule order
+        nx = next60(["A", "B"], ["A", "C", "B", "D", "E"], n=2)
+        assert nx == ["C", "D"] and not set(nx) & {"A", "B"}, nx
     print(json.dumps({"self_test": "ok", "synthetic_trades": h["n_trades"], "rows": built["rows_by_source"]}))
     return 0
 
@@ -418,7 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", default="2020-06-01", help="bybit source: first bar date")
     ap.add_argument("--end", default=None, help="bybit source: last bar date (default now)")
     ap.add_argument("--timeframe", choices=("1h", "4h"), default="1h")
-    ap.add_argument("--universe", default="", help="bp2 = the 60-perp ML universe; with --leg-template builds TWIN legs")
+    ap.add_argument("--universe", default="", help="bp2 = the 60-perp ML universe; bp2_next60 = the next 60 perps by the same rule, disjoint from bp2; with --leg-template builds TWIN legs")
     ap.add_argument("--leg-template", default="trend_donchian_eth_4h", help="the config leg whose params every twin uses")
     ap.add_argument("--pool-folds", action="store_true", help="pooled calendar folds across legs (exit_head_label_bakeoff)")
     ap.add_argument("--fetch-workers", type=int, default=8, help="candle_dataset source: parallel symbol fetches")
