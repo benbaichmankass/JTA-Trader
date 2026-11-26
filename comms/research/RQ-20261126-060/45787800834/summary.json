@@ -1,0 +1,137 @@
+{
+  "leg": "sol_pullback_2h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 22.3599,
+    "n": 148,
+    "max_drawdown_r": 8.8895,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=22.3599 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 148,
+      "net_r": 22.3599,
+      "net_r_fee_only": 26.0092,
+      "max_drawdown_r": 8.8895,
+      "by_outcome": {
+        "take_profit": 57,
+        "stop": 61,
+        "trail_stop": 28,
+        "timeout": 2
+      },
+      "mean_bars_held": 38.358,
+      "net_r_per_capital_day": 0.0473,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0,
+        "adx_min": 30.0,
+        "adx_period": 14
+      },
+      "data_start": "2021-11-13 22:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 22:00:00+00:00",
+          "end": "2023-02-14 10:00:00+00:00",
+          "trades": 38,
+          "net_r": 9.3873
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 10:00:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 38,
+          "net_r": 13.0891
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-08-17 10:00:00+00:00",
+          "trades": 36,
+          "net_r": 1.6096
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:00:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 36,
+          "net_r": -1.726
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "AVAXUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-060/45787800834/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-060/45787800834/arms/A__bt.json",
+        "--adx-min",
+        "30",
+        "--side-filter",
+        "short",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "AVAXUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2021-11-13 22:00:00+00:00",
+      "2023-02-14 10:00:00+00:00",
+      "2024-05-16 22:00:00+00:00",
+      "2025-08-17 10:00:00+00:00",
+      "2026-11-17 22:00:00+00:00"
+    ]
+  }
+}
