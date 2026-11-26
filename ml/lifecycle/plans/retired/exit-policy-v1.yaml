@@ -1,16 +1,16 @@
 # Lifecycle plan -- see ml/lifecycle/plan.py for the schema; seeded by scripts/ops/seed_lifecycle_plans.py (2026-11-07).
 plan_version: 1
-plan_id: setup-candidates-metalabel-paper-v1
-model_id: setup-candidates-metalabel-paper-v1
-manifest: ml/configs/setup-candidates-metalabel-paper-v1.yaml
+plan_id: exit-policy-v1
+model_id: exit-policy-v1
+manifest: ml/configs/retired/exit-policy-v1.yaml
 population_basis: every top-level ml/configs manifest (the nightly-cycle roster; registry stage lives on the trainer VM and can exceed the manifest's
   declared stage)
-manifest_stage_at_seed: research_only
+manifest_stage_at_seed: candidate
 datasets:
-- family: setup_candidates
-  symbol_scope: all
-  timeframe: all
-  version: v030
+- family: exit_candidates
+  symbol_scope: ETHUSDT
+  timeframe: 5m
+  version: v001
   source: scripts/ops/build_trainer_datasets.sh (trainer VM, nightly in ict-trainer.service; datasets-out/)
   window: full available history
   point_in_time: decision-time features only; labels realised strictly after the decision
