@@ -105,6 +105,13 @@ FTT_CFG = {"d_token": 192, "n_blocks": 3, "n_heads": 8, "d_ffn": 256, "dropout":
            "batch_size": 1024, "max_epochs": 30, "patience": 3, "val_frac": 0.10, "seed": 0}
 TABICL_CKPT = "tabicl-regressor-v2-20260212.ckpt"
 TABICL_PARAMS = {"random_state": 0}            # every other TabICLRegressor argument at its 2.2.0 default
+# Inference-MEMORY knobs only (2026-11-26, after dbf8-02 run 45797062321 OOMed on its first window: the column-embedding output
+# buffer at full n was estimated at 30,727 MB with the default batch_size 8 and no disk_offload_dir). batch_size is how many of the
+# 8 ensemble members run together (the model, n_estimators and every prediction-affecting argument are unchanged); with 1 the
+# buffer is ~1/8 of that. disk_offload_dir lets TabICL's offload_mode="auto" (default) fall back to memory-mapped files if CPU
+# memory is still short. Neither changes what is predicted beyond float rounding.
+TABICL_MEMORY = {"batch_size": 1}
+TABICL_OFFLOAD_DIR_DEFAULT = "/tmp/tabicl_offload"
 EXTRA_ARMS = EXTRA_ARMS + GPU_ARMS
 
 
@@ -413,10 +420,25 @@ def fit_tabicl(train: pd.DataFrame, y_col: str, device: str = "auto", max_rows: 
         raise FileNotFoundError(f"TabICL checkpoint not found at {ckpt} (set TABICL_MODEL_DIR; this arm never downloads)")
     t = train if not max_rows or len(train) <= max_rows else train.sort_values("ts").tail(max_rows)
     dev = _torch_device(device)
-    m = TabICLRegressor(model_path=str(ckpt), allow_auto_download=False, device=dev.type, **TABICL_PARAMS)
+    offload_dir = os.environ.get("TABICL_OFFLOAD_DIR") or TABICL_OFFLOAD_DIR_DEFAULT
+    Path(offload_dir).mkdir(parents=True, exist_ok=True)
+    m = TabICLRegressor(model_path=str(ckpt), allow_auto_download=False, device=dev.type, disk_offload_dir=offload_dir,
+                        **TABICL_MEMORY, **TABICL_PARAMS)
     m.fit(t[E.FEATURES].to_numpy(np.float32), t[y_col].to_numpy(float))
     return _TabICL(m), {"status": "ok", "device": dev.type, "n_train": int(len(t)), "full_n": bool(len(t) == len(train)),
-                        "checkpoint": TABICL_CKPT}
+                        "checkpoint": TABICL_CKPT, "batch_size": TABICL_MEMORY["batch_size"], "disk_offload_dir": offload_dir}
+
+
+def _free_gpu() -> None:
+    """Release cached CUDA memory after a contained GPU-arm failure so the next window starts clean (no-op without torch/cuda)."""
+    try:
+        import gc
+        gc.collect()
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001  # allow-silent: best-effort cache release; the failure itself is already recorded
+        pass
 
 
 def fit_gpu_arm(train: pd.DataFrame, arm: str, device: str = "auto", **kw) -> dict:
@@ -574,17 +596,22 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
                 alls[arm].append(None)
                 continue
             if arm in GPU_ARMS:
+                # fit AND predict are contained: TabICL is in-context, so its forward (and an OOM) happens in predict()
+                # (dbf8-02 run 45797062321 crashed the whole command on a predict-time OOM before this).
                 try:
                     m = fit(train, arm)
+                    # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
+                    taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
                 except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as status=unavailable; forces INDETERMINATE below
                     row[arm] = _stats(None)
                     row[f"{arm}_info"] = {"status": "unavailable", "reason": f"{type(exc).__name__}: {exc}"[:500]}
                     alls[arm].append(None)
+                    _free_gpu()
                     continue
             else:
                 m = fit(train, arm, tau=tau) if arm in TAU_ARMS else fit(train, arm)
-            # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
-            taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
+                # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
+                taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
             row[arm] = _stats(taken)
             if "_conf" in m:                 # conf: the matched threshold and slice sizes behind this window's decisions
                 row[f"{arm}_info"] = m["_conf"]
@@ -817,6 +844,22 @@ def self_test() -> int:
         os.environ.pop("TABICL_MODEL_DIR", None)
     d9 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_g, arms=("raw", "tabicl"), deadline=0.0)
     assert all("budget" in w["tabicl_info"]["reason"] for w in d9["windows"]) and d9["verdict"] == "INDETERMINATE"
+    # a PREDICT-time failure (TabICL is in-context: its forward, and an OOM, run in predict) is contained per window too
+    # (dbf8-02 run 45797062321 crashed the whole command on exactly this before 2026-11-26)
+
+    class _OomAtPredict:
+        def predict(self, x):
+            raise RuntimeError("CPU memory allocation failed (CUDA error: out of memory) [self-test]")
+
+    def fit_oom(t, arm, **kw):
+        if arm in GPU_ARMS:
+            return {"long": _OomAtPredict(), "short": _OomAtPredict(), f"_{arm}": {}}
+        return fit_arm(t, arm, sample=15000, **kw)
+
+    d10 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_oom, arms=("raw", "tabicl"))
+    assert d10["verdict"] == "INDETERMINATE" and all(
+        w["tabicl_info"]["status"] == "unavailable" and "out of memory" in w["tabicl_info"]["reason"] for w in d10["windows"])
+    assert all(w["raw"] is not None for w in d10["windows"]), "the RAW arm must still be measured beside a failed GPU arm"
     i_ok = {"long": {"status": "ok", "device": "cuda", "full_n": True}, "short": {"status": "ok", "device": "cuda", "full_n": True}}
     assert gpu_arm_complete(i_ok, "tabicl") and not gpu_arm_complete({**i_ok, "short": {**i_ok["short"], "full_n": False}}, "tabicl")
     # the published-cache route writes the same pkl schema from market_raw JSONL
