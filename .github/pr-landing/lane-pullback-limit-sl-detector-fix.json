@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Fixes the red main from #28989: moves the limit-fill-bar stop check in scripts/backtest_pullback.py into a named helper (_fill_bar_stopped) so the exit loop keeps exactly one intrabar SL-first stop test per direction, which tests/test_backtest_trend_live_tp.py pins. Behaviour is unchanged (same comparison, same inclusivity); adds a direct helper test. Research harness only; no live path reads it. Manager merges. Revert: git revert.",
+  "why": "Main red on tests/test_backtest_trend_live_tp.py::test_tp_is_checked_after_the_stop_in_source[backtest_pullback] since #28989 merged (reported by ML-PRIMARY, 2026-11-26). Edits no config, roster, model or order path."
+}

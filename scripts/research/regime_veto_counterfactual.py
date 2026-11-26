@@ -263,8 +263,11 @@ def grade(snapshot: Path, out_dir: Path, bars_fn=binance_bars, horizon: int = HO
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "signals.jsonl").write_text("".join(json.dumps(s, sort_keys=True) + "\n" for s in replayed))
     (out_dir / "grade.json").write_text(json.dumps(rep, indent=1) + "\n")
-    (out_dir / "verdict.json").write_text(json.dumps({k: rep[k] for k in ("schema", "rule_id", "verdict", "read_state", "population",
-                                                                            "n_replayed", "axes")}, indent=1) + "\n")
+    # script_run.py's verdict contract: verdict, read_state, population AND n (null when not measured) -- without `n` the record
+    # lands producer_failed "verdict.json malformed" (RQ-20261126-c4f2-01 run 45745911700). n = the replayed signals graded.
+    vj = {k: rep[k] for k in ("schema", "rule_id", "verdict", "read_state", "population", "n_replayed", "axes")}
+    vj["n"] = rep["n_replayed"] if replayed else None
+    (out_dir / "verdict.json").write_text(json.dumps(vj, indent=1, allow_nan=False) + "\n")
     return rep
 
 
