@@ -46,9 +46,13 @@ def test_symbols_are_the_artifact_pool_minus_the_declared_exclusions():
     # 2026-11-17 (operator "In general, I ask that we not trade fossil fuels."): the nine reachable oil/gas names left the real-money
     # population (config/values_exclusions.yaml fossil_fuels); 173 - 2 - 9 = 162.
     fossil = {"USO", "UCO", "UNG", "XLE", "XOP", "OIH", "GUSH", "AMLP", "NFX"}
-    assert set(excl) == {"TQQQ", "GLD"} | fossil and all(str(v).strip() for v in excl.values())
+    # 2026-11-26 operator decision D7 (popup, verbatim "Yes, drop them (Recommended)"): FB and INFO each carry two different
+    # securities under one ticker in the data (RQ-20261126-7c11-01), so they leave the live pool; 162 - 2 = 160.
+    ticker_reuse = {"FB", "INFO"}
+    assert set(excl) == {"TQQQ", "GLD"} | fossil | ticker_reuse and all(str(v).strip() for v in excl.values())
+    assert all("ticker reuse" in excl[s] for s in ticker_reuse)
     assert leg["symbols"] == [s for s in pool if s not in excl]
-    assert len(leg["symbols"]) == 162 and leg["pool_scored"] is True
+    assert len(leg["symbols"]) == 160 and leg["pool_scored"] is True
     assert pool == json.loads((REPO / "ml" / "candidates" / "ml_entry_eq_v1" / "model.json").read_text())["pool_symbols"]  # the refresher's pool
 
 

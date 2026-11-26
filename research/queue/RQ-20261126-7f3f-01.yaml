@@ -1,0 +1,125 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (Manager 26a 16:00Z: "#29052: register the lag-0 re-verify unit, so it runs after the side-stream rebuild").
+# Rule registered BEFORE any run (the 7f3d-01 machine rule, unchanged).
+# Gates this adds or changes: none (a research diagnostic; no served model, config or order path).
+id: RQ-20261126-7f3f-01
+title: 'Stride-phase fix RE-VERIFY (lag-0) on BTC: per-COLUMN diff of the LIVE feature rows of btc-regime-15m-lgbm-fc-pcv-v2 captured AFTER #29052 deployed vs the
+  offline market_features BTCUSDT/15m rows REBUILT with the epoch-anchored stride phase'
+status: queued
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: 'After #29052 (a9f4e19350: epoch-anchored stride phase in the offline side-stream AND the live producer), do the live fc_* columns equal the rebuilt offline
+  values on >= 99% of joined bars, as every other column must?'
+why_this_matters: '7f3d-01 (BTC) and 7f3e-01 (SOL) FAILED on fc_* at ~27% agreement, traced to the stride phase. #29052 fixed both paths; this is the same registered
+  rule on post-fix data, so a PASS shows the serve path now matches what the heads were trained on and replay-based reads of the live D2 heads (aadc-01 verify) become
+  valid again.'
+iteration:
+  subject: ml-vol-label-parity
+  subject_kind: ml_model
+  from_result: RQ-20261126-7f3e-01
+  verdict_read: fail
+  diagnosis: '7f3d-01/7f3e-01 FAIL on fc_* (~27%), raw columns 96-97%; cause = stride phase, fixed in #29052 (merged 2026-11-26 16:00Z). This re-runs the identical
+    diff on post-fix live rows.'
+  search: one deterministic diff, no grid.
+  levers:
+  - features
+  attempt: 3
+  due_by: '2026-12-02'
+levers:
+- name: label_fidelity
+  values:
+  - alignment asof
+  - alignment prev_bar
+  hypothesised_effect: one alignment reproduces the live label at kappa >= 0.6 for BTC and SOL; MES is too thin to read
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 190
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.1
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~190 joined 15m bars (199 live records over 2 days). The statistic is a per-column agreement SHARE, counted, not estimated; a share near 0.99
+    has a binomial sd ~0.1 per bar, so 190 bars resolve a 5-point drop below the 99% bar. A smaller join than 50 bars is INDETERMINATE by rule.'
+  feasibility:
+    source: none
+    accrual_basis: committed live snapshot + trainer-resident dataset; nothing accrues.
+baseline:
+  definition: 'Chance agreement: Cohen''s kappa corrects observed agreement for the agreement expected from the two marginal volatile shares (an always-calm replay
+    scores kappa 0 however high its raw agreement).'
+  net_of_cost: false
+decision_rule:
+  id: RULE-RQ-20261126-7f3f-01-FEATDIFF
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: the offline market_features row of the same bar (the row the replay scores)
+  statistic: 'scripts/research/ml_vol_label_replay.py featdiff: live bar open = floor(predicted_at, 15m) - 15m (checked against hour_of_day); per shared column, share
+    of joined bars with live == offline within 1e-6 relative (numeric) or exact (categorical); also on fresh-forecast bars only; stale fc_* bars (identical consecutive
+    live fc blocks) counted.'
+  rule: 'PASS iff >= 50 joined bars AND every shared column agrees on >= 99% of joined bars (then the label disagreement is NOT the feature row: head identity / threshold
+    / alignment). FAIL iff >= 50 joined bars AND any column agrees on < 99% (the named columns are the serve-path divergence). INDETERMINATE iff < 50 joined bars.
+    Fixed now; machine form in featdiff_verdict.'
+  pass_action: Record parity restored on ML-VOL-LABEL-LIVE-VERIFY; re-run aadc-01 verify (replayed vs live label kappa) on post-fix bars.
+  fail_action: Name the still-divergent column(s); if fc_* still fails, read fc_phase_ts in the live rows vs floor(t/tf) % stride in the rebuilt dataset (deploy or
+    rebuild missing?) before any code change.
+  what_it_does_not_do: Reads committed live rows and the trainer dataset only; changes no served model, config or order path; adds no gate.
+  min_n: 50
+  proposal_mapping: pass -> head-identity diff; fail -> column fix + re-verify; indeterminate -> a longer live snapshot.
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify an offline feature/label path against the served one
+  before grading anything on it; chance-corrected agreement for an imbalanced label'
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  basis: 'ESTIMATE: one streamed pass over the 480 MB BTC 15m frame projected to ~16 columns (b819-01 measured the full replay of the same file inside one job).'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/ml_vol_label_replay.py
+  - featdiff
+  - --live
+  - comms/live_parity/vol_featdiff_post_stride/BTCUSDT_shadow.jsonl
+  - --dataset
+  - datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl
+  - --model-id
+  - btc-regime-15m-lgbm-fc-pcv-v2
+  - --out-dir
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261126-7f3f-01
+  note: Dataset path = the head manifest dataset block under the trainer checkout datasets-out/, as aadc-01 / b819-01 read it. Streams the 15m frame projected to
+    the live columns only (memory-bounded).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: whether replayed vol labels may grade the trend_vol OFF-cells that drop BTC bybit_1 intents (and future SOL/MES cells); no change from this unit
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+related:
+- RQ-20261126-7f3d-01
+- RQ-20261126-7f3e-01
+- 'PR #29052'
+- ML-VOL-LABEL-LIVE-VERIFY
+- RQ-20261117-aadc-01
+not_before: '2026-11-28T18:00:00Z'
+blocked_by: '(1) #29052 deployed on the trader (the live artifact carries fc_phase_ts / fc_phase); (2) the trainer''s market_features BTCUSDT/15m side-stream rebuilt
+  with scripts/ml/build_forecasts.py at or after a9f4e19350; (3) a fresh snapshot committed at comms/live_parity/vol_featdiff_post_stride/BTCUSDT_shadow.jsonl from
+  GET /api/diag/log_file?name=shadow_predictions&grep=btc-regime-15m-lgbm-fc-pcv-v2, rows AFTER the deploy only (README.json with source, fetched_at, first/last,
+  as 7f3d-01''s). Owner ML-PRIMARY; pipeline item filed.'

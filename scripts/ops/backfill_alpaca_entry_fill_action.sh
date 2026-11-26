@@ -19,6 +19,41 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/ops/_lib.sh
 source "${SCRIPT_DIR}/_lib.sh"
 
+# Alpaca credentials, loaded exactly as rearm_alpaca_protective_action.sh does (2026-11-26 fix): without this the
+# per-id order reads ran with missing or default (paper) keys, so the 2026-11-26 16:08Z dry run (issue #29223) read
+# 81 live/portfolio orders as 404 'not found' and 56 as could_not_look, and proposed 0 writes against the 12 the
+# #29165 table measured through the web API (which runs with these creds). Never echoes a value.
+cd "${REPO_DIR}"
+load_runtime_secrets
+
+# The working Alpaca creds are the ones the ict-web-api service authenticates
+# with — it loads the root-owned /etc/ict-trader/web-api.env EnvironmentFile in
+# addition to repo .env. The repo .env copy (synced from Actions secrets by
+# sync-vm-secrets) can be empty/stale for the ALPACA_*_LIVE pair, which makes
+# alpaca_client_for() return None → "could not read the live Alpaca position".
+# So prefer web-api.env's known-good ALPACA_* values (sudo-read, mirroring the
+# prop-report.yml pattern). Non-secret presence diagnostic only — never echoes
+# a value. Override only when web-api.env carries a non-empty value.
+WEBAPI_ENV="/etc/ict-trader/web-api.env"
+if sudo test -r "${WEBAPI_ENV}" 2>/dev/null; then
+  for _v in ALPACA_API_KEY_ID_LIVE ALPACA_API_SECRET_KEY_LIVE \
+            ALPACA_API_KEY_ID ALPACA_API_SECRET_KEY \
+            ALPACA_API_KEY_ID_OPTIONS ALPACA_API_SECRET_KEY_OPTIONS; do
+    _val="$(sudo grep -E "^${_v}=" "${WEBAPI_ENV}" 2>/dev/null | tail -n1 | cut -d= -f2- || true)"
+    if [ -n "${_val}" ]; then
+      export "${_v}=${_val}"
+      echo ">>> creds: ${_v} sourced from web-api.env"
+    elif [ -n "${!_v:-}" ]; then
+      echo ">>> creds: ${_v} absent in web-api.env; using repo .env value"
+    else
+      echo ">>> creds: ${_v} absent in web-api.env AND empty/unset in repo .env"
+    fi
+    unset _val
+  done
+else
+  echo ">>> creds: web-api.env not sudo-readable — using repo .env creds only"
+fi
+
 DB_PATH="$(runtime_db_path)"
 PY_SCRIPT="${REPO_DIR}/scripts/ops/backfill_alpaca_entry_fill.py"
 
