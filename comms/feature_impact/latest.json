@@ -1,5 +1,5 @@
 {
- "computed_at": "2026-11-19T14:43:00Z",
+ "computed_at": "2026-11-26T15:29:02Z",
  "coverage": {
   "in_v0": "M1 split_share + gain_share for ml/served + ml/candidates LightGBM artifacts, pooled population",
   "m2": {
@@ -124,7 +124,7 @@
     "slippage_status": "PROVISIONAL"
    },
    "data_end": "2025-06-25 16:00:00+00:00",
-   "decision_rows": 378440,
+   "decision_rows": 380677,
    "features": [
     "ret_1",
     "ret_4",
@@ -159,10 +159,10 @@
    ],
    "label_note": "net_long = LONG net R of the registered 2 ATR stop / 3 ATR target / 24 RTH-bar bracket after fee + provisional 5 bps slippage + 0.5 bps regulatory (the ENTRY-EQ label; the struct models train a pivot-5 SL-only variant of it); fwd_ret_24 = raw 24 RTH-bar log return. Read both: net R divides by stop distance, so a volatility feature can rank net R through cost-per-R rather than direction. DEV ONLY: decisions before 2025-07-01; the confirming window is never loaded. Population: the registered POOL_RULE ETF pool (sha in this block).",
    "pool_rule_sha256": "e9702661d1a596a0f7e84e632c0ca8b5c2743a728f02147477c003644a0858e2",
-   "pool_symbols": 173,
-   "rows": 11064,
+   "pool_symbols": 174,
+   "rows": 11124,
    "state": "measured",
-   "symbols_built": 171
+   "symbols_built": 172
   },
   "m2_regime": {
    "data_end": "2025-06-30 23:00:00+00:00",
@@ -199,22 +199,22 @@
   },
   "m3_equity": {
    "base": {
-    "mean_net_r": -0.14487888312467642,
-    "n_taken": 2711,
-    "rank_ic": 0.20415243604572614
+    "mean_net_r": -0.2396835701271508,
+    "n_taken": 2055,
+    "rank_ic": 0.2067238248389412
    },
    "noise_floor": {
-    "ic": 0.0022283213472716057,
-    "taken": 0.04191283647682764
+    "ic": 0.011537261930577247,
+    "taken": 0.17090553594535735
    },
    "rows": 72,
    "state": "measured",
-   "symbols_test": 168,
+   "symbols_test": 169,
    "tau": 0.2,
    "test_end": "2025-07-01",
-   "test_rows": 82184,
+   "test_rows": 82674,
    "train_end": "2024-07-01",
-   "train_rows": 294245
+   "train_rows": 295980
   },
   "not_yet": [
    "M2 / M3 for the tp-revision exit head (its 18-class check-in label needs its own builder)",
@@ -224,7 +224,7 @@
    "SHAP / permutation on OOF"
   ]
  },
- "file": "20261119T1443Z.jsonl",
+ "file": "20261126T1529Z.jsonl",
  "measures": [
   "abl_rank_ic",
   "abl_taken_mean_net_r",
@@ -240,12 +240,13 @@
   "ml/served/ml_decision_entry_v1/model.json": "measured",
   "ml/served/ml_decision_entry_v1r20261106/model.json": "measured",
   "ml/served/ml_decision_entry_v1r20261115/model.json": "measured",
+  "ml/served/ml_decision_entry_v1r20261122/model.json": "measured",
   "ml/served/ml_decision_entry_v2/model.json": "measured",
   "ml/served/ml_entry_tp_revision_v1/model.json": "measured"
  },
- "n_measured": 15110,
- "n_rows": 15144,
+ "n_measured": 15250,
+ "n_rows": 15284,
  "read_state": "measured",
- "run_id": "20261119T1443Z",
+ "run_id": "20261126T1529Z",
  "schema": "feature_impact/1"
 }
