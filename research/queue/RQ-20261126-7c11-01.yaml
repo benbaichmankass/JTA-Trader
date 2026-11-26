@@ -3,7 +3,7 @@
 id: RQ-20261126-7c11-01
 title: 'ml_entry_eq pool ticker-reuse audit: did six pool tickers (FB, INFO, NFX, ULTI, UN, SIX) carry an OLD company''s bars into POOL_RULE''s
   2019-2020 liquidity screen or into the 2021-2025 training window of the models alpaca_live trades?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -99,3 +99,16 @@ related:
 - ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
 - config/accounts.yaml
 last_dispatched_at: '2026-11-26T06:51:11+00:00'
+grading:
+  attested: RULE-EQ-POOL-TICKER-REUSE-20261126
+  auto: true
+  decision_rule_id: RULE-EQ-POOL-TICKER-REUSE-20261126
+  evidence:
+  - research/results/RQ-20261126-7c11-01/45763324547.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 7 row(s), all measured, all fail
+  rows: 7
+  verdict: fail

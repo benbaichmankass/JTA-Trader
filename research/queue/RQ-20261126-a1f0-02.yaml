@@ -1,7 +1,7 @@
 # Hand-authored 2026-11-26 by lane XRP-BACKTEST-HOLD-FIDELITY (Tier 1 research), manager 26a. RE-RUN of RQ-20261120-e9b5-02 on the engine fixed for (a) the native-timeframe monitor() frame and (b) the live side_filter gate. Argv, arms, thresholds, window unchanged. Evidence: docs/research/xrp-4h-hold-fidelity-2026-11-26.md. Dispatch only AFTER the engine fix is on main. Gates this adds or changes: none.
 id: RQ-20261126-a1f0-02
 title: 'RE-RUN on the native-frame monitor() + live side_filter engine fix: RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261015-1631-01: Same-symbol allocation input, ETHUSDT: per-leg OOS net R per capital-day (solo vs shared slot) for trend_donchian_eth_4h, trend_donchian_eth_prop'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -104,3 +104,14 @@ related:
 - scripts/ci/check_same_symbol_allocation.py
 - src/runtime/intents.py
 last_dispatched_at: '2026-11-26T10:16:14+00:00'
+grading:
+  attested: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT-RERUN-NATIVE-FRAME-SIDEFILTER
+  auto: true
+  decision_rule_id: RULE-RQ-20261015-1631-01-SAME-SYMBOL-REPORT-RERUN-NATIVE-FRAME-SIDEFILTER
+  evidence:
+  - research/results/RQ-20261126-a1f0-02/45797077163.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

@@ -159,7 +159,7 @@ run:
   - '{out_dir}'
   inputs:
     research_unit: RQ-20261126-11d7-17
-status: queued
+status: done
 theme: live_strategy
 title: 'D6 Pointer CEILING on trend_donchian_eth_4h: does ANY static entry bracket (atr_stop_mult x tp_r, 19 cells) beat the declared bracket (SL 1.5 ATR / TP 4R) net of the
   full cost stack, held to a registered rule? If the surface is flat, a learned bracket has no headroom on this leg'
@@ -178,3 +178,14 @@ levers:
   - tp_r 3..6
   hypothesised_effect: a different static stop/target cell lifts net R per trade by >= 0.03 on this leg; if none does, the surface is flat
 last_dispatched_at: '2026-11-26T09:07:35+00:00'
+grading:
+  attested: RULERQ2026112611d717-BRACKET-CEILING
+  auto: true
+  decision_rule_id: RULERQ2026112611d717-BRACKET-CEILING
+  evidence:
+  - research/results/RQ-20261126-11d7-17/45783907869.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
