@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: scripts/research/ml_entry_levers.py `run --unit 5e01-*` (the ml_entry_v2_run.py `levers` mode reaches it); units RQ-20261101-5e01-09/-10/-11 (row ML-STRUCTURE-UNIT-RUNNER)
+# wiring: manual-only - reached only through ml_entry_levers.py `run --unit 5e01-*` (a dynamic import the unwired check cannot see) once the manager moves units RQ-20261101-5e01-09/-10/-11 out of research/queue/blocked/ (row ML-STRUCTURE-UNIT-RUNNER); no schedule runs it
 """Structure-based SL+TP arm on the ML entry walk-forward (row ML-STRUCTURE-UNIT-RUNNER, units RQ-20261101-5e01-09/-10/-11).
 
 WHAT IT DOES. The c692 fold models of the ML entry harness (``ml_entry_levers.base_members``, the frozen v1 base) pick the trades exactly as
