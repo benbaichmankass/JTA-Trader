@@ -139,8 +139,8 @@ def main(argv: list[str] | None = None) -> int:
     accounts = a.account or ["bybit_1"]
     st = yaml.safe_load((REPO / "config" / "strategies.yaml").read_text(encoding="utf-8"))
     st = st.get("strategies", st)
-    ac = yaml.safe_load((REPO / "config" / "accounts.yaml").read_text(encoding="utf-8"))
-    ac = ac.get("accounts", ac)
+    from src.config.accounts_loader import load_accounts_dict
+    ac = load_accounts_dict()
     p = plan(a.family, accounts, st, ac)
     print(json.dumps({k: v for k, v in p.items() if k != "legs"} | {"n_legs": len(p["legs"]), "n_covered": len(p["covered"]),
                                                                   "n_not_covered": len(p["not_covered"])}, indent=1))
