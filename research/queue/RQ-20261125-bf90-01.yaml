@@ -2,7 +2,7 @@
 # deterministic read of the venue's answer plus a re-run of the feed agreement; changes no config, roster or order path).
 id: RQ-20261125-bf90-01
 title: 'Alpaca SIP closed daily bars: is the free-plan entitlement real for a request ending in the last day, and does SIP restore the backtest signal set?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -68,3 +68,15 @@ related:
 - INDEX-CAPIT-1X-LEG
 - scripts/research/alpaca_sip_entitlement_probe.py
 last_dispatched_at: '2026-11-25T21:04:40+00:00'
+grading:
+  attested: RULE-RQ-20261125-bf90-01-SIP-CLOSED
+  auto: true
+  decision_rule_id: RULE-RQ-20261125-bf90-01-SIP-CLOSED
+  evidence:
+  - research/results/RQ-20261125-bf90-01/45686844262.jsonl
+  - research/results/RQ-20261125-bf90-01/45690665032.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass

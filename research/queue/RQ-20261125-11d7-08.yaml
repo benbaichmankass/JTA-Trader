@@ -2,7 +2,7 @@
 id: RQ-20261125-11d7-08
 title: 'POOLED ATTEMPT-2 for the crypto trend_donchian family (BTC/ETH/SOL 1h, AVAX/SOL/XRP 4h): does donchian_lo (donchian 15, declared 20) beat the declared leg on the pooled paired
   read of 6 legs?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -128,3 +128,16 @@ iteration:
   - research/levers/trend_donchian_sol_4h.yaml
   - research/levers/trend_donchian_xrp_4h.yaml
 last_dispatched_at: '2026-11-25T23:57:35+00:00'
+grading:
+  attested: RULERQ20261125-11d7-08
+  auto: true
+  decision_rule_id: RULERQ20261125-11d7-08
+  evidence:
+  - research/results/RQ-20261125-11d7-08/45724464524.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

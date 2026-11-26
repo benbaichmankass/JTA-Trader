@@ -2,7 +2,7 @@
 id: RQ-20261125-11d7-01
 title: 'COST ITERATION 1 of tlt_pullback_1h: at the measured 26 bps round trip, does any one of pullback_frac 0.618/0.786, atr_stop_mult 3.0/4.0, tp_r 5.0 or an open/close skip-hours
   window turn the leg net-positive in >= 3 of 4 folds?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -132,3 +132,16 @@ related:
 - research/levers/tlt_pullback_1h.yaml
 - RQ-20261119-f2a4-07
 last_dispatched_at: '2026-11-25T22:33:44+00:00'
+grading:
+  attested: RULERQ20261125-11d7-01
+  auto: true
+  decision_rule_id: RULERQ20261125-11d7-01
+  evidence:
+  - research/results/RQ-20261125-11d7-01/45709649555.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
