@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-06
 title: 'Deep tabular learner on a MONEY label (D3 Foxhound): does an FT-Transformer on the same features and raw net-R target, trained on a Kaggle GPU,
   beat LightGBM on the trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01)'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -55,17 +55,6 @@ decision_rule:
     retired on one configuration.
   what_it_does_not_do: Changes no served model or config. No architecture search. A PASS is not a promotion. The window was read before (declared, as dbf8-01).
   min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled decisions
-blocked_on:
-- what: 'The same route build as RQ-20261118-dbf8-02 (b), widened for this arm: (a) a Kaggle (GPU) route for scripts/research/ml_entry_residual.py.
-    Kaggle kernels have no internet and this harness fetches Binance klines at run time (ml_entry_retrain.fetch_through), so the route needs the
-    60-perp 1h klines published as a private Kaggle dataset (MARKET data, allowed under docs/research/ml-data-classification-2026-10-13.md) and a
-    --cache pointing at the mount; (b) an ftt learner arm (torch, GPU) in ml_entry_residual.py with a default-off flag and a self-test; (c) the learner set
-    observed importable on Kaggle GPU (FRONTIER-LEVER-TABULAR''s PROBE_LEARNERS line). Not cheap tonight; not built by this lane.'
-  ref: FRONTIER-LEVER-TABULAR
-  kind: build
-  clears_when: 'the ml_entry_residual Kaggle GPU route lands with a smoke run (shared with dbf8-02) and the ftt arm lands with its self-test; then git mv
-    to research/queue/, set status queued and fill run.workflow/run.command.'
-  owner: FRONTIER-LEVER-TABULAR (checklist row; same owner as RQ-20261118-dbf8-02)
 compute: gpu
 value:
   bucket: ai_trader
@@ -75,10 +64,44 @@ value:
 routing:
   needs_trainer_resident_data: false
   needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
   peak_memory_gb: 16.0
   est_minutes: 180
-  why_runner: Kaggle GPU (FT-Transformer training on ~1M rows x 13 refits x 2 sides is GPU-bound).
-  basis: 'ESTIMATE (not measured): ~6-8 min per side per refit on a T4 at this row count.'
+  why_runner: Kaggle GPU; the kernel has no internet, so the klines come from the published metis-market-bp2 market_raw (--cache-source published).
+  basis: 'MEASURED 2026-11-26 (local): the replay table holds 771,560 rows over 59 symbols; each refit trains on 646,766-749,324 rows. One FT-Transformer epoch (both sides) on 54k rows took 99 s on a 4-core CPU. ESTIMATE: ~15-20 s per side-epoch on a T4 with fp16 at full n, so 13 refits x 2 sides x <= 30 epochs (patience 3) runs ~1-4 h; --gpu-arm-budget-min 290 records any windows past the budget as unavailable (INDETERMINATE), never a timeout with no row.'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,ftt
+  - --cache
+  - /tmp/ml_entry_klines
+  - --cache-source
+  - published
+  - --gpu-arm-budget-min
+  - '290'
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - kaggle
+  - --rule-id
+  - RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  - --registered-at
+  - '2026-11-18'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261118-f7c1-06
+# Unblocked 2026-11-26 by lane D3-TABULAR-LEARNER-ARMS (re-owned from the dropped FRONTIER-LEVER-TABULAR on manager 2026-11-25b's
+# instruction): the ftt arm in ml_entry_residual.py (self-test), the Kaggle route via metis-market-bp2, and the registered
+# completeness guard (a CPU-fallback, capped, failed or budget-cut arm forces INDETERMINATE). The rule above is unchanged.
+not_before: '2026-11-26T05:30:00+00:00'
 ml_consumer:
   consumer: src/units/strategies/ml_entry.py
   decision: whether Foxhound-1 (ml_decision_entry) serves FT-Transformer scores (mirror-published) instead of LightGBM; no change from this unit
@@ -93,3 +116,7 @@ related:
 population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
   in 13 x 28-day windows; a recipe comparison, not a promotion read.
 last_dispatched_at: null
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
