@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Re-arm RQ-20261118-f7c1-06 and -dbf8-02 (D3-TABULAR-LEARNER-ARMS). Each failed once at Kaggle startup (missing bp2 manifest in the bundle), fixed by #29092 (merged 07:54Z). The dispatcher only re-fires a producer_failed unit whose last_dispatched_at was cleared on purpose (dispatch_queue.rearm_marked / cleared_on_purpose), so the stamp is set to null with the reason comment. Retry 2 of MAX_NONVERDICT_RETRIES=2. Queue files only. Revert: git revert."
+}
