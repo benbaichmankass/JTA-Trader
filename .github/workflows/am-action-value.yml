@@ -59,6 +59,15 @@ on:
       n_control:
         description: "Seeded matched random placements per trade (the registered number is 100)"
         default: "100"
+      strategies:
+        description: "Comma list: grade only these strategies' trades at reduce (Q10 one-leg re-scope); empty = all"
+        default: ""
+      symbols:
+        description: "Comma list: grade only these symbols' trades at reduce; empty = all"
+        default: ""
+      entry_from:
+        description: "YYYY-MM-DD (>= 2026-01-01): the graded holdout is trades entering on/after this date (out-of-time); empty = 2026-01-01"
+        default: ""
 
 permissions:
   contents: read
@@ -338,7 +347,10 @@ jobs:
           CLS: ${{ inputs.classes }}
           UNIT: ${{ inputs.research_unit }}
           NCTL: ${{ inputs.n_control }}
-        run: python3 scripts/research/am_action_value.py reduce --out out --classes "$CLS" --unit "${UNIT:-am-action-value-manual}" --reader "workflow am-action-value run ${{ github.run_id }}" --n-control "$NCTL"
+          SCOPE_ST: ${{ inputs.strategies }}
+          SCOPE_SY: ${{ inputs.symbols }}
+          ENTRY_FROM: ${{ inputs.entry_from }}
+        run: python3 scripts/research/am_action_value.py reduce --out out --classes "$CLS" --unit "${UNIT:-am-action-value-manual}" --reader "workflow am-action-value run ${{ github.run_id }}" --n-control "$NCTL" --strategies "$SCOPE_ST" --symbols "$SCOPE_SY" --entry-from "$ENTRY_FROM"
       - uses: actions/upload-artifact@v4
         with:
           name: am-av-result-${{ github.run_id }}

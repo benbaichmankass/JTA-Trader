@@ -98,6 +98,10 @@ if _wh:
     _r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-index", "--no-deps", *_wh],
                         capture_output=True, text=True, check=False)
     print("== learner wheels:", len(_wh), "pip rc", _r.returncode, (_r.stderr or "")[-400:])
+# D3-TABULAR-LEARNER-ARMS: a shipped model checkpoint (TabICL regressor) -> the learner reads it offline, never downloads.
+if glob.glob(os.path.join(bundle_dir, "*.ckpt")):
+    env["TABICL_MODEL_DIR"] = bundle_dir
+    print("== TABICL_MODEL_DIR:", bundle_dir, [os.path.basename(c) for c in glob.glob(os.path.join(bundle_dir, "*.ckpt"))])
 if os.path.exists(os.path.join(repo, "scripts", "research", "probe_learners.py")):
     subprocess.run([sys.executable, "scripts/research/probe_learners.py", "--backend", "kaggle"], cwd=repo, env=env, check=False)
 rc = subprocess.run([sys.executable, "scripts/research/script_run.py", "--unit", unit, "--run-id", run_id, "--run"],

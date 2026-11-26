@@ -278,3 +278,138 @@ def test_an_unknown_state_is_re_read_once_before_it_is_read_as_not_dirty(monkeyp
     slept.clear()
     t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append)
     assert len(reads) == 1 and slept == []
+
+
+# ── land is shallow-safe and contained (2026-11-26, run 431: a depth-1 runner timed out fetching two histories and the TimeoutExpired
+#    killed the whole triage run). Proven against a REAL local bare repo and a depth-1 "runner" clone, not mocks. ──────────────────────
+import os  # noqa: E402
+import subprocess  # noqa: E402
+
+import pytest  # noqa: E402
+
+_GIT_ENV = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+_BR = "automation/research-queue-stamp-9-1"
+
+
+def _g(cwd, *a):
+    return subprocess.run(["git", *a], cwd=str(cwd), check=True, capture_output=True, text=True, env=_GIT_ENV).stdout
+
+
+def _stamp_text(ts):
+    return f"id: RQ-A\ncadence: weekly\nstatus: queued\nlast_dispatched_at: '{ts}'\nrun: {{}}\n"
+
+
+@pytest.fixture
+def repos(tmp_path):
+    bare, work, runner = tmp_path / "remote.git", tmp_path / "work", tmp_path / "runner"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True)
+    work.mkdir()
+    _g(work, "init", "-q", "-b", "main")
+    _g(work, "remote", "add", "origin", str(bare))
+    (work / "research/queue").mkdir(parents=True)
+    (work / "docs/claude/work").mkdir(parents=True)
+    (work / "research/queue/RQ-A.yaml").write_text(_stamp_text("2026-11-18T19:00:00+00:00"))
+    (work / t.RECEIPT_PATH).write_text(_rcpt_json("2026-11-18T19:00:00+00:00"))
+    _g(work, "add", "-A"); _g(work, "commit", "-q", "-m", "c0"); _g(work, "push", "-q", "origin", "main")  # noqa: E702
+    _g(work, "checkout", "-q", "-b", _BR)                                                     # the PR branch, cut from c0
+    (work / "research/queue/RQ-A.yaml").write_text(_stamp_text("2026-11-18T21:00:00+00:00"))
+    (work / t.RECEIPT_PATH).write_text(_rcpt_json("2026-11-18T22:00:00+00:00"))
+    (work / ".github/pr-landing").mkdir(parents=True)
+    (work / ".github/pr-landing/x.json").write_text('{"tier": 1}\n')
+    _g(work, "add", "-A"); _g(work, "commit", "-q", "-m", "pr"); _g(work, "push", "-q", "origin", _BR)  # noqa: E702
+    _g(work, "checkout", "-q", "main")                                                        # main moves on the SAME line: a real conflict
+    (work / "research/queue/RQ-A.yaml").write_text(_stamp_text("2026-11-18T20:00:00+00:00"))
+    (work / t.RECEIPT_PATH).write_text(_rcpt_json("2026-11-18T20:30:00+00:00"))
+    (work / "docs/mainonly.md").write_text("only on main\n")
+    _g(work, "add", "-A"); _g(work, "commit", "-q", "-m", "c1"); _g(work, "push", "-q", "origin", "main")  # noqa: E702
+    subprocess.run(["git", "clone", "-q", "--depth=1", f"file://{bare}", str(runner)], check=True, env=_GIT_ENV)
+    return bare, work, runner
+
+
+def _unit_decision():
+    return {"units": [{"unit": "RQ-A", "path": "research/queue/RQ-A.yaml", "stamp": "2026-11-18T21:00:00+00:00",
+                       "main": "2026-11-18T20:00:00+00:00", "kind": t.NEEDS_LAND, "reason": ""}],
+            "own": [".github/pr-landing/x.json"]}
+
+
+def _mergeable_into_main(work, bare):
+    _g(work, "fetch", "-q", "origin")
+    _g(work, "checkout", "-q", "-B", "probe", f"origin/{_BR}")
+    out = _g(work, "merge", "origin/main")                      # raises on any conflict
+    _g(work, "checkout", "-q", "main")
+    return out
+
+
+def test_land_pushes_a_merge_commit_from_a_depth_one_clone_with_no_conflict_left(repos):
+    bare, work, runner = repos
+    assert (runner / ".git/shallow").exists()                     # the runner really is shallow
+    ok, why = t.land_max("o/r", 1, _BR, _unit_decision(), "tok", repo_root=runner, remote_url=str(bare))
+    assert ok, why
+    _g(work, "fetch", "-q", "origin")
+    assert len(_g(work, "rev-list", "--parents", "-n", "1", f"origin/{_BR}").split()) == 3       # commit + its two parents
+    assert "last_dispatched_at: '2026-11-18T21:00:00+00:00'" in _g(work, "show", f"origin/{_BR}:research/queue/RQ-A.yaml")  # max wins
+    assert _g(work, "show", f"origin/{_BR}:docs/mainonly.md") == "only on main\n"                # main's other content is in the tree
+    assert _g(work, "show", f"origin/{_BR}:.github/pr-landing/x.json") == '{"tier": 1}\n'         # the PR's own landing file is kept
+    assert "up to date" in _mergeable_into_main(work, bare).lower()                              # no conflict, nothing left to merge
+
+
+def test_land_resolves_to_main_when_the_prs_stamp_is_older(repos):
+    bare, work, runner = repos
+    d = _unit_decision()
+    d["units"][0]["stamp"] = "2026-11-18T19:30:00+00:00"          # the PR's stamp is OLDER than main's 20:00
+    ok, why = t.land_max("o/r", 1, _BR, d, "tok", repo_root=runner, remote_url=str(bare))
+    assert ok, why
+    _g(work, "fetch", "-q", "origin")
+    assert "last_dispatched_at: '2026-11-18T20:00:00+00:00'" in _g(work, "show", f"origin/{_BR}:research/queue/RQ-A.yaml")
+
+
+def test_land_keeps_a_newer_receipt_as_a_whole_file(repos):
+    bare, work, runner = repos
+    # a receipt PR: the PR's receipt (22:00) is newer than main's (20:30) and is kept as a whole file
+    rd = {"receipt": True, "own": [".github/pr-landing/x.json"],
+          "units": [{"unit": "receipt", "path": t.RECEIPT_PATH, "stamp": "2026-11-18T22:00:00+00:00", "main": "2026-11-18T20:30:00+00:00",
+                     "kind": t.NEEDS_LAND, "reason": ""}]}
+    ok, why = t.land_max("o/r", 1, _BR, rd, "tok", repo_root=runner, remote_url=str(bare))
+    assert ok, why
+    _g(work, "fetch", "-q", "origin")
+    assert t.receipt_stamp(_g(work, "show", f"origin/{_BR}:{t.RECEIPT_PATH}")) == "2026-11-18T22:00:00+00:00"
+    assert "up to date" in _mergeable_into_main(work, bare).lower()
+
+
+def test_land_never_raises_a_git_failure_or_timeout_is_a_false_result(repos, monkeypatch):
+    bare, work, runner = repos
+    ok, why = t.land_max("o/r", 1, _BR, _unit_decision(), "tok", repo_root=runner, remote_url=str(bare) + "-missing")
+    assert ok is False and "fetch" in why
+    real = subprocess.run
+
+    def slow(*a, **k):
+        raise subprocess.TimeoutExpired(cmd="git fetch", timeout=1)
+    monkeypatch.setattr(t.subprocess, "run", slow)
+    ok, why = t.land_max("o/r", 1, _BR, _unit_decision(), "tok", repo_root=runner, remote_url=str(bare))
+    assert ok is False and "TimeoutExpired" in why
+    monkeypatch.setattr(t.subprocess, "run", real)
+
+
+def test_one_pr_whose_land_blows_up_does_not_stop_the_triage_of_the_next(monkeypatch):
+    calls = []
+    monkeypatch.setattr(t, "_gh", lambda args, inp=None: calls.append((args, inp)) or "")
+    monkeypatch.setattr(t, "main_reader", lambda *a, **k: (lambda rel: _unit("weekly", "last_dispatched_at: '2026-11-18T19:00:00+00:00'")
+                                                          if rel.startswith("research/queue/") else _rcpt_json("2026-11-18T22:30:00+00:00")))
+
+    def boom(*a, **k):
+        raise subprocess.TimeoutExpired(cmd="git fetch", timeout=300)
+    monkeypatch.setattr(t, "land_max", boom)
+    files = {1: [_file("RQ-A", "2026-11-18T19:30:00+00:00")], 2: [_rcpt_file("2026-11-18T22:00:00+00:00")]}
+
+    def api(path):
+        if path.endswith("/files?per_page=100"):
+            return files[int(path.split("/pulls/")[1].split("/")[0])]
+        if "/pulls/" in path:
+            return {"mergeable_state": "dirty"}
+        return [_pr(1, "automation/research-queue-stamp-9-1"), _pr(2, "automation/research-queue-receipt-9-1")]
+    monkeypatch.setattr(t, "_api", api)
+    now = datetime(2026, 11, 18, 23, 0, tzinfo=timezone.utc)
+    rows = t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    assert [r["pr"] for r in rows] == [1, 2]                                   # PR 2 was still reached
+    assert rows[0]["done"].startswith("land_failed") and "TimeoutExpired" in rows[0]["done"]
+    assert rows[1]["done"] == "closed"                                         # its receipt is superseded by main's 22:30

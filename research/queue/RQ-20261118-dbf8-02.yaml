@@ -1,7 +1,7 @@
 id: RQ-20261118-dbf8-02
 title: 'Tabular foundation model on a MONEY label (D3 Foxhound): does TabICLv2 (BSD-3, in-context, no training) at FULL n on a GPU beat LightGBM on the
   trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01)'
-status: blocked
+status: queued
 cadence: once
 theme: ml_health
 priority: 2
@@ -53,15 +53,6 @@ decision_rule:
   what_it_does_not_do: Changes no served model or config. No fine-tuning of TabICL. TabPFN is not an arm (non-commercial weights; research-only). A PASS
     is not a promotion.
   min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled decisions
-blocked_on:
-- what: 'Two builds: (a) FRONTIER-LEVER-TABULAR -- the learner set observed importable on a GPU backend (a PROBE_LEARNERS line from Kaggle in a run log);
-    (b) a tabicl learner arm in scripts/research/ml_entry_residual.py plus a Kaggle (GPU) route for that script (today it runs only on research-script-run,
-    4 vCPU, where TabICL at full n timed out in 4a3b-01).'
-  ref: FRONTIER-LEVER-TABULAR
-  kind: build
-  clears_when: 'FRONTIER-LEVER-TABULAR closes with a Kaggle PROBE_LEARNERS line showing tabicl ok on GPU, and the tabicl arm lands with a smoke run; then
-    git mv to research/queue/, set status queued and fill run.workflow/run.command.'
-  owner: FRONTIER-LEVER-TABULAR (checklist row; raised to the manager by ML-FRONTIER-PREP-20261118 as queued for 4+ scans)
 compute: gpu
 value:
   bucket: ai_trader
@@ -71,10 +62,44 @@ value:
 routing:
   needs_trainer_resident_data: false
   needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
   peak_memory_gb: 16.0
   est_minutes: 240
-  why_runner: Kaggle GPU (TabICL in-context inference at full n is GPU-bound).
-  basis: ESTIMATE from 4a3b-01 timing out at 300 min on CPU with capped members.
+  why_runner: Kaggle GPU; the kernel has no internet, so the klines come from the published metis-market-bp2 market_raw (--cache-source published).
+  basis: 'MEASURED 2026-11-26 (local, CPU): TabICLv2 2.2.0 with the shipped regressor checkpoint fit + predict on 3,000 rows in 3.0 s, offline (model_path, no download). The replay trains on 646,766-749,324 rows per refit at full n; T4 time and memory at that context are NOT measured (the first run measures them). --gpu-arm-budget-min 290 records windows past the budget as unavailable (INDETERMINATE).'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,tabicl
+  - --cache
+  - /tmp/ml_entry_klines
+  - --cache-source
+  - published
+  - --gpu-arm-budget-min
+  - '290'
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - kaggle
+  - --rule-id
+  - RULE-RQ20261118-dbf8-02-TABICL-ENTRY
+  - --registered-at
+  - '2026-11-18'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261118-dbf8-02
+# Unblocked 2026-11-26 by lane D3-TABULAR-LEARNER-ARMS (re-owned from the dropped FRONTIER-LEVER-TABULAR on manager 2026-11-25b's
+# instruction): the tabicl arm in ml_entry_residual.py (self-test), the Kaggle route via metis-market-bp2, and the registered
+# completeness guard (a CPU-fallback, capped, failed or budget-cut arm forces INDETERMINATE). The rule above is unchanged.
+not_before: '2026-11-26T05:30:00+00:00'
 ml_consumer:
   consumer: src/units/strategies/ml_entry.py
   decision: whether Foxhound-1 (ml_decision_entry) serves TabICL scores (mirror-published) instead of LightGBM; no change from this unit

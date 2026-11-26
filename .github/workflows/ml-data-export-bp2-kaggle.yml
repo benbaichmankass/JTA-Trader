@@ -86,7 +86,9 @@ jobs:
           fi
           READY=0
           for i in $(seq 1 120); do
-            st=$(kaggle datasets status "$USERNAME/metis-market-bp2" 2>&1 | scrub)
+            # `|| true`: while a NEW dataset is still being created, `status` exits non-zero, and under -e/pipefail that
+            # killed the step before this poll ran (first run 45742758768, 2026-11-26: upload OK, step exit 1).
+            st=$(kaggle datasets status "$USERNAME/metis-market-bp2" 2>&1 | scrub || true)
             echo "dataset: $st"
             case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
             sleep 15
