@@ -168,7 +168,9 @@ def block_har_rv(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
 def _fmt(text: str, df) -> str:
     """Substitute ``{group}`` (the dataset group this frame belongs to) in a block's path/name strings, so ONE learner
     spec serves every symbol of a multi-group bake-off."""
-    return str(text).replace("{group}", str(getattr(df, "attrs", {}).get("group", "")))
+    g = str(getattr(df, "attrs", {}).get("group", ""))
+    # ``{group_sym}`` = the group name before its first '_' (BTCUSDT_1h -> BTCUSDT), for a side file keyed by symbol only.
+    return str(text).replace("{group_sym}", g.split("_")[0]).replace("{group}", g)
 
 
 def _read_jsonl_cols(path: str, cols: List[str], tail: int = 0):
@@ -207,6 +209,58 @@ def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     Chronos columns for the arm that tests them, against an arm that does not get them. A column missing from the
     shard is NaN (the loader's rule), so a dead side-stream shows up as a dead feature, never as a silent drop."""
     return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
+
+
+def block_raw_bars(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """RAW per-bar inputs from the group's ``market_raw`` OHLCV (RQ-20261126-9e73-01, the representation iteration of the
+    GRU after 9e72-01 tied LightGBM on the 10 engineered features). Joined on ts (left; a bar missing from market_raw is NaN,
+    never dropped). Columns, each a function of bar t and bar t-1 only (no lookahead):
+      ``<p>r1``   log(close_t / close_{t-1})                       ``<p>hl``  log(high_t / low_t)
+      ``<p>co``   log(close_t / open_t)                            ``<p>gap`` log(open_t / close_{t-1})
+      ``<p>lv``   log(volume_t) - its trailing ``vol_window``-bar median of log volume (past bars only; default 96)
+    The sequence model sees these over its own ``window_bars`` lookback, so the LENGTH of history it uses is the arm's lever.
+    spec: path (market_raw jsonl/csv/parquet; ``{group}`` ok, or ``{entity}`` with entity_col for a pooled frame), on (default ts),
+    prefix (default raw_), vol_window, tail_rows, entity_col."""
+    import pandas as pd
+    on, pre = spec.get("on", "ts"), spec.get("prefix", "raw_")
+    cols = [on, "open", "high", "low", "close", "volume"]
+    names = ("r1", "hl", "co", "gap", "lv")
+
+    def one(path_text: str):
+        path = _resolve_path(path_text)
+        sp = str(path)
+        if sp.endswith(".jsonl"):
+            side = _read_jsonl_cols(sp, cols, int(spec.get("tail_rows", 0)))
+        elif sp.endswith(".parquet"):
+            side = pd.read_parquet(path, columns=cols)
+        else:
+            side = pd.read_csv(path, usecols=lambda c: c in set(cols))
+        side[on] = pd.to_datetime(side[on], utc=True)
+        side = side.dropna(subset=[on]).drop_duplicates(on).sort_values(on).reset_index(drop=True)
+        o, h, lo, c = (pd.to_numeric(side[k], errors="coerce").to_numpy(dtype=float) for k in ("open", "high", "low", "close"))
+        v = pd.to_numeric(side["volume"], errors="coerce").to_numpy(dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            c_prev = np.r_[np.nan, c[:-1]]
+            lvol = np.log(np.where(v > 0, v, np.nan))
+            med = pd.Series(lvol).shift(1).rolling(int(spec.get("vol_window", 96)), min_periods=10).median().to_numpy()
+            f = {"r1": np.log(c / c_prev), "hl": np.log(h / lo), "co": np.log(c / o), "gap": np.log(o / c_prev), "lv": lvol - med}
+        return side[[on]].assign(**{pre + k: np.where(np.isfinite(x), x, np.nan) for k, x in f.items()})
+
+    ent = spec.get("entity_col")
+    if ent:   # pooled frame: one market_raw file per entity (path carries {entity}); joined on (entity, ts)
+        parts = []
+        for e in pd.unique(df[ent].astype(str)):
+            try:
+                parts.append(one(str(spec["path"]).replace("{entity}", e)).assign(**{ent: e}))
+            except FileNotFoundError as exc:   # allow-silent: an entity with no market_raw shard keeps NaN raw columns (a visible dead feature)
+                print(f"raw_bars: no market_raw for {e}: {exc}", file=sys.stderr)
+        side = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=[on, ent] + [pre + k for k in names])
+        left = pd.DataFrame({on: pd.to_datetime(df[on], utc=True), ent: df[ent].astype(str).to_numpy()})
+        merged = left.merge(side, on=[ent, on], how="left")
+    else:
+        side = one(_fmt(spec["path"], df))
+        merged = pd.DataFrame({on: pd.to_datetime(df[on], utc=True)}).merge(side, on=on, how="left")
+    return {pre + k: merged[pre + k].to_numpy(dtype=float) for k in names}
 
 
 def _ridge_solve(X: np.ndarray, Y: np.ndarray, lam: float) -> np.ndarray:
@@ -288,7 +342,7 @@ def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
 
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
     "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns,
-    "var_price_vector": block_var_price_vector}
+    "var_price_vector": block_var_price_vector, "raw_bars": block_raw_bars}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────
@@ -871,7 +925,10 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         if why:
             res["arms"][name] = {"status": "unavailable", "reason": why}
             continue
-        cols = dict((c, df[c].to_numpy(dtype=float)) for c in base_cols)
+        # ``base_features`` (opt-in, RQ-20261126-9e73-01): a learner may REPLACE the shared base list (e.g. [] = only its own
+        # feature_blocks, so a raw-window GRU never sees the engineered columns the baseline uses). Absent = the shared list.
+        own_base = ls.get("base_features")
+        cols = dict((c, df[c].to_numpy(dtype=float)) for c in (base_cols if own_base is None else list(own_base)))
         for blk in ls.get("feature_blocks") or []:
             cols.update(FEATURE_BLOCKS[blk["kind"]](df, blk))
         names = list(cols)
