@@ -55,6 +55,7 @@ from ml.datasets.forecast_features import (  # noqa: E402
     DEFAULT_CONTEXT_LEN,
     DEFAULT_HORIZON,
     DEFAULT_MIN_CONTEXT,
+    DEFAULT_PHASE,
     DEFAULT_STRIDE,
     FORECAST_FEATURE_COLUMNS,
     FORECAST_MODEL_ID,
@@ -182,8 +183,14 @@ def latest_forecast_row(
     min_context: int = DEFAULT_MIN_CONTEXT,
     horizon: int = DEFAULT_HORIZON,
     quantile_levels: Sequence[float] = FORECAST_QUANTILES,
+    phase: str = DEFAULT_PHASE,
+    tf_seconds: float | None = None,
 ) -> dict[str, Any] | None:
     """Compute the fc_* rows for *candles* and return the MOST-RECENT one.
+
+    ``phase="epoch"`` (DEFAULT_PHASE, row FC-STRIDE-PHASE): the most recent EPOCH-ALIGNED bar's forecast, i.e. the one the
+    offline as-of join carries onto the latest bar (the offline build emits on the same epoch-aligned bars). ``"row"``:
+    the legacy rule below, under which the last bar was always forecast fresh (RQ-20261126-7f3d-01: 27% agreement).
 
     The shared core the CLI and the parity test both call. It shapes the candles
     (`_candles_to_rows`) then delegates to the SAME pure
@@ -201,6 +208,8 @@ def latest_forecast_row(
         forecast_fn=forecast_fn,
         horizon=horizon,
         quantile_levels=quantile_levels,
+        phase=phase,
+        tf_seconds=tf_seconds,
     )
     if not out:
         return None
@@ -219,8 +228,15 @@ def build_forecast_artifact(
     min_context: int = DEFAULT_MIN_CONTEXT,
     horizon: int = DEFAULT_HORIZON,
     quantile_levels: Sequence[float] = FORECAST_QUANTILES,
+    phase: str = DEFAULT_PHASE,
 ) -> dict[str, Any] | None:
     """Assemble the serializable artifact for one symbol (``None`` if no row).
+
+    FC-STRIDE-PHASE (2026-11-26): with ``phase="epoch"`` the ``fc_row`` is the latest EPOCH-ALIGNED bar's forecast
+    carried forward (``fc_phase_ts`` names that bar), exactly what the offline as-of join gives the latest bar, while
+    ``as_of_ts`` stays the last CLOSED bar so ``src/runtime/forecast_live.py``'s one-bar staleness check is unchanged
+    (it compares the scored bar to as_of_ts). The window stamp describes the window the forecast SAW (ending at
+    ``fc_phase_ts``).
 
     The still-forming bar is dropped first (FIX-CA-25 /
     CA-B01-fc-producer-forecasts-forming-bar): the live fetch ends on it, and
@@ -231,10 +247,14 @@ def build_forecast_artifact(
     """
     from src.runtime.closed_bars import drop_forming_bar  # stdlib-only
 
+    from src.runtime.closed_bars import TF_SECONDS  # stdlib-only
+
     fetched_n = len(candles)
     candles = drop_forming_bar(list(candles), timeframe)
     row = latest_forecast_row(
         candles,
+        phase=phase,
+        tf_seconds=TF_SECONDS.get(str(timeframe or "").strip().lower()),
         forecast_fn=forecast_fn,
         context_len=context_len,
         stride=stride,
@@ -245,9 +265,13 @@ def build_forecast_artifact(
     if row is None:
         return None
     fc_row = {col: row[col] for col in FORECAST_FEATURE_COLUMNS}
+    fc_phase_ts = row.get("ts")
+    last_closed = sorted(_candles_to_rows(candles), key=lambda r: str(r.get("ts", "")))
+    as_of_ts = last_closed[-1]["ts"] if (phase == "epoch" and last_closed) else fc_phase_ts
     # Window identity (PI-20261119-K7ZSW5Z7-0005): which closes this forecast
     # saw, so a live-vs-offline diff can tell a data difference from a model one.
-    stamp = latest_window_stamp(candles, timeframe, context_len=context_len) or {}
+    saw = [c for c in candles if str(_candle_time_value(c)) <= str(fc_phase_ts)] if phase == "epoch" else candles
+    stamp = latest_window_stamp(saw, timeframe, context_len=context_len) or {}
     return {
         "symbol": symbol,
         "timeframe": timeframe,
@@ -259,7 +283,9 @@ def build_forecast_artifact(
         "model_id": model_id,
         "feature_columns": list(FORECAST_FEATURE_COLUMNS),
         "fc_row": fc_row,
-        "as_of_ts": row.get("ts"),
+        "as_of_ts": as_of_ts,
+        "fc_phase_ts": fc_phase_ts,
+        "fc_phase": {"anchor": phase, "stride": stride},
         "fetched_n": fetched_n,
         "forming_dropped": fetched_n - len(candles),
         **stamp,
