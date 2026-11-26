@@ -1,0 +1,58 @@
+{
+  "unit": "RQ-20261025-006",
+  "run_id": "45728644833",
+  "commit_sha": "976358b95d62d48f22fb042dcaefcdef0779be40",
+  "run_url": null,
+  "timeout_minutes": 20,
+  "runner": {
+    "cpu_model": "AMD EPYC 7B12",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "d6a1124fd94a",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/infra_selftest.py",
+        "--check",
+        "roadmap_ref_valid",
+        "--out",
+        "comms/research/RQ-20261025-006/45728644833"
+      ],
+      "log": "comms/research/RQ-20261025-006/45728644833/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 0.1
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}
