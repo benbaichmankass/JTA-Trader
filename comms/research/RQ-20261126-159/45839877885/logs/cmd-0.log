@@ -1,0 +1,9 @@
+candle dataset: served binance__BTCUSDT__120 (21961 rows, last 2026-11-17 22:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol BTCUSDT --resample 2h --atr-period 14 --atr-stop-mult 3 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-159/45839877885/arms/A__trades.jsonl --json comms/research/RQ-20261126-159/45839877885/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0
+[side_long] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol BTCUSDT --resample 2h --atr-period 14 --atr-stop-mult 3 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-159/45839877885/arms/side_long__trades.jsonl --json comms/research/RQ-20261126-159/45839877885/arms/side_long__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --side-filter long
+[side_short] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol BTCUSDT --resample 2h --atr-period 14 --atr-stop-mult 3 --trail-mult 4.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-159/45839877885/arms/side_short__trades.jsonl --json comms/research/RQ-20261126-159/45839877885/arms/side_short__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --side-filter short
+{
+ "verdict": "pass",
+ "label": "reachable_lever_beats_removed",
+ "why": "side_short beats the removed-lever baseline by 5.5003 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+}
