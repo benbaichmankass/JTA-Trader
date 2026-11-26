@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # for the shared dirty-tree notice
 
 #: a validator / writer / risk / intake surface, by path (src/ and scripts/ .py only; scripts/ci is excluded below)
 PATH_RE = re.compile(
@@ -148,6 +149,8 @@ def main(argv=None) -> int:
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     try:
+        import _dirty_tree  # noqa: PLC0415 -- path shim above; the shared notice (a --base guard grades a commit range)
+        _dirty_tree.warn()
         if a.self_test:
             # a broken self-test is a bug in THIS file; it still must not block a merge, so report and exit 0
             rc = _self_test()
