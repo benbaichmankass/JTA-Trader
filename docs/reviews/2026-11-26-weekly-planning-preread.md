@@ -292,3 +292,30 @@ Source: the planning doc § 0 and § 7, measured 17:50Z and 19:01Z. These are it
 - I did not re-read the per-account scoreboard myself; § 1 is the performance lane's read.
 - Runner throughput, and so the "queue dry in 2–3 days" figure, is not measured.
 - I checked none of tonight's merges for deployed or observed.
+
+---
+
+## 11. Outcome (operator answers 2026-11-25)
+
+Recorded by lane `PLANNING-OUTCOME-W48` (dispatched by Manager Session 2026-11-25b). Source: the W48 planning decision doc, answered ~22:36-22:41Z; choices
+copied verbatim. **Q4 is not in this batch on purpose:** the operator had already decided it on 2026-11-25 ("Don't wait", recorded on the body of #28869), so it was dropped from the doc rather than re-asked. **Gates this section adds or changes: none.**
+
+| Q | operator answer (verbatim) | what it changes | where it lives |
+|---|---|---|---|
+| Q1 | "Refuse; judge it in the weekly review" | No automatic ml_entry demotion trigger. The performance review flags it weekly and the operator decides. Disposition of D1 (PREP1125-0003): **(b) weekly review, no rule** | PI-20261125-PREP1125-0003 |
+| Q2 | "Until the Q1 rule fires, with no date" + note "There's is no demotion path, only iteration and improvement" | ml_entry stays on real money with **no date and no rule**: Q1 was refused, so nothing ends it automatically; it changes by iteration (the 11-29 retrain graded under Amendment 4). The note contradicts the "demote stops at the floor" language elsewhere; **the manager should reconcile it with OPERATING-PLAN § 2 (not done here)** | ML-ENTRY-FINETUNE |
+| Q3 | "Exclude it from every promotion/demotion read, keep it visible and labelled (Recommended)" | Trade 4773 (ib_paper MGC, ESTIMATED, about +$249k) is out of promotion/demotion reads and stays listed and labelled. **Landed (scripts side):** `comms/promotion_exclusions.yaml`, `scripts/ops/promotion_exclusions.py`, applied in `scripts/research/live_bar.py` and `scripts/ops/scoreboard.py`. **Not landed:** the served `/api/bot/performance` and the R4 recent payload in `src/web` still include it (Tier 2) | AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED; new row PLAN-W48-PROMOTION-EXCLUSION-WEB-ROUTE (due 12-02) |
+| Q5 | "Report it beside the current net for 2 weeks, then decide (Recommended)" | Report-only: a markout-adjusted net beside each Stage-0 net. **The grading basis does not change.** Decision due 2026-12-09 | COST-STACK-MARKOUT-TERM (`due_by` set to 2026-12-09) |
+| Q6 | "Yes: measured headline, the other parts labelled beside it (Recommended)" | The scoreboard headline is venue-measured P&L (`headline_usd`; null renders as "—"), with estimated / unverified / fabricated parts named beside it (`headline_beside`). `net_usd` stays as the all-priced total, so the API stays compatible. The `%` columns are still computed on all priced rows and are labelled so | `scripts/ops/scoreboard.py` |
+| Q7 | "Paper off live review this week" | Paper accounts get no live review this week (done by the manager: `ltr_paper` OFF 22:42Z) | LTR |
+| Q8 | "Close it and fold it into L-ML-MECE" + note "But that is the planning priority this week" | L-ML-LIVE closed and folded; L-ML-MECE is the week's top planning priority (`week_priority: 1`) | `docs/roadmap/milestones.yaml` |
+| Q9 | "Re-scope to desk capacity + DESK-MACRO-DAILY in production end to end, target 12-09 (Recommended)" | L-DESK-V1 re-scoped, target 2026-12-09 | `docs/roadmap/milestones.yaml` |
+| Q10 | "Target 12-16: decide on c7e3-08/09; if none passes, re-scope to one action family on one leg (Recommended)" | L-AM-STANDARD target 2026-12-16 with the conditional re-scope | `docs/roadmap/milestones.yaml` |
+| Q11 | "Approve both (Recommended)" | Tier-2 fixes approved; the manager's HEALTH-20261125-CFI-ALERTER lane and the housekeeping lane carry them. **Not this lane** | HEALTH-20261125-CFI-ALERTER |
+| Q12 | "One backfill pass by the housekeeping lane, then keep it (Recommended)" | The amendments log stays; one backfill pass. **Not this lane** | AUD-20261104-AMENDMENTS-UNLOGGED |
+| Q13 | "Pause it while you are active; re-arm on request (Recommended)" | The daily email digest trigger is paused (done by the manager) | WEEKLY-PLANNING |
+
+**Disposition check (§ 9).** I resolved every row id named in § 9 against the work store. Of 34 distinct id tokens, 19 did not match literally. Fourteen were short forms with a full-id row; the rest were lane or owner names or bare PI suffixes (PREP1125-0002/-0003 resolve as PI-20261125-PREP1125-000N). Short forms and their full ids (AUD-2026…-AMENDMENTS-UNLOGGED, -DEMO-FLOOR-NO-EVAL, -FLATTEN-LABEL, -HEALTH-CLOSE-LIST-MISS,
+-HOLD-VS-CLOSE-CONFLICT, -ITERATION-ORPHANS, -LANES-ON-DEAD-SESSIONS, -PIPELINE-DOC-PATH, -PREDICATE-FALLBACK-DRIFT, -PRODUCER-OK-OVER-CNL, -RELAY-INVARIANTS-BRIDGE, -SIZE-UP-AT-CALLERS,
+-TICK-SIZE-OWNERS; HEALTH-20261118-RECONCILE-LOCK-TICK). **Not verified by this lane:** that each row carries an owner and a due date; I checked existence only. Rows filed or changed here: COST-STACK-MARKOUT-TERM
+(`due_by` 2026-12-09) and PLAN-W48-PROMOTION-EXCLUSION-WEB-ROUTE (new, due 12-02). `ML-PRIMARY`, `QUEUE-FILL` and `LEVER-FAMILY-REACH` are lane or owner names, not rows.
