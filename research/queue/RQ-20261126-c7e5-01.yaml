@@ -1,0 +1,150 @@
+# Hand-authored 2026-11-26 by the ML-PRIMARY lane: AM v2 Q10 RE-SCOPE (operator W48 Q10: "re-scope to ONE action family on ONE leg"; manager
+# approved 2026-11-26 01:12Z: mf_tighten_fixed on ict_scalp_5m, graded on entries after 2026-11-23 only). Rule registered BEFORE any run on the grading
+# population (no trade in it exists yet). Gates this adds or changes: none. No trade path; a pass is a Tier-3 proposal input, never an apply.
+id: RQ-20261126-c7e5-01
+title: 'AM v2 Q10 re-scope: the fixed-age-5 tighten (mf_tighten_fixed_cc) on ict_scalp_5m BTCUSDT 5m only, graded OUT-OF-TIME on entries after 2026-11-23
+  vs HOLD and 100 causal random placements'
+status: queued
+cadence: once
+not_before: '2027-06-15T00:00:00+00:00'
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261125-c7e3-09/45701041853.jsonl
+  verdict_read: fail
+  diagnosis: 'Every AM v2 class failed on the pooled book once the exit-time leak was removed (c7e3-08 and c7e3-09 FAIL). Operator Q10 then re-scopes to one action
+    family on one leg. The cut that picked it is the c7e3 strategy cuts (MEASURED, research/results c7e3-01..09). fade_breakout (the first candidate)
+    carries +0.0023 R/trade with a 0.7% drawdown cut, and that number is the WHOLE family (62,683 trades). The rostered leg fade_breakout_4h has 403 dev +
+    102 holdout trades, MDE ~0.04-0.08 R at sd 0.3, i.e. 20-40x the effect: recorded "unpowered, not run". ict_scalp_5m carries the signal in four separate
+    classes: av_tighten +0.084, mf_tighten_fixed (06 and 09) +0.068, av_tighten_late +0.058, av_bank +0.049 R/trade, drawdown cut 14-22%, n 1,298. Those cuts were read over dev AND
+    holdout together, so the whole pinned corpus (1eb164f4, 2026-11-23) is the CHOOSING window (operator 2026-11-23/25: a number measured only over the
+    grading window never promotes). Only trades entering after 2026-11-23 are disjoint.'
+  search: 'one class, one leg, no search: mf_tighten_fixed_cc exactly as c7e3-09 registered it (tighten_half once at the first eligible bar aged >= 5; causal
+    controls), filtered at reduce to strategy ict_scalp_5m, symbol BTCUSDT; the holdout starts at 2026-11-24.'
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+  attempt: 5
+  due_by: '2027-06-30'
+question: 'On ict_scalp_5m (BTCUSDT 5m) trades entering on or after 2026-11-24 (disjoint from the window that chose the leg), does the fixed-age tighten raise net R
+  per trade over HOLD (paired mean delta > 0, t >= 2) AND beat >= 90 of 100 causal random placements of the same tighten, net of the full cost stack, at n >= the
+  target fixed on the dev half?'
+why_this_matters: 'It is the Q10 re-scope the operator asked for, on the one rostered leg where the tighten signal is large enough to measure. A pass is the first
+  disjoint evidence that an AM action class pays on a live leg: an input to a Tier-3 / mandate proposal for that leg''s live-review tighten. A fail records
+  that this fixed-age tighten config does not pay on its strongest leg.'
+power:
+  expected_n: 283
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.3
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'Target n FIXED ON THE DEV HALF before any grading trade exists. sd 0.3 R per-trade paired delta is an ESTIMATE (not reported by c7e3; tighten deltas
+    are bounded by about half the stop distance on fired trades, and 86% fire on this leg). The run measures the dev sd (reduce paired.dev.sd_delta_r) and
+    the target becomes n* = ceil((2.8 x sd_dev / 0.05)^2); at sd 0.3, n* = 283 (282.2 by this formula, 282.6 by the power checker; both round up to 283). MDE 0.05 R is set BELOW the dev-observed +0.068 because a selected cut
+    is inflated. Accrual: ict_scalp_5m runs ~40 harness trades/month (MEASURED, cf_bulk corpus 2025-10..2026-09), so 283 trades take ~7 months:
+    expected grading date 2027-06-15 (not_before). A run before n* is reached grades INDETERMINATE (n not reached) and re-arms.'
+  feasibility:
+    source: none
+    accrual_basis: 'No observed data exists for the GRADING population yet: it is ict_scalp_5m trades entering after 2026-11-23, and the pinned corpus
+      ends there. It accrues at ~40 harness trades/month (MEASURED, cf_bulk corpus 2025-10..2026-09) through the weekly ict_scalp_5m walk-forward unit
+      RQ-20261105-028, which writes fresh harness trade files under comms/research; the am-action-value run with corpus_sha empty replays the tree at
+      dispatch. Before n* the rule grades INDETERMINATE (n not reached). At the 2027-06-15 dispatch the population exists, and this block is
+      re-pointed to source corpus then.'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+ml_consumer:
+  consumer: .claude/skills/live-trade-review/SKILL.md
+  decision: tighten moves a live-review packet states and may make on ict_scalp_5m (advice-only until a class passes its own net-of-cost test)
+  legs:
+  - ict_scalp_5m
+  book: demo_floor
+baseline:
+  definition: 'HOLD = `replayed_actual` of the same replay (the leg''s own TP, trail and harness timeout), net of the full cost stack; REFERENCE the 100 causal
+    random placements of the same tighten (age drawn at entry from U{1..horizon}).'
+  net_of_cost: true
+run:
+  workflow: am-action-value.yml
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261126-c7e5-01
+    classes: mf_tighten_fixed_cc
+    corpus_sha: ''
+    strategies: ict_scalp_5m
+    symbols: BTCUSDT
+    entry_from: '2026-11-24'
+decision_rule:
+  id: RULE-AM-Q10-ONE-LEG-OOT-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  statistic: 'scripts/research/am_action_value.py reduce --strategies ict_scalp_5m --symbols BTCUSDT --entry-from 2026-11-24: `paired.holdout` = per-trade paired
+    delta (arm net R - HOLD net R; 0 where the tighten never fired) over trades entering >= 2026-11-24: n, n_fired, mean_delta_r, sd_delta_r, t, and
+    share_controls_beaten (share of the 100 causal random placements whose mean delta the arm beats). `paired.dev` (entry < 2026-01-01) supplies sd_dev
+    for n*. The RULE-AM-RISK-ADJUSTED-V1 book clauses are reported, not graded (folds and drawdown cannot be read on a few hundred trades).'
+  rule: 'n* = ceil((2.8 x paired.dev.sd_delta_r / 0.05)^2). If paired.holdout.n < n*: INDETERMINATE (n not reached; re-arm not_before by the accrual rate).
+    Else PASS iff mean_delta_r > 0 AND t >= 2.0 AND share_controls_beaten >= 0.90; FAIL iff mean_delta_r <= 0 OR share_controls_beaten <= 0.50; else
+    INDETERMINATE. Fixed now; no threshold is changed after a result.'
+  what_it_does_not_do: Serves, promotes or applies nothing; changes no bracket, config or order; a per-trade-R SCREEN for one leg; says nothing about any other leg or class.
+  pass_action: Propose the tighten on ict_scalp_5m to the manager as a Tier-3 / mandate decision input with this record (live-review tighten advice for that leg); the operator
+    or manager decides.
+  fail_action: 'Record that this CONFIG failed on disjoint data: mf_tighten_fixed_cc (tighten_half once at the first eligible bar aged >= 5) on
+    ict_scalp_5m BTCUSDT 5m. Author the next AM iteration from this result on another action (bank / partial) or another fixed age on the same leg.'
+  proposal_mapping: pass -> Tier-3 proposal input; fail -> this config failed, next action or age from the result; indeterminate -> n not reached (re-arm) or not separable (state it, iterate).
+  choices_where_the_design_memo_is_silent:
+  - 'FADE_BREAKOUT_4H: recorded "unpowered, not run". MDE = 2.8 x 0.3 / sqrt(102) = 0.083 R (holdout) and 0.042 R (dev, n 403) vs the +0.0023 R family cut; even
+    the 93k-trade family needs ~176k trades for 0.002 R.'
+  - 'CORPUS: corpus_sha empty = the repo tree at dispatch (the pinned 1eb164f4 holds no post-2026-11-23 entry). The run log records the checkout sha.'
+  - 'MODELS: the model-free class only uses the value models to fix the population; the last heads fold is open-ended (test_end null), so post-2026-11-23
+    trades get a fold. The heads artifact am-heads-45384292963 is kept only to 2026-12-24 and the value models are rebuilt here (av_run_id empty), so the
+    dispatch needs a live heads artifact: precondition tracked in docs/claude/work/PIPELINE.jsonl (re-materialise before expiry).'
+  - 'HOLDOUT: family AM-HEADS, 2026-11-24..end, symbols [BTCUSDT], claimed by the reduce step BEFORE the holdout books are built.'
+  min_n: 283
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.15
+  basis: 'ESTIMATE: +0.05 R/trade x ~40 trades/month on one demo-floor leg; not a P&L measurement.'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: HOLD is `replayed_actual` of the same replay
+  matched_random:
+    draws: 100
+    same_class: true
+    same_count_and_level_parameters: true
+    note: 'CAUSAL: the same tighten_half at an age drawn at entry from U{1..hz_bars}, seeded per (trade, class, draw); no action if the trade has closed by then'
+  best_static:
+    grid:
+    - hold
+    excludes_test_folds: true
+    note: one fixed class on one leg; nothing searched
+  bootstrap_group: trade
+practice_precedent: rule registered before the grading population exists, disjoint out-of-time grading (operator 2026-11-23/25), matched causal random control, power
+  stated up front (principles R5, M6, M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 180
+  basis: 'ESTIMATE: the full am-action-value pipeline (labels + fits + policy shards over the whole corpus), filtered at reduce; same as c7e3-09.'
+  why_runner: CPU LightGBM and a Python replay over keyless bars; sharded on GitHub-hosted runners (am-action-value.yml).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/am_action_value.py
+- .github/workflows/am-action-value.yml
+- RQ-20261125-c7e3-09
+- RQ-20261125-c7e3-06
+- RQ-20261105-028
+- AM-V2-STAGE-B-POLICY-ARM

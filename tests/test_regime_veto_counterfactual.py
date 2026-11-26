@@ -90,3 +90,26 @@ def test_grade_end_to_end_with_stub_bars(tmp_path):
     assert rep["axes"]["trend"]["label"] == "underpowered" and rep["verdict"] == "indeterminate"
     assert rep["axes"]["ml_vol"]["n_mixed_signals"] == 0
     assert json.loads((tmp_path / "out" / "verdict.json").read_text())["rule_id"] == R.RULE_ID
+
+
+def test_verdict_json_meets_the_script_run_contract(tmp_path):
+    """script_run.py refuses a verdict.json without verdict / read_state / population / n (c4f2-01 run 45745911700 landed
+    producer_failed 'n must be present'); the grade must also be strict JSON (no NaN)."""
+    import script_run as SR
+    rows = []
+    for k in range(6):
+        b = BAR0 + 3600 * 100 * k
+        rows += [ev("a", b + 3700, bar=b), drop("a", b + 3702)]
+    snap = tmp_path / "s.jsonl"
+    snap.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+    def bars_fn(sym, tf, start, end):
+        out, t = [], BAR0
+        while t <= end.timestamp():
+            out.append({"time": t, "open": 100.0, "high": 100.5, "low": 97.0, "close": 99.0})
+            t += 3600
+        return out
+    R.grade(snap, tmp_path / "out", bars_fn=bars_fn, horizon=4)
+    v = json.loads((tmp_path / "out" / "verdict.json").read_text())
+    assert v["verdict"] in SR.VERDICTS and v["read_state"] in SR.READ_STATES and str(v["population"]).strip() and "n" in v
+    assert v["n"] == 6

@@ -1,0 +1,145 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row REGIME-LIVE-VETO-COUNTERFACTUAL; manager 03:31Z: "CONFIRM FIRST ... htf_pullback_trend_2h through its
+# OWN harness with vs without the ADX cell, 2020-2026, net of the full cost stack, matched random drops, rule registered before the run"). The
+# regime-selectivity walk-forward-before-Tier-3 read. Only regime x side COUNTS were read (local replay); no net R. Gates this adds or changes: none.
+id: RQ-20261126-4d1c-01
+title: 'Walk-forward-before-Tier-3: does REMOVING htf_pullback_trend_2h''s 1-D ADX cells (trending L/S, chop L/S, transitional S; config/regime_policy.yaml)
+  add >= +0.01 R per available trade over the cells as configured, on the leg''s OWN harness replay 2022-2026, beyond random add-backs of the same count,
+  net of the full cost stack?'
+status: queued
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-btc-router-cells
+  subject_kind: ml_model
+  from_result: RQ-20261126-c4f2-01/45745911700
+  verdict_read: fail
+  diagnosis: 'c4f2-01 priced the LIVE regime_hard_gate drops 2026-09-01..11-26 and FAILED on the trend axis: the ADX veto COST money. The 22
+    htf_pullback_trend_2h signals dropped on every tick replay at +1.08 R each (fvg_range_15m''s 7 at -0.50 R, so its cell is kept out of this).
+    But that is a bracket replay (emitted SL/TP, 48-bar horizon) on n 22, not the leg''s own trail, and a live cell is not removed on that. The cells
+    were set from the 2026-06/07 full-sample regime matrix ("re-measured -6.85R" for trending long), which the walk-forward rule exists to check.
+    Local count replay (no net R): of 357 test-window trades the cells DROP 330 (92%: trending L 121 / S 141, chop L 27 / S 19, transitional S 22)
+    and keep 27, so the live leg trades about 5 times a year. Competing hypotheses: (a) the cells drop money-making trend pullbacks (c4f2-01);
+    (b) the matrix was right and the live window was a lucky stretch.'
+  hypothesis: removing the cells adds net R on the leg's own harness, robust across test years and beyond random add-backs
+  search: 'one fixed comparison: the cells as configured vs no cells for this leg (all five off-cells together); per-cell rows reported, never graded;
+    regime = the live detector (wilder_adx 14 + regime_label) on the last 2h bar closed at or before entry.'
+  levers:
+  - regime
+  map_entries:
+  - research/levers/ml-btc-router-cells.yaml
+  attempt: 4
+  due_by: '2026-12-03'
+question: On htf_pullback_trend_2h replayed through its own harness with declared params (2020-09..2026-10; graded over test trades >= 2022-01-03), does
+  removing its 1-D ADX cells add >= +0.01 R per available trade over the cells as configured (t >= 2, >= 4 of 5 test years positive), beyond >= 95% of
+  200 random add-backs of the same count within leg x month, net of the full cost stack?
+why_this_matters: 'If it passes, it is the evidence record for a Tier-3 diff that sets htf_pullback_trend_2h''s off-cells to on (the manager takes it
+  from there), giving back ~66 trades a year the leg now skips. If it fails, the matrix stands, c4f2-01''s live read is recorded as a window effect,
+  and the cells stay. MATERIAL FACT REPORTED WHATEVER THE VERDICT (manager 03:39Z): by design the cells block about 92% of this live leg''s
+  harness trades (330 of 357 test-window trades; counts from the local replay, re-measured and published in the result as dropped.share), so
+  htf_pullback_trend_2h trades only transitional longs, about 5 a year.'
+power:
+  expected_n: 357
+  min_detectable_effect: 0.17
+  effect_units: metric
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED counts (local replay of the leg on Binance Vision 2h, 2026-11-26, no net R read): 454 window trades, 357 in the test window
+    (>= 2022-01-03, 221 weeks), 330 of them dropped by the cells. delta = (sum of dropped net R) / 357, so with per-trade sd ~1.2 R (ESTIMATE)
+    SE ~ 1.2 x sqrt(330) / 357 = 0.061 R and MDE ~0.17 R per available trade (dropped trades averaging ~+0.18 R). That is well above the +0.01 bar,
+    so the t >= 2 clause binds: a pass needs the dropped trades to average roughly +0.13 R or more. c4f2-01''s live read (+1.08 R on a bracket
+    replay) would clear it easily; a small real effect would read INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: The trades are replayed at run time from the leg's own harness path over a pinned window; nothing accrues. The counts above came
+      from a local replay, not a committed verdict, so the source is none.
+ml_consumer:
+  consumer: research/levers/ml-btc-router-cells.yaml
+  decision: drop (veto) an htf_pullback_trend_2h intent before routing when its ADX-14 regime x side cell is off
+  legs:
+  - htf_pullback_trend_2h
+  book: demo_floor
+baseline:
+  definition: the leg's replayed trades with its 1-D ADX cells applied (dropped trades contribute 0 R); random add-backs of the same count within leg
+    x month (200 draws)
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - adxcell
+  - --legs
+  - htf_pullback_trend_2h
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261126-4d1c-01
+decision_rule:
+  id: RULE-HTF-ADX-CELL-REMOVAL-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: the cells as configured; 200 random add-backs of the same count within leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode adxcell --legs htf_pullback_trend_2h (adx_regime_at_entry with the live detector, load_cells
+    from config/regime_policy.yaml, grade_adxcell -> grade_raw normalise=False with add-back weights 2 dropped / 1 kept): delta = (sum of dropped net
+    R) / all test trades; se from 1,000 entry-week bootstrap draws; share_ge_arm = share of 200 within leg x month permutations of the 2/1 flags with
+    delta >= the arm; yearly delta; dropped and kept mean net R; per-cell (regime x side) n / mean / sum reported, never graded.'
+  rule: 'PASS iff delta >= +0.01 R per available trade AND t >= 2 AND share_ge_arm <= 0.05 AND >= 4 of 5 test years > 0 (RR.tilt_verdict on the RULE_MS
+    thresholds, unchanged). FAIL iff delta <= 0 or share_ge_arm >= 0.5. Else INDETERMINATE. Fixed now.'
+  pass_action: 'Bring the manager the exact Tier-3 diff (config/regime_policy.yaml: htf_pullback_trend_2h trending {long: on, short: on}, chop {long:
+    on, short: on}, transitional short: on) with this evidence record. fvg_range_15m''s cells are NOT part of it (c4f2-01: they saved money). The
+    manager / operator decides; no lane edits the config.'
+  fail_action: Record the htf_pullback_trend_2h ADX cells as confirmed by the leg's own harness (c4f2-01's live read was a window effect at n 22 on a
+    bracket replay); the cells stay. REGIME-PROGRAM's next unit is the rates / risk-off hand rule on the bond and gold legs.
+  proposal_mapping: pass -> Tier-3 cell-removal diff for the manager; fail -> cells stay, next REGIME unit; indeterminate -> the per-cell table names
+    which cell to read next (one cell at a time, its own unit).
+  what_it_does_not_do: Changes no config, cell, filter or order path; adds no gate; replays the leg's harness read-only and writes only under --out.
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: the cells skip ~66 trades a year on a demo-floor leg; c4f2-01 priced the live drops at +1.08 R each (bracket replay); not a P&L
+    measurement.'
+intervention_controls:
+  matched_random:
+    description: the 2/1 add-back flags permuted within leg x calendar month (200 draws, same add-back count per leg-month); the arm must beat >= 95%
+    draws: 200
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: every trade keeps its harness bracket; a dropped trade contributes 0 R in the baseline'
+  best_static:
+    grid:
+    - the cells as configured (the registered comparator)
+    excludes_test_folds: true
+    note: one fixed comparison; no per-cell selection; per-cell rows reported only
+  bootstrap_group: week
+practice_precedent: walk-forward-before-Tier-3 (regime-selectivity skill), rule registered before the run, net of the full cost stack, matched random
+  control, week-clustered se, yearly consistency (principles R5, M6, M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 15
+  why_runner: Keyless Binance Vision 2h candles for one leg plus the repo pullback harness.
+  basis: 'MEASURED: the local replay of this leg (fetch + harness) took ~3 min; the grade adds 1,000 bootstraps + 200 permutations.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- RQ-20261126-c4f2-01
+- REGIME-LIVE-VETO-COUNTERFACTUAL
+- config/regime_policy.yaml
+- .claude/skills/regime-selectivity/SKILL.md
+- docs/research/regime-debt-matrix-corrected-cost-2026-07-30.md
