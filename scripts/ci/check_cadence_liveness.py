@@ -363,6 +363,11 @@ CADENCE_REGISTRY: dict[str, dict] = {
         "why": "full-regenerated from ALL committed captures every run and "
                "committed via commit-to-main -- a fixed, overwritten path",
     },
+    "macro-cot-snapshot.yml": {
+        "receipt": "comms/macro/cot_snapshots.jsonl",
+        "why": "DESK-MACRO v1.1: every weekly run re-fetches the CFTC history by contract code and commits this fixed, "
+               "overwritten path via commit-to-main (CFTC publishes every Friday, so each run changes it)",
+    },
     "earnings-calendar-snapshot.yml": {
         "receipt": "comms/macro/earnings_calendar_snapshots.jsonl",
         "why": "DESK-MACRO-DAILY: every weekday run appends the next 7 days' earnings (new report dates enter the window "
