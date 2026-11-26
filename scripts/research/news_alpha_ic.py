@@ -572,7 +572,31 @@ def events_of(d: pd.DataFrame, cls: str) -> pd.Series:
     return out
 
 
-def event_stat(d: pd.DataFrame, cell: Cell, rng: np.random.Generator) -> Dict[str, Any]:
+def day_clustered_p(abn: np.ndarray, days: np.ndarray) -> Tuple[float, float]:
+    """Two-sided normal p and t of mean(abn) with a CR1 day-clustered standard error. No resampling floor: the row
+    NEWS-ALPHA-EVENT-PVALUE-FLOOR fix (the 2,000-draw bootstrap cannot report p < 0.0005, above wave-1 BH's 0.10/600 at rank 1)."""
+    abn = np.asarray(abn, dtype=float)
+    n = len(abn)
+    mean = float(abn.mean())
+    s = pd.Series(abn - mean).groupby(pd.Series(days).to_numpy()).sum().to_numpy()
+    g = len(s)
+    if n < 3 or g < 2:
+        return float("nan"), float("nan")
+    se = math.sqrt(float((s ** 2).sum()) * g / (g - 1)) / n
+    if not se > 0:
+        return float("nan"), float("nan")
+    t = mean / se
+    return norm_p_two_sided(t), t
+
+
+def event_p_method(spec: "Spec") -> str:
+    m = str(((spec.raw or {}).get("news_alpha") or {}).get("event_p") or "bootstrap")
+    if m not in ("bootstrap", "analytic"):
+        raise ProducerFailed(f"news_alpha.event_p {m!r} not in bootstrap|analytic")
+    return m
+
+
+def event_stat(d: pd.DataFrame, cell: Cell, rng: np.random.Generator, p_method: str = "bootstrap") -> Dict[str, Any]:
     ev = events_of(d, cell.feature)
     tcol = "fwd_ret" if cell.target == "car" else "_lrv"
     d = d.copy()
@@ -600,16 +624,22 @@ def event_stat(d: pd.DataFrame, cell: Cell, rng: np.random.Generator) -> Dict[st
     for b in range(BOOT_RESAMPLES):
         pick = rng.integers(0, len(by_day), len(by_day))
         boots[b] = np.concatenate([by_day[i] for i in pick]).mean()
-    p = float(np.mean(np.abs(boots - mean) >= abs(mean)))
-    return {"stat": mean, "p": max(p, 1.0 / BOOT_RESAMPLES), "events": int(len(e)), "_events": e}
+    p_boot = max(float(np.mean(np.abs(boots - mean) >= abs(mean))), 1.0 / BOOT_RESAMPLES)
+    out = {"stat": mean, "p": p_boot, "events": int(len(e)), "_events": e}
+    if p_method == "analytic":   # opt-in per unit (news_alpha.event_p: analytic); the bootstrap p is kept as a reported cross-check
+        p_an, t_an = day_clustered_p(e["abn"].to_numpy(), days.to_numpy())
+        out.update({"p": p_an if np.isfinite(p_an) else 1.0, "t": t_an if np.isfinite(t_an) else None,
+                    "p_bootstrap": p_boot, "p_method": "analytic_day_clustered"})
+    return out
 
 
 def compute_cell(spec: Spec, cell: Cell, d: pd.DataFrame, rng: np.random.Generator) -> Dict[str, Any]:
     h = spec.h_bars(cell.horizon)
     if spec.design == "event":
-        st = event_stat(d, cell, rng)
+        st = event_stat(d, cell, rng, p_method=event_p_method(spec))
         st.pop("_events", None)
-        return {"stat": st["stat"], "p": st["p"], "events": st["events"]}
+        return {"stat": st["stat"], "p": st["p"], "events": st["events"],
+                **{k: st[k] for k in ("t", "p_bootstrap", "p_method") if k in st}}
     y = cell_ycol(cell)
     if spec.design == "xsec":
         st = xsec_ic(d, cell.feature, y if cell.kind == "direction" else cell.target, h)
