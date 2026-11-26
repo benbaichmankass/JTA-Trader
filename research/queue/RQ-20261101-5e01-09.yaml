@@ -67,6 +67,12 @@ decision_rule:
     4). Thresholds, grid, seeds and window are not changed after any result.'
   what_it_does_not_do: Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a promotion. Harness fills a stop at the
     stop price (no gap), equally in S, A and the R controls.
+amendments:
+- at: '2026-11-26T21:58Z'
+  by: lane BUILDS-W48 (manager 26a ruling, same date)
+  before_any_run: true
+  what: 'HARNESS changed, rule and thresholds unchanged. Registered harness: scripts/research/exit_lever_ablation.py --leg ml_entry (the decision_rule statistic and run.command named it). Harness actually used: scripts/research/ml_structure_unit.py via ml_entry_v2_run.py levers (the c692 ml_entry walk-forward: fold models fit per fold, the declared arm''s decisions re-scored with ml_structure_bracket.label_cell_structure at pivot 3/5/8, 100 seeded random-exit controls). The bracket is the registered one: SL 2.0 ATR, TP 1.5 R = 3.0 ATR.'
+  why: 'exit_lever_ablation takes one config/strategies.yaml leg key and replays that leg''s own Stage-0 backtest harness; ml_entry is not a strategies.yaml leg and has no such harness, so the registered command cannot express the ml_entry walk-forward (its decisions come from fitted fold models). The ML-equivalent runner applies the SAME rule: arms A / S3 / S5 / S8, entries fixed, pivot chosen leave-one-bin-out on 5 of 6 calendar bins and scored on the held bin, paired week-bootstrap lower bound, >= 4 of 6 bins, beat the 95th percentile of 100 random-exit controls (R4), PASS_NONINFERIOR via R2, n >= 39 else INDETERMINATE, net of the full cost stack (ml_decision_entry._cost_r). No threshold, grid, seed or window changed. One implementation choice the registration did not fix: the 6 bins regroup the walk-forward''s out-of-sample trades into equal spans of entry time, and the first seed decides (other seeds reported). The unit had not run and no result was seen. Tests: tests/test_ml_structure_unit.py.'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 400
