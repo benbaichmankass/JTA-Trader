@@ -39,7 +39,9 @@ question: On htf_pullback_trend_2h replayed through its own harness with declare
   200 random add-backs of the same count within leg x month, net of the full cost stack?
 why_this_matters: 'If it passes, it is the evidence record for a Tier-3 diff that sets htf_pullback_trend_2h''s off-cells to on (the manager takes it
   from there), giving back ~66 trades a year the leg now skips. If it fails, the matrix stands, c4f2-01''s live read is recorded as a window effect,
-  and the cells stay.'
+  and the cells stay. MATERIAL FACT REPORTED WHATEVER THE VERDICT (manager 03:39Z): by design the cells block about 92% of this live leg's
+  harness trades (330 of 357 test-window trades; counts from the local replay, re-measured and published in the result as dropped.share), so
+  htf_pullback_trend_2h trades only transitional longs, about 5 a year.'
 power:
   expected_n: 357
   min_detectable_effect: 0.17
