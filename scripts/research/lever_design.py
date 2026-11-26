@@ -77,6 +77,32 @@ def declared_levers(map_doc: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+#: DECLARED DEFAULTS (row RESEARCH-LEVER-FAMILY-REACH, 2026-11-26): families the iteration generator could not reach because they
+#: have no numeric config key, but whose lever is a harness FLAG every leg of that harness class already takes, with values that do
+#: not depend on the venue. A leg's own `declared:` block in research/levers/<leg>.yaml wins for a family it names.
+#:   direction  `--side-filter long|short` on the trend and pullback harnesses (a subset-of-trades arm, graded against the control).
+#: NOT here, deliberately: `session` (skip_hours values are venue-specific; row LEVER-SESSION-HOURS-PER-VENUE), and
+#: `sizing_vs_cost` / `symbol_set` / `timeframe` (they change the cost or the trade set, so they are not "arm minus A" levers; they
+#: are absolutely-graded sibling units, see scripts/research/queue_replenish.py twin templates).
+#: `cfg_key` names the config key the flag mirrors, so an arm equal to the leg's declared setting is dropped (a long-only leg gets
+#: no `long` arm); `label` names the arm `<label>_<value>`.
+DEFAULT_DECLARED: dict[str, dict[str, Any]] = {
+    "direction": {"harness": ("trend", "pullback"),
+                  "entries": [{"key": "--side-filter", "cfg_key": "side_filter", "label": "side", "values": ["long", "short"]}]},
+}
+
+
+def default_declared(cfg: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """family -> declared entries that apply to this leg's harness class. {} when the harness cannot be classified (a default,
+    never a refusal)."""
+    try:
+        from regime_debt_matrix import classify
+        harness = classify(cfg)
+    except Exception:   # the classifier is read-only config logic; a failure means "no defaults", never a failed unit
+        return {}
+    return {fam: [dict(e) for e in spec["entries"]] for fam, spec in DEFAULT_DECLARED.items() if harness in spec["harness"]}
+
+
 def attribution_family(attr: dict[str, Any]) -> tuple[str | None, str]:
     """The family the attribution points at, and the row it read. (None, why) when it is not measured / decisive."""
     if not isinstance(attr, dict) or attr.get("read_state") != "measured":
@@ -135,19 +161,20 @@ def arms_for(cfg: dict[str, Any], keys: list[str], declared: list[dict[str, Any]
     """[(label, spec)] with the control `A=` first. One factor at a time; duplicate settings are dropped."""
     arms: list[tuple[str, str]] = [("A", "")]
     seen: set = set()
-    plan: list[tuple[str, list[Any]]] = []
+    plan: list[tuple[str, list[Any], str | None, str | None]] = []     # (key, values, label, cfg_key)
     for e in (declared or []):
         if e.get("values"):
-            plan.append((str(e["key"]), list(e["values"])))
+            plan.append((str(e["key"]), list(e["values"]), e.get("label"), e.get("cfg_key")))
     for k in keys:
         if k not in {p[0] for p in plan} and k in cfg:
-            plan.append((k, [_step(cfg[k], f) for _, f in STEPS]))
-    for k, vals in plan[:MAX_KEYS_PER_LEVER]:
+            plan.append((k, [_step(cfg[k], f) for _, f in STEPS], None, None))
+    for k, vals, label, cfg_key in plan[:MAX_KEYS_PER_LEVER]:
         for i, v in enumerate(vals):
-            if (k, v) in seen or cfg.get(k) == v:
+            if (k, v) in seen or cfg.get(cfg_key or k) == v:
                 continue
             seen.add((k, v))
-            arms.append((f"{k}_{('lo', 'hi')[i] if i < 2 else 'v' + str(i)}", f"{k}={v}"))
+            name = f"{label}_{v}" if label else f"{k}_{('lo', 'hi')[i] if i < 2 else 'v' + str(i)}"
+            arms.append((name, f"{k}={v}"))
     return arms
 
 
@@ -155,7 +182,7 @@ def design_block(subject: str, kind: str, cfg: dict[str, Any], map_doc: dict[str
                  *, fam_override: str | None = None) -> dict[str, Any]:
     """Everything a generated unit stamps for a structured design. `arms` is [] only when no lever can be varied."""
     cl = config_levers(cfg)
-    dl = declared_levers(map_doc)
+    dl = {**default_declared(cfg), **declared_levers(map_doc)}       # a leg's own declared: block wins per family
     available = [f for f in families if f in cl or f in dl]
     pick = ({"lever": fam_override, "basis": "template_fixed", "why": f"{fam_override} is this template's lever", "map_entries": []}
             if fam_override else next_lever(map_doc, families, available))
