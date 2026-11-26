@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# wiring: manual-only - a read-only measurement a session or the daily review runs by hand (row COMPUTE-IDLE-TRAINER-GPU-W48 asks the daily review to read runnable hours per backend); nothing schedules it and it gates nothing
 """Runnable research hours per backend: the "is compute idle?" check-in number.
 
 WHY (operator 2026-11-25, verbatim: "these resources are free and should never sit idle!!!!"; row COMPUTE-IDLE-TRAINER-GPU-W48,
