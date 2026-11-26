@@ -77,3 +77,47 @@ def test_rearm_job_skips_when_inline_rearm_happened_and_outlives_its_longest_sle
     assert "needs.dispatch.outputs.rearmed != 'true'" in job["if"]
     # the idle heartbeat sleeps 1800 s; a 20-min timeout killed it before it could re-dispatch
     assert job["timeout-minutes"] * 60 > 1800 + 120
+
+
+# ── GH-API-RATE-LIMIT-1126: a failed lookup of the waiting runs must re-arm, never read as "pending" ─────────────────────
+
+import subprocess  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+def _rearm_snippet(job: str, step_id: str | None) -> str:
+    steps = _wf()["jobs"][job]["steps"]
+    step = next(s for s in steps if (step_id is None or s.get("id") == step_id) and "other=$(gh api" in s.get("run", ""))
+    lines = step["run"].splitlines()
+    start = next(i for i, ln in enumerate(lines) if "other=$(gh api" in ln)
+    # from the lookup (its --jq continuation line is part of the same command) to the end of the step
+    return "\n".join(lines[start:])
+
+
+def _run_snippet(snippet: str, tmp_path, *, gh_out: str, gh_rc: int) -> list[str]:
+    calls = tmp_path / "calls"
+    calls.write_text("")
+    script = (
+        'GH_REPO=o/r; THIS_RUN=1; GITHUB_OUTPUT="$TMP_OUT"; : > "$GITHUB_OUTPUT"\n'
+        'gh() { if [ "$1" = api ]; then printf "%s" "$STUB_OUT"; return "$STUB_RC"; fi; echo "gh $*" >> "$CALLS"; return 0; }\n'
+        + snippet + "\n"
+    )
+    subprocess.run(["bash", "-c", script], check=True, capture_output=True, text=True, timeout=30,
+                   env={"PATH": "/usr/bin:/bin", "STUB_OUT": gh_out, "STUB_RC": str(gh_rc), "CALLS": str(calls),
+                        "TMP_OUT": str(tmp_path / "out")})
+    return [ln for ln in calls.read_text().splitlines() if ln]
+
+
+@pytest.mark.parametrize("job,step_id", [("dispatch", "rearm_inline"), ("rearm", None)])
+@pytest.mark.parametrize("gh_out,gh_rc,rearms", [
+    ('{"message":"API rate limit exceeded for installation","status":"403"}', 1, True),   # the 2026-11-26 failure: JSON on stdout, exit 1
+    ("", 1, True),                                                                      # no output at all
+    ("0", 0, True),                                                                     # nothing waiting: re-arm (unchanged)
+    ("2", 0, False),                                                                    # another cycle really is waiting: do not re-arm (unchanged)
+])
+def test_a_failed_or_unreadable_lookup_rearms_and_a_real_pending_cycle_does_not(tmp_path, job, step_id, gh_out, gh_rc, rearms):
+    snippet = _rearm_snippet(job, step_id).replace("sleep 60", "true")
+    calls = _run_snippet(snippet, tmp_path, gh_out=gh_out, gh_rc=gh_rc)
+    fired = any(c.startswith("gh workflow run research-queue-dispatch.yml") for c in calls)
+    assert fired is rearms, (gh_out, gh_rc, calls)
