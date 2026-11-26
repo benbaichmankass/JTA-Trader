@@ -44,8 +44,12 @@ authoritative list — a new scheduled producer is one entry, not a rewrite):
     * ``comms/macro/econ_calendar_snapshots.jsonl`` — daily ~22:30 UTC
       (``econ-calendar-produce.yml``); each newest-batch row is a captured
       calendar event.
+    * ``comms/macro/cot_snapshots.jsonl``           — weekly Saturday 10:17 UTC
+      (``macro-cot-snapshot.yml``, DESK-MACRO v1.1 2026-11-26; before it the file was a
+      one-off backfill that went 133-1756 days stale); observed_at is the CFTC Friday
+      release, so the threshold is 240 h (one missed week + a holiday-delayed release).
 
-Dispatch/issue-driven one-shots (COT, the valuation backfill) have no schedule,
+Dispatch/issue-driven one-shots (the valuation backfill) have no schedule,
 so they cannot "silently skip a cron" and are deliberately out of scope. The
 weekly ``econ-event-study`` writes a scorecard (a single JSON artifact, not an
 append-only ledger) and is covered on the vacuity side by
@@ -106,6 +110,13 @@ PRODUCERS: tuple[dict[str, Any], ...] = (
         "value_key": "event_name",
         "min_inputs": 1,
         "label": "daily PIT economic-calendar snapshot (econ-calendar-produce.yml)",
+    },
+    {
+        "path": "comms/macro/cot_snapshots.jsonl",
+        "max_age_hours": 240.0,
+        "value_key": "value",
+        "min_inputs": 1,
+        "label": "weekly CFTC COT positioning snapshot (macro-cot-snapshot.yml)",
     },
 )
 

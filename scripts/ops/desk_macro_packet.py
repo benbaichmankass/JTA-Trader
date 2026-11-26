@@ -23,8 +23,9 @@ Parts:
   cot         the newest CFTC positioning row per symbol (comms/macro/cot_snapshots.jsonl), with its age in days.
   valuation   the newest M28 valuation row per (symbol, metric) (comms/macro/valuation_snapshots.jsonl), with its age.
   crypto_oi   Binance Vision daily metrics for each desk perp (open interest, top-trader and taker long/short ratios) for the
-              last two days available; funding rate is could_not_look (the live Bybit/Binance APIs are geo-blocked from the
-              session container and Vision publishes funding monthly only).
+              last two days available; funding (v1.1): an ESTIMATED current 8h rate from Vision's daily premium-index klines
+              (Binance's formula) plus the MEASURED previous-month realised rates (Vision monthly fundingRate); the live
+              Bybit/Binance APIs are geo-blocked from the session container.
   book        the desk's newest scan packet (origin/desk/decisions comms/desk/latest_scan.json): the system book (open
               packages per symbol) and the desk book; plus the rostered legs per desk symbol from config/strategies.yaml.
   outcomes    the shadow-trade record of earlier briefs (desk_macro_outcomes.summary: n, hit rate, mean net R, Brier).
@@ -35,6 +36,8 @@ Parts:
 
   python3 scripts/ops/desk_macro_packet.py [--out-dir comms/desk/macro/packets] [--print]
   python3 scripts/ops/desk_macro_packet.py --check            # dry run: every part's read_state, writes nothing
+                                                               # (takes a few minutes: it fetches the full price panel
+                                                               #  and the venue tradability; known, accepted 2026-11-26)
   python3 scripts/ops/desk_macro_packet.py fetch --packet PACKET.json SYM [SYM ...]   # in-run bars for any symbol
   python3 scripts/ops/desk_macro_packet.py --self-test
 """
@@ -66,6 +69,10 @@ FETCH_SCHEMA = "desk_macro_fetch/1"
 # venue_class (the brief's proposal field) -> the exchange names that can fill it (accounts.yaml `exchange:`)
 VENUE_EXCHANGES = {"perp": ("bybit", "breakout"), "etf": ("alpaca",), "equity": ("alpaca",), "future": ("interactive_brokers",)}
 VISION = "https://data.binance.vision/data/futures/um/daily/metrics/{s}/{s}-metrics-{d}.zip"
+VISION_PREMIUM = "https://data.binance.vision/data/futures/um/daily/premiumIndexKlines/{s}/1h/{s}-1h-{d}.zip"
+VISION_FUNDING_M = "https://data.binance.vision/data/futures/um/monthly/fundingRate/{s}/{s}-fundingRate-{m}.zip"
+FUNDING_INTEREST_8H = 0.0001       # Binance USD-M interest component per 8h (0.03%/day)
+FUNDING_CLAMP = 0.0005             # clamp(I - P, -0.05%, +0.05%)
 SCHEMA = "desk_macro_packet/1"
 STALE_DAYS = {"cot": 14, "valuation": 7, "calendar": 2, "calendar_row": 7}
 PERP_SUFFIX = "USDT"
@@ -273,7 +280,64 @@ def _vision_day(symbol: str, day: str) -> dict | None:
     return dict(zip(head, last))
 
 
-def part_crypto_oi(symbols: list[str], now: datetime, get: Callable[[str, str], dict | None] = _vision_day) -> dict:
+def _vision_csv(url: str) -> list[dict] | None:
+    """Every row of one Binance Vision zip as dicts; None on 404 (not published yet)."""
+    import requests
+    r = requests.get(url, timeout=60)
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        text = z.read(z.namelist()[0]).decode()
+    rows = [ln.split(",") for ln in text.strip().splitlines()]
+    return [dict(zip(rows[0], x)) for x in rows[1:]]
+
+
+def part_funding(perps: list[str], now: datetime, get: Callable[[str], list[dict] | None] = _vision_csv) -> dict:
+    """DESK-MACRO v1.1: crypto funding without the geo-blocked live APIs. Per perp:
+    (a) ESTIMATED current 8h funding from the latest published day of Binance premium-index 1h klines, by Binance's own
+        formula F = P + clamp(I - P, -0.05%, +0.05%), I = 0.01%/8h, P = mean premium over the last 8 hourly closes;
+    (b) MEASURED realised funding: mean / last of the previous calendar month's settled rates (Vision monthly fundingRate).
+    Binance USD-M is a proxy for the Bybit perps the desk trades (the same benchmark, a different venue's book)."""
+    out = {}
+    prev_m = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    for s in perps:
+        rec: dict = {}
+        try:
+            for k in range(1, 4):
+                d = (now - timedelta(days=k)).strftime("%Y-%m-%d")
+                rows = get(VISION_PREMIUM.format(s=s, d=d))
+                if rows:
+                    closes = [float(r["close"]) for r in rows if r.get("close") not in (None, "")]
+                    p8 = sum(closes[-8:]) / len(closes[-8:])
+                    est = p8 + max(-FUNDING_CLAMP, min(FUNDING_CLAMP, FUNDING_INTEREST_8H - p8))
+                    rec["estimate"] = {"read_state": "measured", "provenance": "ESTIMATED", "day": d,
+                                       "premium_mean_8h": round(p8, 8), "premium_mean_24h": round(sum(closes) / len(closes), 8),
+                                       "funding_8h_est": round(est, 8), "annualised_pct_est": round(est * 3 * 365 * 100, 2)}
+                    break
+            else:
+                rec["estimate"] = {"read_state": "could_not_look", "reason": "no premium-index day file in the last 3 days"}
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-symbol could_not_look with the reason
+            rec["estimate"] = {"read_state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}"[:160]}
+        try:
+            rows = get(VISION_FUNDING_M.format(s=s, m=prev_m))
+            if rows:
+                rates = [float(r["last_funding_rate"]) for r in rows if r.get("last_funding_rate") not in (None, "")]
+                rec["realised_prev_month"] = {"read_state": "measured", "provenance": "MEASURED", "month": prev_m,
+                                              "n": len(rates), "mean": round(sum(rates) / len(rates), 8), "last": rates[-1]}
+            else:
+                rec["realised_prev_month"] = {"read_state": "could_not_look", "reason": f"no fundingRate file for {prev_m}"}
+        except Exception as exc:  # noqa: BLE001  # allow-silent: per-symbol could_not_look with the reason
+            rec["realised_prev_month"] = {"read_state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}"[:160]}
+        out[s] = rec
+    n_ok = sum(1 for v in out.values() if v["estimate"]["read_state"] == "measured")
+    return {"read_state": "measured" if perps and n_ok == len(perps) else ("could_not_look" if n_ok == 0 else "partial"),
+            "source": "data.binance.vision premiumIndexKlines (daily) + fundingRate (monthly); Binance USD-M as a proxy for Bybit",
+            "symbols": out}
+
+
+def part_crypto_oi(symbols: list[str], now: datetime, get: Callable[[str, str], dict | None] = _vision_day,
+                   funding_get: Callable[[str], list[dict] | None] | None = _vision_csv) -> dict:
     perps = [s for s in symbols if s.endswith(PERP_SUFFIX)]
     out = {}
     for s in perps:
@@ -303,9 +367,8 @@ def part_crypto_oi(symbols: list[str], now: datetime, get: Callable[[str, str], 
     n_ok = sum(1 for v in out.values() if v["read_state"] == "measured")
     return {"read_state": "measured" if perps and n_ok == len(perps) else ("could_not_look" if n_ok == 0 else "partial"),
             "source": "data.binance.vision futures/um daily metrics (UTC day files; the latest is yesterday's)",
-            "funding": {"read_state": "could_not_look",
-                        "reason": "live Bybit/Binance funding endpoints are geo-blocked from the session container; Vision "
-                                  "publishes funding monthly only"},
+            "funding": (part_funding(perps, now, funding_get) if funding_get is not None else
+                        {"read_state": "could_not_look", "reason": "no funding reader supplied"}),
             "symbols": out}
 
 
@@ -349,13 +412,36 @@ def part_screen(prices: dict, top: int = 10) -> dict:
             "unusual_range": [{"symbol": s, "range_atr": r} for s, r in wide if r >= 1.8][:top]}
 
 
-def tradable_api(symbols: list[str]) -> dict:
+class TradableRouteMissing(RuntimeError):
+    """/api/bot/tradable answered 404: the web-api serving it is not deployed yet (v1 e2e, 2026-11-26)."""
+
+
+TRADABLE_RETRY_WAITS = (5, 15)   # seconds between the 3 attempts per chunk (a web-api restart or a transient 5xx)
+
+
+def tradable_api(symbols: list[str], sleep=None) -> dict:
+    """Venue answers per symbol from /api/bot/tradable, 40 at a time, each chunk tried 3 times. A 404 is not retried
+    (the route itself is absent) and raises TradableRouteMissing, so part_tradability names it plainly."""
+    import time
+
     import requests
+    sleep = sleep or time.sleep
     out = {}
     for i in range(0, len(symbols), 40):
-        r = requests.get(TRADABLE_API, params={"symbols": ",".join(symbols[i:i + 40])}, timeout=90)
-        r.raise_for_status()
-        out.update(r.json().get("symbols") or {})
+        for attempt, wait in enumerate((*TRADABLE_RETRY_WAITS, None)):
+            try:
+                r = requests.get(TRADABLE_API, params={"symbols": ",".join(symbols[i:i + 40])}, timeout=90)
+                if r.status_code == 404:
+                    raise TradableRouteMissing(f"{TRADABLE_API} returned 404: route not deployed on web-api yet")
+                r.raise_for_status()
+                out.update(r.json().get("symbols") or {})
+                break
+            except TradableRouteMissing:
+                raise
+            except Exception:  # noqa: BLE001  # allow-silent: retried; the last failure propagates to part_tradability's could_not_look
+                if wait is None:
+                    raise
+                sleep(wait)
     return out
 
 
@@ -368,8 +454,10 @@ def part_tradability(symbols: list[str], api: Callable[[list[str]], dict] = trad
         ro, ro_state = {}, f"could_not_look: {type(exc).__name__}"
     try:
         venue, v_state = api(symbols), "measured"
-    except Exception as exc:  # noqa: BLE001  # allow-silent: the venue route may not be deployed yet; roster evidence still counts
-        venue, v_state = {}, f"could_not_look: {type(exc).__name__}: {exc}"[:200]
+    except TradableRouteMissing as exc:
+        venue, v_state = {}, f"could_not_look: route_not_deployed: {exc}"[:200]
+    except Exception as exc:  # noqa: BLE001  # allow-silent: after 3 tries; roster evidence still counts
+        venue, v_state = {}, f"could_not_look: {type(exc).__name__} after 3 tries: {exc}"[:200]
     rows = {s: {"rostered_on": ro.get(s, []), "venue": venue.get(s)} for s in symbols}
     state = "measured" if v_state == "measured" and ro_state == "measured" else (
         "partial" if (v_state == "measured") != (ro_state == "measured") else "could_not_look")
@@ -498,10 +586,21 @@ def self_test() -> int:
           not prices_could_not_look({"parts": {"prices": pp}}))
     oi = part_crypto_oi(["BTCUSDT", "SPY"], now, lambda sym, d: {"create_time": d, "sum_open_interest": "100" if d.endswith("25") else "90",
                                                                   "sum_open_interest_value": "1", "count_toptrader_long_short_ratio": "1.2",
-                                                                  "sum_taker_long_short_vol_ratio": "0.9"})
+                                                                  "sum_taker_long_short_vol_ratio": "0.9"},
+                        funding_get=lambda url: None)
     check("crypto OI: perps only, 1d change computed", list(oi["symbols"]) == ["BTCUSDT"] and
           abs(oi["symbols"]["BTCUSDT"]["oi_change_1d_pct"] - 11.111) < 0.01)
-    check("funding is declared could_not_look, not omitted", oi["funding"]["read_state"] == "could_not_look")
+    check("no funding reader -> funding declared could_not_look, not omitted",
+          part_crypto_oi(["BTCUSDT"], now, lambda sym, d: None, funding_get=None)["funding"]["read_state"] == "could_not_look")
+
+    def _fund(url):
+        if "premiumIndexKlines" in url:
+            return [{"close": "0.0002"}] * 24          # premium +0.02%/8h -> F = 0.0002 + clamp(0.0001-0.0002) = 0.0001
+        return [{"last_funding_rate": "0.0001"}, {"last_funding_rate": "0.0003"}]
+    fu = part_funding(["BTCUSDT"], now, _fund)["symbols"]["BTCUSDT"]
+    check("funding estimate follows Binance's formula and is labelled ESTIMATED",
+          abs(fu["estimate"]["funding_8h_est"] - 0.0001) < 1e-12 and fu["estimate"]["provenance"] == "ESTIMATED")
+    check("previous-month realised funding is MEASURED", fu["realised_prev_month"]["mean"] == 0.0002 and fu["realised_prev_month"]["n"] == 2)
     u = universe()
     check("the panel is every rostered symbol, wider than the 14 desk symbols", "SPY" in u and "BTCUSDT" in u and len(u) > 14)
     scr = part_screen({"symbols": {"A": dict(s, ret_1d_pct=5.0, ret_5d_pct=1.0, atr14_pct=2.0, range_last_atr=2.5),
@@ -511,6 +610,29 @@ def self_test() -> int:
     check("screen with nothing measured is could_not_look", part_screen({"symbols": {}})["read_state"] == "could_not_look")
     tr = part_tradability(["SPY", "ZZZ"], api=lambda syms: (_ for _ in ()).throw(OSError("404")), roster=lambda: {"SPY": ["alpaca"]})
     check("venue route down -> partial, roster evidence kept", tr["read_state"] == "partial" and tr["symbols"]["SPY"]["rostered_on"] == ["alpaca"])
+    def _missing(syms):  # inert: syms — a stub that raises before reading its input, as a 404 does
+        raise TradableRouteMissing("404")
+    tr404 = part_tradability(["SPY"], api=_missing, roster=lambda: {"SPY": ["alpaca"]})
+    check("a 404 names the route as not deployed", "route_not_deployed" in tr404["venue_route"])
+    import unittest.mock as _m
+    calls, waits = [], []
+
+    class _R:
+        def __init__(self, code):
+            self.status_code = code
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise OSError(f"HTTP {self.status_code}")
+
+        def json(self):
+            return {"symbols": {"SPY": {"read_state": "measured"}}}
+
+    seq = [_R(503), _R(200)]
+    with _m.patch("requests.get", lambda *a, **k: (calls.append(1), seq.pop(0))[1]):
+        got = tradable_api(["SPY"], sleep=waits.append)
+    check("a transient 503 is retried once, then measured", got == {"SPY": {"read_state": "measured"}} and len(calls) == 2
+          and waits == [TRADABLE_RETRY_WAITS[0]])
     check("is_tradable: rostered on the venue class's exchange", is_tradable(tr["symbols"]["SPY"], "etf")[0])
     check("is_tradable: rostered elsewhere is not enough", not is_tradable(tr["symbols"]["SPY"], "perp")[0])
     check("is_tradable: unknown symbol is refused with the reason", not is_tradable(tr["symbols"]["ZZZ"], "equity")[0])
