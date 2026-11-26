@@ -44,6 +44,7 @@ from ml.datasets.forecast_features import (  # noqa: E402
     DEFAULT_CONTEXT_LEN,
     DEFAULT_HORIZON,
     DEFAULT_MIN_CONTEXT,
+    DEFAULT_PHASE,
     DEFAULT_STRIDE,
     FORECAST_FEATURE_COLUMNS,
     FORECAST_MODEL_ID,
@@ -88,6 +89,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--model-id", default=None, help=f"explicit Hub id (default: the backend's, else {FORECAST_MODEL_ID})")
     ap.add_argument("--context-len", type=int, default=DEFAULT_CONTEXT_LEN)
     ap.add_argument("--stride", type=int, default=DEFAULT_STRIDE)
+    ap.add_argument("--phase", choices=["epoch", "row"], default=DEFAULT_PHASE,
+                    help="stride phase anchor (FC-STRIDE-PHASE): epoch = the same bars in any window, as the live producer emits; "
+                         "row = the legacy every-Nth-row-from-the-first-row rule")
     ap.add_argument("--min-context", type=int, default=DEFAULT_MIN_CONTEXT)
     ap.add_argument("--horizon", type=int, default=DEFAULT_HORIZON,
                     help="how many bars ahead to forecast (default 1 = next bar).")
@@ -110,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         stride=args.stride,
         min_context=args.min_context,
         forecast_fn=chronos_forecast_fn(args.model_id),
+        phase=args.phase,
         horizon=args.horizon,
         quantile_levels=FORECAST_QUANTILES,
     )
@@ -128,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         "feature_columns": list(FORECAST_FEATURE_COLUMNS),
         "context_len": args.context_len,
         "stride": args.stride,
+        "phase": args.phase,
         "min_context": args.min_context,
         "horizon": args.horizon,
         "quantile_levels": list(FORECAST_QUANTILES),
