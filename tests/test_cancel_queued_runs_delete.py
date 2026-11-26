@@ -77,6 +77,9 @@ def test_ten_generic_refusals_in_a_row_stop_the_loop_and_the_api_message_is_prin
     assert len(deletes) == 10
     assert "stopped=consecutive_refusals" in p.stdout and "deleted=0" in p.stdout and "refused=10" in p.stdout
     assert "refused 1: gh: Could not delete the workflow run (HTTP 403)" in p.stdout     # the API's own words are in the log
+    # the summary names how many the filter SELECTED (29) apart from how many the loop PROCESSED before it stopped (10):
+    # the 20:49Z run read "candidates=11" for a filter that selected 242
+    assert "selected_by_filter=29 processed=10" in p.stdout
 
 
 def test_a_run_that_started_a_job_is_kept_never_deleted(tmp_path):

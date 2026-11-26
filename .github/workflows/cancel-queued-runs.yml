@@ -106,6 +106,9 @@ jobs:
           cutoff=$(date -u -d "${MIN_AGE_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
           ids=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId,createdAt,attempt,status \
                   --jq ".[] | select(.createdAt < \"$cutoff\" and .status == \"queued\" and .attempt == 1) | .databaseId" | sort -n || true)
+          # `total` is every run the filter selected; `cand` is how many the loop had PROCESSED when it ended. They differ whenever a
+          # stop condition fires (the 20:49Z run read "candidates=11" after 10 refusals in a row while the filter selected 242).
+          total=$(printf '%s\n' "$ids" | grep -c . || true)
           cand=0; elig=0; done_n=0; kept=0; refused=0; consec=0; stopped="none"
           for id in $ids; do
             cand=$((cand+1))
@@ -132,7 +135,7 @@ jobs:
             sleep "$THROTTLE"
           done
           after=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
-          echo "SUMMARY: candidates(older than ${MIN_AGE_HOURS} h, queued, attempt 1)=$cand eligible=$elig deleted=$done_n refused=$refused kept=$kept stopped=$stopped dry_run=$DRY_RUN"
+          echo "SUMMARY: selected_by_filter=$total processed=$cand (older than ${MIN_AGE_HOURS} h, queued, attempt 1) eligible=$elig deleted=$done_n refused=$refused kept=$kept stopped=$stopped dry_run=$DRY_RUN"
           echo "queued runs AFTER: $after (before: $before)"
           echo "rate limit AFTER: $(rl)"
 
