@@ -415,7 +415,7 @@ def test_a_peak_inside_the_pre_entry_decision_bar_is_not_the_trades():
     pkg = _pkg(entry_time="2026-11-26T15:00:00+00:00")
     pkg["created_at"] = "2026-11-26T16:04:14+00:00"       # the fill
     w = exit_levers.since_entry(df, pkg)
-    assert len(w) >= 1                                    # the old window still holds the decision bar
+    assert len(w) == 0                                    # #29249 anchors since_entry on the fill, so the decision bar is gone
     rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w, direction="short", current_price=100.1)
     assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
 
