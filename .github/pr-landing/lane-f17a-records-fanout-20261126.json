@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Dispatcher still red after #29078 (Manager Session 2026-11-26a, 09:01Z): the lost run is RQ-20261126-f17a-01 run 45774478743 (research_result --emit refused its rows: no verdict / population.n). Both trainer light reads (registry_feature_preflight.py, vol_head_label_audit.py, from #29057) put bare per-head dicts in verdict.records. Each fanned-out row now carries verdict, read_state (measured / no_data / not_attempted), population and n, with the head's dict in its measurement (self-tests assert it). The landed f17a-01 (45774478743) and f17a-02 (45773199101) records.jsonl are re-fanned from their own verdict.json (verdict and n re-derived equal) and their E5 records emitted, commit_sha from the GitHub run record. No number changed. Research tooling + results only. Revert: git revert."
+}
