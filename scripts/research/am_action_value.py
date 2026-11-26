@@ -567,6 +567,35 @@ def scope_filter(recs: list, strategies: Sequence[str] | None = None, symbols: S
     return [r for r in recs if (not st or str(r.get("st")) in st) and (not sy or str(r.get("sy")) in sy)]
 
 
+def paired_stats(recs: list, cls: str, n_control: int) -> dict:
+    """Per-trade paired delta (arm net R - HOLD net R; 0 where the lever never fired) over one segment: n, n_fired, mean, sd, t, and the share of the
+    matched random re-timings of the same action whose mean delta the arm's mean delta beats. The statistic for a one-leg re-scope, where the
+    book-level RULE-AM-RISK-ADJUSTED-V1 clauses (folds, drawdown) cannot be read on a few hundred trades."""
+    import math
+    n = len(recs)
+    if n == 0:
+        return {"n": 0, "n_fired": 0, "mean_delta_r": None, "sd_delta_r": None, "t": None, "n_control": 0, "share_controls_beaten": None}
+    d, ctl_sum, n_fired = [], [0.0] * n_control, 0
+    for r in recs:
+        h = float(r["b"][0])
+        a = r["a"].get(cls, {"n": 0})
+        if a.get("n"):
+            n_fired += 1
+            d.append(float(a["p"][0]) - h)
+            for k in range(min(n_control, len(a.get("cn", [])))):
+                ctl_sum[k] += float(a["cn"][k]) - h
+        else:
+            d.append(0.0)
+    mean = sum(d) / n
+    sd = math.sqrt(sum((x - mean) ** 2 for x in d) / (n - 1)) if n > 1 else None
+    t = mean / (sd / math.sqrt(n)) if sd else None
+    ctl_means = [c / n for c in ctl_sum]
+    beaten = sum(1 for c in ctl_means if mean > c)
+    return {"n": n, "n_fired": n_fired, "mean_delta_r": round(mean, 5), "sd_delta_r": round(sd, 5) if sd is not None else None,
+            "t": round(t, 3) if t is not None else None, "n_control": n_control,
+            "share_controls_beaten": round(beaten / n_control, 4) if n_control else None}
+
+
 def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None, claim: bool, n_control: int = N_CONTROL,
                strategies: Sequence[str] | None = None, symbols: Sequence[str] | None = None, entry_from: str = "") -> dict:
     """``entry_from`` (YYYY-MM-DD, >= HOLDOUT_START) moves the holdout segment's start to that date, so a re-scope chosen on the corpus can be graded
@@ -589,6 +618,7 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None,
                                             ledger or holdout_lock.LEDGER, train_end=P.HOLDOUT_TRAIN_END, family="AM-HEADS",
                                             symbols=sorted(set(symbols or [])) or None)
         (out / "holdout_claims.jsonl").write_text(json.dumps(claim_rec) + "\n")
+    paired = {"dev": paired_stats(dev, cls, n_control), "holdout": paired_stats(hold, cls, n_control)}
     if cls in ("mf_tighten_random", "mf_tighten_causal"):
         n_control = 0
     seg_dev = P._segment(dev, cls, n_control)
@@ -614,6 +644,7 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None,
             "lever": {"trades_fired": sum(1 for c in fired if c["n"]), "share_fired": round(sum(1 for c in fired if c["n"]) / len(recs), 4) if recs else None,
                       "kinds": dict(kinds)},
             "could_not_replay": dict(could), "n_shards": len(metas), "reported_cuts": cuts,
+            "paired": paired,
             "scope": {"strategies": sorted(set(strategies or [])) or None, "symbols": sorted(set(symbols or [])) or None, "holdout_start": hold_start,
                       "n_corpus": n_corpus}, "holdout_claim": claim_rec, "graduation_eligible": False,
             "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R books); a PASS is a fresh-window confirmation input, then a Tier-3 proposal input.",
