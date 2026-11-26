@@ -174,11 +174,24 @@ def scoped_leg_accounts(leg: str | None, scope: Mapping[str, Any] | None) -> lis
 POOL_SCORED_KEY = "pool_scored"
 
 
+#: A leg declaring ``queue_scored: true`` (DESK-MACRO v2, the claude_desk leg) trades only proposals waiting in its queue
+#: (runtime_logs/desk/accepted_proposals.jsonl), so its symbols are NOT part of the STATIC per-tick fetch set either: the tick
+#: adds back only the symbols with a live queued proposal (src/units/strategies/claude_desk.py::tick_symbols). That is what lets
+#: the leg declare every symbol the paper venues trade without ticking all of them. A data-fetch rule, not a gate.
+QUEUE_SCORED_KEY = "queue_scored"
+
+
+def is_tick_exempt(cfg: Optional[Mapping[str, Any]]) -> bool:
+    """True for a leg whose symbols are fetched on demand (pool_scored or queue_scored), not every tick."""
+    return isinstance(cfg, Mapping) and (bool(cfg.get(POOL_SCORED_KEY, False)) or bool(cfg.get(QUEUE_SCORED_KEY, False)))
+
+
 def tick_strategies_cfg(strategies_cfg: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    """``strategies_cfg`` with every ``pool_scored`` leg's ``symbols`` emptied -- the input for the STATIC tick fetch set (and the readers that
-    mirror it). The one definition: src/main.py::_resolve_tick_symbols, the desk scan packet and the resolver/union guards all call this."""
+    """``strategies_cfg`` with every ``pool_scored`` / ``queue_scored`` leg's ``symbols`` emptied -- the input for the STATIC tick fetch
+    set (and the readers that mirror it). The one definition: src/main.py::_resolve_tick_symbols, the desk scan packet and the
+    resolver/union guards all call this."""
     cfgs = strategies_cfg or {}
-    return {n: (dict(c, symbols=[]) if isinstance(c, Mapping) and bool(c.get(POOL_SCORED_KEY, False)) else c) for n, c in cfgs.items()}
+    return {n: (dict(c, symbols=[]) if is_tick_exempt(c) else c) for n, c in cfgs.items()}
 
 
 def roster_symbols(roster: Optional[Sequence[Any]],

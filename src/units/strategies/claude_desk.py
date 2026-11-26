@@ -186,6 +186,28 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def tick_symbols(rows: Optional[List[Dict[str, Any]]] = None, now: Optional[datetime] = None) -> List[str]:
+    """DESK-MACRO v2 (queue_scored): the symbols the tick must fetch for this leg -- every queued proposal still inside its
+    good_till window, or inside good_till + max_hold_min (the leg's own max-hold close needs the symbol ticked). A row whose
+    expiry cannot be read is kept for a day from acceptance (never silently dropped). Order kept, de-duplicated."""
+    now = now or datetime.now(timezone.utc)
+    out: List[str] = []
+    for r in (read_queue() if rows is None else rows):
+        sym = norm_symbol((r.get("proposal") or {}).get("symbol")) if isinstance(r, dict) else None
+        if not sym or sym in out:
+            continue
+        exp = expires_at(r)
+        if exp is None:
+            at = _ts(r.get("at"))
+            exp = at + timedelta(days=1) if at else None
+        mh = (r.get("proposal") or {}).get("max_hold_min")
+        if exp is not None and isinstance(mh, int) and not isinstance(mh, bool) and mh > 0:
+            exp = exp + timedelta(minutes=mh)
+        if exp is not None and now < exp:
+            out.append(sym)
+    return out
+
+
 def read_queue(path: Optional[Path] = None) -> List[Dict[str, Any]]:
     """Every parseable row of the accepted-proposals queue; a missing file is an empty queue."""
     q = path or queue_path()

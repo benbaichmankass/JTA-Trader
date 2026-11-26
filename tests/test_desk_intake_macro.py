@@ -106,3 +106,25 @@ def test_the_rows_watcher_runs_the_macro_source_only_when_briefs_change(tmp_path
     files[0] = (("a.json", 1.0), ("b.json", 2.0))
     assert w.run_macro_pass(files_fn=lambda: files[0], intake=lambda: calls.append(1) or {"exit": 0},
                             logs=tmp_path)["intake"] == "ran"
+
+
+# ----------------------------------------------------------------------------- (c) queue_scored: fetch on demand
+def test_queue_scored_leg_ticks_only_live_queued_symbols():
+    from src.units.strategies import claude_desk as cd
+    at = "2026-11-27T13:00:00+00:00"
+    rows = [{"at": at, "proposal": {"symbol": "SLV", "timeframe": "1d", "entry": {"good_till_bars": 3}}},
+            {"at": at, "proposal": {"symbol": "FXI", "timeframe": "1h", "entry": {"good_till_bars": 1}}},
+            {"at": at, "proposal": {"symbol": "XLE", "timeframe": "1h", "entry": {"good_till_bars": 1}, "max_hold_min": 600}},
+            {"at": at, "proposal": {"symbol": "EEM"}},                       # expiry unreadable: kept a day, never dropped
+            {"at": at, "proposal": {"symbol": "SLV", "timeframe": "1d", "entry": {"good_till_bars": 3}}}]
+    t = datetime(2026, 11, 27, 16, 0, tzinfo=timezone.utc)
+    assert cd.tick_symbols(rows, t) == ["SLV", "XLE", "EEM"]              # FXI expired at 14:00; XLE alive via max_hold
+    assert cd.tick_symbols(rows, t + timedelta(days=4)) == []
+
+
+def test_tick_exempt_legs_leave_the_static_fetch_set():
+    from src.config.symbol_sets import is_tick_exempt, tick_strategies_cfg
+    cfg = {"a": {"symbols": ["X"]}, "q": {"symbols": ["Y"], "queue_scored": True}, "p": {"symbols": ["Z"], "pool_scored": True}}
+    t = tick_strategies_cfg(cfg)
+    assert t["a"]["symbols"] == ["X"] and t["q"]["symbols"] == [] and t["p"]["symbols"] == []
+    assert is_tick_exempt(cfg["q"]) and not is_tick_exempt(cfg["a"])

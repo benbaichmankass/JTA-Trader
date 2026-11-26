@@ -270,7 +270,7 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any],
                 continue
             # A `pool_scored` leg (row ML-ENTRY-EQ-STRUCT-FULL-POOL) gets its data from its own pool-snapshot refresher and a tick pass for each
             # symbol holding a package (src/runtime/ml_pool_scoring.py), so the PULL-LIST axis does not apply; the venue axis still does.
-            pool_scored = bool(scfg.get("pool_scored", False))
+            pool_scored = bool(scfg.get("pool_scored", False)) or bool(scfg.get("queue_scored", False))   # queue_scored: DESK-MACRO v2
             for sym in syms:
                 n = _norm(sym)
                 if n not in declared and not pool_scored:
