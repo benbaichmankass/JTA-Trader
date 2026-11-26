@@ -49,6 +49,11 @@ on:
         type: boolean
         required: false
         default: true
+      throttle_seconds:
+        description: 'With delete_zombies and dry_run=false: seconds to wait between deletes (default 2), so the run cannot exhaust the hourly API budget of the installation token.'
+        type: string
+        required: false
+        default: '2'
   repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     types: [cancel-queued-runs]
 
@@ -77,6 +82,7 @@ jobs:
       MIN_AGE_HOURS: ${{ inputs.min_age_hours || '24' }}
       DELETE_ZOMBIES: ${{ inputs.delete_zombies && 'true' || 'false' }}
       DRY_RUN: ${{ inputs.dry_run == false && 'false' || 'true' }}
+      THROTTLE: ${{ inputs.throttle_seconds || '2' }}
     steps:
       # BUILDS-W48 / row ACTIONS-ZOMBIE-QUEUED-RUNS: the plain and force cancel endpoints both return HTTP 409 for runs that are
       # `queued` in the list but never started (282 of 283 on 2026-11-26). The only API path left is DELETE /actions/runs/{id},
@@ -87,33 +93,48 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.delete_zombies
         run: |
           set -uo pipefail
+          # GH-API-RATE-LIMIT-1126 (manager 26a, 2026-11-26): the first live delete (run 45868657356) was refused 247 times (HTTP 403,
+          # message 'Could not delete the workflow run') and then, at 17:38:02Z, succeeded for the last 36. Two readings fit: the
+          # installation token's hourly API budget (a rate-limit window ending at 17:38:02Z) or a per-run refusal. This step settles it:
+          # it prints the rate_limit endpoint before and after, processes OLDEST first (so a run-age effect cannot be confused with
+          # processing order), waits THROTTLE s between deletes, prints the API's own message on every refusal, STOPS on the first
+          # rate-limit message, and stops after 10 refusals in a row (it must not hammer an endpoint that keeps refusing).
+          rl() { gh api rate_limit --jq '.resources.core | "core remaining=\(.remaining) limit=\(.limit) resets_at=\(.reset | todate)"' 2>&1 | head -c 200; echo; }
+          echo "rate limit BEFORE: $(rl)"
           before=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
-          echo "queued runs BEFORE: $before (dry_run=$DRY_RUN, min age ${MIN_AGE_HOURS} h)"
+          echo "queued runs BEFORE: $before (dry_run=$DRY_RUN, min age ${MIN_AGE_HOURS} h, throttle ${THROTTLE}s)"
           cutoff=$(date -u -d "${MIN_AGE_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
-          ids=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId,createdAt \
-                  --jq ".[] | select(.createdAt < \"$cutoff\") | .databaseId" || true)
-          cand=0; elig=0; done_n=0; kept=0; refused=0
+          ids=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId,createdAt,attempt,status \
+                  --jq ".[] | select(.createdAt < \"$cutoff\" and .status == \"queued\" and .attempt == 1) | .databaseId" | sort -n || true)
+          cand=0; elig=0; done_n=0; kept=0; refused=0; consec=0; stopped="none"
           for id in $ids; do
             cand=$((cand+1))
-            info=$(gh api "repos/$REPO/actions/runs/$id" --jq '[.status,.run_attempt,.created_at]|@tsv' 2>/dev/null || echo "?")
             started=$(gh api "repos/$REPO/actions/runs/$id/jobs" --jq '[.jobs[]|select(.status=="in_progress" or .status=="completed")]|length' 2>/dev/null || echo "?")
-            st=$(printf '%s' "$info" | cut -f1); att=$(printf '%s' "$info" | cut -f2)
-            if [ "$st" = "queued" ] && [ "$att" = "1" ] && [ "$started" = "0" ]; then
-              elig=$((elig+1))
-              if [ "$DRY_RUN" = "true" ]; then
-                echo "WOULD DELETE $id (status=$st attempt=$att started_jobs=$started)"
-              elif gh api --method DELETE "repos/$REPO/actions/runs/$id" >/dev/null 2>/tmp/del_err; then
-                echo "deleted $id"; done_n=$((done_n+1))
-              else
-                echo "refused $id: $(tail -n1 /tmp/del_err 2>/dev/null || echo 'unknown error')"; refused=$((refused+1))
-              fi
-            else
-              echo "KEEP $id (status=$st attempt=$att started_jobs=$started): not a never-started zombie"; kept=$((kept+1))
+            if [ "$started" != "0" ]; then
+              echo "KEEP $id (started_jobs=$started): not a never-started zombie"; kept=$((kept+1)); continue
             fi
+            elig=$((elig+1))
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "WOULD DELETE $id"; continue
+            fi
+            if msg=$(gh api --method DELETE "repos/$REPO/actions/runs/$id" 2>&1 >/dev/null); then
+              echo "deleted $id"; done_n=$((done_n+1)); consec=0
+            else
+              refused=$((refused+1)); consec=$((consec+1))
+              echo "refused $id: $(printf '%s' "$msg" | tr '\n' ' ' | head -c 200)"
+              if printf '%s' "$msg" | grep -qi "rate limit"; then
+                echo "STOP: rate-limit message. $(rl)"; stopped="rate_limit"; break
+              fi
+              if [ "$consec" -ge 10 ]; then
+                echo "STOP: 10 refusals in a row (not a rate-limit message). $(rl)"; stopped="consecutive_refusals"; break
+              fi
+            fi
+            sleep "$THROTTLE"
           done
           after=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
-          echo "SUMMARY: candidates(older than ${MIN_AGE_HOURS} h)=$cand eligible=$elig deleted=$done_n refused=$refused kept=$kept dry_run=$DRY_RUN"
+          echo "SUMMARY: candidates(older than ${MIN_AGE_HOURS} h, queued, attempt 1)=$cand eligible=$elig deleted=$done_n refused=$refused kept=$kept stopped=$stopped dry_run=$DRY_RUN"
           echo "queued runs AFTER: $after (before: $before)"
+          echo "rate limit AFTER: $(rl)"
 
       - name: Cancel all queued workflow runs
         id: cancel

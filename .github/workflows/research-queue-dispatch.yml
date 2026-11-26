@@ -489,7 +489,15 @@ jobs:
           set -uo pipefail
           sleep 60
           other=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=20" \
-            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null || echo 0)
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null) || other=""
+          # GH-API-RATE-LIMIT-1126 (2026-11-26): when the API call fails (an exhausted installation token answers HTTP 403), `gh api`
+          # puts the error JSON on stdout and `|| echo 0` appended to it, so `other` held JSON, `[ "${other}" != "0" ]` read it as
+          # "another cycle is pending", and the chain never re-armed (the dispatcher sat idle ~2 h). Anything that is not a plain
+          # integer is UNKNOWN, not "pending": re-arm. A duplicate cycle is harmless (the dispatch concurrency group collapses it);
+          # a missed re-arm idles every backend.
+          case "${other}" in
+            ''|*[!0-9]*) echo "::warning::could not read the waiting dispatch runs (not an integer: $(printf '%.80s' "${other}")); treating as unknown and re-arming"; other=0 ;;
+          esac
           echo "other dispatch runs waiting to start: ${other}"
           if [ "${other}" != "0" ]; then echo "another cycle is already pending; not re-arming"; echo "rearmed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           if gh workflow run research-queue-dispatch.yml --ref main; then
@@ -559,7 +567,15 @@ jobs:
           # NOT counted: the previous cycle's `land` / `research-store` jobs keep its run open for minutes after its
           # `dispatch` job ended, and counting it would end the chain after one hop.
           other=$(gh api "repos/${GH_REPO}/actions/workflows/research-queue-dispatch.yml/runs?per_page=20" \
-            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null || echo 0)
+            --jq '[.workflow_runs[] | select((.id|tostring) != env.THIS_RUN) | select(.status=="queued" or .status=="waiting" or .status=="requested" or .status=="pending")] | length' 2>/dev/null) || other=""
+          # GH-API-RATE-LIMIT-1126 (2026-11-26): when the API call fails (an exhausted installation token answers HTTP 403), `gh api`
+          # puts the error JSON on stdout and `|| echo 0` appended to it, so `other` held JSON, `[ "${other}" != "0" ]` read it as
+          # "another cycle is pending", and the chain never re-armed (the dispatcher sat idle ~2 h). Anything that is not a plain
+          # integer is UNKNOWN, not "pending": re-arm. A duplicate cycle is harmless (the dispatch concurrency group collapses it);
+          # a missed re-arm idles every backend.
+          case "${other}" in
+            ''|*[!0-9]*) echo "::warning::could not read the waiting dispatch runs (not an integer: $(printf '%.80s' "${other}")); treating as unknown and re-arming"; other=0 ;;
+          esac
           echo "other dispatch runs waiting to start: ${other}"
           if [ "${other}" != "0" ]; then echo "another cycle is already pending; not re-arming"; exit 0; fi
           gh workflow run research-queue-dispatch.yml --ref main \
