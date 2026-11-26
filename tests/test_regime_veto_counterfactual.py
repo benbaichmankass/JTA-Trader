@@ -87,5 +87,6 @@ def test_grade_end_to_end_with_stub_bars(tmp_path):
     rep = R.grade(snap, tmp_path / "out", bars_fn=bars_fn, horizon=4)
     assert rep["n_replayed"] == 12 and rep["signals_by_status"] == {"dropped": 6, "kept": 6}
     assert rep["axes"]["ml_vol"]["n"] == 6 and rep["axes"]["ml_vol"]["mean_r"] < -1.0
-    assert rep["axes"]["trend"]["label"] == "underpowered"
+    assert rep["axes"]["trend"]["label"] == "underpowered" and rep["verdict"] == "indeterminate"
+    assert rep["axes"]["ml_vol"]["n_mixed_signals"] == 0
     assert json.loads((tmp_path / "out" / "verdict.json").read_text())["rule_id"] == R.RULE_ID

@@ -239,6 +239,7 @@ def grade(snapshot: Path, out_dir: Path, bars_fn=binance_bars, horizon: int = HO
     for ax in ("ml_vol", "trend"):
         dropped = [s for s in replayed if s["status"] == "dropped" and s["axis"] == ax]
         axes[ax] = axis_verdict(dropped, pool, rng)
+        axes[ax]["n_mixed_signals"] = sum(1 for s in sigs if s["status"] == "mixed" and s["axis"] == ax)
     status = defaultdict(int)
     for s in sigs:
         status[s["status"]] += 1
@@ -248,8 +249,9 @@ def grade(snapshot: Path, out_dir: Path, bars_fn=binance_bars, horizon: int = HO
                           f"{min(span) if span else None}..{max(span) if span else None}; {len(replayed)} replayed on Binance Vision USD-M klines, "
                           f"market fill at the next bar open, emitted SL/TP, {horizon}-bar horizon, net of the full cost stack"),
            "signals_by_status": dict(status), "n_replayed": len(replayed), "could_not_replay": dict(could), "axes": axes,
-           "verdict": axes["ml_vol"]["verdict"], "provenance": "ESTIMATED",
-           "note": "verdict = the ml_vol axis (the ML router's own drops); the trend (ADX) axis is reported beside it."}
+           "verdict": axes["trend"]["verdict"], "provenance": "ESTIMATED",
+           "note": ("verdict = the trend (ADX) axis, re-designated before any outcome was computed: the snapshot holds 1 ML-vol signal dropped on "
+                    "every tick (n < 5, underpowered by count), so the ml_vol axis is reported beside it with its mixed-bar count.")}
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "signals.jsonl").write_text("".join(json.dumps(s, sort_keys=True) + "\n" for s in replayed))
     (out_dir / "grade.json").write_text(json.dumps(rep, indent=1) + "\n")
