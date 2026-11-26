@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "run_id": "45909623075",
+  "generated_at": "2026-11-26T23:16:13.708835+00:00",
+  "fired": true,
+  "backends": {
+    "github_runner": {
+      "read_state": "could_not_look",
+      "capacity": 4,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 1,
+      "due_total": 1
+    },
+    "github_runner_data": {
+      "read_state": "could_not_look",
+      "capacity": 1,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 0,
+      "due_total": 0
+    },
+    "kaggle_cpu": {
+      "read_state": "could_not_look",
+      "capacity": 1,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 0,
+      "due_total": 0
+    },
+    "trainer": {
+      "read_state": "could_not_look",
+      "capacity": 1,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 0,
+      "due_total": 0
+    },
+    "kaggle": {
+      "read_state": "could_not_look",
+      "capacity": 1,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 3,
+      "due_total": 3
+    },
+    "runpod": {
+      "read_state": "could_not_look",
+      "capacity": 1,
+      "why": "gh run list failed; occupancy unknown",
+      "fired_this_cycle": 0,
+      "due_waiting": 0,
+      "due_total": 0
+    }
+  },
+  "runner_pool_used_vs_platform": {
+    "research_inflight": null,
+    "platform_concurrency": 20,
+    "read_state": "could_not_look",
+    "note": "research runs only; other workflows share the pool"
+  },
+  "kaggle_gpu": {
+    "read_state": "measured",
+    "remaining_h": 16.97,
+    "used_h": 13.03,
+    "total_h": 30.0,
+    "refresh_at": "2026-11-28T00:00:00+00:00",
+    "hours_to_refresh": 24.7,
+    "expiring_h": 16.97
+  },
+  "gpu_burst": {
+    "read_state": "measured",
+    "month_to_date_usd": 0,
+    "budget_usd": 10.0
+  },
+  "trainer_vm": {
+    "read_state": "measured",
+    "source": "comms/cloud/compute_spare.json",
+    "spare": {
+      "as_of": "2026-11-26T17:20:42+00:00",
+      "consumer": "research router (config/research_compute.yaml), trainer backend = hosts.trainer",
+      "hosts": {
+        "gateway": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-ib-gateway",
+          "memory_gb": 6.0,
+          "ocpus": 1.0,
+          "read_state": "measured",
+          "spare_memory_gb": 4.536,
+          "spare_ocpus": 0.241
+        },
+        "live": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-bot-arm",
+          "memory_gb": 12.0,
+          "ocpus": 2.0,
+          "read_state": "measured",
+          "spare_memory_gb": 9.405,
+          "spare_ocpus": 0.007
+        },
+        "trainer": {
+          "basis": "shape x (1 - max daily p95 over last 7 complete days)",
+          "days_measured": 7,
+          "display_name": "ict-trainer-vm",
+          "memory_gb": 6.0,
+          "ocpus": 1.0,
+          "read_state": "measured",
+          "spare_memory_gb": 1.085,
+          "spare_ocpus": 0.0
+        }
+      }
+    }
+  },
+  "dispatched": [],
+  "flags": []
+}
