@@ -11,7 +11,7 @@
   "MAKE REPORT-ONLY"
  ],
  "sort": "real_money desc, no_operator_authorization desc, category",
- "count": 298,
+ "count": 299,
  "gates": [
   {
    "id": "GATE-BAR-DEBOUNCE",
@@ -8624,6 +8624,32 @@
    "authorization": "NONE",
    "no_operator_authorization": true,
    "question": "Keep this gate? It is report-only by design.",
+   "options": [
+    "KEEP",
+    "REMOVE",
+    "MAKE REPORT-ONLY"
+   ]
+  },
+  {
+   "id": "CI-new-refusal-reasons-warn",
+   "category": "ci-guard",
+   "where": "scripts/ci/run_guards.py (GUARDS name=new-refusal-reasons-warn)",
+   "where_more": [
+    "scripts/ci/check_new_refusal_reasons.py"
+   ],
+   "blocks": "Nothing: warning only (mode: report; the script exits 0 in every case). A PR diff that ADDS a refusal / limit string or enum member in a validator, writer, risk or intake .py under src/ or scripts/ prints a ::warning:: annotation.",
+   "scope": "only PRs touching a .py under src/ or scripts/",
+   "added": "2026-11-26 (BUILDS-W48 item 5)",
+   "auth": "Operator popup 2026-11-26, verbatim: \"Yes, warn only (Recommended)\".",
+   "real_money": false,
+   "rec": "KEEP",
+   "rec_why": "Makes a new way for the system to say no visible on the PR; it decides nothing and blocks no merge.",
+   "effect": "NEITHER",
+   "effect_why": "Prints a warning; blocks no merge and no trade.",
+   "trigger_case": false,
+   "authorization": "OPERATOR",
+   "no_operator_authorization": false,
+   "question": "Keep this warning? It is warn-only by the operator's choice.",
    "options": [
     "KEEP",
     "REMOVE",

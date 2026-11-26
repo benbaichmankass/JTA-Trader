@@ -2153,6 +2153,21 @@ GUARDS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "new-refusal-reasons-warn",
+        # BUILDS-W48 item 5 (operator popup 2026-11-26, verbatim: "Yes, warn only (Recommended)"): annotate a PR diff that
+        # ADDS a refusal / limit reason in a validator, writer or risk / intake path. The script exits 0 in every case; mode
+        # "report" is belt and braces. Gates this adds or changes: none (warning only). Do not add --enforce.
+        "mode": "report",
+        "when": {"globs": ["src/**/*.py", "scripts/**/*.py"]},
+        "steps": [
+            ["python3", "scripts/ci/check_new_refusal_reasons.py", "--self-test"],
+            {
+                "argv": ["python3", "scripts/ci/check_new_refusal_reasons.py", "--base", "origin/{base_ref}"],
+                "pr_only": True,
+            },
+        ],
+    },
+    {
         "name": "queue-harness-flags-guard",
         # 2026-11-19 (manager direction; PROGRAMME-REVIEW-20261119): a queued unit may only pass a harness the flags its parser declares.
         # --side-filter and --skip-hours were authored against backtest_ict_scalp.py without existing there; the runs died at argparse
