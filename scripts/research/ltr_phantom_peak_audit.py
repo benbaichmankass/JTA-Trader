@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: row LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS part (C); one-shot audit, writes docs/research/ltr-phantom-peak-audit-2026-11-26/
+# wiring: manual-only - one-shot audit for row LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS part (C); a session runs it once, it writes docs/research/ltr-phantom-peak-audit-2026-11-26/
 """Audit: which past live-review CLOSE / TIGHTEN / PARTIAL rows acted on a peak measured over PRE-FILL bars.
 
 Row LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26, live money; operator: "These both sound like good trades for the ml
