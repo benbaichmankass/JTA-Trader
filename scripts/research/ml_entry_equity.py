@@ -539,6 +539,47 @@ def export_stage(tab: pd.DataFrame, config: str, tau: float, pool: list[str], ex
             "model_json_bytes": (out / "model.json").stat().st_size, "n_fixture_rows": n_fixture, "pinned_params": PINNED}
 
 
+# ------------------------------------------------------------------------------------------------ security-keyed pool (opt-in)
+SECKEY_GAP_DAYS = 30      # a gap this long in a ticker's RTH 1h history splits it into two securities (RQ-20261126-7c11-01's rule)
+SECKEY_GRACE_DAYS = 30    # the kept run must start within this many days of DATA_START and end within this many days of the data end
+
+
+def security_keyed_pool(bars: dict[str, pd.DataFrame], pool: list[str], start: str = DATA_START, end_day: str | None = None,
+                        gap_days: int = SECKEY_GAP_DAYS, grace_days: int = SECKEY_GRACE_DAYS) -> tuple[list[str], dict]:
+    """RQ-20261126-7c11-01 FAIL -> ML-ENTRY-EQ-CORP-EVENTS (b): key the pool on the SECURITY, not the ticker.
+
+    Alpaca serves bars by ticker, so a reused ticker concatenates two securities (FB = Meta before 2022-06-09, then an ETF from
+    2025-06; INFO = IHS Markit to 2022-02-25, then an ETF from 2024-10). POOL_RULE screened every pool ticker on 2019-2020 dollar
+    volume, so the security the screen admitted must trade continuously from DATA_START to the data end. A pool ticker is KEPT iff
+    its 1h history is ONE run (no gap >= ``gap_days``) that starts within ``grace_days`` of ``start`` and ends within ``grace_days``
+    of ``end_day``; otherwise the whole ticker is EXCLUDED (train and scoring rows alike), since the security trading today is not
+    the one the screen admitted, or the screened one no longer trades. No partial trimming: a kept ticker's rows are unchanged.
+    Proxies are not filtered. Returns (kept pool, report)."""
+    t0 = pd.Timestamp(start, tz="UTC")
+    t1 = pd.Timestamp(end_day, tz="UTC") + pd.Timedelta(days=1) if end_day else None
+    gap, grace = pd.Timedelta(days=gap_days), pd.Timedelta(days=grace_days)
+    kept, excluded = [], {}
+    for sym in pool:
+        df = bars.get(sym)
+        if df is None or not len(df):
+            excluded[sym] = {"reason": "no_bars"}
+            continue
+        ts = pd.to_datetime(df["ts"], utc=True).sort_values().reset_index(drop=True)
+        cuts = np.flatnonzero(ts.diff().to_numpy() >= gap.to_timedelta64())
+        bounds = [0, *cuts.tolist(), len(ts)]
+        runs = [{"first": str(ts[a]), "last": str(ts[b - 1]), "bars": int(b - a)} for a, b in zip(bounds[:-1], bounds[1:])]
+        late_start = ts.iloc[0] - t0 > grace
+        early_end = t1 is not None and t1 - ts.iloc[-1] > grace
+        if len(runs) > 1 or late_start or early_end:
+            excluded[sym] = {"reason": "+".join(r for r, x in (("two_securities", len(runs) > 1), ("late_start", late_start),
+                                                                ("early_end", early_end)) if x), "runs": runs}
+        else:
+            kept.append(sym)
+    rep = {"rule": f"one 1h run (gap < {gap_days} d) starting <= {start} + {grace_days} d and ending >= data end - {grace_days} d",
+           "n_pool_in": len(pool), "n_kept": len(kept), "excluded": excluded}
+    return kept, rep
+
+
 # ------------------------------------------------------------------------------------------------ runner glue
 def _pool_and_bars(a, end_day: str):
     """The registered pool (POOL_RULE) + 1h RTH bars for pool and proxies. Read-only allowlisted Alpaca client."""
@@ -612,7 +653,8 @@ def reproduce_frozen(tab: pd.DataFrame, artifact: str, start: str, end: str, exp
 
 def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, symbols, spec: str = STRUCT_SPEC,
                     configs: dict = None, train_end: str = TRAIN_END, start: str = CONFIRM_START, folds: list = None,
-                    taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print, ens_seeds=None, min_mean: float = 0.0) -> dict:
+                    taus=TAUS, min_oof_n: int = MIN_OOF_N, claim: bool = True, log=print, ens_seeds=None, min_mean: float = 0.0,
+                    tag_extra: str = "") -> dict:
     """RQ-20261106-98e3-01: the equity ENTRY model RE-TRAINED on structure-exit labels (config B fixed), tau re-selected on the
     dev walk-forward by the registered rule (4 draws), then ONE confirming read of the same window as the fixed-bracket confirm
     (ledger N counts it: N=2). ``tab`` must already carry the structure-exit net_long/gross_long/cost_long."""
@@ -624,7 +666,7 @@ def structure_stage(tab: pd.DataFrame, unit: str, ledger_dir: Path, end: str, sy
     if sel is None:
         return {"verdict": "indeterminate", "note": "dev stage selected nothing (no tau with >= %d OOF trades)" % min_oof_n, "dev": d}
     c = confirm_stage(tab, sel["config"], float(sel["tau"]), float(sel["mean_net_r"]), unit, ledger_dir, train_end=train_end,
-                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else ""), min_mean=min_mean, return_taken=True)
+                      start=start, end=end, symbols=symbols, configs=configs, claim=claim, model_tag="-STRUCT-" + spec.replace(";", "-").replace("=", "") + (f"-ENS{len(ens_seeds)}" if ens_seeds else "") + tag_extra, min_mean=min_mean, return_taken=True)
     c["dev"] = d
     c["structure_exit"] = spec
     return c
@@ -853,6 +895,9 @@ def main_run(a) -> int:
     if a.cmd == "reproduce-frozen":
         return _run_reproduce_frozen(a, slip, fee, t0, out)
     pool, prep, bars, client = _pool_and_bars(a, end_day)
+    if getattr(a, "security_keyed", False):   # RQ-20261126-7c11-01 (b): opt-in; the default pool is unchanged
+        pool, prep["security_keyed"] = security_keyed_pool(bars, pool, end_day=end_day)
+        print(f"[pool] security-keyed: kept {len(pool)}; excluded {sorted(prep['security_keyed']['excluded'])}", flush=True)
     spec_used = getattr(a, "struct_spec", "") or STRUCT_SPEC   # dev-only override (pivot 3 / pivot 8 variants); default = the live exit
     tab = build_table(bars, pool, slip, fee, struct=spec_used if (a.cmd in ("structure", "forward") or getattr(a, "structure", False)) else "")
     print(f"[table] {len(tab)} decision rows, {tab.symbol.nunique()} symbols t={time.strftime('%H:%M:%S')}", flush=True)
@@ -887,7 +932,7 @@ def main_run(a) -> int:
         c = structure_stage(tab, a.unit, out / "ledger", end_day, pool,
                             taus=[float(x) for x in a.taus.split(",")] if a.taus else TAUS,
                             ens_seeds=a.ensemble_seeds.split(",") if a.ensemble_seeds else None, min_mean=float(a.min_mean),
-                            claim=not repro)
+                            claim=not repro, tag_extra="-SECKEY" if getattr(a, "security_keyed", False) else "")
         _write_taken(c, a, repro)
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": c["verdict"], "note": c["note"],
                "generated_at": pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1193,6 +1238,8 @@ def main(argv=None) -> int:
             p.add_argument("--trades-out", dest="trades_out", default="", help="write one JSONL row per confirm-window trade (net_r) to this path")
             p.add_argument("--rule-id", required=True)
             p.add_argument("--registered-at", required=True)
+            p.add_argument("--security-keyed", dest="security_keyed", action="store_true",
+                           help="RQ-20261126-7c11-01 (b): drop pool tickers whose 1h history is not ONE continuous security over the data window")
         if name == "confirm":
             p.add_argument("--dev-oof-mean", required=True)
             p.add_argument("--rule-id", required=True)

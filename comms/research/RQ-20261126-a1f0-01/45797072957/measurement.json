@@ -1,0 +1,65 @@
+{
+  "unit": "RQ-20261126-a1f0-01",
+  "symbol": "XRPUSDT",
+  "legs": [
+    "trend_donchian_xrp_4h",
+    "xrp_pullback_2h"
+  ],
+  "accounts": [
+    "bybit_1",
+    "bybit_2",
+    "bybit_portfolio"
+  ],
+  "n_by_arm": {
+    "solo:trend_donchian_xrp_4h": 25,
+    "solo:xrp_pullback_2h": 127,
+    "together": 148
+  },
+  "arms": {
+    "solo:trend_donchian_xrp_4h": {
+      "n_oos": 25,
+      "n_skipped_zero_risk": 0,
+      "net_r": 0.0271,
+      "capital_days": 20.5,
+      "net_r_per_capital_day": 0.001324
+    },
+    "solo:xrp_pullback_2h": {
+      "n_oos": 127,
+      "n_skipped_zero_risk": 0,
+      "net_r": 0.4562,
+      "capital_days": 404.5938,
+      "net_r_per_capital_day": 0.001128
+    },
+    "together": {
+      "n_oos": 148,
+      "n_skipped_zero_risk": 0,
+      "net_r": -8.495,
+      "capital_days": 406.3333,
+      "net_r_per_capital_day": -0.020906
+    }
+  },
+  "cost_policy": {
+    "source": "execution_costs.resolve_cost_policy",
+    "symbol": "XRPUSDT",
+    "fee_bps_roundtrip": 7.5,
+    "slippage_bps_roundtrip": 3.0,
+    "funding_bps_per_window": 1.0,
+    "funding_window_hours": 8.0,
+    "term_sources": {
+      "fee": "execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP",
+      "funding": "venue_default",
+      "slippage": "venue_default"
+    },
+    "fee_only_arm_declared": false,
+    "prop_declared": {}
+  },
+  "risk_pct": 0.75,
+  "oos_start": "2025-01-01",
+  "verdict": "pass",
+  "reason": "all arms measured; per-leg inputs reported, no exclusion",
+  "per_leg_net_r_per_capital_day": {
+    "trend_donchian_xrp_4h": 0.001324,
+    "xrp_pullback_2h": 0.001128
+  },
+  "combined_book_net_r_per_capital_day": -0.020906
+}

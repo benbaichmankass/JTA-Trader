@@ -4,7 +4,7 @@
 id: RQ-20261119-c8e2-02
 title: 'FRESH-DATA RE-RUN: do the LIVE trend_vol regime OFF-cells (config/regime_policy.yaml, vol-keyed) still remove a money-losing slice on
   post-freeze BTC data, or have they become cosmetic?'
-status: done
+status: queued
 cadence: once
 roadmap:
 - L-ML-LIVE
@@ -123,7 +123,7 @@ related:
 - docs/research/A-vol-gating-AB-evidence-2026-06-27.md
 - scripts/ml/walkforward_vol_gating.sh
 - .claude/skills/regime-selectivity/SKILL.md
-last_dispatched_at: '2026-11-19T19:25:04+00:00'
+last_dispatched_at: '2026-11-26T12:36:31+00:00'  # re-armed 2026-11-26 by ML-PRIMARY (PI-20261126-NKFYPTFT-0001 triage): the only run, 44598184518, landed producer_failed (verdict 'mixed' / read_state 'complete' outside the contract) and the unit was marked done with NO measurement. The emitter now maps the rule outcome to the contract (CONTRACT_VERDICT in vol_offcell_fresh_wf.py), and #29082 fixed the backtest_system native-frame monitor + side_filter this roster (1h/4h/2h legs) runs through. Retry 1 of 2
 grading:
   auto: false
   decision_rule_id: RULE-RQ20261119-c8e2-02-TRENDVOL-CELLS-FRESH

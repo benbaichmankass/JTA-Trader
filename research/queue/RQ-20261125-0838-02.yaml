@@ -1,7 +1,7 @@
 id: RQ-20261125-0838-02
 title: 'eth_pullback_2h / sol_pullback_2h COST-SHARE iteration: gross edge survives but cost takes ~80% of gross at 2h; does a 4h bar or a wider 3.0 ATR stop cut
   cost per R enough to pass Stage 0 net?'
-status: queued
+status: done
 cadence: once
 roadmap:
 - L-LADDER
@@ -134,3 +134,16 @@ iteration:
 practice_precedent: 'Execution cost is a first-order term: turnover and cost per unit risk are cut by slower signals or wider risk units before the signal is changed
   (docs/reference/trading-and-model-practice-principles.md T3).'
 last_dispatched_at: '2026-11-25T22:54:51+00:00'
+grading:
+  attested: RULE-RQ20261125-0838-02-PULLBACK-COSTSHARE
+  auto: true
+  decision_rule_id: RULE-RQ20261125-0838-02-PULLBACK-COSTSHARE
+  evidence:
+  - research/results/RQ-20261125-0838-02/45715823262.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

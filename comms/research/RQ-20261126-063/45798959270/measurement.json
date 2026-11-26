@@ -1,0 +1,178 @@
+{
+  "leg": "spy_pullback_1h",
+  "label": "stage0_edge",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 46.9428,
+    "n": 151,
+    "max_drawdown_r": 19.763,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=46.9428 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0861,
+      "n": 151,
+      "net_r": 46.9428,
+      "net_r_fee_only": 52.2289,
+      "max_drawdown_r": 19.763,
+      "by_outcome": {
+        "trail_stop": 36,
+        "stop": 97,
+        "take_profit": 17,
+        "timeout": 1
+      },
+      "mean_bars_held": 20.563,
+      "net_r_per_capital_day": 0.3628,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "trend_lookback": 60,
+        "pullback_lookback": 12,
+        "pullback_frac": 0.618,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2024-01-16 14:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-01-16 14:30:00+00:00",
+          "end": "2024-10-03 16:00:00+00:00",
+          "trades": 36,
+          "net_r": 19.8319
+        },
+        {
+          "fold": 2,
+          "start": "2024-10-03 16:00:00+00:00",
+          "end": "2025-06-21 17:30:00+00:00",
+          "trades": 34,
+          "net_r": 18.8314
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-21 17:30:00+00:00",
+          "end": "2026-03-09 19:00:00+00:00",
+          "trades": 38,
+          "net_r": 10.7891
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-09 19:00:00+00:00",
+          "end": "2026-11-25 20:30:00+00:00",
+          "trades": 43,
+          "net_r": -2.5092
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-063/45798959270/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-063/45798959270/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "GDX",
+      "interval": "60m",
+      "resample": "1h"
+    },
+    "fold_edges": [
+      "2024-01-16 14:30:00+00:00",
+      "2024-10-03 16:00:00+00:00",
+      "2025-06-21 17:30:00+00:00",
+      "2026-03-09 19:00:00+00:00",
+      "2026-11-25 20:30:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "60",
+        "--pullback-lookback",
+        "12",
+        "--pullback-frac",
+        "0.618",
+        "--data",
+        "<data>",
+        "--symbol",
+        "GDX",
+        "--resample",
+        "1h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-063/45798959270/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-063/45798959270/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar",
+        "skip_hours"
+      ],
+      "routed_cfg_keys": []
+    }
+  }
+}

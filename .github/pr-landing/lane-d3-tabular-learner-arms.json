@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 research tooling + 2 previously blocked queue units moved to queued (row D3-TABULAR-LEARNER-ARMS). (1) ml_entry_residual.py gets two fixed GPU learner arms on the RAW target: ftt (FT-Transformer, Gorishniy 2021, fixed architecture/schedule, early stop on the newest 10%) and tabicl (TabICLv2 2.2.0 regressor at defaults, full n, BSD-3 checkpoint read offline from $TABICL_MODEL_DIR); a per-window completeness guard (not ok on cuda / not to schedule / not full n -> INDETERMINATE, never FAIL, as both registered rules require); --gpu-arm-budget-min so a backend timeout still lands a row; --cache-source published (the kline cache from metis-market-bp2 market_raw, no internet). (2) Kaggle route: kaggle_run ships *.ckpt; kernel_main exports TABICL_MODEL_DIR; research-script-run-kaggle.yml downloads the checkpoint only for tabicl units. (3) RQ-20261118-f7c1-06 + -dbf8-02: blocked -> queued, re-owned from the dropped FRONTIER-LEVER-TABULAR; registered rules unchanged. R5 cannot vouch research/queue/ or .github/workflows/, so the manager merges. Revert: git revert.",
+  "why": "Manager 2026-11-25b (02:29Z): re-own dbf8-02, build the learner arms + Kaggle route, unblock both D3 units (free Kaggle GPU must not sit idle). Gates this adds or changes: none (the completeness guard is the registered rule both units already state). Edits no config, roster, model or order path."
+}

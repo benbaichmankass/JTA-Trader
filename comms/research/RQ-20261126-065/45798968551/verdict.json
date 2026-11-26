@@ -1,0 +1,175 @@
+{
+  "verdict": "indeterminate",
+  "read_state": "measured",
+  "population": "spy_trend_long_1d: 26 trades in the baseline arm 'A' on IWM 1d candles 2021-11-15 00:00:00+00:00 .. 2026-11-18 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 26,
+  "measurement": {
+    "leg": "spy_trend_long_1d",
+    "label": "underpowered",
+    "grade": {
+      "verdict": "indeterminate",
+      "label": "underpowered",
+      "baseline": "A",
+      "net_r": -2.3169,
+      "n": 26,
+      "max_drawdown_r": 8.1738,
+      "folds_positive": 2,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "n=26 < n_floor 39"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 26,
+        "net_r": -2.3169,
+        "net_r_fee_only": -1.8222,
+        "max_drawdown_r": 8.1738,
+        "by_outcome": {
+          "stop": 17,
+          "take_profit": 8,
+          "trail_stop": 1
+        },
+        "mean_bars_held": 13.154,
+        "net_r_per_capital_day": -0.0068,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 30,
+          "atr_stop_mult": 1.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0
+        },
+        "data_start": "2021-11-15 00:00:00+00:00",
+        "data_end": "2026-11-18 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-15 00:00:00+00:00",
+            "end": "2023-02-15 06:00:00+00:00",
+            "trades": 6,
+            "net_r": -3.1222
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-15 06:00:00+00:00",
+            "end": "2024-05-17 12:00:00+00:00",
+            "trades": 6,
+            "net_r": 0.0166
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-17 12:00:00+00:00",
+            "end": "2025-08-17 18:00:00+00:00",
+            "trades": 8,
+            "net_r": -2.0901
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-17 18:00:00+00:00",
+            "end": "2026-11-18 00:00:00+00:00",
+            "trades": 6,
+            "net_r": 2.8787
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "IWM",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-065/45798968551/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-065/45798968551/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "2.0"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "IWM",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2021-11-15 00:00:00+00:00",
+        "2023-02-15 06:00:00+00:00",
+        "2024-05-17 12:00:00+00:00",
+        "2025-08-17 18:00:00+00:00",
+        "2026-11-18 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_trend.py",
+          "--donchian",
+          "30",
+          "--data",
+          "<data>",
+          "--symbol",
+          "IWM",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "1.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-065/45798968551/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-065/45798968551/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "2.0"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "INDETERMINATE / underpowered: n=26 < n_floor 39"
+}

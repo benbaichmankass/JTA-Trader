@@ -4,7 +4,7 @@
 id: RQ-20261126-c4f2-01
 title: 'ITERATION 3 of ml-btc-router-cells: did the LIVE regime_hard_gate drops (2026-09-01..11-26) save money? Replay every dropped live signal as emitted and
   compare its net R with matched random signals of the same strategies the gate let through, split by axis (ML vol vs ADX trend).'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 2
@@ -149,3 +149,17 @@ related:
 - RQ-20261117-aadc-01
 - .claude/skills/regime-selectivity/SKILL.md
 rearmed_at: '2026-11-26T03:40:00+00:00'
+last_dispatched_at: '2026-11-26T04:52:26+00:00'
+grading:
+  attested: RULE-REGIME-LIVE-VETO-CF-20261126
+  auto: true
+  decision_rule_id: RULE-REGIME-LIVE-VETO-CF-20261126
+  evidence:
+  - research/results/RQ-20261126-c4f2-01/45756678009.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

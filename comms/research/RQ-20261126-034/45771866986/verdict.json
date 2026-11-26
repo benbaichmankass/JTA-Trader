@@ -1,0 +1,216 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "iaum_pullback_1d: 57 trades in the baseline arm 'A' on GLD 1d candles 2019-08-16 00:00:00+00:00 .. 2026-11-25 00:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 57,
+  "measurement": {
+    "leg": "iaum_pullback_1d",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "A",
+      "net_r": 25.7856,
+      "n": 57,
+      "max_drawdown_r": 7.9597,
+      "folds_positive": 3,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=25.7856 > 0 with 3/4 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 57,
+        "net_r": 25.7856,
+        "net_r_fee_only": 27.0166,
+        "max_drawdown_r": 7.9597,
+        "by_outcome": {
+          "stop": 19,
+          "take_profit": 12,
+          "trail_stop": 26
+        },
+        "mean_bars_held": 17.789,
+        "net_r_per_capital_day": 0.0254,
+        "cost_stack": {
+          "fee_bps_roundtrip": 0.0,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 15,
+          "pullback_frac": 0.618,
+          "atr_stop_mult": 2.0,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0,
+          "tp_target_r": 3.5,
+          "tp_extend_r": 1.0,
+          "tp_approach_frac": 0.85,
+          "tp_max_extends": 3,
+          "tp_thesis": "native"
+        },
+        "data_start": "2019-08-16 00:00:00+00:00",
+        "data_end": "2026-11-25 00:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2019-08-16 00:00:00+00:00",
+            "end": "2021-06-10 12:00:00+00:00",
+            "trades": 15,
+            "net_r": -0.519
+          },
+          {
+            "fold": 2,
+            "start": "2021-06-10 12:00:00+00:00",
+            "end": "2023-04-06 00:00:00+00:00",
+            "trades": 14,
+            "net_r": 6.7312
+          },
+          {
+            "fold": 3,
+            "start": "2023-04-06 00:00:00+00:00",
+            "end": "2025-01-29 12:00:00+00:00",
+            "trades": 15,
+            "net_r": 7.1498
+          },
+          {
+            "fold": 4,
+            "start": "2025-01-29 12:00:00+00:00",
+            "end": "2026-11-25 00:00:00+00:00",
+            "trades": 13,
+            "net_r": 12.4238
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "15",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "GLD",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-034/45771866986/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-034/45771866986/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "10",
+          "--trail-decay-tight-mult",
+          "2.0",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.5",
+          "--tp-target-r",
+          "3.5",
+          "--tp-extend-r",
+          "1.0",
+          "--tp-approach-frac",
+          "0.85",
+          "--tp-max-extends",
+          "3",
+          "--tp-thesis",
+          "native"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "GLD",
+        "interval": "1d",
+        "resample": "1d"
+      },
+      "fold_edges": [
+        "2019-08-16 00:00:00+00:00",
+        "2021-06-10 12:00:00+00:00",
+        "2023-04-06 00:00:00+00:00",
+        "2025-01-29 12:00:00+00:00",
+        "2026-11-25 00:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "15",
+          "--pullback-frac",
+          "0.618",
+          "--data",
+          "<data>",
+          "--symbol",
+          "GLD",
+          "--resample",
+          "1d",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.0",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "0.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-034/45771866986/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-034/45771866986/arms/A__bt.json",
+          "--trail-decay-stall-bars",
+          "10",
+          "--trail-decay-tight-mult",
+          "2.0",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "3.5",
+          "--tp-target-r",
+          "3.5",
+          "--tp-extend-r",
+          "1.0",
+          "--tp-approach-frac",
+          "0.85",
+          "--tp-max-extends",
+          "3",
+          "--tp-thesis",
+          "native"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=25.7856 > 0 with 3/4 positive folds at this arm's cost stack"
+}

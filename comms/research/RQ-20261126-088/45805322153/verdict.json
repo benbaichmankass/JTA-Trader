@@ -1,0 +1,178 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "trend_donchian_sol: 296 trades in the baseline arm 'A' on AVAXUSDT 1h candles 2021-11-22 00:00:00+00:00 .. 2026-11-25 23:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 296,
+  "measurement": {
+    "leg": "trend_donchian_sol",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "A",
+      "net_r": 23.4951,
+      "n": 296,
+      "max_drawdown_r": 22.9319,
+      "folds_positive": 3,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=23.4951 > 0 with 3/4 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0034,
+        "n": 296,
+        "net_r": 23.4951,
+        "net_r_fee_only": 29.8641,
+        "max_drawdown_r": 22.9319,
+        "by_outcome": {
+          "stop": 139,
+          "take_profit": 61,
+          "trail_stop": 96
+        },
+        "mean_bars_held": 27.483,
+        "net_r_per_capital_day": 0.0693,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.8
+        },
+        "data_start": "2021-11-22 00:00:00+00:00",
+        "data_end": "2026-11-25 23:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-22 00:00:00+00:00",
+            "end": "2023-02-22 11:45:00+00:00",
+            "trades": 70,
+            "net_r": 9.0872
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-22 11:45:00+00:00",
+            "end": "2024-05-24 23:30:00+00:00",
+            "trades": 76,
+            "net_r": 8.6508
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-24 23:30:00+00:00",
+            "end": "2025-08-25 11:15:00+00:00",
+            "trades": 71,
+            "net_r": 17.0262
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-25 11:15:00+00:00",
+            "end": "2026-11-25 23:00:00+00:00",
+            "trades": 79,
+            "net_r": -11.2689
+          }
+        ],
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-088/45805322153/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-088/45805322153/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "binance",
+        "ticker": "AVAXUSDT",
+        "interval": "60",
+        "resample": "1h"
+      },
+      "fold_edges": [
+        "2021-11-22 00:00:00+00:00",
+        "2023-02-22 11:45:00+00:00",
+        "2024-05-24 23:30:00+00:00",
+        "2025-08-25 11:15:00+00:00",
+        "2026-11-25 23:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+          "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "AVAXUSDT",
+          "--resample",
+          "1h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.8",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-088/45805322153/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-088/45805322153/arms/A__bt.json",
+          "--long-only",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar",
+          "exit_head_action",
+          "exit_head_model",
+          "exit_head_threshold"
+        ],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=23.4951 > 0 with 3/4 positive folds at this arm's cost stack"
+}

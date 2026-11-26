@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "hold_text": "Idle-compute incident (manager 2026-11-26). Edits three generator templates (leg-twin-symbol, leg-twin-timeframe, roster-walkforward: drop the pinned run.workflow so the compute router places the unit) and queue_replenish.py (copy compute from a workflow-less template and stamp inputs.research_unit; templates that still name a workflow render exactly as before), and adds 153 generated units (81 symbol twins, 44 timeframe twins, 28 roster-walkforward lever units) from ONE manual explicit-target dispatch (--target 400); the 17 units of other families that dispatch planned were deleted, not landed. queue_replenish --verify is OK. The generator default target stays 0 (STOP-GENERATED-AUTHORING). R12: a template edit is landing machinery, so the manager merges. Revert: git revert.",
+  "why": "Manager order 2026-11-26 (IDLE-COMPUTE INCIDENT): every backend floor_thin after the night queue drained; the operator's rule is >= 2 weeks of runnable work per backend. The lever families (twin, direction/exit/entry roster-walkforward) are plan-derived from RESEARCH-LEVER-FAMILY-REACH, not a floor fill. Edits no config, roster, model or order path."
+}

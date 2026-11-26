@@ -1,0 +1,161 @@
+# AUTHORED by scripts/research/queue_grade.py: the one confirmation of RQ-20261106-011's PASS
+# (RESEARCH-CONFIRM-FRESH-WINDOW). Self-lands only while `queue_grade.py --verify` reproduces it.
+id: RQ-20261126-cda8-01
+title: 'Holdout re-run of RQ-20261106-011: Walk-forward lever sweep of sol_pullback_2h: next lever entry
+  (generated, weekly)'
+status: queued
+cadence: once
+kind: experiment
+theme: live_strategy
+priority: 3
+roadmap:
+- L-LADDER
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): walk-forward on
+  fresh data against a rule registered before the run; one-factor sensitivity before combinations'
+question: 'HOLDOUT RE-RUN of RQ-20261106-011''s single-window PASS: with the latest ~0.25 of each leg''s
+  history held back BEFORE selection, does a cell still clear the SAME registered gate on the earlier
+  span, and does it hold on the held-back span? Original question: Does sol_pullback_2h (SOLUSDT 2h, pullback
+  harness) still show net-of-cost OOS edge on freshly fetched candles at its configured settings (control
+  arm A) -- and how does the next lever family on the lever map, entry, move that edge when stepped one
+  factor at a time (arms: see run.command / iteration.design)?'
+why_this_matters: A live leg's evidence record is a photograph; the roster trades the film. A weekly re-run
+  keeps the control honest AND measures one more lever of the leg per unit, so the lever map -- not a
+  pass/fail on one configuration -- is what the research learns.
+power:
+  expected_n: 50
+  min_detectable_effect: 0.45
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: d=0.45 -> 39 trades at alpha 0.05 / power 0.8 (the E35 floor) for the CONTROL reading. Each variant
+    is graded against the control on the same trades (paired), with a 3-of-4 calendar-fold consistency
+    bar and a materiality bar of 4.0 R over the window; the number of variants is counted in iteration.multiple_testing
+    and a best-of-k pass is a LEAD, never a finding.
+  feasibility:
+    source: none
+    accrual_basis: Free-lane candle fetch (binance_vision / yfinance); Bybit-hosted symbols may land producer_failed
+      on a GitHub runner (known geoblock), which is recorded honestly rather than retried.
+decision_rule:
+  id: RULE-TPL-ROSTER-WALKFORWARD-LEVER-SWEEP
+  statistic: 'exit_lever_ablation.py --grade sweep: per variant, delta net R vs the control A, delta maxDD,
+    and the number of 4 calendar folds in which it beats A, all net of the full cost stack (execution_costs.resolve_cost_policy);
+    the control''s own n, net R and fold signs are reported in verdict.json (the standing walk-forward
+    reading).'
+  rule: PASS (a LEAD for a Tier-3 setting proposal after a holdout read, never applied here) IF some variant
+    beats A by >= 4.0 R, with maxDD no worse and >= 3 of 4 folds, at A's n >= 39. FAIL IF none does at
+    n >= 39 (these settings are not better than the configured ones; the lever FAMILY stays open until
+    its map is flat/noisy at adequate power). indeterminate IF A's n < 39 or the producer failed. The
+    control A net R <= 0 at n >= 39 on two consecutive units is a Gate-2 demotion INPUT (never a demotion
+    by this unit). The result is appended to the leg's lever map either way.
+  registered_at: '2026-11-06'
+  registered_before_run: true
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 60
+  basis: one leg, <= 5 arms (control + 2 keys x low/high) through the committed-record argv builder on
+    a GitHub runner.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+design: structured
+levers_declared:
+- entry
+iteration:
+  subject: sol_pullback_2h
+  subject_kind: strategy_leg
+  from_result: comms/strategy_evidence/sol_pullback_2h.json
+  verdict_read: pass
+  diagnosis: 'sol_pullback_2h: baseline net R 6.9287 on n 17; attribution read: gross edge survives cost;
+    lever map reads 5 of 9 lever families tested. entry has a noisy / single-point / unread response on
+    [''pullback_frac''] -- a finer sweep, not a verdict.'
+  hypothesis: the chosen lever family moves the leg's net-of-cost OOS R monotonically and fold-stably;
+    a flat or spiky response is recorded in the lever map as evidence of no edge / overfit, not discarded
+  attempt: 1
+  due_by: '2026-11-20'
+  design:
+    control: A (the subject as configured)
+    kind: one-factor sweep around the control
+    levers:
+      sol_pullback_2h: entry
+    lever_basis:
+      sol_pullback_2h: unresolved_shape
+    why_this_lever:
+      sol_pullback_2h: entry has a noisy / single-point / unread response on ['pullback_frac'] -- a finer
+        sweep, not a verdict
+    map_entries:
+      sol_pullback_2h:
+      - 'entry.pullback_frac: noisy'
+    arms:
+      sol_pullback_2h:
+      - - A
+        - ''
+      - - pullback_frac_lo
+        - pullback_frac=0.375
+      - - pullback_frac_hi
+        - pullback_frac=0.625
+  multiple_testing:
+    arms_counted: 3
+    variants_vs_control: 2
+    correction: Holm
+    note: every variant is fixed before the run; a best-of-k pass is a LEAD that needs a holdout read,
+      never a finding
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - sol_pullback_2h
+  - --arm
+  - A=
+  - --arm
+  - pullback_frac_lo=pullback_frac=0.375
+  - --arm
+  - pullback_frac_hi=pullback_frac=0.625
+  - --days
+  - '1830'
+  - --grade
+  - sweep_holdout
+  - --baseline
+  - A
+  - --delta-r
+  - '4.0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --n-floor
+  - '39'
+  - --out
+  - '{out_dir}'
+  - --holdout-frac
+  - '0.25'
+  - --research-unit
+  - RQ-20261126-cda8-01
+  inputs:
+    research_unit: RQ-20261126-cda8-01
+requires_result:
+  unit: RQ-20261106-011
+  verdict: pass
+confirmation:
+  of: RQ-20261106-011
+  mode: holdout_rerun
+  policy: 'operator 2026-10-16 (popup, ''Holdout re-run''): "From now on, each sweep holds back the most
+    recent ~25% of history before it chooses settings, then tests the winner on that held-back part, so
+    discovery and confirmation come from one run with no wait. The 13 current passes get re-run that way
+    now, within days. Cost: each choice is made on 25% less data."'
+  holdout_frac: '0.25'
+  selected_from_cells: null
+  passing_cells: []
+  note: RQ-20261106-011 PASSED on one full-history window, selected from an unrecorded number of cell(s);
+    passing not named. This re-run CONFIRMS only when a cell selected on the earlier span passes on the
+    held-back span (measurement.holdout.confirmation == confirmed); not_replicated closes the configuration,
+    never the family. Until then RQ-20261106-011 may not feed a Tier-3 proposal.
+grading:
+  auto: true
+last_dispatched_at: '2026-11-26T14:00:46+00:00'
