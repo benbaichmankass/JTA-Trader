@@ -140,6 +140,52 @@ def r_distances(*, price: Optional[float], stop: Optional[float],
     return r_to_stop, r_to_target, rr
 
 
+def _ts_utc(v: Any) -> Optional[datetime]:
+    if v is None or v == "":
+        return None
+    try:
+        t = datetime.fromisoformat(str(v).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+#: package / meta keys that can carry the moment the position existed; the LATEST readable one is the anchor
+#: (each is at or before the real fill, so the latest is the tightest bound that never admits a pre-fill bar).
+FILL_TIME_KEYS = (("meta", "entry_filled_at"), ("meta", "filled_at"), ("meta", "fill_time"), ("pkg", "created_at"),
+                  ("pkg", "opened_at"), ("meta", "entry_time"))
+
+
+def fill_anchor(open_pkg: Dict[str, Any], meta: Dict[str, Any]) -> Optional[datetime]:
+    """The fill anchor: the latest readable of the package's creation / fill timestamps and meta.entry_time.
+    ``None`` when none is readable (the peak is then ``unanchored``, never measured over pre-entry bars)."""
+    cands = []
+    for src, k in FILL_TIME_KEYS:
+        t = _ts_utc((meta if src == "meta" else open_pkg or {}).get(k))
+        if t is not None:
+            cands.append(t)
+    return max(cands) if cands else None
+
+
+def post_fill_window(window: Any, fill_ts: Optional[datetime]) -> Any:
+    """Rows of ``window`` whose bar OPENED at or after ``fill_ts`` (possibly none: the first bar of a trade).
+    Unchanged when the anchor or the timestamps are unreadable; the caller then reports ``unanchored``."""
+    if fill_ts is None or window is None or "timestamp" not in getattr(window, "columns", []):
+        return window
+    try:
+        import pandas as pd
+
+        ts = pd.to_datetime(window["timestamp"], utc=True, errors="coerce")
+        out = window[ts >= pd.Timestamp(fill_ts)]
+        try:
+            out.attrs = dict(getattr(window, "attrs", {}) or {})
+        except Exception:  # noqa: BLE001  # allow-silent: attrs are advisory; the filtered rows are what matter
+            pass
+        return out
+    except Exception:  # noqa: BLE001  # allow-silent: an unreadable frame keeps the caller's own unanchored path
+        return window
+
+
 def build_record(
     *,
     open_pkg: Dict[str, Any],
@@ -170,7 +216,15 @@ def build_record(
         # pre-entry peak (SINCE-ENTRY-WINDOW-FIX, 2026-10-29).
         from src.runtime.exit_levers import since_entry_is_anchored
 
-        anchored = bool(meta.get("entry_time")) and since_entry_is_anchored(window)
+        # LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26, live money): the peak / MFE / giveback window is
+        # bars that OPENED AT OR AFTER THE FILL, never the bar containing the entry nor any earlier one.
+        # ml_entry stamps meta.entry_time = the DECISION bar's open (15:00Z for the bar closing 16:00Z) and
+        # `since_entry` keeps the bar containing that time, so the whole pre-entry 15:00Z bar was read as the
+        # trade: ADA/XRP shorts filled 16:04Z, "gave back 1.25R of 1.25R peak" at 16:05Z, closed by a review.
+        fill_ts = fill_anchor(open_pkg, meta)
+        covers_trade = window_covers_trade(window, meta)   # judged on the caller's window, before the post-fill cut
+        window = post_fill_window(window, fill_ts)
+        anchored = fill_ts is not None and since_entry_is_anchored(window)
 
         peak = since_entry_peak(window, entry, risk, direction, anchored=anchored)
         peak_r = _f(peak.get("peak_r"))
@@ -234,7 +288,7 @@ def build_record(
             "bars_held": int(peak.get("bars") or 0),
             # Not persisted: this pass's window holds the whole trade, so its
             # peak replaces the running maximum (see `_UPSERT`).
-            "peak_authoritative": 1 if window_covers_trade(window, meta) else 0,
+            "peak_authoritative": 1 if covers_trade else 0,
             "bars_since_peak": peak.get("bars_since_peak"),
             "cap_r": _r(ceiling),
             "pct_of_cap": _r(pct_of_cap, 2),
@@ -852,8 +906,9 @@ def read_records(db_path: Optional[str] = None,
         conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
         try:
             conn.row_factory = sqlite3.Row
+            _has_ts = "timestamp" in {c[1] for c in conn.execute("PRAGMA table_info(trades)")}
             sql = (f"SELECT t.*, tr.status AS _trade_status, "
-                   f"tr.id AS _trade_seen FROM {TABLE} t "
+                   f"tr.id AS _trade_seen{', tr.timestamp AS _trade_opened_at' if _has_ts else ''} FROM {TABLE} t "
                    f"LEFT JOIN trades tr ON tr.id = CAST(t.trade_id AS INTEGER) ")
             params: list[Any] = []
             if strategy:
