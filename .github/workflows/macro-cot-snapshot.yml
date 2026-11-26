@@ -1,0 +1,74 @@
+name: macro-cot-snapshot
+
+# DESK-MACRO v1.1 (2026-11-26): the weekly PRODUCER for comms/macro/cot_snapshots.jsonl.
+#
+# Until this workflow the file was written only by a one-off manual backfill, so the desk macro packet's
+# `cot` part read 7 rows 133-1756 days old (DESK-MACRO v1 end-to-end run, Manager 26a). The producer is
+# scripts/macro/cot_snapshot_backfill.py: a FULL, idempotent regeneration of the point-in-time CFTC Legacy
+# COT positioning snapshots from the keyless CFTC Socrata API, one weekly row per market, each market queried
+# by its stable CFTC contract code (scripts/macro/cot_data.COT_MARKETS).
+#
+# Cadence: the CFTC publishes Friday 15:30 ET (Tuesday positions); this runs Saturday 10:17 UTC.
+# Lands through the same commit-to-main auto-merge path as macro-valuation-snapshot (main is protected).
+#
+# Tier-1: observability / data producer, no order path, no live-VM touch, no secret beyond the PAT that opens
+# the auto-merge PR.
+
+on:
+  schedule:
+    - cron: "17 10 * * 6"
+  workflow_dispatch:
+  repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
+    types: [macro-cot-snapshot-now]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: macro-cot-snapshot
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'repository_dispatch' &&
+       github.event.client_payload.issue.user.login == github.repository_owner &&
+       contains(github.event.client_payload.issue.labels.*.name, 'macro-cot-snapshot-now'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: python -m pip install --upgrade pip "pyyaml>=6.0"
+
+      - name: Regenerate COT snapshots (off-VM CFTC fetch)
+        env:
+          ICT_OFFVM_BUILD_HOST: "1"
+        run: |
+          set -euo pipefail
+          python scripts/macro/cot_snapshot_backfill.py --path comms/macro/cot_snapshots.jsonl
+
+      - name: Land the regenerated log on main (auto-merge PR)
+        uses: ./.github/actions/commit-to-main
+        with:
+          token: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          paths: comms/macro/cot_snapshots.jsonl
+          message: "chore(m29): COT positioning snapshots"
+          pr-title: "chore(m29): COT positioning snapshots (auto)"
+          pr-body: "Automated weekly CFTC COT snapshot regeneration (macro-cot-snapshot producer). Data-only; auto-merge."
+          branch-prefix: automation/cot-snapshots
+          verify-merged: "true"

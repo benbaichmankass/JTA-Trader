@@ -418,6 +418,12 @@ def test_a_peak_inside_the_pre_entry_decision_bar_is_not_the_trades():
     assert len(w) == 0                                    # #29249 anchors since_entry on the fill, so the decision bar is gone
     rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w, direction="short", current_price=100.1)
     assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
+    # #29238's own layer, independent of since_entry: handed an old-style window that still holds the decision bar
+    # (what since_entry returned before #29249), build_record's post-fill cut must still refuse it.
+    old = df.tail(1)
+    assert len(old) == 1
+    rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=old, direction="short", current_price=100.1)
+    assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
 
 
 def test_fill_anchor_is_the_latest_known_time():
