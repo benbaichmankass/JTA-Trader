@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-117
 title: 'Config-exact timeframe twin of sol_pullback_2h: 1d (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -132,3 +132,16 @@ generated:
     twin: 1d
     twin_key: timeframe:1d
 last_dispatched_at: '2026-11-26T13:27:08+00:00'
+grading:
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-TPL-LEG-TWIN-TIMEFRAME-STAGE0
+  evidence:
+  - research/results/RQ-20261126-117/45825058809.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

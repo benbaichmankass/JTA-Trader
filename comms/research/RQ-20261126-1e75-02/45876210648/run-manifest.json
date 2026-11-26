@@ -1,0 +1,90 @@
+{
+  "unit": "RQ-20261126-1e75-02",
+  "run_id": "45876210648",
+  "commit_sha": "96f894b3a4e80e0a0ce017981b62156c4034a279",
+  "run_url": null,
+  "timeout_minutes": 120,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "db1ff15f88db",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "trend_donchian_eth_4h",
+        "--symbol",
+        "BTCUSDT",
+        "--arm",
+        "B=",
+        "--arm",
+        "S10T4=atr_stop_mult=1.0;tp_r=4.0",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "paired",
+        "--baseline",
+        "B",
+        "--candidate",
+        "S10T4",
+        "--paired-min-mean",
+        "0.03",
+        "--paired-t-bar",
+        "2.0",
+        "--paired-min-match",
+        "0.8",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "5",
+        "--n-floor",
+        "39",
+        "--research-unit",
+        "RQ-20261126-1e75-02",
+        "--out",
+        "comms/research/RQ-20261126-1e75-02/45876210648"
+      ],
+      "log": "comms/research/RQ-20261126-1e75-02/45876210648/logs/cmd-0.log",
+      "exit_code": 2,
+      "seconds": 0.2
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}
