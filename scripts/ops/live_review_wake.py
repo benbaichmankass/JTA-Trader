@@ -559,14 +559,18 @@ def render(p: Dict[str, Any], now: datetime, run_url: str,
 
 
 def _gh(args: List[str], retries: int = 4) -> Optional[str]:
+    last = ""
     for i in range(retries):
         try:
             r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=120)
             if r.returncode == 0:
                 return r.stdout
-        except (OSError, subprocess.SubprocessError):
-            pass
+            last = f"exit {r.returncode}: {(r.stderr or '').strip()[-400:]}"
+        except (OSError, subprocess.SubprocessError) as exc:
+            last = f"{type(exc).__name__}: {exc}"[:400]
         time.sleep(2 ** (i + 1))
+    # Name the cause (2026-11-26: two 'cannot read ops-flags PR comments' runs with no reason logged).
+    print(f"::warning::gh {' '.join(args[:2])} failed after {retries} tries; last: {last}", file=sys.stderr)
     return None
 
 
