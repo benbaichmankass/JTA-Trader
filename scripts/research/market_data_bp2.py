@@ -190,7 +190,7 @@ def _self_test() -> int:
     import numpy as np
     import pandas as pd
 
-    def fake(sym: str, dst: Path, start: datetime, end: datetime) -> Dict[str, Any]:
+    def fake(sym: str, dst: Path, start: datetime, end: datetime) -> Dict[str, Any]:  # inert: start, end -- the fetcher signature stage() calls; the synthetic series has fixed dates
         if sym == "NOPEUSDT":
             return {"read_state": "could_not_look", "why": "synthetic miss"}
         n = 600
