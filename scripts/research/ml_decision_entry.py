@@ -297,17 +297,39 @@ def regrid_hourly(df: pd.DataFrame) -> pd.DataFrame:
     return df.set_index("ts").reindex(full).rename_axis("ts").reset_index()
 
 
+def mask_dead_bars(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Bars with ZERO volume -> NaN OHLCV (row ML-ENTRY-DEAD-REF-FLAT-BARS). Binance Vision keeps publishing flat,
+    zero-volume bars for a perp after it is delisted (measured: BAL / BLZ / DEFI / FTM / OMG through 2026-10, quote
+    volume 0, ret24 == 0 on every bar). Unmasked they enter the cross-sectional features as ret 0 / vol 0 members, while
+    the live path (src/runtime/ml_decision_features._same_ts_row) cannot fetch a delisted perp and drops it. Masked, a
+    dead symbol leaves the cross-section exactly as it does live; the NaN bars are handled like any data hole."""
+    v = pd.to_numeric(df["volume"], errors="coerce")
+    dead = (v == 0).to_numpy()
+    if not dead.any():
+        return df, 0
+    df = df.copy()
+    df.loc[dead, ["open", "high", "low", "close", "volume"]] = np.nan
+    return df, int(dead.sum())
+
+
 def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = None,
-                recost_inputs: bool = False, hole_safe: bool = True) -> pd.DataFrame:
+                recost_inputs: bool = False, hole_safe: bool = True, *, mask_dead: bool = False) -> pd.DataFrame:
     """``xs_symbols`` None: cross-sectional context over ``symbols`` (the c692-01 recipe, unchanged). Given: context is
     computed against that fixed REFERENCE set for every row, so a row's inputs do not depend on which other symbols are
     in the table (the c692-04 training-universe arms).
     ``hole_safe`` (default True since ML-ENTRY-HOLE-SAFE-ADOPT, 2026-11-12): bars are regridded hourly so a data hole is NaN
     bars, never a seam in the positional rolling features; rows touching it are dropped, not refused. ``False`` reproduces the
-    legacy build. Hourly crypto only: equity sessions are legitimately non-contiguous, never pass it there."""
-    rows, feats = [], {}
+    legacy build. Hourly crypto only: equity sessions are legitimately non-contiguous, never pass it there.
+    ``mask_dead`` (opt-in, ML-ENTRY-DEAD-REF-FLAT-BARS; the weekly retrain passes True): zero-volume bars become NaN before
+    any feature, so a delisted perp's flat bars never count in the cross-section. Per-symbol masked counts land in
+    ``tab.attrs["dead_bars_masked"]``. False reproduces every earlier table byte-for-byte."""
+    rows, feats, masked = [], {}, {}
     for sym in symbols:
         df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if mask_dead:
+            df, n_dead = mask_dead_bars(df)
+            if n_dead:
+                masked[sym] = n_dead
         if hole_safe:   # default ON (ML-ENTRY-HOLE-SAFE-ADOPT); hole_safe=False reproduces a pre-2026-11-12 table byte-for-byte
             df = regrid_hourly(df)
         f = features_symbol(df)
@@ -349,6 +371,7 @@ def build_table(cache: Path, symbols: list[str], xs_symbols: list[str] | None = 
     tab["ts"] = pd.to_datetime(tab["ts"], utc=True)
     if tab.empty or tab.symbol.nunique() < max(1, len(symbols) // 2):
         raise RuntimeError(f"label table degenerate: rows={len(tab)} symbols={tab.symbol.nunique()} of {len(symbols)}")
+    tab.attrs["dead_bars_masked"] = masked
     return tab
 
 
