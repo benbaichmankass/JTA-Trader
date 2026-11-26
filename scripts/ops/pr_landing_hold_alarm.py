@@ -222,7 +222,10 @@ def _recorded_decision(decl: Dict[str, Any],
 
 APPROVED_LABEL = "operator-approved"
 _DATE = r"\d{4}-\d{2}-\d{2}"
-_QUOTE = r"[\"\u201c]([^\"\u201d\n]{3,})[\"\u201d]"
+# The quoted operator choice is taken verbatim, however short. It was {3,} until 2026-11-26, when the operator's
+# whole approval of #29091/#29165 was "Ok" (2 characters) and a correct citation read as no decision at all. The
+# date, the source and the word "verbatim" (or a "decision:" line) still have to be there.
+_QUOTE = r"[\"\u201c]([^\"\u201d\n]{2,})[\"\u201d]"
 _BODY_HEADER = re.compile(r"(?im)^[ \t>*_-]*operator decisions?[*_]*\s*[,:]?\s*(" + _DATE + r")\s+([^\n,]{3,120})")
 _BODY_DECISION_LINE = re.compile(r"(?im)^[ \t>*_-]*decision:\s*(" + _DATE + r")\s+(\S[^\n\"\u201c]{2,120}?)\s*" + _QUOTE)
 
