@@ -1,0 +1,1228 @@
+{
+ "schema": "desk_macro_brief/1",
+ "brief_id": "DMB-20261126T1835Z",
+ "judged_at": "2026-11-26T18:35:00Z",
+ "info_cutoff_at": "2026-11-26T18:27:00Z",
+ "model": "sonnet-tier",
+ "skill_sha": "trading-desk-7b",
+ "supersedes": "DMB-20261126T1305Z",
+ "packet_path": "comms/desk/macro/packets/20261126T1823Z.json",
+ "packet_sha": "d7c3c80e24c54b4f2a8c8252b718a6b667fe79224bfd029a66814e789475c32c",
+ "fetch_paths": [],
+ "analysis_paths": [
+  "comms/desk/macro/packets/analysis-20261126T182604Z.json"
+ ],
+ "sources": [
+  {
+   "source_id": "S1",
+   "kind": "packet",
+   "ref": "comms/desk/macro/packets/20261126T1823Z.json",
+   "retrieved_at": "2026-11-26T18:23:00Z",
+   "content_sha256": "87952b10cf9673ca46023897bd37c7d7e14ede73d9c08f2f919d27968ed08449",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S2",
+   "kind": "analysis",
+   "ref": "comms/desk/macro/packets/analysis-20261126T182604Z.json",
+   "retrieved_at": "2026-11-26T18:26:04Z",
+   "content_sha256": "5c65c3faabbb55b874c65af39c0f6996fe2ec2e6c19b4a979782bbd1ce788d34",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S3",
+   "kind": "news_fxstreet_gold_fed",
+   "ref": "https://app.bigdata.com/documents/A70A8A10C31420EA9CA7B6778F1A6C85",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "8d61345e54fa4251c18de3e1d8d1d4e4e4b5c45c337147c03ef60a39c9fec5c1",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S4",
+   "kind": "news_yahoo_fed_tariffs",
+   "ref": "https://app.bigdata.com/documents/FF415A48F0FAB54D5C663EDC745FBDE0",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "10e18bcd899a2906cd332a547ee44e53e92cdee0f33b23805005a971c0d229f6",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S5",
+   "kind": "news_commerzbank_fed",
+   "ref": "https://app.bigdata.com/documents/8BA7D47789CFA1310B65796E931A379B",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "40c9e9b5d5faf4249ba55eb314d866a30aa1639f6afd6f8eff2eca6c7d00fee4",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S6",
+   "kind": "news_fed_speakers",
+   "ref": "https://app.bigdata.com/documents/2A63C9A5AD7E3EA584AC4DF6C2E66F27",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "358690fe2b43ff7c79bab1bdf7dc63c2d9385d4c08e3df15e1056167c3dc834b",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S7",
+   "kind": "news_bowman_core_pce",
+   "ref": "https://app.bigdata.com/documents/B325FED22835679DF4A1678E5892F0BD",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "8c0bda37fb8976ed512eadec75b555a5f2ba8ee6dff6e96b0d02005c6fe9df39",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S8",
+   "kind": "news_core_pce_consensus",
+   "ref": "https://app.bigdata.com/documents/2B88481E875FA777D27A8196D467C2E0",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "4ce43f771e6495f94352a947870575ca87cb6b507b67d909675f95d37eb81b6b",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S9",
+   "kind": "news_btc_etf_outflows",
+   "ref": "https://app.bigdata.com/documents/BB03F4A4AD01471D8BA78D3A0C3B957E",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "54ca6475a485424ed4d20885a10010b29aa0d4ac8822bbb5bb736ae117f04796",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S10",
+   "kind": "news_btc_etf_exodus",
+   "ref": "https://app.bigdata.com/documents/BC4C2D45895BA961CABE8390BED9D509",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "aa0152f7a8328d05a2ca6315e8a6f4f970489f4fa9bd64094f54e727da958a92",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S11",
+   "kind": "news_commodities_alliance",
+   "ref": "https://app.bigdata.com/documents/9C07EF0A20ACCBFBAEA06292F0235CAA",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "377eda08891f8295b3851015729bf432100b625f42977a6c9f4f0245c3b635aa",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S12",
+   "kind": "news_silver_below_40",
+   "ref": "https://app.bigdata.com/documents/DE1A799E74FAFA49BED415157D2717EF",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "b8f25ce376311f196662fffe1955b7ef5ea08d78c643df8c76fea590a9dd5083",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S13",
+   "kind": "news_dxy_mufg",
+   "ref": "https://app.bigdata.com/documents/038DB47A46FCB524E181CCD5A64BED6D",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "8e0b18a1a5200e1a78f7beedb10a7416b5a1129e1e7145df8a20bcbf574f7711",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S14",
+   "kind": "news_commerzbank_equities_copper",
+   "ref": "https://app.bigdata.com/documents/2C69E669567F80FC6FB5B2FA0CC54F26",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "ea8bc5b84295bd951b5d039dcd3a646d94cf8422e2ffaf321bab7673bacba7c9",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S15",
+   "kind": "news_ny_close_nov20",
+   "ref": "https://app.bigdata.com/documents/CB378A5D6E228702AB0FA6B1F5FD80D1",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "d55e71dd3718a3195b40e02eef05a7d7e5874cc53b4d3a4deb446939f626ab31",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S16",
+   "kind": "news_nov_brutal",
+   "ref": "https://app.bigdata.com/documents/6F967515BC18CD70A785123E9ECE8693",
+   "retrieved_at": "2026-11-26T18:25:32Z",
+   "content_sha256": "fe87853e83b8bacc8e4d3a54edf9cefebd57fc5184c84f14c19d1ca7c0e005e6",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S17",
+   "kind": "news_oil_hormuz",
+   "ref": "https://app.bigdata.com/documents/174384B65259D5C7E509859469959122",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "41adf9dfd69710dac0c1a089b9528871b1a24ad7bbddf91515b8d6e0254aefe0",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S18",
+   "kind": "news_oil_ing",
+   "ref": "https://app.bigdata.com/documents/4388EA4898F222C8D4D7AB6B486671A3",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "48d09468f566d9462f9922ced81d0f403d4cbd54898c2e0da2a8099e4c7819a8",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S19",
+   "kind": "news_eth_sol_xrp",
+   "ref": "https://app.bigdata.com/documents/4409F3CE8E2DF9574C1E1B4D92C7F108",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "c5e88ce53fcda278013997dedfc896440e87fb3be5908ab92f88d98c4e49c1d8",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S20",
+   "kind": "news_russell",
+   "ref": "https://app.bigdata.com/documents/9BED98AB40A7B3C0396DEB936E79B51A",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "63772a0c7ebb97ce582ce1589fcff3cd1b13a55e72091cb58c034ffb589d6a65",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S21",
+   "kind": "news_small_caps_hike_year",
+   "ref": "https://app.bigdata.com/documents/6A300AA6A5771D4ACEA843B2C9FF9895",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "29a14bb3bf9d13e7604925aa5af678eb472ab0fab7c7d58152d3b57d86a4848c",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S22",
+   "kind": "news_nfp_week_ahead",
+   "ref": "https://app.bigdata.com/documents/D950270B44E646F359CFA355B9044654",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "3a49f72f7f3fd6af7fd28a86a7c24838e248fd11fa8e5fad0af0a87dba11dab0",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S23",
+   "kind": "news_bloomberg_nfp",
+   "ref": "https://app.bigdata.com/documents/10C85EACDC0884690C57D12F3D568A12",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "cbf1bda00eec13522ac6b432558f02d57d5d99bed6e53f1a81a782570a000573",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S24",
+   "kind": "news_treasury_yields",
+   "ref": "https://app.bigdata.com/documents/9D2E05089363EA5F6D4AF2DB7B69669A",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "cadcf46eeca0414c6deaed866ca740a4837b0cdd4de02a20017ead643a92699c",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S25",
+   "kind": "news_precious_v_reversal",
+   "ref": "https://app.bigdata.com/documents/31FA221AFA36697FA6330D698EC55444",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "dd1db2462d0c168d0a3f2459ebce73f551c9ff218d64387cbe271c6654731e3e",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S26",
+   "kind": "news_treasuries_reuters",
+   "ref": "https://app.bigdata.com/documents/14BE3BD6BC10D009121DA23BB207E3B0",
+   "retrieved_at": "2026-11-26T18:26:49Z",
+   "content_sha256": "584409a53741ed53e85ed7955fc9112b9889b4e50defd470dfd3fdb76bc60d66",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S27",
+   "kind": "websearch_nfp_consensus",
+   "ref": "https://forexfundamentals.com/economic-calendar/nfp/2026-12-04",
+   "retrieved_at": "2026-11-26T18:26:00Z",
+   "content_sha256": "926528df43229c42e42d0ff057209f883557c4dbdbfde99d46944ca7d07908c6",
+   "influence": "context"
+  },
+  {
+   "source_id": "S28",
+   "kind": "websearch_china",
+   "ref": "https://tradingeconomics.com/china/stock-market/news/601338",
+   "retrieved_at": "2026-11-26T18:26:00Z",
+   "content_sha256": "865ec59f64db7de71a28cdc9defde44323362eaf60111a5913e17272ec85c8bb",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S29",
+   "kind": "websearch_trade_policy",
+   "ref": "https://globaltradealert.org/blog/gta-monthly-roundup-October-2026",
+   "retrieved_at": "2026-11-26T18:26:00Z",
+   "content_sha256": "e3fd67d70116ef8b0c37fe6ef1c99532ebe2f6ab9b53575b207d7ac4ccacf25c",
+   "influence": "context"
+  },
+  {
+   "source_id": "S30",
+   "kind": "websearch_copper",
+   "ref": "https://tradingeconomics.com/commodity/copper",
+   "retrieved_at": "2026-11-26T18:26:00Z",
+   "content_sha256": "5b0f54a3ebf8896c6712496b2484b0d8e3c0f152606636e64f3f2162e1df9c45",
+   "influence": "context"
+  }
+ ],
+ "regime": {
+  "call": "risk_off",
+  "axes": {
+   "growth": 1,
+   "inflation": 1,
+   "liquidity": -1,
+   "vol": 1
+  },
+  "confidence": 0.6,
+  "basis": "S3,S4,S24: Fed in a hiking cycle, Dec 9 25bp hike ~97% priced after core PCE 3.3% y/y vs 3.2% forecast (S8) and Q3 GDP 4.3%; S14,S15: AI-led equity correction, forced de-risking across EM, HY and metals; S13: 10y fell to ~4.80-4.86% and DXY ~103.7 as the bond bid returned; S17: Hormuz/Ras Tanura keeps oil bid but Brent ~90."
+ },
+ "tilts": [
+  {
+   "asset": "TLT",
+   "tilt": -1,
+   "horizon_days": 10,
+   "confidence": 0.35,
+   "source_ids": [
+    "S24",
+    "S26"
+   ],
+   "basis": "S24 hike cycle vs flight-to-quality bid; low conviction"
+  },
+  {
+   "asset": "SLV",
+   "tilt": 1,
+   "horizon_days": 5,
+   "confidence": 0.4,
+   "source_ids": [
+    "S2",
+    "S12"
+   ],
+   "basis": "S12,S2 washout bounce"
+  },
+  {
+   "asset": "BTCUSDT",
+   "tilt": 0,
+   "horizon_days": 5,
+   "confidence": 0.3,
+   "source_ids": [
+    "S9",
+    "S10",
+    "S1"
+   ],
+   "basis": "S9,S10 outflows vs S1 own-history short conditional hit only 15% (n=13); no trade"
+  }
+ ],
+ "calendar": [
+  {
+   "event_key": "US_ISM_MFG_2026-12-01",
+   "at": "2026-12-01T15:00:00Z",
+   "class": "scheduled.macro.pmi",
+   "source_ids": [
+    "S1"
+   ]
+  },
+  {
+   "event_key": "US_NFP_2026-12-04",
+   "at": "2026-12-04T13:30:00Z",
+   "class": "scheduled.macro.nfp",
+   "source_ids": [
+    "S1",
+    "S22"
+   ]
+  },
+  {
+   "event_key": "US_FOMC_2026-12-09",
+   "at": "2026-12-09T19:00:00Z",
+   "class": "scheduled.macro.rate_decision",
+   "source_ids": [
+    "S1",
+    "S3"
+   ]
+  },
+  {
+   "event_key": "US_CPI_2026-12-10",
+   "at": "2026-12-10T13:30:00Z",
+   "class": "scheduled.macro.cpi",
+   "source_ids": [
+    "S1",
+    "S2"
+   ]
+  },
+  {
+   "event_key": "US_PCE_2026-11-27",
+   "at": "2026-11-27T13:30:00Z",
+   "class": "scheduled.macro.cpi",
+   "source_ids": [
+    "S1",
+    "S24"
+   ],
+   "read": "packet lists 11-27 PCE rows as schedule_unconfirmed; S24/S3 show Oct PCE already printed Nov 25 (3.3% core y/y) and next PCE Dec 23: the 11-27 rows are stale, treat as digested"
+  }
+ ],
+ "events": [
+  {
+   "event_id": "EV-20261125-TARIFF",
+   "published_at": "2026-11-25T21:39:57Z",
+   "class": "unscheduled.policy.tariff",
+   "source_ids": [
+    "S4",
+    "S29"
+   ],
+   "direction": -1,
+   "magnitude": "medium",
+   "horizon_days": 5,
+   "confidence": 0.5,
+   "affected": [
+    "FXI",
+    "SPY"
+   ],
+   "summary": "USTR proposes tariffs on 14 partners incl China/Japan/EU; reaction muted, may not apply until 2027"
+  },
+  {
+   "event_id": "EV-20261125-HORMUZ",
+   "published_at": "2026-11-25T22:04:38Z",
+   "class": "unscheduled.geopolitical.conflict",
+   "source_ids": [
+    "S17",
+    "S18"
+   ],
+   "direction": 1,
+   "magnitude": "medium",
+   "horizon_days": 5,
+   "confidence": 0.5,
+   "affected": [
+    "USO"
+   ],
+   "summary": "Houthi strike on Ras Tanura and Hormuz tanker mines; Brent 90-95; Gulf exports recovering"
+  }
+ ],
+ "trades": [
+  {
+   "proposal": {
+    "symbol": "SLV",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 36.8,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 34.97,
+     "basis": "1.0 ATR below entry (below the washout low area)"
+    },
+    "tp": {
+     "level": 39.55,
+     "basis": "1.5 ATR above entry, near the SMA20-region retrace",
+     "p_hit": 0.38
+    },
+    "expected_r_net": 0.2,
+    "thesis": "Washout bounce: SLV -14% in 5 sessions, -3.5 ATR from SMA20 and -6.9 ATR from SMA50, silver -67% from high and liquidity-driven selling; own-history: same 1.0/1.5 ATR geometry hit TP before SL 36% unconditionally and 45% (n=38) when this oversold; mean gross R +0.16 / +0.51.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.38,
+   "catalyst": "regime: hot-inflation Fed hike cycle with forced de-risking; oversold metals vs a Dec 9 FOMC that is already ~97% priced",
+   "invalidation": "SLV closes below 34.97 or 10y yield back above 5.05% with DXY above 104.6",
+   "forecast_ids": [
+    "F-SLV-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S11",
+    "S12",
+    "S25"
+   ],
+   "management": {
+    "design": "Counter-trend 1-5 day rebound trade into thin holiday liquidity; the edge is the extreme oversold state, not a macro view. Entry limit slightly under last close so a drift lower fills us; stop 1 ATR; TP 1.5 ATR inside the venue cap.",
+    "expected_path": "Chop 1-2 days around entry, then retrace toward 39-39.5 if equities stabilise and yields stay near 4.8%.",
+    "watch_for": [
+     {
+      "signal": "10y Treasury yield back above 5.0% would reignite the real-yield headwind",
+      "source_ids": [
+       "S13",
+       "S24"
+      ]
+     },
+     {
+      "signal": "daily close below the stop area",
+      "source_ids": [
+       "S12"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 35.0
+      }
+     },
+     {
+      "signal": "Dec 4 NFP 13:30Z hot (> +150K) with AHE > 0.4%: hike-path repricing",
+      "source_ids": [
+       "S22",
+       "S23"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM manufacturing",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close above 38.6 (about +1 ATR from entry): trail the stop to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 38.6
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 35.0",
+      "check": {
+       "kind": "close_below",
+       "level": 35.0
+      }
+     }
+    ],
+    "do_not": [
+     "do not add to the position on a lower low",
+     "do not hold through the Dec 9 FOMC if the position is not at least at breakeven"
+    ],
+    "thesis_invalidated_by": "weekly close below 34 with gold also making new lows below GLD 317"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "FXI",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 31.2,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 30.7,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 31.96,
+     "basis": "1.5 ATR above entry (prior-week breakdown level)",
+     "p_hit": 0.38
+    },
+    "expected_r_net": 0.2,
+    "thesis": "China large-cap mean reversion: -3.6 ATR from SMA20 and -2.1 ATR in 5d after the AI/chip and tariff sell-off; own-history same geometry hit TP 34% unconditionally and 41% (n=27) conditional; mean gross R +0.15 / +0.57.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.38,
+   "catalyst": "regime: global de-risking washout; new US tariff proposal on China already known and muted in reaction",
+   "invalidation": "FXI closes below 30.7 or a tariff action on China larger than the proposed one",
+   "forecast_ids": [
+    "F-FXI-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S4",
+    "S28",
+    "S29"
+   ],
+   "management": {
+    "design": "Oversold bounce in a name with a known, partly priced negative (tariff proposal). Not a China view; one-week rebound.",
+    "expected_path": "Two-day base, then drift to 31.9-32.0.",
+    "watch_for": [
+     {
+      "signal": "formal tariff announcement beyond the proposal on China",
+      "source_ids": [
+       "S4",
+       "S29"
+      ]
+     },
+     {
+      "signal": "Hang Seng / A-share AI-chip weakness resuming",
+      "source_ids": [
+       "S28"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close above 31.7: trail to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 31.7
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 30.7",
+      "check": {
+       "kind": "close_below",
+       "level": 30.7
+      }
+     }
+    ],
+    "do_not": [
+     "do not average down",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "formal escalation of US tariffs/export controls on China"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "GLD",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 326.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 317.6,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 338.6,
+     "basis": "1.5 ATR above entry",
+     "p_hit": 0.34
+    },
+    "expected_r_net": 0.1,
+    "thesis": "Gold -9% last week, -3.2 ATR from SMA20 and -5.2 from SMA50 with the V-shaped reversal Nov 25 (S25) signalling hiking-cycle pricing is mature; own-history 36% unconditional, 36% (n=28) conditional; mean gross R +0.18 / -0.02. Weakest of the oversold longs because conditional edge is absent and the Dec hike is a headwind.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.34,
+   "catalyst": "regime: oversold metals; 2026-12-09 FOMC priced",
+   "invalidation": "GLD closes below 317.6; XAU through 3,400",
+   "forecast_ids": [
+    "F-GLD-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S3",
+    "S11",
+    "S25"
+   ],
+   "management": {
+    "design": "Same washout logic as SLV with lower p_hit; keep as the lowest-conviction metals expression (correlated with SLV).",
+    "expected_path": "Slow grind back to 335-338 if yields hold 4.8%.",
+    "watch_for": [
+     {
+      "signal": "HSBC flags 3,400 gold / ~GLD 317 as the next downside marker",
+      "source_ids": [
+       "S3"
+      ]
+     },
+     {
+      "signal": "close below stop",
+      "source_ids": [
+       "S3"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 317.6
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "close above 334.5: trail to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 334.5
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 318",
+      "check": {
+       "kind": "close_below",
+       "level": 318.0
+      }
+     }
+    ],
+    "do_not": [
+     "do not size GLD and SLV as independent trades",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "gold below 3,400 on a daily close"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "SPY",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 714.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 698.7,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 737.0,
+     "basis": "1.5 ATR above entry",
+     "p_hit": 0.32
+    },
+    "expected_r_net": 0.03,
+    "thesis": "Equity dip-buy: SPY -1.5 ATR from SMA20 after the AI rout (Nasdaq intraday -4.6% reversed to -0.6%); own-history 29% unconditional, 36% (n=104) conditional; mean gross R +0.08 / +0.05. Thin edge; lowest expected R of the five.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.32,
+   "catalyst": "regime: AI-led correction with dip-buying and a hike already priced",
+   "invalidation": "SPY closes below 698.7 or a credit-spread blowout / chipmaker downgrade cascade",
+   "forecast_ids": [
+    "F-SPY-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S14",
+    "S15",
+    "S16"
+   ],
+   "management": {
+    "design": "Bounce trade with tight edge; TP is the 1.5 ATR retrace of the last leg. Exists to record a low judge_prior on a thesis-free index day.",
+    "expected_path": "Volatile, range 700-725 then retrace to 735.",
+    "watch_for": [
+     {
+      "signal": "AI capex / chipmaker credit headlines (rating review)",
+      "source_ids": [
+       "S14"
+      ]
+     },
+     {
+      "signal": "VIX above 30 persisting",
+      "source_ids": [
+       "S19"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-11-27 half-day",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "close above 730: trail to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 730.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 699",
+      "check": {
+       "kind": "close_below",
+       "level": 699.0
+      }
+     }
+    ],
+    "do_not": [
+     "do not add after a gap-down",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "S&P 500 closes below 6,700-equivalent SPY 690"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "TLT",
+    "venue_class": "etf",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 82.5,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 83.3,
+     "basis": "1.0 ATR above entry"
+    },
+    "tp": {
+     "level": 81.3,
+     "basis": "1.5 ATR below entry",
+     "p_hit": 0.3
+    },
+    "expected_r_net": 0.01,
+    "thesis": "Fade the bond rally: TLT +2.6 ATR in 5 days to 1.5 ATR above SMA20 (10y 4.80-4.86%, 3-month low) into a Dec hike priced ~97% with hot core PCE; own-history short geometry 32% unconditional and conditional (n=135); mean gross R +0.06. Expected net R is near zero.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.3,
+   "catalyst": "regime: Fed in hiking cycle (core PCE 3.3% vs 3.2%); bond rally is risk-off driven and reversible; 2026-12-04 NFP and 12-10 CPI",
+   "invalidation": "TLT closes above 83.3 or core data soften enough to price an early end to hikes",
+   "forecast_ids": [
+    "F-TLT-ptp",
+    "F-core_cpi_mom"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S24",
+    "S26",
+    "S6"
+   ],
+   "management": {
+    "design": "Short a risk-off-driven duration bounce; the thesis is that inflation, not equities, sets the hike path. Weak edge, recorded as such.",
+    "expected_path": "Fade back to 81.5-82 as equities stabilise.",
+    "watch_for": [
+     {
+      "signal": "equity stabilisation removes the flight-to-quality bid",
+      "source_ids": [
+       "S24",
+       "S26"
+      ]
+     },
+     {
+      "signal": "Dec 4 NFP and Dec 10 CPI (own core CPI nowcast 0.27% m/m vs naive 0.30)",
+      "source_ids": [
+       "S2",
+       "S22"
+      ]
+     },
+     {
+      "signal": "close above stop",
+      "source_ids": [
+       "S24"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 83.3
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC",
+     "2026-12-10T13:30:00Z CPI"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close below 81.9: trail to entry",
+      "check": {
+       "kind": "close_below",
+       "level": 81.9
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close above 83.3",
+      "check": {
+       "kind": "close_above",
+       "level": 83.3
+      }
+     }
+    ],
+    "do_not": [
+     "do not hold through FOMC if AI selloff re-intensifies",
+     "do not add into a flight-to-quality day"
+    ],
+    "thesis_invalidated_by": "10y closes below 4.6% (market pricing an early end to the hike cycle)"
+   }
+  }
+ ],
+ "forecasts": [
+  {
+   "forecast_id": "F-continuing_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-continuing-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "CCSA",
+    "transform": "level",
+    "period": "2026-11-21",
+    "naive_point": 1697000.0,
+    "unit": "claims"
+   },
+   "own_point": 1694291.772653,
+   "interval": {
+    "lo": 1655747.183317,
+    "hi": 1732836.361989,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CCSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-initial_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-initial-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "ICSA",
+    "transform": "level",
+    "period": "2026-11-28",
+    "naive_point": 189000.0,
+    "unit": "claims"
+   },
+   "own_point": 187470.748599,
+   "interval": {
+    "lo": 176152.0744,
+    "hi": 198789.422797,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED ICSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-average_hourly_earnings_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-average-hourly-earnings-mom-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "CES0500000003",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.369783,
+    "unit": "% m/m"
+   },
+   "own_point": 0.25054,
+   "interval": {
+    "lo": 0.085989,
+    "hi": 0.415091,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CES0500000003 (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-nfp",
+   "target": {
+    "kind": "release",
+    "key": "evt-nfp-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "PAYEMS",
+    "transform": "diff",
+    "period": "2026-11-01",
+    "naive_point": 165.0,
+    "unit": "thousands, m/m change"
+   },
+   "own_point": 138.718948,
+   "interval": {
+    "lo": -11.702296,
+    "hi": 289.140193,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED PAYEMS (diff), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found; only single-forecaster NFP estimates 76K and 80K (S22,S23), not a consensus",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-unemployment_rate",
+   "target": {
+    "kind": "release",
+    "key": "evt-unemployment-rate-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "UNRATE",
+    "transform": "level",
+    "period": "2026-11-01",
+    "naive_point": 4.1,
+    "unit": "%"
+   },
+   "own_point": 4.149111,
+   "interval": {
+    "lo": 3.987974,
+    "hi": 4.310248,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED UNRATE (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-core_cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-core-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPILFESL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.296256,
+    "unit": "% m/m"
+   },
+   "own_point": 0.273985,
+   "interval": {
+    "lo": 0.149771,
+    "hi": 0.398199,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPILFESL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPIAUCSL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.350285,
+    "unit": "% m/m"
+   },
+   "own_point": 0.300926,
+   "interval": {
+    "lo": 0.036715,
+    "hi": 0.565137,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPIAUCSL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com and web (S22, S23, S27) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-SLV-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "SLV_long_36.8",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.38,
+   "interval": {
+    "lo": 0.26,
+    "hi": 0.5,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-FXI-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "FXI_long_31.2",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.38,
+   "interval": {
+    "lo": 0.26,
+    "hi": 0.5,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-GLD-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "GLD_long_326.0",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.34,
+   "interval": {
+    "lo": 0.22,
+    "hi": 0.46,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-SPY-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "SPY_long_714.0",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.32,
+   "interval": {
+    "lo": 0.2,
+    "hi": 0.44,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-TLT-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "TLT_short_82.5",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.3,
+   "interval": {
+    "lo": 0.18,
+    "hi": 0.42,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T182604Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  }
+ ],
+ "informs": [],
+ "no_trade_reason": null,
+ "notes": {
+  "parts_not_measured": {
+   "prices": "partial: 181/182 symbols measured",
+   "cot": "stale: 7 rows, 133 days to 1756 days old; not used",
+   "tradability": "partial: venue route /api/bot/tradable returned HTTP 404; tradability evidence is roster membership only (rostered_on)",
+   "crypto_funding": "could_not_look: Binance/Bybit funding geo-blocked from the session container"
+  },
+  "data_gaps": [
+   "consensus for NFP, AHE, unemployment, claims, core CPI: none published/found, so gap_z is null for every release forecast; single-forecaster NFP estimates 76K-80K vs own 138.7K (model RMSE 117 vs naive 136, a thin edge)",
+   "11-27 PCE calendar rows were schedule_unconfirmed and stale (PCE printed Nov 25)",
+   "only 2 packet calendar events carry a consensus (goods_trade_balance, wholesale_inventories)",
+   "calendar rows for jobless claims 11-26 are schedule_unconfirmed and observed 17.7 days ago",
+   "no copper (CPER) bars in the panel; no per-symbol news search for SOL/XRP/ADA/AVAX/MES/MGC/MHG/IWM/QQQ beyond the cross-asset and crypto/small-cap searches",
+   "Outcome record empty: judge_priors are not calibrated on desk history (n=0); they use own-history geometry rates shrunk toward unconditional"
+  ],
+  "btc_short_rejected": "BTCUSDT short 61500/64600/56860 conditional TP rate 0.154 (n=13), unconditional 0.247, mean gross R 0.004 / -0.36: not proposed"
+ },
+ "training": {
+  "train_eligible": true,
+  "gate_eligible": false,
+  "label_clean_from": "2026-06-30"
+ }
+}
