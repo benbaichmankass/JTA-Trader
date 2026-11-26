@@ -1,0 +1,756 @@
+{
+ "schema": "desk_macro_analysis/1",
+ "analysis_id": "DMA-20261126T161812Z",
+ "computed_at": "2026-11-26T16:18:12Z",
+ "packet_id": "DMP-20261126T1613Z",
+ "packet_sha": "09eaf5e9a85d16cfee9ca74446bd1ae7b15f3cd1fea792ca42b8f06c44448a31",
+ "code_sha": "77c201c6e1bc153dcf9d76a50157ba7f0cba45a5a731be55d14a8d118b5a957c",
+ "nowcasts": {
+  "read_state": "measured",
+  "releases": {
+   "continuing_jobless_claims": {
+    "read_state": "measured",
+    "release": "Continuing Jobless Claims",
+    "release_at": "2026-12-03T13:30:00Z",
+    "event_id": "evt-continuing-jobless-claims-2026-12-03-us",
+    "target_period": "2026-11-21",
+    "series": "CCSA",
+    "transform": "level",
+    "unit": "claims",
+    "last_obs": {
+     "date": "2026-11-14",
+     "value": 1697000.0
+    },
+    "own_point": 1694291.772653,
+    "interval_80": [
+     1655747.183317,
+     1732836.361989
+    ],
+    "naive_point": 1697000.0,
+    "model_rmse": 30075.366211,
+    "naive_rmse": 30392.798855,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED CCSA (level), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-continuing_jobless_claims",
+     "target": {
+      "kind": "release",
+      "key": "evt-continuing-jobless-claims-2026-12-03-us",
+      "resolves_at": "2026-12-03T13:30:00Z",
+      "series": "CCSA",
+      "transform": "level",
+      "period": "2026-11-21",
+      "naive_point": 1697000.0,
+      "unit": "claims"
+     },
+     "own_point": 1694291.772653,
+     "interval": {
+      "lo": 1655747.183317,
+      "hi": 1732836.361989,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED CCSA (level), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "initial_jobless_claims": {
+    "read_state": "measured",
+    "release": "Initial Jobless Claims",
+    "release_at": "2026-12-03T13:30:00Z",
+    "event_id": "evt-initial-jobless-claims-2026-12-03-us",
+    "target_period": "2026-11-28",
+    "series": "ICSA",
+    "transform": "level",
+    "unit": "claims",
+    "last_obs": {
+     "date": "2026-11-21",
+     "value": 189000.0
+    },
+    "own_point": 187470.748599,
+    "interval_80": [
+     176152.0744,
+     198789.422797
+    ],
+    "naive_point": 189000.0,
+    "model_rmse": 8831.674624,
+    "naive_rmse": 8875.684637,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED ICSA (level), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-initial_jobless_claims",
+     "target": {
+      "kind": "release",
+      "key": "evt-initial-jobless-claims-2026-12-03-us",
+      "resolves_at": "2026-12-03T13:30:00Z",
+      "series": "ICSA",
+      "transform": "level",
+      "period": "2026-11-28",
+      "naive_point": 189000.0,
+      "unit": "claims"
+     },
+     "own_point": 187470.748599,
+     "interval": {
+      "lo": 176152.0744,
+      "hi": 198789.422797,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED ICSA (level), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "average_hourly_earnings_mom": {
+    "read_state": "measured",
+    "release": "Average Hourly Earnings (MoM)",
+    "release_at": "2026-12-04T13:30:00Z",
+    "event_id": "evt-average-hourly-earnings-mom-2026-12-04-us",
+    "target_period": "2026-11-01",
+    "series": "CES0500000003",
+    "transform": "pct",
+    "unit": "% m/m",
+    "last_obs": {
+     "date": "2026-10-01",
+     "value": 0.369783
+    },
+    "own_point": 0.25054,
+    "interval_80": [
+     0.085989,
+     0.415091
+    ],
+    "naive_point": 0.369783,
+    "model_rmse": 0.128395,
+    "naive_rmse": 0.18498,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED CES0500000003 (pct), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-average_hourly_earnings_mom",
+     "target": {
+      "kind": "release",
+      "key": "evt-average-hourly-earnings-mom-2026-12-04-us",
+      "resolves_at": "2026-12-04T13:30:00Z",
+      "series": "CES0500000003",
+      "transform": "pct",
+      "period": "2026-11-01",
+      "naive_point": 0.369783,
+      "unit": "% m/m"
+     },
+     "own_point": 0.25054,
+     "interval": {
+      "lo": 0.085989,
+      "hi": 0.415091,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED CES0500000003 (pct), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "nfp": {
+    "read_state": "measured",
+    "release": "Nonfarm Payrolls",
+    "release_at": "2026-12-04T13:30:00Z",
+    "event_id": "evt-nfp-2026-12-04-us",
+    "target_period": "2026-11-01",
+    "series": "PAYEMS",
+    "transform": "diff",
+    "unit": "thousands, m/m change",
+    "last_obs": {
+     "date": "2026-10-01",
+     "value": 165.0
+    },
+    "own_point": 138.718948,
+    "interval_80": [
+     -11.702296,
+     289.140193
+    ],
+    "naive_point": 165.0,
+    "model_rmse": 117.369885,
+    "naive_rmse": 136.367151,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED PAYEMS (diff), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-nfp",
+     "target": {
+      "kind": "release",
+      "key": "evt-nfp-2026-12-04-us",
+      "resolves_at": "2026-12-04T13:30:00Z",
+      "series": "PAYEMS",
+      "transform": "diff",
+      "period": "2026-11-01",
+      "naive_point": 165.0,
+      "unit": "thousands, m/m change"
+     },
+     "own_point": 138.718948,
+     "interval": {
+      "lo": -11.702296,
+      "hi": 289.140193,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED PAYEMS (diff), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "unemployment_rate": {
+    "read_state": "measured",
+    "release": "Unemployment Rate",
+    "release_at": "2026-12-04T13:30:00Z",
+    "event_id": "evt-unemployment-rate-2026-12-04-us",
+    "target_period": "2026-11-01",
+    "series": "UNRATE",
+    "transform": "level",
+    "unit": "%",
+    "last_obs": {
+     "date": "2026-10-01",
+     "value": 4.1
+    },
+    "own_point": 4.149111,
+    "interval_80": [
+     3.987974,
+     4.310248
+    ],
+    "naive_point": 4.1,
+    "model_rmse": 0.125731,
+    "naive_rmse": 0.113039,
+    "beats_naive_backtest": false,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED UNRATE (level), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-unemployment_rate",
+     "target": {
+      "kind": "release",
+      "key": "evt-unemployment-rate-2026-12-04-us",
+      "resolves_at": "2026-12-04T13:30:00Z",
+      "series": "UNRATE",
+      "transform": "level",
+      "period": "2026-11-01",
+      "naive_point": 4.1,
+      "unit": "%"
+     },
+     "own_point": 4.149111,
+     "interval": {
+      "lo": 3.987974,
+      "hi": 4.310248,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED UNRATE (level), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "core_cpi_mom": {
+    "read_state": "measured",
+    "release": "Consumer Price Index ex Food & Energy (MoM)",
+    "release_at": "2026-12-10T13:30:00Z",
+    "event_id": "evt-core-cpi-mom-2026-12-10-us",
+    "target_period": "2026-11-01",
+    "series": "CPILFESL",
+    "transform": "pct",
+    "unit": "% m/m",
+    "last_obs": {
+     "date": "2026-10-01",
+     "value": 0.296256
+    },
+    "own_point": 0.273985,
+    "interval_80": [
+     0.149771,
+     0.398199
+    ],
+    "naive_point": 0.296256,
+    "model_rmse": 0.096921,
+    "naive_rmse": 0.111655,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED CPILFESL (pct), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-core_cpi_mom",
+     "target": {
+      "kind": "release",
+      "key": "evt-core-cpi-mom-2026-12-10-us",
+      "resolves_at": "2026-12-10T13:30:00Z",
+      "series": "CPILFESL",
+      "transform": "pct",
+      "period": "2026-11-01",
+      "naive_point": 0.296256,
+      "unit": "% m/m"
+     },
+     "own_point": 0.273985,
+     "interval": {
+      "lo": 0.149771,
+      "hi": 0.398199,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED CPILFESL (pct), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   },
+   "cpi_mom": {
+    "read_state": "measured",
+    "release": "Consumer Price Index (MoM)",
+    "release_at": "2026-12-10T13:30:00Z",
+    "event_id": "evt-cpi-mom-2026-12-10-us",
+    "target_period": "2026-11-01",
+    "series": "CPIAUCSL",
+    "transform": "pct",
+    "unit": "% m/m",
+    "last_obs": {
+     "date": "2026-10-01",
+     "value": 0.350285
+    },
+    "own_point": 0.300926,
+    "interval_80": [
+     0.036715,
+     0.565137
+    ],
+    "naive_point": 0.350285,
+    "model_rmse": 0.206157,
+    "naive_rmse": 0.244509,
+    "beats_naive_backtest": true,
+    "n_backtest": 36,
+    "consensus": null,
+    "own_minus_consensus": null,
+    "method": "seasonal_ar_ols_v1 on FRED CPIAUCSL (pct), walk-forward RMSE interval",
+    "pit_basis": "current_vintage",
+    "brief_forecast": {
+     "forecast_id": "F-cpi_mom",
+     "target": {
+      "kind": "release",
+      "key": "evt-cpi-mom-2026-12-10-us",
+      "resolves_at": "2026-12-10T13:30:00Z",
+      "series": "CPIAUCSL",
+      "transform": "pct",
+      "period": "2026-11-01",
+      "naive_point": 0.350285,
+      "unit": "% m/m"
+     },
+     "own_point": 0.300926,
+     "interval": {
+      "lo": 0.036715,
+      "hi": 0.565137,
+      "level": 0.8
+     },
+     "method": "seasonal_ar_ols_v1 on FRED CPIAUCSL (pct), walk-forward RMSE interval",
+     "inputs": {
+      "analysis_ref": "DMA-20261126T161812Z"
+     },
+     "consensus": null,
+     "own_minus_consensus": null
+    }
+   }
+  }
+ },
+ "rv_screen": {
+  "read_state": "measured",
+  "population": "124 panel symbols with 61 closes",
+  "method": "5d residual vs benchmark beta fit on the prior 55 daily log returns; z = resid_5d / (sigma sqrt 5)",
+  "rich": [
+   {
+    "symbol": "XBI",
+    "benchmark": "SPY",
+    "beta": 1.3916,
+    "resid_5d_pct": 10.8111,
+    "z": 3.022
+   },
+   {
+    "symbol": "IBB",
+    "benchmark": "SPY",
+    "beta": 1.0741,
+    "resid_5d_pct": 7.8958,
+    "z": 2.757
+   },
+   {
+    "symbol": "IEF",
+    "benchmark": "SPY",
+    "beta": -0.0137,
+    "resid_5d_pct": 1.6486,
+    "z": 1.88
+   },
+   {
+    "symbol": "GOVT",
+    "benchmark": "SPY",
+    "beta": -0.0118,
+    "resid_5d_pct": 1.1729,
+    "z": 1.832
+   },
+   {
+    "symbol": "BIV",
+    "benchmark": "SPY",
+    "beta": 0.0086,
+    "resid_5d_pct": 1.3446,
+    "z": 1.768
+   },
+   {
+    "symbol": "TLT",
+    "benchmark": "SPY",
+    "beta": 0.0498,
+    "resid_5d_pct": 2.7474,
+    "z": 1.767
+   },
+   {
+    "symbol": "BNDX",
+    "benchmark": "SPY",
+    "beta": 0.0479,
+    "resid_5d_pct": 0.8346,
+    "z": 1.76
+   },
+   {
+    "symbol": "IEI",
+    "benchmark": "SPY",
+    "beta": -0.0295,
+    "resid_5d_pct": 0.9939,
+    "z": 1.738
+   },
+   {
+    "symbol": "AGG",
+    "benchmark": "SPY",
+    "beta": 0.0218,
+    "resid_5d_pct": 1.2187,
+    "z": 1.734
+   },
+   {
+    "symbol": "IGIB",
+    "benchmark": "SPY",
+    "beta": 0.0408,
+    "resid_5d_pct": 1.2603,
+    "z": 1.645
+   },
+   {
+    "symbol": "TIP",
+    "benchmark": "SPY",
+    "beta": -0.0149,
+    "resid_5d_pct": 1.0479,
+    "z": 1.642
+   },
+   {
+    "symbol": "BND",
+    "benchmark": "SPY",
+    "beta": 0.022,
+    "resid_5d_pct": 1.1449,
+    "z": 1.636
+   }
+  ],
+  "cheap": [
+   {
+    "symbol": "FB",
+    "benchmark": "SPY",
+    "beta": 0.023,
+    "resid_5d_pct": -4.234,
+    "z": -11.821
+   },
+   {
+    "symbol": "UPRO",
+    "benchmark": "SPY",
+    "beta": 3.041,
+    "resid_5d_pct": -1.1604,
+    "z": -3.535
+   },
+   {
+    "symbol": "SPXU",
+    "benchmark": "SPY",
+    "beta": -2.9289,
+    "resid_5d_pct": -1.7936,
+    "z": -3.226
+   },
+   {
+    "symbol": "SSO",
+    "benchmark": "SPY",
+    "beta": 2.0226,
+    "resid_5d_pct": -0.5419,
+    "z": -3.003
+   },
+   {
+    "symbol": "SPXL",
+    "benchmark": "SPY",
+    "beta": 3.0728,
+    "resid_5d_pct": -1.032,
+    "z": -2.82
+   },
+   {
+    "symbol": "SPXS",
+    "benchmark": "SPY",
+    "beta": -2.9121,
+    "resid_5d_pct": -1.6615,
+    "z": -2.709
+   },
+   {
+    "symbol": "INFO",
+    "benchmark": "SPY",
+    "beta": 0.6174,
+    "resid_5d_pct": -3.8795,
+    "z": -2.259
+   },
+   {
+    "symbol": "SVXY",
+    "benchmark": "SPY",
+    "beta": 2.6977,
+    "resid_5d_pct": -3.8279,
+    "z": -1.434
+   },
+   {
+    "symbol": "SOXL",
+    "benchmark": "SPY",
+    "beta": 9.2278,
+    "resid_5d_pct": -22.2411,
+    "z": -1.433
+   },
+   {
+    "symbol": "TQQQ",
+    "benchmark": "SPY",
+    "beta": 4.5244,
+    "resid_5d_pct": -5.4209,
+    "z": -1.412
+   },
+   {
+    "symbol": "TZA",
+    "benchmark": "SPY",
+    "beta": -2.8871,
+    "resid_5d_pct": -5.7436,
+    "z": -1.341
+   },
+   {
+    "symbol": "QLD",
+    "benchmark": "SPY",
+    "beta": 2.9861,
+    "resid_5d_pct": -3.1373,
+    "z": -1.215
+   }
+  ]
+ },
+ "priors": {
+  "read_state": "measured",
+  "candidates": [
+   {
+    "symbol": "ETHUSDT",
+    "side": "short",
+    "entry": 1750,
+    "stop": 1870,
+    "tp": 1590,
+    "horizon_bars": 10,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.529,
+     "stop_atr": 1.091,
+     "tp_atr": 1.455
+    },
+    "all": {
+     "n": 536,
+     "p_tp": 0.3787,
+     "mean_r_gross": 0.0561
+    },
+    "conditional": {
+     "n": 28,
+     "p_tp": 0.3214,
+     "mean_r_gross": -0.0004
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "BTCUSDT",
+    "side": "short",
+    "entry": 62750,
+    "stop": 65850,
+    "tp": 57000,
+    "horizon_bars": 10,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.75,
+     "stop_atr": 1.002,
+     "tp_atr": 1.859
+    },
+    "all": {
+     "n": 433,
+     "p_tp": 0.2587,
+     "mean_r_gross": 0.0066
+    },
+    "conditional": {
+     "n": 11,
+     "p_tp": 0.3636,
+     "mean_r_gross": 0.6505
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "QQQ",
+    "side": "short",
+    "entry": 645,
+    "stop": 667,
+    "tp": 605,
+    "horizon_bars": 8,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.521,
+     "stop_atr": 1.035,
+     "tp_atr": 1.881
+    },
+    "all": {
+     "n": 562,
+     "p_tp": 0.2509,
+     "mean_r_gross": -0.1173
+    },
+    "conditional": {
+     "n": 103,
+     "p_tp": 0.3204,
+     "mean_r_gross": 0.0495
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "TLT",
+    "side": "long",
+    "entry": 82.0,
+    "stop": 80.9,
+    "tp": 84.0,
+    "horizon_bars": 10,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": -0.29,
+     "stop_atr": 1.387,
+     "tp_atr": 2.522
+    },
+    "all": {
+     "n": 592,
+     "p_tp": 0.2078,
+     "mean_r_gross": -0.0766
+    },
+    "conditional": {
+     "n": 145,
+     "p_tp": 0.2069,
+     "mean_r_gross": 0.0044
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "FXI",
+    "side": "short",
+    "entry": 31.8,
+    "stop": 32.6,
+    "tp": 30.3,
+    "horizon_bars": 8,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.986,
+     "stop_atr": 1.578,
+     "tp_atr": 2.958
+    },
+    "all": {
+     "n": 315,
+     "p_tp": 0.1492,
+     "mean_r_gross": -0.0015
+    },
+    "conditional": {
+     "n": 16,
+     "p_tp": 0.0625,
+     "mean_r_gross": -0.4554
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "XBI",
+    "side": "short",
+    "entry": 159.0,
+    "stop": 165.0,
+    "tp": 148.0,
+    "horizon_bars": 8,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.449,
+     "stop_atr": 1.109,
+     "tp_atr": 2.033
+    },
+    "all": {
+     "n": 629,
+     "p_tp": 0.221,
+     "mean_r_gross": -0.0538
+    },
+    "conditional": {
+     "n": 190,
+     "p_tp": 0.2316,
+     "mean_r_gross": -0.0018
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   },
+   {
+    "symbol": "GLD",
+    "side": "short",
+    "entry": 335.0,
+    "stop": 345.0,
+    "tp": 315.0,
+    "horizon_bars": 10,
+    "good_till_bars": 3,
+    "read_state": "measured",
+    "geometry_atr": {
+     "entry_off_atr": 0.896,
+     "stop_atr": 1.188,
+     "tp_atr": 2.376
+    },
+    "all": {
+     "n": 377,
+     "p_tp": 0.1645,
+     "mean_r_gross": -0.2535
+    },
+    "conditional": {
+     "n": 14,
+     "p_tp": 0.1429,
+     "mean_r_gross": -0.1155
+    },
+    "n_bars": 1000,
+    "method": "own daily history, same ATR geometry, stop-first on a both-touch bar, gross of costs"
+   }
+  ]
+ },
+ "analysis_sha": "3dcec98c67acd594c35e62d8010cf380719806ebfab29e00e9258f2920a42b97"
+}

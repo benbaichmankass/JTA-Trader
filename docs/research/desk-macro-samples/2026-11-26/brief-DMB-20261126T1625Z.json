@@ -1,0 +1,974 @@
+{
+ "schema": "desk_macro_brief/1",
+ "brief_id": "DMB-20261126T1625Z",
+ "judged_at": "2026-11-26T16:25:00Z",
+ "info_cutoff_at": "2026-11-26T16:18:12Z",
+ "model": "opus-tier",
+ "skill_sha": "sample",
+ "packet_sha": "09eaf5e9a85d16cfee9ca74446bd1ae7b15f3cd1fea792ca42b8f06c44448a31",
+ "packet_path": "docs/research/desk-macro-samples/2026-11-26/20261126T1613Z.json",
+ "fetch_paths": [],
+ "analysis_paths": [
+  "docs/research/desk-macro-samples/2026-11-26/analysis-20261126T161812Z.json"
+ ],
+ "sources": [
+  {
+   "source_id": "S1",
+   "kind": "desk_packet",
+   "ref": "docs/research/desk-macro-samples/2026-11-26/20261126T1613Z.json",
+   "retrieved_at": "2026-11-26T16:13:37Z",
+   "content_sha256": "09eaf5e9a85d16cfee9ca74446bd1ae7b15f3cd1fea792ca42b8f06c44448a31",
+   "influence": "decisive",
+   "summary": "packet: rostered panel (183/184 measured), calendar, COT (stale), valuation, crypto OI, screen, tradability"
+  },
+  {
+   "source_id": "S2",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/5B575FFD6D92B0BC6D93D857F59A7F07?cnum=1",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "1f2c7e8ec3671999e34643e1cb5b8c389d3904afa310b9043ccbc4e681109bc9",
+   "influence": "decisive",
+   "summary": "BTC -21.7% MTD; ~$5.1bn spot-ETF outflows in 30d; stablecoin supply -5.6%"
+  },
+  {
+   "source_id": "S3",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/B55D8C2C2893D74035C56EC0072CDABD?cnum=1",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "6402a71ec44378c53b9ddcadc07b633efbebbf1b311e9accd2b88acfdac9bd76",
+   "influence": "supporting",
+   "summary": "Glassnode: 11.6m BTC at a loss; 7 straight weekly losses; low ~55,147"
+  },
+  {
+   "source_id": "S4",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/494D1DD7C12EEFC5A258F63FC7DACBDF?cnum=1",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "86cb445c4ec5465092fc199e225cb8f4e8b684d1bbae20f7583be10e91d4ad4b",
+   "influence": "decisive",
+   "summary": "Q3 GDP 4.3%; core PCE 3.3% y/y vs 3.2% exp"
+  },
+  {
+   "source_id": "S5",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/F75647A9A983031042865763A785F60F?cnum=3",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "cbc4972bce757c77996d63604576832e128820b39098a35f3d2ead008c714670",
+   "influence": "decisive",
+   "summary": "FedWatch 97.5% +25bp Dec 9; Williams: consecutive hikes if needed"
+  },
+  {
+   "source_id": "S6",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/7281008A8FE918DFA463675E2A331058?cnum=1",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "c574eac36527722a9fb7ab9293de822cbcc9beb38679894a1942caff9359e824",
+   "influence": "supporting",
+   "summary": "11-25 close: S&P -0.3%, Nasdaq -0.6%; 10y 4.87% (-3.6bp) on hot data"
+  },
+  {
+   "source_id": "S9",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/F12131974E1EB2E8014DA14C9B58A93A?cnum=20",
+   "retrieved_at": "2026-11-26T15:41:02Z",
+   "content_sha256": "7cae3fb0acfa98d3b219027c859c87778093a51f97cf1f9cba3f4aebe3524720",
+   "influence": "supporting",
+   "summary": "AI-stock selloff forcing liquidation elsewhere"
+  },
+  {
+   "source_id": "S10",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/2DB94BEB4006F5591AF397858A1F32BF?cnum=1",
+   "retrieved_at": "2026-11-26T16:17:24Z",
+   "content_sha256": "b78cd9929fd180b13d7533b4a889bc7dd0ae83f6908645302a57a457fa810eac",
+   "influence": "supporting",
+   "summary": "claims 189k w/e 11-21 vs 200k exp; continuing 1.697m"
+  },
+  {
+   "source_id": "S11",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/06B73B5923C66B8862404AC54B39DADB?cnum=1",
+   "retrieved_at": "2026-11-26T16:17:24Z",
+   "content_sha256": "61994b0d9cdb3b122161fd57b752313399ef2aa4f1a0641f533b7b7c7a024fb7",
+   "influence": "supporting",
+   "summary": "Oct NFP +165k vs 65k exp (range 35-125k); breakeven ~40k; Nov consensus not yet published"
+  },
+  {
+   "source_id": "S12",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/DAA9D85121BD64E0A8AF413E8A2303D8?cnum=3",
+   "retrieved_at": "2026-11-26T16:17:24Z",
+   "content_sha256": "dacb8b4e63c26cdf70596c62c63a3e05d717e5c4125ce78817ffa2ed1aeb43c5",
+   "influence": "decisive",
+   "summary": "XBI +6.56% on 11-24: Sanofi-Insmed $41bn deal, rotation out of AI chips"
+  },
+  {
+   "source_id": "S13",
+   "kind": "bigdata_news",
+   "ref": "https://app.bigdata.com/documents/01E34F0BAE1A8ADFE084716B954D8E07?cnum=3",
+   "retrieved_at": "2026-11-26T16:17:24Z",
+   "content_sha256": "acd8d73c02b32fe194c55110ba1b7225c6fccfc67fd747873ea49a103766bb0d",
+   "influence": "supporting",
+   "summary": "Nov CPI due Dec 10 (after FOMC); FedWatch 97.8%"
+  },
+  {
+   "source_id": "S14",
+   "kind": "desk_analysis",
+   "ref": "docs/research/desk-macro-samples/2026-11-26/analysis-20261126T161812Z.json",
+   "retrieved_at": "2026-11-26T16:18:12Z",
+   "content_sha256": "3dcec98c67acd594c35e62d8010cf380719806ebfab29e00e9258f2920a42b97",
+   "influence": "decisive",
+   "summary": "own nowcasts (7 releases), whole-panel RV screen, empirical TP-before-SL priors per candidate"
+  }
+ ],
+ "regime": {
+  "call": "risk_off_tightening",
+  "axes": {
+   "growth": 1,
+   "inflation": 1,
+   "liquidity": -1,
+   "vol": 1
+  },
+  "confidence": 0.65,
+  "basis": "S4 hot core PCE + strong GDP, S5 Dec hike ~97.5% priced, S2 crypto liquidity drain, S1 most panel symbols below SMA20"
+ },
+ "tilts": [
+  {
+   "asset": "ETHUSDT",
+   "tilt": -1,
+   "horizon_days": 10,
+   "confidence": 0.5,
+   "basis": "S1 S2 S14"
+  }
+ ],
+ "calendar": [
+  {
+   "event_key": "evt-ism-manufacturing-2026-12-01-us",
+   "at": "2026-12-01T15:00:00Z",
+   "class": "scheduled.macro.pmi",
+   "source_ids": [
+    "S1"
+   ]
+  },
+  {
+   "event_key": "evt-nfp-2026-12-04-us",
+   "at": "2026-12-04T13:30:00Z",
+   "class": "scheduled.macro.nfp",
+   "source_ids": [
+    "S1",
+    "S14"
+   ]
+  },
+  {
+   "event_key": "evt-fomc-2026-12-09-us",
+   "at": "2026-12-09T19:00:00Z",
+   "class": "scheduled.macro.rate_decision",
+   "source_ids": [
+    "S1",
+    "S5"
+   ]
+  }
+ ],
+ "events": [
+  {
+   "key": "sanofi_insmed_2026-11",
+   "class": "unscheduled.corporate.m_and_a",
+   "published_at": "2026-11-25T02:43:52Z",
+   "note": "Sanofi to buy Insmed for $41bn; XBI +6.56%",
+   "source_ids": [
+    "S12"
+   ]
+  }
+ ],
+ "forecasts": [
+  {
+   "forecast_id": "F-continuing_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-continuing-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "CCSA",
+    "transform": "level",
+    "period": "2026-11-21",
+    "naive_point": 1697000.0,
+    "unit": "claims"
+   },
+   "own_point": 1694291.772653,
+   "interval": {
+    "lo": 1655747.183317,
+    "hi": 1732836.361989,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CCSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-initial_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-initial-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "ICSA",
+    "transform": "level",
+    "period": "2026-11-28",
+    "naive_point": 189000.0,
+    "unit": "claims"
+   },
+   "own_point": 187470.748599,
+   "interval": {
+    "lo": 176152.0744,
+    "hi": 198789.422797,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED ICSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-average_hourly_earnings_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-average-hourly-earnings-mom-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "CES0500000003",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.369783,
+    "unit": "% m/m"
+   },
+   "own_point": 0.25054,
+   "interval": {
+    "lo": 0.085989,
+    "hi": 0.415091,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CES0500000003 (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-nfp",
+   "target": {
+    "kind": "release",
+    "key": "evt-nfp-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "PAYEMS",
+    "transform": "diff",
+    "period": "2026-11-01",
+    "naive_point": 165.0,
+    "unit": "thousands, m/m change"
+   },
+   "own_point": 138.718948,
+   "interval": {
+    "lo": -11.702296,
+    "hi": 289.140193,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED PAYEMS (diff), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-unemployment_rate",
+   "target": {
+    "kind": "release",
+    "key": "evt-unemployment-rate-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "UNRATE",
+    "transform": "level",
+    "period": "2026-11-01",
+    "naive_point": 4.1,
+    "unit": "%"
+   },
+   "own_point": 4.149111,
+   "interval": {
+    "lo": 3.987974,
+    "hi": 4.310248,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED UNRATE (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-core_cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-core-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPILFESL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.296256,
+    "unit": "% m/m"
+   },
+   "own_point": 0.273985,
+   "interval": {
+    "lo": 0.149771,
+    "hi": 0.398199,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPILFESL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPIAUCSL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.350285,
+    "unit": "% m/m"
+   },
+   "own_point": 0.300926,
+   "interval": {
+    "lo": 0.036715,
+    "hi": 0.565137,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPIAUCSL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_source": null,
+   "consensus_reason": "searched Bigdata.com 2026-11-26 16:17Z (S11 NFP, S13 CPI, S10 claims): November consensus not yet published"
+  },
+  {
+   "forecast_id": "F-ptp-ETHUSDT",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "ETHUSDT",
+    "resolves_at": "2026-12-09T16:25:00Z"
+   },
+   "own_point": 0.36,
+   "interval": {
+    "lo": 0.3334,
+    "hi": 0.3866,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL of this ATR geometry on ETHUSDT's own daily history (n=536), gross",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_reason": "no published street estimate exists for a TP-before-SL probability"
+  },
+  {
+   "forecast_id": "F-ptp-BTCUSDT",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "BTCUSDT",
+    "resolves_at": "2026-12-09T16:25:00Z"
+   },
+   "own_point": 0.3,
+   "interval": {
+    "lo": 0.2718,
+    "hi": 0.3282,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL of this ATR geometry on BTCUSDT's own daily history (n=433), gross",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_reason": "no published street estimate exists for a TP-before-SL probability"
+  },
+  {
+   "forecast_id": "F-ptp-QQQ",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "QQQ",
+    "resolves_at": "2026-12-07T16:25:00Z"
+   },
+   "own_point": 0.31,
+   "interval": {
+    "lo": 0.2516,
+    "hi": 0.3684,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL of this ATR geometry on QQQ's own daily history (n=103), gross",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_reason": "no published street estimate exists for a TP-before-SL probability"
+  },
+  {
+   "forecast_id": "F-ptp-TLT",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "TLT",
+    "resolves_at": "2026-12-09T16:25:00Z"
+   },
+   "own_point": 0.21,
+   "interval": {
+    "lo": 0.1666,
+    "hi": 0.2534,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL of this ATR geometry on TLT's own daily history (n=145), gross",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_reason": "no published street estimate exists for a TP-before-SL probability"
+  },
+  {
+   "forecast_id": "F-ptp-XBI",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "XBI",
+    "resolves_at": "2026-12-07T16:25:00Z"
+   },
+   "own_point": 0.23,
+   "interval": {
+    "lo": 0.1909,
+    "hi": 0.2691,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL of this ATR geometry on XBI's own daily history (n=190), gross",
+   "inputs": {
+    "analysis_ref": "DMA-20261126T161812Z"
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_reason": "no published street estimate exists for a TP-before-SL probability"
+  }
+ ],
+ "trades": [
+  {
+   "proposal": {
+    "symbol": "ETHUSDT",
+    "venue_class": "perp",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 10,
+    "entry": {
+     "type": "limit",
+     "level": 1750.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 1870.0,
+     "basis": "1.1 ATR above entry, above the SMA20 band"
+    },
+    "tp": {
+     "level": 1590.0,
+     "basis": "just above the 1,536 20d low (needs a retest, not a new low)",
+     "p_hit": 0.36
+    },
+    "expected_r_net": 0.006,
+    "thesis": "Weakest major (20d -24%, -1.75 ATR under SMA20) with ETF outflows and a shrinking stablecoin float; own prior 0.38 all / 0.32 in today's state (n 536 / 28).",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.36,
+   "catalyst": "evt-fomc-2026-12-09-us",
+   "invalidation": "daily close above 1,870 or two consecutive days of net spot-ETH-ETF inflows",
+   "source_ids": [
+    "S1",
+    "S2",
+    "S5",
+    "S14"
+   ],
+   "forecast_ids": [
+    "F-core_cpi_mom",
+    "F-nfp",
+    "F-ptp-ETHUSDT"
+   ],
+   "management": {
+    "design": "Sell a +0.5 ATR bounce; the geometry's own history: TP first 38% of the time, mean +0.06R gross, so the edge is thin and the trade lives on the macro drain (S2) plus a firm core CPI (own nowcast 0.27% m/m).",
+    "expected_path": "Fill on a holiday-thin bounce within 3 sessions; drift lower into NFP; chop 1,700-1,800 is fine.",
+    "watch_for": [
+     {
+      "signal": "Two straight days of net spot-ETH-ETF inflow",
+      "source_ids": [
+       "S2"
+      ]
+     },
+     {
+      "signal": "Daily close above 1,820",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 1820.0
+      }
+     },
+     {
+      "signal": "NFP below the own nowcast's 80% low (-12k): soft labour, rates rally, crypto bid",
+      "source_ids": [
+       "S14"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z NFP (own nowcast F-nfp)",
+     "2026-12-09T19:00:00Z FOMC (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close below 1,640 before NFP: stop to entry",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 1640.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Two consecutive closes above 1,820",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 1820.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not trail inside 1 ATR (~110) before NFP",
+     "Do not add below 1,600: TP sits above the low"
+    ],
+    "thesis_invalidated_by": "daily close above 1,870 or two consecutive days of net spot-ETH-ETF inflows"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "BTCUSDT",
+    "venue_class": "perp",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 10,
+    "entry": {
+     "type": "limit",
+     "level": 62750.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 65850.0,
+     "basis": "1 ATR above entry"
+    },
+    "tp": {
+     "level": 57000.0,
+     "basis": "0.6 ATR above the 55,147 cycle low (S3)",
+     "p_hit": 0.3
+    },
+    "expected_r_net": 0.0,
+    "thesis": "Liquidity drain + a near-certain hike; own prior 0.26 all / 0.36 in today's state but n=11 (thin), so 0.30.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.3,
+   "catalyst": "evt-fomc-2026-12-09-us",
+   "invalidation": "daily close above 65,850 or stablecoin supply turning up week-on-week",
+   "source_ids": [
+    "S1",
+    "S2",
+    "S3",
+    "S14"
+   ],
+   "forecast_ids": [
+    "F-core_cpi_mom",
+    "F-ptp-BTCUSDT"
+   ],
+   "management": {
+    "design": "Sell a +0.75 ATR relief bounce; the conditional history is too thin (n 11) to lean on, so the prior is shaded toward the unconditional 0.26.",
+    "expected_path": "Fill in 1-3 sessions; the edge is the drift back toward the low over 5-8 sessions.",
+    "watch_for": [
+     {
+      "signal": "Daily close above 64,000",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 64000.0
+      }
+     },
+     {
+      "signal": "Supply-in-profit recovering (Glassnode)",
+      "source_ids": [
+       "S3"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-04T13:30:00Z NFP (own nowcast F-nfp)",
+     "2026-12-09T19:00:00Z FOMC (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close below 59,000 after fill: stop to breakeven",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 59000.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Close above 64,500",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 64500.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not hold through the FOMC press conference if not in profit by Dec 8"
+    ],
+    "thesis_invalidated_by": "daily close above 65,850 or stablecoin supply turning up week-on-week"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "QQQ",
+    "venue_class": "etf",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 8,
+    "entry": {
+     "type": "limit",
+     "level": 645.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 667.0,
+     "basis": "1 ATR above entry"
+    },
+    "tp": {
+     "level": 605.0,
+     "basis": "near the 606 20d low",
+     "p_hit": 0.31
+    },
+    "expected_r_net": 0.02,
+    "thesis": "Hot core PCE + 4.3% GDP keep hikes coming while AI-led tech is the weak spot; own prior 0.25 all / 0.32 in today's state (n 103).",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.31,
+   "catalyst": "evt-nfp-2026-12-04-us",
+   "invalidation": "a close above 667, or NFP below the own nowcast's 80% low with the Dec hike odds falling below 80%",
+   "source_ids": [
+    "S1",
+    "S4",
+    "S5",
+    "S6",
+    "S9",
+    "S14"
+   ],
+   "forecast_ids": [
+    "F-nfp",
+    "F-core_cpi_mom",
+    "F-ptp-QQQ"
+   ],
+   "management": {
+    "design": "Short a holiday bounce to 645 for a retest of the 606 low; the state-conditioned history (n 103) is what earns this a listing: unconditionally the geometry loses (-0.12R).",
+    "expected_path": "Bounce to 645 within 3 sessions, roll over into NFP; a gap through 655 before fill means skip.",
+    "watch_for": [
+     {
+      "signal": "NFP vs own nowcast +139k (80% -12k..289k): a print under the low weakens the thesis",
+      "source_ids": [
+       "S14"
+      ]
+     },
+     {
+      "signal": "Daily close above 655",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 655.0
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM",
+     "2026-12-04T13:30:00Z NFP (own nowcast F-nfp)",
+     "2026-12-09T19:00:00Z FOMC (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [],
+    "exit_early_if": [
+     {
+      "signal": "Close above 660 before NFP",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 660.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not short into ISM without the fill"
+    ],
+    "thesis_invalidated_by": "a close above 667, or NFP below the own nowcast's 80% low with the Dec hike odds falling below 80%"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "TLT",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 10,
+    "entry": {
+     "type": "limit",
+     "level": 82.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 80.9,
+     "basis": "1.4 ATR below entry, under the SMA20"
+    },
+    "tp": {
+     "level": 84.0,
+     "basis": "the late-October high area",
+     "p_hit": 0.21
+    },
+    "expected_r_net": -0.03,
+    "thesis": "The long end rallied on the hot print (S6); a priced hike plus growth fear caps yields. LOW conviction: own prior 0.21 either way (n 592 / 145), mean ~0R.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.21,
+   "catalyst": "evt-nfp-2026-12-04-us",
+   "invalidation": "10y back above 5.00% on a closing basis",
+   "source_ids": [
+    "S1",
+    "S5",
+    "S6",
+    "S10",
+    "S14"
+   ],
+   "forecast_ids": [
+    "F-nfp",
+    "F-initial_jobless_claims",
+    "F-ptp-TLT"
+   ],
+   "management": {
+    "design": "Listed as a candidate, not a conviction: the geometry's own history is flat. It pays if NFP lands under the own nowcast and claims stay near 187k (own nowcast).",
+    "expected_path": "Fill on a dip within 3 sessions; works only on a soft labour print.",
+    "watch_for": [
+     {
+      "signal": "Claims vs own nowcast 187k (80% 176-199k)",
+      "source_ids": [
+       "S14",
+       "S10"
+      ]
+     },
+     {
+      "signal": "Daily close below 81.3",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 81.3
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM",
+     "2026-12-04T13:30:00Z NFP (own nowcast F-nfp)",
+     "2026-12-09T19:00:00Z FOMC (+25bp ~97.5% priced, S5)"
+    ],
+    "tighten_if": [
+     {
+      "signal": "Close above 83.3: stop to entry",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 83.3
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "Close below 81.0",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 81.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not tighten inside 0.8 (1 ATR) before NFP"
+    ],
+    "thesis_invalidated_by": "10y back above 5.00% on a closing basis"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "XBI",
+    "venue_class": "etf",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 8,
+    "entry": {
+     "type": "limit",
+     "level": 159.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 165.0,
+     "basis": "1.1 ATR above entry, above the 20d high"
+    },
+    "tp": {
+     "level": 148.0,
+     "basis": "half the 11-24 jump retraced",
+     "p_hit": 0.23
+    },
+    "expected_r_net": -0.03,
+    "thesis": "Own RV screen: XBI is +3.0 sigma rich vs its SPY beta over 5 days after the Sanofi-Insmed deal (S12). LOW conviction: M&A repricings tend to persist; own prior 0.23 (n 629 / 190), mean ~0R.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.23,
+   "catalyst": "rv_screen_XBI_z+3.0",
+   "invalidation": "a second large-cap biotech M&A deal, or a close above 165",
+   "source_ids": [
+    "S1",
+    "S12",
+    "S14"
+   ],
+   "forecast_ids": [
+    "F-ptp-XBI"
+   ],
+   "management": {
+    "design": "Fade a statistical dislocation found by the whole-panel screen, not by the news; it is listed to test whether the RV screen adds information, at a low prior.",
+    "expected_path": "Fill near the 20d high within 3 sessions; a retrace toward 148 over a week.",
+    "watch_for": [
+     {
+      "signal": "Further biotech M&A headlines",
+      "source_ids": [
+       "S12"
+      ]
+     },
+     {
+      "signal": "Daily close above 162",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 162.0
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "no scheduled catalyst; the RV z is the thesis"
+    ],
+    "tighten_if": [],
+    "exit_early_if": [
+     {
+      "signal": "Close above 163",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 163.0
+      }
+     }
+    ],
+    "do_not": [
+     "Do not hold a full stop through a new deal announcement"
+    ],
+    "thesis_invalidated_by": "a second large-cap biotech M&A deal, or a close above 165"
+   }
+  }
+ ],
+ "informs": [],
+ "no_trade_reason": null,
+ "notes": [
+  "Not proposed after own priors: FXI short (TP-first 15%, 6% in today's state, mean -0.46R conditional) and GLD short (16%, mean -0.25R).",
+  "Consensus: none published yet for Nov NFP / claims w/e 11-28 / Nov CPI (S11, S13), so every release forecast carries consensus null; the calendar has consensus on 2 of 120 rows (row ECON-CAL-CONSENSUS-AND-STALE-ROWS).",
+  "Model vs naive: the own nowcast does NOT beat naive on the unemployment rate (RMSE 0.126 vs 0.113): treat F-unemployment_rate as naive-grade.",
+  "COT is stale (as_of 2026-07-17): positioning not used. Data gaps: no ISM nowcast (FRED NAPM is not served to this client); no options-implied vol."
+ ],
+ "training": {
+  "train_eligible": true,
+  "gate_eligible": false,
+  "label_clean_from": "2026-06-01"
+ }
+}
