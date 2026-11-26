@@ -661,7 +661,9 @@ def context_v3(s: "Snapshot", pkg: str, view: dict, meta: dict, symbol: Optional
         chart["timeframe"] = tf
         chart["since_entry"] = since_entry(bars, _opened_ts(view["package"], view["trades"]), atr_now)
         if chart["since_entry"] is None:
-            miss("context_v3.chart.since_entry", "package open time not in the journal reads")
+            _ot = _opened_ts(view["package"], view["trades"])
+            miss("context_v3.chart.since_entry", "package open time not in the journal reads" if _ot is None else
+                 "no bar has opened since the fill yet: no in-trade excursion is measurable (REVIEWER-BRIEF step 0)")
     htf = None
     htf_tf = HTF_OF.get(tf or "")
     if chart is not None and htf_tf and symbol:

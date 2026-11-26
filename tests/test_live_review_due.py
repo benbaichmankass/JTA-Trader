@@ -20,7 +20,7 @@ CFG = {**CFG_LIVE, "events": {k: v for k, v in CFG_LIVE["events"].items() if k !
 def row(**kw):
     base = {"order_package_id": "pkg-1", "strategy": "ada_pullback_2h",
             "account_id": "bybit_2", "symbol": "ADAUSDT", "direction": "short",
-            "open_r": 0.2, "peak_r": 0.3, "giveback_r": 0.1, "r_to_target": 3.0,
+            "open_r": 0.2, "peak_r": 0.3, "giveback_r": 0.1, "r_to_target": 3.0, "peak_state": "measured",
             "updated_at": NOW.isoformat(), "lifecycle": "open"}
     base.update(kw)
     return base
@@ -115,8 +115,8 @@ def test_timeframe_from_suffix():
     assert lrd.timeframe_seconds("weird", "2h") == 7200
 
 
-# collapsed-state: measured -- fixture rows only need the measured peak state; the
-# production reader (live_review_due) does not branch on peak_state at all.
+# collapsed-state: measured -- fixture rows carry the measured peak state; since 2026-11-26 the production
+# reader DOES branch on it: new_peak / giveback fire only on peak_state == measured.
 def _db(path, rows):
     c = sqlite3.connect(path)
     c.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, status TEXT)")
@@ -775,3 +775,19 @@ def test_prop_action_paths_mirror_live_review_apply():
     for cls in ("phone", "prop_vm"):
         want = sorted(set(lra.ACTION_PATHS[cls]) | {"tighten"})
         assert sorted(lrd._PROP_ACTION_PATHS[cls]) == want
+
+
+def test_giveback_never_fires_on_an_unmeasured_peak():
+    """LTR-PHANTOM-GIVEBACK-PRE-ENTRY-BARS (2026-11-26): thin_window / unanchored peaks are 'could not look'."""
+    cfg = lrd.load_config()
+    for st in ("thin_window", "unanchored", "no_risk", None):
+        ev = lrd.candidate_events(row(open_r=0.0, peak_r=1.25, giveback_r=1.25, peak_state=st),
+                                  {"fired": set(), "last": None, "peak": 0.0, "mech": None}, cfg, NOW, set())
+        assert not [e for e in ev if e[0] in ("giveback", "new_peak")], st
+
+
+def test_judgement_slot_skips_a_package_younger_than_one_bar():
+    young = row(_trade_opened_at=(NOW - timedelta(minutes=2)).isoformat())
+    assert lrd.package_younger_than_bar(young, NOW, 3600)
+    assert lrd.package_younger_than_bar(row(_trade_opened_at=(NOW - timedelta(hours=2)).isoformat()), NOW, 3600) is None
+    assert lrd.package_younger_than_bar(row(), NOW, 3600) is None          # unknown age: no skip
