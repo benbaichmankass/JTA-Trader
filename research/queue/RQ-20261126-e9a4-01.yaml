@@ -1,0 +1,150 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (REGIME-PROGRAM; the registered next subject after the crypto regime forms closed: f1a0-35 entry filter FAIL
+# and the F8 regime-as-input FAIL f8a1-01). Rule registered BEFORE any run; the legs were replayed locally once for TRADE COUNTS only (no grade).
+# Gates this adds or changes: none (a research unit; no config, filter, sizing or order path).
+id: RQ-20261126-e9a4-01
+title: 'REGIME-PROGRAM equities/futures entry filter: on the ROSTERED non-crypto legs (ETFs, micro futures), does skipping each trade whose walk-forward
+  LightGBM prediction (the f1a0-26 frozen recipe; own-symbol + SPY daily state) falls below the training 1/3 quantile beat taking every trade by +0.01 R
+  per available trade, and beat random skips of the same count within leg-month, net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-35
+  verdict_read: fail
+  diagnosis: 'The crypto regime forms are exhausted. Sizing tilts (f1a0-19..32) and the entry filter (f1a0-35 FAIL: -0.0026 R, the skipped tercile still
+    averaged +0.010 R) both failed, and regime as a model INPUT failed too (F8 f8a1-01 FAIL: -0.072 R/decision, more and worse entries). Every one of those
+    tests used crypto legs whose state is dominated by one BTC cycle. The non-crypto legs (bonds, gold, silver, oil, index ETFs, micro futures) have
+    different and less correlated regime drivers (rates, risk-on/off), and no regime form has ever been tested on them. Competing hypothesis: the daily
+    trend/pullback harnesses already embed their own regime filter (SMA/ADX), so a learned state adds nothing on any asset class. This unit separates the
+    two by running the SAME frozen recipe on the new population with nothing re-tuned.'
+  search: 'one fixed definition, the f1a0-35 recipe unchanged (MS_FEATS, MS_LGB, huber, clip 3R, yearly walk-forward from RR.TEST_START, skip iff the prediction
+    is below the 1/3 quantile of that year''s TRAINING predictions, every other trade at size 1). The only changes are the population (--universe equities)
+    and the market-anchor block (SPY daily instead of BTC). No grid, no threshold search.'
+  levers:
+  - regime
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 14
+  due_by: '2026-12-03'
+question: On the rostered non-crypto legs (trend / pullback harnesses; Dukascopy candles), does skipping each trade whose walk-forward LightGBM prediction (f1a0-26
+  frozen recipe, own-symbol + SPY daily state) is below that year's training 1/3 quantile, taking every other trade at equal risk, add >= +0.01 R per available
+  trade over taking all of them (t >= 2, >= 4 of 5 test years positive) and beat 200 random skips of the same count within each leg x month (share <= 0.05),
+  net of the full cost stack?
+why_this_matters: It is the first regime test on the non-crypto half of the roster (19 replayable rostered legs, 3 of them real money). A pass is an input to a
+  Tier-3 per-family entry-filter proposal for those legs (strategy logic; the operator decides), after a fresh-window confirmation. A fail retires this recipe
+  for both asset classes and moves REGIME-PROGRAM to a different form (a hand rule on the rates/risk-off axis, or the equities intraday state).
+power:
+  expected_n: 1835
+  min_detectable_effect: 0.045
+  effect_units: metric
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED trade counts (local replay 2026-11-26 with the runner''s pinned dukascopy-python 4.0.1, no grade computed): 19 of 22 rostered non-crypto legs
+    replay (MHG, QLD and TQQQ are refused by the Dukascopy lane: no copper mapping, and leveraged ETFs have no valid proxy). That gives 2,350 trades in
+    2020-09-01..2026-10-26, of which 1,835 are test-window trades (>= 2022-01-03) over 249 test weeks. With per-trade sd ~1.2 R (ESTIMATE) and a 1/3 skip,
+    the delta per available trade has SE ~ 1.2 / sqrt(3 x 1835) = 0.016 R, so the MDE is ~0.045 R. That is ABOVE the rule''s +0.01 bar, so the unit is
+    underpowered for an effect at the bar: INDETERMINATE is a live (likely) outcome, stated up front. The rule is the frozen f1a0-35 one, unchanged.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed history pulled at run time from the keyless Dukascopy lane over a pinned window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: an entry filter (skip a trade) within each rostered non-crypto leg by its own symbol + SPY daily state
+  legs:
+  - tlt_pullback_1h
+  - slv_trend_1h
+  - spy_pullback_1h
+  - qqq_pullback_1h
+  - mgc_trend_1h
+  - uso_trend_1h
+  book: money
+baseline:
+  definition: Equal risk per trade on the same replayed trades (weight 1); and 200 permutations of the 0/1 keep flags within each leg x month.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - filter
+  - --universe
+  - equities
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261126-e9a4-01
+decision_rule:
+  id: RULE-REGIME-ENTRY-FILTER-EQ-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: take every replayed trade at equal risk (the same trades); 200 random skips of the same count within each leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode filter --universe equities (metastate_frame with the SPY anchor in the btc_* columns, metastate_raw
+    kind=filter, grade_raw normalise=False, grade_filter): delta = -(sum of skipped net R) / all test trades (a skipped trade contributes 0 R); se from 1,000
+    entry-week bootstrap draws; permutation share = share of 200 within leg x month permutations of the 0/1 keep flags with delta >= the arm; yearly delta;
+    skipped share and the mean net R of skipped vs kept; per-family delta and skip share reported; per-leg feed (source, ticker; proxies) reported.'
+  rule: PASS iff delta >= +0.01 R per available trade AND t >= 2 AND permutation share <= 0.05 AND >= 4 of 5 test years > 0; FAIL iff delta <= 0 or share >= 0.5;
+    else INDETERMINATE. Fixed now (the RULE_MS thresholds, unchanged from f1a0-35).
+  pass_action: 'A fresh-WINDOW confirmation first (trades after 2026-10-26 once enough accrue, or the leg configs on non-rostered ETFs), plus the regime-selectivity
+    walk-forward-before-Tier-3 rule; then a Tier-3 per-family entry-filter PROPOSAL to the manager with this evidence record. A filter is strategy logic: the
+    operator decides; no lane applies it.'
+  fail_action: Record that this RECIPE (the f1a0-26 frozen walk-forward LightGBM entry filter on own-symbol + market-anchor daily state) failed on both the crypto
+    and the non-crypto rostered legs; REGIME-PROGRAM's next form is authored from this result (a hand rates / risk-off rule on the bond and gold legs, or the
+    equities intraday state).
+  proposal_mapping: pass -> fresh-window confirmation -> Tier-3 entry-filter proposal; fail or indeterminate -> the next regime form from this diagnosis.
+  what_it_does_not_do: Changes no config, sizing, filter or order path; adds no gate. Re-runs the evidence builder's harness path read-only (writes only under --out).
+  min_n: 300
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  basis: 'stand-in: 19 rostered non-crypto legs, 3 real-money; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: the 0/1 keep flags permuted within each leg x calendar month (200 draws, same skip count per leg-month, no renormalisation); the arm must beat >=
+      95% of draws
+    draws: 200
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: a kept trade keeps its harness bracket at size 1; a skipped trade is not entered (0 R, no cost)'
+  best_static:
+    grid:
+    - take every trade at size 1 (the registered comparator)
+    excludes_test_folds: true
+    note: one fixed rule and one fixed model recipe, not chosen on any fold; no grid was searched
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6, M13); the same
+  frozen recipe on a new population (no re-tune).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 40
+  why_runner: Keyless Dukascopy candles for 19 symbols x timeframes (research-script-run installs dukascopy-python 4.0.1) plus the repo harnesses; LightGBM for 5
+    small yearly fits.
+  basis: 'MEASURED: the local count replay of all 22 legs (fetch + harness) took ~15 min on one core; the grade adds 200 permutations x 1,000 bootstrap draws.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- research/queue/RQ-20261125-f1a0-35.yaml
+- research/queue/RQ-20261125-f8a1-01.yaml
+- REGIME-PROGRAM
+- .claude/skills/regime-selectivity/SKILL.md
