@@ -907,7 +907,8 @@ def main() -> int:
     assert tab.ts.max() < pd.Timestamp(E.HOLDOUT_START, tz="UTC")
     u = a.unit.split("-")[-2] if a.unit.startswith("RQ-") else a.unit.split("-")[0]
     fn = {"b601": lambda: bracket_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "b602": lambda: selectivity_unit(tab, out, a.n_jobs),
-          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "b608": lambda: stack_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "a508": lambda: traded_unit(tab, out, a.n_jobs)}[u]
+          "b604": lambda: calibration_unit(tab, out, a.n_jobs), "b606": lambda: cost_gate_unit(tab, out, a.n_jobs), "b607": lambda: recipe_unit(tab, out, a.n_jobs), "b608": lambda: stack_unit(tab, out, a.n_jobs, tpath.parent / "klines"), "a508": lambda: traded_unit(tab, out, a.n_jobs),
+          "5e01": lambda: __import__("ml_structure_unit").structure_unit(tab, out, a.n_jobs, tpath.parent / "klines", a.unit)}[u]
     res = fn()
     (out / f"{u}_result.json").write_text(json.dumps(res, indent=1, default=str))
     print(res["result"])
