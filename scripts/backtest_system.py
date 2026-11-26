@@ -81,6 +81,7 @@ from src.runtime.intents import StrategyIntent, aggregate_intents  # noqa: E402
 # than mirrored so the harness measures the arm that actually runs.
 from src.runtime.intents import _evaluate_confidence_override  # noqa: E402
 from src.runtime.market_data import _TF_SECONDS  # noqa: E402
+from src.runtime.strategy_signal_builders import _resolve_side_filter, _side_filter_suppresses  # noqa: E402  (the LIVE directional gate)
 # P2 · unified engine: the ONE verdict interpreter, shared with the live
 # order monitor so the harness cannot re-derive (and silently narrow) what a
 # strategy's monitor() verdict means.
@@ -230,7 +231,7 @@ def _load_candles(path: str) -> pd.DataFrame:
 
 #: Bar-stamp convention of every resampled frame below. Part of the signal-cache key, so a stream cached under the old
 #: right/right grid is never reused (PI-20261120-7ITMUEB1-0006).
-GRID = "open-stamped-v2"
+GRID = "open-stamped-v3-sidefilter"
 
 
 def _resample(df: pd.DataFrame, rule: str) -> pd.DataFrame:
@@ -421,6 +422,11 @@ def generate_signal_stream(name: str, base5m: pd.DataFrame, *, start, end,
         # variants were first validated both-sides). No effect unless
         # cfg["long_only"] is truthy (set via the strategy YAML or an override).
         if cfg.get("long_only") and str(pkg.get("direction")) == "short":
+            continue
+        # side_filter (long|short|both): the LIVE directional gate (strategy_signal_builders), applied here with the same helpers.
+        # Without it the engine traded BOTH sides of a short-only leg (trend_donchian_xrp_4h: 38 of 63 OOS trades were longs the
+        # live bot never takes). XRP-BACKTEST-HOLD-FIDELITY, 2026-11-26.
+        if _side_filter_suppresses(str(pkg.get("direction")), _resolve_side_filter(cfg)):
             continue
         rows.append({
             "ts": ts.iloc[i], "side": pkg["direction"],
@@ -1211,6 +1217,19 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
             sig_at.setdefault(idx, {})[name] = r.to_dict()
 
     monitors = {name: _import_callable(ROSTER[name]["module"], "monitor") for name in roster}
+    # MONITOR-NATIVE-FRAME (2026-11-26, XRP-BACKTEST-HOLD-FIDELITY): live and the Stage-0 harnesses hand monitor() the leg's
+    # NATIVE-timeframe frame; handing a 4h leg the 15m clock frame made stale_stop count age in 15m rows (the entry bar's own
+    # 16 rows already exceeded stale_exit_bars 8), cutting trades after one clock bar. Legs coarser than the clock get their
+    # own closed native bars instead; legs at/below the clock tf keep the clock window (byte-identical).
+    _clock_td = pd.Timedelta(_PANDAS_TF[clock_tf])
+    native_close: Dict[str, Any] = {}
+    native_frame: Dict[str, pd.DataFrame] = {}
+    for _name in roster:
+        _ntf = pd.Timedelta(_PANDAS_TF[ROSTER[_name]["tf"]])
+        if _ntf > _clock_td:
+            _nf = _resample(base5m, _PANDAS_TF[ROSTER[_name]["tf"]]).reset_index(drop=True)
+            native_frame[_name] = _nf
+            native_close[_name] = (_nf["timestamp"] + _ntf)
     cfgs = {name: {"symbol": symbol, "timeframe": ROSTER[name]["tf"],
                    **_load_strategy_cfg(name), **overrides.get(name, {})} for name in roster}
 
@@ -1309,7 +1328,12 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
             if pos is not None:
                 mon = monitors.get(pos.owner)
                 if mon is not None:
-                    win = clock.iloc[max(0, i - 300):i + 1]
+                    if pos.owner in native_frame:
+                        # closed native bars only: bar_open + tf <= this clock bar's close
+                        _k = int(native_close[pos.owner].searchsorted(ts.iloc[i] + _clock_td, side="right"))
+                        win = native_frame[pos.owner].iloc[max(0, _k - 300):_k]
+                    else:
+                        win = clock.iloc[max(0, i - 300):i + 1]
                     open_pkg = {"direction": pos.side, "entry": pos.entry,
                                 "sl": pos.sl, "tp": pos.tp, "meta": pos.meta,
                                 "created_at": str(pos.entry_ts)}

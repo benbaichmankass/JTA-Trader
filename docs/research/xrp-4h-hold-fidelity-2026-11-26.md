@@ -32,11 +32,32 @@ Stage-0 ledger, same leg (`comms/strategy_evidence/runs/2026-11-06/trend_donchia
 `stale_stop` 11 trades, mean hold 40.7 h, -3.23 R; overall mean hold of entries since 2025-01-01 (n 25) is 24 h, net +4.23 R. The record's holds
 are the 4h-native behaviour; the record is faithful.
 
-## Not explained (say so)
+## UPDATE 2026-11-26 (fix lane): a SECOND defect, and the fixed-engine numbers
 
-n differs by population, not reconciled: engine solo 62 vs Stage-0 25 entries since 2025-01-01. The engine takes every raw signal on a
-15m clock under its own sizing/daily-loss rules; the harness folds/filters differ. Fix row below asks for the per-trade comparison once the
-frame is fixed. Trail ratchet on the same 15m window was not isolated here.
+The n62-vs-n25 gap was a second engine defect: `backtest_system` never applied `side_filter`. `trend_donchian_xrp_4h` is `side_filter: short`
+live (strategy_signal_builders gate), but the engine traded BOTH sides: of 63 OOS trades 38 were longs the bot never takes.
+All 25 short entries match the Stage-0 ledger's 25 entries since 2025-01-01 one-for-one (signal-bar open stamps; 0 ledger-only).
+
+Fixes in `scripts/backtest_system.py` (the engine; no runtime/config): (a) monitor() gets the leg's closed NATIVE-tf frame when the leg's
+tf is coarser than the clock; (b) the signal stream applies the live `_resolve_side_filter`/`_side_filter_suppresses`; signal-cache key GRID bumped.
+Regression test `tests/test_backtest_system_grid.py::test_monitor_gets_native_tf_frame_and_side_filter_is_applied` (fails on the old engine:
+frame spacing 15m; passes now).
+
+Same population (XRPUSDT, OOS entries >= 2025-01-01, full cost stack, bybit_1 risk basis), solo trend_donchian_xrp_4h:
+
+| engine | n | net R | capital-days | note |
+|---|---|---|---|---|
+| committed (e9b5-03) | 65 | -9.17 | 3.40 | stale_stop on 15m rows |
+| native frame only | 63 | -6.84 | 53.85 | 37 sl, 12 tp, 11 stale_stop; 38 longs -6.87 R, 25 shorts +0.03 R |
+| native frame + side_filter (as live) | 25 | +0.03 | 20.50 | same 25 entries as the ledger |
+| Stage-0 ledger (backtest_trend, since 2025-01-01) | 25 | +4.23 | n/a (avg hold 24 h) | |
+
+Note the 9999-override figure (+3.32 R, n62) above disabled the stale-stop outright; it is not the fixed-engine number (-6.84 R at n63).
+
+**Still open (honest):** entries now agree 25/25, holds agree (avg 20.5 h engine vs 24 h ledger), but R differs: +0.03 (engine, 15m intrabar
+SL/TP, full cost stack, USD-sized then /risk) vs +4.23 (4h-bar harness). That residual is an exit-resolution/cost-basis difference and is NOT
+resolved here. It does not move the Stage-0 record (the 46-trade 4-fold record is `harness: trend`, faithful); it does mean the engine reads this
+leg ~4 R lower than the Stage-0 harness on identical entries, so the engine and the harness must not be compared leg-by-leg without that bridge.
 
 ## Blast radius
 
@@ -47,4 +68,4 @@ including RQ-20261015-1631-02 and RQ-20261120-e9b5-03, is invalid for hold-depen
 
 ## Decision
 
-No Tier-3 proposal about the leg: its Stage-0 evidence is not contradicted. Fix row `BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME` filed.
+No Tier-3 proposal about the leg: its Stage-0 evidence is not contradicted. Engine fixed (row `BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME`); re-runs queued as RQ-20261126-a1f0-01 (re-run of e9b5-03), -02 (of e9b5-02), -03 (of e9b5-05); e9b5-04 was retired. Other `backtest_system` consumers listed by `grep -l backtest_system research/queue/*.yaml` (RQ-20260922-007, 20261018-001, 20261101-78fc-12, 20261114-82fd-02, 20261115-a474-02, 20261119-c8e2-02, 20261122-fa22-06, e9b5-01) ran on the old engine and are NOT re-run here: any leg of theirs with tf coarser than 15m or a side_filter is affected; the manager should triage them.
