@@ -282,6 +282,7 @@ def calibrate_slopes(M: Dict[str, Any], outer_mask: np.ndarray, outer_fold: int,
                 continue
             ok = np.isfinite(M["V"][idx, j])
             if ok.any():
+                # provenance: LGBMRegressor.predict -- a REGRESSION head's predicted value_r (R versus hold), not a probability
                 preds[j].append(h.predict(M["X"][idx][ok]))
                 vals[j].append(M["V"][idx, j][ok])
     scale = np.zeros(n_act)
