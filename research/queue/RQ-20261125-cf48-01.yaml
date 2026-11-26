@@ -1,0 +1,188 @@
+# Hand-authored 2026-11-25 by lane COMPUTE-FILL-W48 (Manager Session 2026-11-25b), from plan node P2-PR1125-D6-ceiling-two-legs
+# (research/programmes/02-ai-trader.yaml rollforward_2026_11_25 D6). Rule registered before any run. Gates this adds or changes: none.
+id: RQ-20261125-cf48-01
+title: 'D6 Pointer CEILING, second legs (plan node P2-PR1125-D6-ceiling-two-legs): on trend_donchian_eth_4h (declared SL 1.5 ATR / TP 4.0R), does ANY of 19 static
+  entry brackets beat the declared one by >= 4 R over 2020-07..2026-10 in >= 3 of 4 calendar folds, net of the full cost stack?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+programme: P2
+kind: experiment
+roadmap:
+- L-ML-LIVE
+- L-AM-STANDARD
+plan_node: research/programmes/02-ai-trader.yaml P2-PR1125-D6-ceiling-two-legs (rollforward_2026_11_25 D6, w2026_12_08); after RQ-20261122-b18a-03 verdict fail (met)
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261122-b18a-03
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-12-08'
+  diagnosis: 'b18a-03 FAIL: none of 19 static (atr_stop_mult x tp_r) cells replaced the declared bracket on ada_pullback_2h, so a learned bracket has no measured
+    headroom THERE. The plan (rollforward D6 belief) says the ceiling must be read on a leg where static brackets differ before any model is built: one trend leg
+    and one more pullback leg. The configured brackets may themselves have been chosen on this history (pre-mortem), so the first variant is a held-out 2018-2020
+    window.'
+  search: registered static grid, 2 levers (atr_stop_mult 1.0..3.0 x tp_r 3..6), 19 candidates plus the declared cell, one rule; plan-node thresholds (>= 4 R over
+    the window, >= 3 of 4 folds)
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+question: 'On trend_donchian_eth_4h (4h trend leg (live on the real-money roster); declared atr_stop_mult 1.5, tp_r 4.0), 2020-07-01..2026-10-15, four equal calendar
+  folds by entry time, net of the full cost stack the harness resolves: does any of the 19 static (atr_stop_mult x tp_r) cells beat the declared bracket by >= 4 R
+  over the window AND in >= 3 of 4 folds (maxDD <= 1.35x)?'
+why_this_matters: 'Decides whether any learned-bracket (D6 Pointer) unit is worth authoring: a learned bracket can only capture headroom a static cell already shows.
+  Read together with its sibling (the other leg): FAIL on both parks D6 with this re-entry test (P2-PR1125-D6-ceiling-two-legs fail branch); a PASS on either is a
+  SELECTION and opens the learned-bracket design on that leg only after its confirmation.'
+decision_rule:
+  id: RULE-RQ20261125-cf48-01-BRACKET-CEILING
+  unit_rule_id: RULE-RQ20261125-cf48-01-BRACKET-CEILING
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  min_n: 39
+  statistic: exit_lever_ablation.py --grade replace over 2020-07-01..2026-10-15 (--days 2330), 4 calendar folds by entry time, full cost stack the harness resolves
+    per venue, baseline B = the leg as declared; delta-r 4 (R over the window), delta-r-per-trade 0, fold-majority 3 of 4, dd-tol-frac 0.35, n-floor 39.
+  rule: 'Registered 2026-11-25 BEFORE any run, thresholds copied from plan node P2-PR1125-D6-ceiling-two-legs. A candidate C REPLACES B iff net_r(C) - net_r(B) >=
+    4 R AND net_r(C) >= net_r(B) in >= 3 of 4 folds AND maxDD(C) <= 1.35 x maxDD(B). Several pass -> the highest net R is SELECTED. PASS = a SELECTION over 19 cells,
+    unconfirmed: it supports nothing on the order path; its registered next step is the selected cell alone, exit_lever_ablation --grade paired vs B on the held-out
+    2018-01-01..2020-06-30 window (the plan''s first variant), same bars. FAIL = no candidate passes with n(B) >= 39: the static bracket surface is flat on this leg
+    and window. INDETERMINATE if n(B) < 39, every candidate is byte-identical to B, or the producer failed. Thresholds, arms and window are not changed after any
+    result.'
+  what_it_does_not_do: Edits no config, roster or order path; a PASS is not a promotion and the leg's bracket is Tier 3. A FAIL does not retire the Pointer family
+    (scripts/research/family_retirement_policy.yaml). Per-trade R changes with the stop distance (R is stop-denominated), which the replace grade reports beside net
+    R.
+evidence_class:
+  claim: edge
+  holdout: in_sample
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B. A matched-random control belongs to a learned-head unit, which this unit
+    decides whether to author.
+power:
+  expected_n: 500
+  min_detectable_effect: 4.0
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.2
+  basis: n ESTIMATED from the b18a-03 sibling (ada_pullback_2h held ~700 trades on the same window; a 4h trend leg trades less), replaced by the first run. The bar
+    is the plan node's materiality (4 R over the window) plus fold stability, not a significance test; n < 39 grades INDETERMINATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a pinned window; nothing accrues.
+ml_consumer:
+  consumer: ML-DECISION-MODELS
+  decision: 'whether a learned entry bracket (D6 Pointer) is worth building on trend_donchian_eth_4h: it must beat the best static cell this unit finds, or the declared
+    cell if none passes'
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): intervention judged against the declared setting, entries fixed, net of cost;
+  a pre-registered grid with the multiplicity stated.'
+levers:
+- name: entry_bracket
+  values:
+  - atr_stop_mult 1.0..3.0
+  - tp_r 3..6
+  hypothesised_effect: a different static stop/target cell lifts net R by >= 4 R over the window; if none does, the surface is flat
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'plan node P2-PR1125-D6-ceiling-two-legs value (usd 100, conf 0.15): governs whether a D6 learned-bracket build proceeds; not a measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  basis: ESTIMATE from b18a-03 (20 arms of a 2h leg over 2330 d, estimated 75 min); a 4h leg has half the bars. The first run replaces it.
+run:
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - S10T3=atr_stop_mult=1.0;tp_r=3.0
+  - --arm
+  - S10T4=atr_stop_mult=1.0;tp_r=4.0
+  - --arm
+  - S10T5=atr_stop_mult=1.0;tp_r=5.0
+  - --arm
+  - S10T6=atr_stop_mult=1.0;tp_r=6.0
+  - --arm
+  - S15T3=atr_stop_mult=1.5;tp_r=3.0
+  - --arm
+  - S15T5=atr_stop_mult=1.5;tp_r=5.0
+  - --arm
+  - S15T6=atr_stop_mult=1.5;tp_r=6.0
+  - --arm
+  - S20T3=atr_stop_mult=2.0;tp_r=3.0
+  - --arm
+  - S20T4=atr_stop_mult=2.0;tp_r=4.0
+  - --arm
+  - S20T5=atr_stop_mult=2.0;tp_r=5.0
+  - --arm
+  - S20T6=atr_stop_mult=2.0;tp_r=6.0
+  - --arm
+  - S25T3=atr_stop_mult=2.5;tp_r=3.0
+  - --arm
+  - S25T4=atr_stop_mult=2.5;tp_r=4.0
+  - --arm
+  - S25T5=atr_stop_mult=2.5;tp_r=5.0
+  - --arm
+  - S25T6=atr_stop_mult=2.5;tp_r=6.0
+  - --arm
+  - S30T3=atr_stop_mult=3.0;tp_r=3.0
+  - --arm
+  - S30T4=atr_stop_mult=3.0;tp_r=4.0
+  - --arm
+  - S30T5=atr_stop_mult=3.0;tp_r=5.0
+  - --arm
+  - S30T6=atr_stop_mult=3.0;tp_r=6.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - B
+  - --delta-r
+  - '4'
+  - --delta-r-per-trade
+  - '0'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261125-cf48-01
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261125-cf48-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+follow_up: PASS -> author the registered paired confirmation of the selected cell on 2018-01-01..2020-06-30. FAIL on BOTH siblings -> D6 stays parked with this re-entry
+  test (write it on ML-FS-BRACKETS-HOLD).
+related:
+- RQ-20261122-b18a-03
+- RQ-20261118-04a5-02
+- RQ-20261101-c692-02
+- research/programmes/02-ai-trader.yaml P2-PR1125-D6-ceiling-two-legs
+last_dispatched_at: '2026-11-26T00:56:19+00:00'

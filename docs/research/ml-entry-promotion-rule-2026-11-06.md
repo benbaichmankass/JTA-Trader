@@ -4,6 +4,19 @@
 
 **Gates this adds or changes:** none new. This writes down, as a rule fixed before the run, the bar a real-money ENTRY artifact change already has to clear (the c692-01 registered rule, the `holdout_lock` deflation, the full cost stack). It decides what may be CHANGED, not what RUNS, and it is landed as a held PR; nothing swaps without a human merge.
 
+## AMENDMENT 4 (2026-11-25, OPERATOR DECISION 2026-11-23, reconfirmed 2026-11-25, relayed by Manager Session 2026-11-25a): the window that chose the candidate does not promote it
+
+Operator, verbatim: *"a number measured only over the grading window must not promote."* The canonical statement is [`OPERATING-PLAN § 2 "A number measured only over the grading window never promotes"`](../plans/OPERATING-PLAN-2026-09-21.md). Row `PROMOTION-RULE-GRADE-WINDOW`.
+
+**Gates this adds or changes:** none new. The PASS test (Amendments 1–3: both models n ≥ 100 on ≥ 10 symbols, and the candidate at least as good as served, net of the full cost stack) is unchanged. What changes is the data it is measured on.
+
+1. The `WINDOW_DAYS` (14) window `[S, run_date − 1]` is split in time. The **selection half** `[S, run_date − CONFIRM_DAYS − 1]` chooses: the candidate must be at least as good as served there, otherwise `fail`. This half has no floor, because choosing is not promoting. The **confirmation half** is the last `CONFIRM_DAYS` (7) days, disjoint from the selection half. The Amendment 1–3 test must pass again there, floors included. The run's verdict is the confirmation verdict, and only the confirmation-half number is the promoting number and the headline in `ml/served/SERVED_MODELS.yaml`. The full-window read is kept in the record as information only.
+2. Each half is scored on its own rows, so the one-open-position-per-symbol policy restarts at the cut and no decision straddles it. Training is unchanged: the refit is as of `S`, purged and embargoed, so both halves are also out-of-time for the candidate.
+3. A record with no confirmation half recomputes to `no_disjoint_number`, and that is every record before this amendment. The three promotions made under Amendments 1–3 recompute that way: runs 42250040398 (v1r20261106), 43710344172 (v1r20261115) and 45021344426 (v1r20261122). Their recomputes are `verdict_amended_amendment4.json` beside each record. The re-grade and the proposal for the operator are in [`promotion-rule-grade-window-2026-11-25.md`](promotion-rule-grade-window-2026-11-25.md). Nothing is repointed by this amendment.
+4. What it costs: each half is about 7 days, so the floors bind more often. The past grades had n 281–434 per model over 14 days, about 140–217 per half. A half below 100 reads `insufficient_n` and the served model is kept. That is the existing outcome of the existing floor, not a new gate.
+
+Honest provenance: registered 2026-11-25, after the five grades in `comms/research/ml_entry_grade/` were read. It is the operator's rule change, not a session's tuning. It changes no threshold.
+
 ## AMENDMENT 1 (2026-11-06 ~16:58Z, OPERATOR DECISION, relayed by Manager Session 2026-11-06a): replacing a LIVE model needs only "at least as good"
 
 Operator, verbatim: **"New rule for replacing an already-live model: the retrained version goes live if, on the same post-training window and net of all costs, it does at least as well as the live one. The edge bar stays for brand-new strategies."** Popup answer: **"Graded retrain now (Recommended)"**. The operator's reasoning, in chat: *"the whole point of retraining is to improve it, so if the retraining improved the outcome, then shouldn't we be using the retrain?"*

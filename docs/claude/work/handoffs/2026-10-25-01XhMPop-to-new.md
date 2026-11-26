@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-25 (midday): session_01XhMPopphHY7qu8H8NqJqqC → new
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · written 2026-10-25 ~11:50Z by the outgoing manager `session_01XhMPopphHY7qu8H8NqJqqC` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `history` · last verified `never` · written 2026-10-25 ~11:50Z by the outgoing manager `session_01XhMPopphHY7qu8H8NqJqqC` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 **Why rotating:** context reached 677k at 11:45Z, past the ~650k threshold. This is a natural boundary: no lanes are running and no PR waits on the manager. Follow `.claude/skills/manager/SKILL.md` § Start of session (Rotation case).
 

@@ -126,6 +126,28 @@ def test_prop_package_carries_all_its_accounts_and_the_prop_label():
     assert wt.ltr_label(p["entries"]) == "prop"
 
 
+def test_a_failed_marker_entry_blocks_a_repost_for_ten_minutes_then_is_due_again():
+    """LTR-FAILED-MARKER-RETRY: a could_not_commit wake started no reviewer; it must not suppress the review forever."""
+    import sys as _s
+    from datetime import datetime, timedelta, timezone
+    from pathlib import Path as _P
+    _s.path.insert(0, str(_P(__file__).resolve().parents[1] / "scripts" / "ops"))
+    import live_review_wake as wake
+    now = datetime(2026, 11, 25, 19, 40, tzinfo=timezone.utc)
+    cfg = wake.load_cfg()
+    acct = sorted(cfg["accounts"])[0]
+    doc = {"read_state": "looked", "due_count": 1, "generated_at": now.isoformat(),
+           "due": [{"order_package_id": "pkg-1", "account_id": acct, "telemetry_updated_at": now.isoformat(),
+                    "events": [{"event": "near_target", "level": 1, "why": "x"}]}]}
+    ent = {"order_package_id": "pkg-1", "event": "near_target", "level": 1, "evidence_state": "could_not_commit"}
+
+    def marker(at, e):
+        return [{"kind": "wake", "posted_at": at.isoformat(), "entries": [e]}]
+    assert wake.plan(doc, marker(now - timedelta(minutes=3), ent), cfg, now)["kind"] != "wake"   # just posted
+    assert wake.plan(doc, marker(now - timedelta(minutes=12), ent), cfg, now)["kind"] == "wake"  # retried
+    ok = dict(ent, evidence_state="committed")
+    assert wake.plan(doc, marker(now - timedelta(minutes=12), ok), cfg, now)["kind"] != "wake"   # a good one stays deduped
+
 def test_a_build_timeout_names_the_reads_still_in_flight(monkeypatch):
     """LTR-PACKET-BUILD-TIMEOUT: could_not_build used to record only 'TimeoutExpired'."""
     import subprocess as sp
@@ -142,3 +164,44 @@ def test_a_build_timeout_names_the_reads_still_in_flight(monkeypatch):
     b = wake.build_bundle("pkg-1")
     assert b["state"] == "could_not_build" and "TimeoutExpired after 180s" in b["reason"]
     assert "bybit_open_orders" in b["reason"] and "prop_status:tradeify_1" in b["reason"]
+
+
+# --- LTR-WAKE-ACTIONS-ERRPATH-IMPORT (2026-11-25): the HTTP error path must work on the Actions runner, where the script
+# is run as `python3 scripts/ops/live_review_wake.py` and the repo root is NOT on sys.path.
+_ERRPATH_PROBE = r"""
+import importlib.util, io, json, sys, urllib.error, urllib.request
+repo = sys.argv[1]
+assert repo not in sys.path and "src" not in sys.modules      # the runner condition
+spec = importlib.util.spec_from_file_location("lrw", repo + "/scripts/ops/live_review_wake.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+if len(sys.argv) > 2 and sys.argv[2] == "no-src":
+    sys.modules["src.runtime.live_review_wake_post"] = None       # import raises ImportError
+    sys.modules["src.runtime"] = None
+    sys.modules["src"] = None
+def boom(req, timeout=None):
+    raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, io.BytesIO(b'{"message": "Not Found"}'))
+urllib.request.urlopen = boom
+code, doc = m.http_json("GET", "https://api.github.com/repos/x/y/contents/z", None, "token t")
+print(json.dumps([code, doc]))
+"""
+
+
+def _run_errpath(tmp_path, *extra):
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-I", "-c", _ERRPATH_PROBE, str(ROOT), *extra], cwd=tmp_path,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr[-800:]
+    return json.loads(r.stdout.strip().splitlines()[-1])
+
+
+def test_http_error_path_works_without_src_on_sys_path(tmp_path):
+    code, doc = _run_errpath(tmp_path)
+    assert code == 404
+    assert doc == {"_error": {"message": "Not Found"}}
+
+
+def test_http_error_path_falls_back_when_src_cannot_be_imported(tmp_path):
+    code, doc = _run_errpath(tmp_path, "no-src")
+    assert code == 404
+    assert doc == {"_error": {"message": "Not Found"}}

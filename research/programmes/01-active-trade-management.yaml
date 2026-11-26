@@ -18198,3 +18198,59 @@ two_week_plan:
         owner: unit
         step: Author from the Thursday design, family timing; dispatch via QUEUE-FILL-STANDING; read the verdict on the registered rule. Second family (action_bounds)
           PLANNED behind that verdict.
+
+
+# ── PROGRAMME REVIEW 2026-11-25 (lane PROGRAMME-REVIEW-20261125): regroup of the 11-23 two-week plan; weeks 12-01 and 12-08.
+# Live-review (LTR) classes. Facts read 2026-11-25 from research/queue grading and blocked_on. Gates this adds or changes: none.
+rollforward_2026_11_25:
+  schema: iteration-plan-2w/v1-regroup
+  regrouped: '2026-11-25'
+  weeks: [w2026_12_01, w2026_12_08]
+  regroup_next: '2026-12-02 (Wednesday programme review)'
+  belief: 'Two LTR reads failed this week and both failed the same way: a lever that looked good on dev folds (tp-pull-in at new_peak 5 of 6 folds;
+    tighten at breakeven+0.25R) did not survive the holdout or the late-cell timing. The class-level evidence says TIMING (when the action
+    fires), not the action itself, is the untested family on 5 of 7 classes. Two classes (widen_sl, tp_extend) cannot be read at all until
+    the continuation harness exists.'
+  subjects:
+    ltr-tighten-sl:
+      w48_outcome: 'RQ-20261122-c8e1-01 (iteration 3: the same breakeven+0.25R tighten fired only after momentum failed) FAIL. Trigger family read.'
+      w2026_12_01: 'Author ITERATION 4 from the diagnosis: timing family (fire at a fixed bars-in-trade grid vs momentum-failure trigger), matched-random-time control.'
+      w2026_12_08: 'Read it; flat timing + flat trigger = write the family-review record for this class (lever map: action_bounds untested only if the record says so).'
+      owner: research-ops (P1)
+      driver_row: none
+    ltr-close:
+      w48_outcome: 'Orphan: no live iteration unit (last verdict indeterminate).'
+      w2026_12_01: 'Author ITERATION 1: timing family (close at new_peak giveback >= x R vs the reviewer''s close), on comms/live_review/reviews.jsonl closes, matched-random-close control.'
+      w2026_12_08: 'Read; INDETERMINATE on n = name the accrual count that would power it (live_review closes per week).'
+      owner: research-ops (P1)
+      driver_row: LTR-GRADER-COVERAGE
+    ltr-partial-close:
+      w48_outcome: 'Orphan: no unit (pending, never read).'
+      w2026_12_01: 'First structured design: partial_close_50 at 1R/1.5R/2R (timing) vs hold, on the TM-BENCH v2 corpus.'
+      w2026_12_08: 'Read; feeds D7 Stage B v2 as the static-rule baseline either way (P2-PR1125-D7-stageB-v2-policy).'
+      owner: research-ops (P1)
+      driver_row: TMBENCH-V2-TRAIN-INPUT
+    ltr-widen-sl:
+      w48_outcome: 'RQ-20261113-ed2b-02 blocked on the continuation harness (scripts/research/ltr_action_trigger_s0.py widen_sl action, past-the-recorded-exit replay); overdue since 11-20.'
+      w2026_12_01: 'Owner of the harness gap (ORPHANS-LTR or the P1 lane) builds the continuation replay; no unit until it lands.'
+      w2026_12_08: 'Run ed2b-02 on the harness; on FAIL move to timing.'
+      owner: P1 lane (harness), research-ops (unit)
+      driver_row: 'blocked_on of RQ-20261113-ed2b-02 (no checklist row; see record handoff)'
+    ltr-sl-to-structure:
+      w48_outcome: 'Orphan: no unit (pending, never read).'
+      w2026_12_01: 'First structured design: move SL to the last swing structure at fixed bars-in-trade (timing) vs hold, matched-random control.'
+      w2026_12_08: 'Read; on PASS a holdout read before any MD-TRADE-DESK class change.'
+      owner: research-ops (P1)
+      driver_row: none
+    ltr-tp-extend:
+      w48_outcome: 'RQ-20261113-ed2b-04 blocked on the same continuation harness as ed2b-02; overdue since 11-20.'
+      w2026_12_01: 'Same harness build as ltr-widen-sl (one build unblocks both).'
+      w2026_12_08: 'Run ed2b-04; compare with Labrador-1b (D7 TP extend-only) on the same trades so the rule and the model are read like for like.'
+      owner: P1 lane (harness), research-ops (unit)
+      driver_row: 'blocked_on of RQ-20261113-ed2b-04'
+    ltr-tp-pull-in:
+      w48_outcome: 'RQ-20261119-020 HOLDOUT read of tp-pull-in@new_peak FAIL (the 43b6-04 dev PASS, 5 of 6 folds, maxDD cut 43%, did not hold out). Previous review call (p 0.35) missed.'
+      w2026_12_01: 'Diagnosis before a variant: was the dev PASS a regime artefact (folds concentrated in 2024-25) or a fill artefact (the real-TP corpus)? Read fold dates and the TP-hit share.'
+      w2026_12_08: 'Timing variant from the diagnosis (pull-in after N bars past new_peak) on the real-TP corpus; never a re-run of the failed cell.'
+      owner: research-ops (P1)
+      driver_row: none

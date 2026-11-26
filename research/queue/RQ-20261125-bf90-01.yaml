@@ -1,0 +1,70 @@
+# Authored 2026-11-25 by lane INDEX-CAPIT-SIP-CLOSED-BARS (dispatched by Manager Session 2026-11-25a). Gates this adds or changes: none (a
+# deterministic read of the venue's answer plus a re-run of the feed agreement; changes no config, roster or order path).
+id: RQ-20261125-bf90-01
+title: 'Alpaca SIP closed daily bars: is the free-plan entitlement real for a request ending in the last day, and does SIP restore the backtest signal set?'
+status: queued
+cadence: once
+roadmap:
+- L-LADDER
+theme: infra
+priority: 1
+kind: deterministic
+question: 'With the runner''s Alpaca data pair, does feed=sip with end = now - 16 min return daily bars through the last closed session for all 18
+  index_capitulation_1x tickers (feed=sip end = now refused as the negative control), and does the leg''s signal on SIP closed bars reproduce the
+  consolidated (harness) signal set over the sessions the live IEX path serves?'
+why_this_matters: 'Row INDEX-CAPIT-SIP-CLOSED-BARS: index_capitulation_1x goes live on alpaca_live reading Alpaca IEX daily bars; over 975 sessions on
+  12 tickers IEX reproduces 144/148 backtest signals but adds 21 IEX-only signals and costs ~4.9 R on matched entries
+  (comms/research/INDEX-CAPIT-1X-LEG/feed_agreement.json). The fix reads the signal from SIP closed bars; it ships only if the plan serves them.'
+practice_precedent: 'none: a deterministic read of what the venue serves on this plan plus a signal-set comparison; no modelling practice applies'
+why_not_inferential: 'Deterministic: the venue either serves the request or refuses it, and the signal sets either match or they do not. No sampling question.'
+decision_rule:
+  id: RULE-RQ-20261125-bf90-01-SIP-CLOSED
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: scripts/research/alpaca_sip_entitlement_probe.py (sip_entitlement.json summary.entitled) and scripts/research/index_capit_live_parity.py
+    --feed-compare --live-source sip (feed_agreement_sip.json summary)
+  rule: 'PASS IFF sip_closed_ok == 18 of 18 AND, on the tickers both feeds read, SIP signals match the consolidated set with live_only == 0 (SIP-only
+    signals) and consolidated_only <= 2% of consolidated signals. FAIL otherwise; a producer_failed or no_key record is NOT a verdict.'
+  what_it_does_not_do: Changes no config, roster, account or order path; the SIP signal input ships through its own Tier-2 PR.
+compute: cpu_light
+value:
+  usd_at_stake_per_month: 40
+  confidence: 0.5
+  bucket: structural
+  basis: 'stand-in: ~13% of live signals on a real-money leg are unvalidated on IEX; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 10
+  why_runner: Needs the Alpaca paper data pair (wired in research-script-run.yml) and yfinance; runner compute, never the VM.
+  basis: ESTIMATE; 54 single-symbol reads plus 18 multi-year daily reads.
+run:
+  commands:
+  - - python3
+    - scripts/research/alpaca_sip_entitlement_probe.py
+    - --out
+    - '{out_dir}'
+  - - python3
+    - scripts/research/index_capit_live_parity.py
+    - --feed-compare
+    - --live-source
+    - sip
+    - --out
+    - '{out_dir}'
+  - - python3
+    - scripts/research/index_capit_sip_grade.py
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 40
+  inputs:
+    research_unit: RQ-20261125-bf90-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- INDEX-CAPIT-SIP-CLOSED-BARS
+- INDEX-CAPIT-1X-LEG
+- scripts/research/alpaca_sip_entitlement_probe.py
+last_dispatched_at: '2026-11-25T21:04:40+00:00'

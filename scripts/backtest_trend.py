@@ -393,6 +393,7 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                  trail_decay_tight_mult: float = 0.0,
                  rr_floor: float = 0.0,
                  confirm_bars: int = 0,
+                 entry_at: str = "close",
                  skip_hours: str = "",
                  flat_at_utc: str = "",
                  no_entry_after_utc: str = "",
@@ -864,14 +865,28 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
                 if _flat_jf <= entry_i:      # no bar left to flatten on: not entered
                     i += 1
                     continue
-        entry = c
+        # EXECUTION CONVENTION (``entry_at``, default "close" = byte-identical, the signal bar's close fill): "next_open"
+        # fills at the NEXT bar's open (t+1), the order a bar-close signal can actually send. As live does (below), the
+        # stop/target/risk anchor stays the SIGNAL close and the ATR stays the signal bar's, so the fill-vs-signal gap shows
+        # up as R (a fill already through the stop is refused, as the venue does). The loop still starts at the bar after
+        # ``entry_i``, i.e. the fill bar's own range is tested from its open; ``entry_time``/``entry_index`` stay the SIGNAL
+        # bar (signal-time risk, the repo's R basis) and the timeout / stale counters run from it, one bar earlier than the
+        # fill. Research-harness only; no live path reads it.
+        _fill_px = None
+        if entry_at == "next_open":
+            if entry_i + 1 >= n:
+                break
+            _fill_px = float(df["open"].iloc[entry_i + 1])
+        elif entry_at != "close":
+            raise ValueError(f"entry_at must be 'close' or 'next_open', got {entry_at!r}")
+        entry = c if _fill_px is None else _fill_px
         # entry_override only, optional ``sl_anchor`` (None = byte-identical):
         # live places a Market order whose SL/TP were computed from the SIGNAL
         # price (order_package entry = the decision bar's close) and does not
         # re-anchor them to the fill (src/units/accounts/execute.py sends
         # order["sl"]/order["tp"] as-is), so the stop/target/risk anchor is the
         # signal price while the position, trail and P&L run from the fill.
-        _anc = entry
+        _anc = entry if _fill_px is None else c
         if _ov is not None and _ov.get("sl_anchor") is not None:
             _anc = float(_ov["sl_anchor"])
         sl = _anc - atr_stop_mult * atr if direction == "long" else _anc + atr_stop_mult * atr
@@ -1451,6 +1466,8 @@ def run_backtest(df: pd.DataFrame, *, donchian: int, atr_period: int,
     params.update(tp_geom.params())
     if confirm_bars:
         params["confirm_bars"] = confirm_bars
+    if entry_at != "close":
+        params["entry_at"] = entry_at
     if skip_hour_set:
         params["skip_hours"] = skip_hours
     if _flat_min is not None:
@@ -1905,6 +1922,9 @@ def main(argv: List[str]) -> int:
                         "rr_min_median / rr_min_p90 first -- a floor above "
                         "rr_min_p90 fires on nearly every trade and one below "
                         "rr_min_p10 fires on almost none.")
+    p.add_argument("--entry-at", choices=("close", "next_open"), default="close",
+                   help="execution convention: 'close' (default) fills at the signal bar's close; 'next_open' fills at the NEXT bar's "
+                        "open with the stop/risk anchored to the signal close (row HARNESS-ENTRY-NEXT-OPEN).")
     p.add_argument("--confirm-bars", type=int, default=0,
                    help="M21 E-2 entry lever (0=off): require the close to hold "
                         "beyond the signal bar's channel edge for N further "
@@ -2214,6 +2234,7 @@ def main(argv: List[str]) -> int:
                      cell_tighten_random_p=args.cell_tighten_random_p,
                      cell_tighten_seed=args.cell_tighten_seed,
                      confirm_bars=args.confirm_bars,
+                     entry_at=args.entry_at,
                      skip_hours=args.skip_hours,
                      flat_at_utc=args.flat_at_utc,
                      no_entry_after_utc=args.no_entry_after_utc,

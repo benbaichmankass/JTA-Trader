@@ -2435,6 +2435,15 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
                 "exchange_order_id": None,
                 "error": None,
             }
+        # AUD-20261125-OPTIONS-CLOSE-LEAVES-LEGS (operator 2026-11-25, W48 decision doc Q11, verbatim:
+        # "Approve both (Recommended)"). An options-expression account holds a defined-risk VERTICAL, not an equity
+        # position on the underlying: the equity close below would ask the broker to close the UNDERLYING and leave
+        # both option legs open (alpaca_options_paper slv_trend_1h row 8569, sl_cross 17:11Z, legs open ~1 h until
+        # the reverse reconciler bare-adopted them). Liquidate the structure's legs FIRST, and let the caller close
+        # the journal row only on ok=True (the existing exchange-first flow), so a row is never closed over open legs.
+        _opt = _options_structure_close(matched_trade, cfg)
+        if _opt is not None:
+            return _opt
         return close_open_position(
             client, cfg,
             symbol=matched_trade.get("symbol"),
@@ -2446,6 +2455,49 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: exchange close failed: %s", exc)
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _options_structure_close(matched_trade: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Close an options-expression row by liquidating each OCC leg; ``None`` = not an options structure (caller uses
+    the equity path unchanged).
+
+    Applies only when the account expresses options AND the row recorded its legs (``notes.options.legs[].symbol``,
+    written by ``options_overlay.options_structure_dict``). A legacy options row with no recorded legs returns
+    ``None`` (the old behaviour, logged) rather than guessing symbols. Never raises. The result mirrors
+    ``close_open_position``: ``ok`` is True only when EVERY leg was closed (``close_position`` treats an
+    already-flat leg as success), so the monitor closes the row only over flat legs; a failed leg or a missing
+    executor is ``ok=False`` and the row stays open for the next tick (premortem: never a row open on a flat venue
+    is acceptable, legs open under a closed row is not).
+    """
+    try:
+        from src.units.accounts.options_overlay import account_expresses_options
+        if not account_expresses_options(cfg or {}):
+            return None
+        opts = _decode_notes(matched_trade.get("notes")).get("options")
+        legs = (opts or {}).get("legs") if isinstance(opts, dict) else None
+        occ = [str(leg.get("symbol")).upper() for leg in (legs or [])
+               if isinstance(leg, dict) and leg.get("symbol")]
+        if not occ:
+            logger.warning(
+                "order_monitor: options account %s trade %s has no recorded legs (notes.options.legs); "
+                "falling back to the equity close, which does NOT close option legs",
+                (cfg or {}).get("account_id"), matched_trade.get("id"))
+            return None
+        executor = _options_executor_for(cfg)
+        if executor is None:
+            return {"ok": False, "error": "options_executor_unavailable"}
+        env = executor.close_structure(occ)
+        result = (env or {}).get("result") or {}
+        failed = result.get("failed") or []
+        if (env or {}).get("retCode") == 0 and not failed:
+            return {"ok": True, "skipped": None, "exchange_response": env,
+                    "exchange_order_id": None, "error": None,
+                    "options_legs_closed": result.get("closed") or occ}
+        return {"ok": False, "exchange_response": env, "exchange_order_id": None,
+                "error": f"options_leg_close_failed:{failed}"}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: options structure close failed: %s", exc)
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 

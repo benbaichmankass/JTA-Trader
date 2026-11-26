@@ -245,7 +245,8 @@ def test_real_yaml_loads():
     # 59 -> 60 on 2026-11-01: ml_entry_v2, the ENTRY v2 candidate as a bybit_1 demo TESTING leg (Tier-3 held; W1 read FAILED, mechanics only).
     # 60 -> 61 on 2026-11-06: ml_entry_eq, the equity-native ENTRY model as an alpaca_paper TESTING leg (Tier-2 held).
     # 61 -> 62 on 2026-11-08: ml_entry_eq_struct, the structure-exit 5-seed ensemble on alpaca_live + alpaca_portfolio (ML-ENTRY-EQ-STRUCT-LIVE, Tier-3).
-    assert len(strategies) == 62
+    # 62 -> 63 on 2026-11-25: index_capitulation_1x, daily capitulation bounce on alpaca_live + alpaca_portfolio (INDEX-CAPIT-1X-LEG, Tier-3).
+    assert len(strategies) == 63
 
 
 def test_real_yaml_has_required_strategies():
@@ -299,6 +300,7 @@ def test_real_yaml_has_required_strategies():
         "ml_entry_v2",  # 2026-11-01 ENTRY v2 testing leg (bybit_1 demo only)
         "ml_entry_eq",  # 2026-11-06 equity-native ENTRY testing leg (alpaca_paper only)
         "ml_entry_eq_struct",  # 2026-11-08 structure-exit ensemble (alpaca_live + alpaca_portfolio)
+        "index_capitulation_1x",  # 2026-11-25 INDEX-CAPIT-1X-LEG daily capitulation bounce (alpaca_live + alpaca_portfolio)
         # E4-DEMO-LEG (2026-10-30, Tier-3): the E4 OI-shock leg, execution: live, bybit_1 demo only.
         "e4_oi_shock_1h",
     }

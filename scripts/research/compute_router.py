@@ -132,6 +132,8 @@ def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
     """Every dataset path an ml_bakeoff unit reads (single `dataset.path` and per-group `groups.*.path`)."""
     ds = (entry.get("ml_bakeoff") or {}).get("dataset") or {}
     out = [str(ds["path"])] if ds.get("path") else []
+    if ds.get("paths"):   # ml_bakeoff POOLED mode (ML-GRU-POOLED-BP2): every glob match is read, so the glob is checked
+        out.append(str(ds["paths"]))
     groups = ds.get("groups")
     for g in (groups.values() if isinstance(groups, dict) else []):     # a list of group names (synthetic data) has no paths
         if isinstance(g, dict) and g.get("path"):
@@ -180,7 +182,10 @@ def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[st
     if not paths:
         return "routing.published_data is set but the unit declares no ml_bakeoff.dataset path to check it against"
     from scripts.research import market_data_export as mde  # noqa: PLC0415
-    bad = [p for p in paths if not mde.covers(p)]
+    # Each published dataset has its own allowlist (ML-DATA-PUBLISH-WIDEN-BP2): a path is covered only by the dataset the
+    # unit names (kaggle_dataset slug), so a unit cannot claim metis-market-bp2 while reading a metis-market-data shard.
+    slug = str((reg[str(name)] or {}).get("kaggle_dataset") or name)
+    bad = [p for p in paths if not mde.covers(p, dataset=slug)]
     return (f"routing.published_data {name!r} but these dataset paths are NOT in the published allowlist: {bad}") if bad else None
 
 
@@ -300,11 +305,33 @@ def class_backends(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> List
     ob, after = ov.get("backend"), ov.get("after")
     if ob and ob in cfg["backends"] and after in bl and cls in (ov.get("classes") or []) and not runner_only_reason(entry):
         bl.insert(bl.index(after) + 1, ob)      # KAGGLE GPU OVERFLOW: the idle GPU kernel runs CPU units behind the full CPU kernel
+    elif ob and ob in cfg["backends"] and after in cfg["backends"] and ov.get("short_units_tail") \
+            and cls in (ov.get("classes") or []) and not runner_only_reason(entry):
+        bl += [after, ob]                       # SHORT-UNIT TAIL: a unit too short for kaggle_first still overflows when the runner is full
+    tb = trainer_overflow_backend(cls, entry, cfg)
+    if tb:
+        bl.append(tb)                           # TRAINER OVERFLOW: the idle trainer window is the class's last resort
     out: List[str] = []
     for b in bl:
         if b not in out:
             out.append(b)
     return out
+
+
+def trainer_overflow_backend(cls: str, entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[str]:
+    """The trainer, when a CPU unit may overflow onto its idle window (COMPUTE-FILL-W48, research_compute.yaml
+    `trainer_overflow`), else None. Needs a DECLARED routing.peak_memory_gb within the trainer's measured spare, no secret
+    and no GPU; a runner-only unit IS eligible (the trainer has outbound internet, unlike the Kaggle kernels)."""
+    to = cfg.get("trainer_overflow") or {}
+    be = to.get("backend")
+    if not be or be not in cfg["backends"] or cls not in (to.get("classes") or []):
+        return None
+    r = entry.get("routing") if isinstance(entry.get("routing"), dict) else {}
+    mem = _num(r.get("peak_memory_gb"))
+    cap = _num(to.get("max_peak_memory_gb"))
+    if mem is None or cap is None or mem > cap or r.get("needs_secrets") or r.get("needs_gpu"):
+        return None
+    return be
 
 
 def overflow_keep_hours(be: str, cls: str, cfg: Dict[str, Any]) -> float:
@@ -538,7 +565,11 @@ def resolve(entry: Dict[str, Any], cfg: Dict[str, Any], st: Optional[BackendStat
                 base.wait, base.reason = True, why
         return base
     why_not: List[str] = []
+    tried: List[str] = []
     for be in (effective_backend(b, entry, cfg) for b in class_backends(base.cls, entry, cfg)):
+        if be in tried:
+            continue                            # a published twin can repeat a backend already tried (runner -> kaggle_cpu)
+        tried.append(be)
         why = _available(be, entry, cfg, st, overflow_keep_hours(be, base.cls, cfg))
         if why is None:
             return Resolution(True, be, cfg["backends"][be]["workflow"], base.cls, base.source,

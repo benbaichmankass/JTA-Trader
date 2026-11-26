@@ -117,6 +117,20 @@ def _key(e: dict) -> str:
     return f"{e.get('order_package_id')}|{e.get('event')}|{e.get('level')}"
 
 
+#: LTR-FAILED-MARKER-RETRY (2026-11-25): a posted marker entry whose packet/evidence failed
+#: (``could_not_commit`` / ``could_not_build`` / ``evidence_conflict``) started no reviewer, yet counted as "already
+#: posted" for both posters and started the per-package cooldown, so that review was never retried (18:33Z VM and
+#: 19:36Z Actions posts during the 403 incident). It still blocks a repost for this many minutes (no comment
+#: storm), then the entry is due again and the next pass rebuilds it.
+FAILED_ENTRY_STATES = ("could_not_commit", "could_not_build", "evidence_conflict")
+FAILED_ENTRY_RETRY_MIN = 10
+
+
+def _counts_as_posted(e: dict, at: Optional[datetime], now: datetime) -> bool:
+    failed = (e.get("evidence_state") in FAILED_ENTRY_STATES or e.get("packet_state") in FAILED_ENTRY_STATES)
+    return not (failed and (at is None or now - at >= timedelta(minutes=FAILED_ENTRY_RETRY_MIN)))
+
+
 def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Dict[str, Any]:
     """What to post. Pure. ``kind`` in wake / could_not_look / quiet."""
     if not isinstance(doc, dict) or doc.get("read_state") != "looked" or doc.get("due_count") is None:
@@ -127,11 +141,14 @@ def plan(doc: Any, posted: List[dict], cfg: Dict[str, Any], now: datetime) -> Di
             return {"kind": "quiet", "why": f"could_not_look ({reason}); flagged {last.isoformat()}"}
         return {"kind": "could_not_look", "reason": str(reason or "unknown"), "entries": []}
 
-    seen = {_key(e) for p in posted for e in p.get("entries") or []}
+    seen = {_key(e) for p in posted for e in p.get("entries") or []
+            if _counts_as_posted(e, _ts(p.get("posted_at")), now)}
     last_by: Dict[str, datetime] = {}
     for p in posted:
         at = _ts(p.get("posted_at"))
         for e in p.get("entries") or []:
+            if not _counts_as_posted(e, at, now):
+                continue
             k = f"{e.get('order_package_id')}|{e.get('event')}"
             if at and (k not in last_by or at > last_by[k]):
                 last_by[k] = at
@@ -231,6 +248,26 @@ def evidence_files(b: Dict[str, Any]) -> List[Tuple[str, bytes]]:
 Http = Callable[[str, str, Optional[bytes], str], Tuple[Optional[int], Any]]
 
 
+def _http_error_doc(exc: Any) -> Dict[str, Any]:
+    """The error body of an HTTPError as a small dict, never raising. LTR-WAKE-ACTIONS-ERRPATH-IMPORT (2026-11-25):
+    run 45709763387 died with ``ModuleNotFoundError: No module named 'src'`` on this very line, because the Actions
+    step runs ``python3 scripts/ops/live_review_wake.py`` (sys.path[0] is scripts/ops, not the repo root), so the
+    error path crashed on the first HTTP 404 -- a NORMAL answer for a file absent from the rows branch. Put the repo
+    root on sys.path first so the VM poster's helper is reused; if the import still fails (any reason), fall back to
+    the same shape locally. Either way the error path returns a doc and never raises."""
+    try:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
+        return _error_doc(exc)
+    except Exception:  # noqa: BLE001 -- the error path of an HTTP helper must not raise
+        try:
+            msg = json.loads(exc.read() or b"{}").get("message")
+        except Exception:  # noqa: BLE001
+            msg = None
+        return {"_error": {"message": str(msg or "")[:160]}}
+
+
 def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[Optional[int], Any]:
     """(status, parsed JSON or None). Never raises; status None = no response."""
     import urllib.error
@@ -243,8 +280,7 @@ def http_json(method: str, url: str, body: Optional[bytes], auth: str) -> Tuple[
             raw = resp.read()
             return resp.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as exc:
-        from src.runtime.live_review_wake_post import _error_doc  # same helper as the VM poster
-        return exc.code, _error_doc(exc)
+        return exc.code, _http_error_doc(exc)
     except Exception:  # noqa: BLE001 — a network failure is a state, never a raise
         return None, None
 
