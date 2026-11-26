@@ -542,6 +542,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-15-manager-14a-to-new.md` | history | historical | — | 2026-11-15 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | history | historical | — | never | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/handoffs/2026-11-25-25a-to-new.md` | history | historical | — | 2026-11-25 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
+| `docs/claude/work/handoffs/2026-11-26-25b-to-new.md` | history | historical | — | 2026-11-26 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |
@@ -1249,6 +1250,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ws-a-s3-significance-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ws-a-s3b-fee-headroom-2026-06-02.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xa-d2b-conviction-verification-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/xrp-4h-hold-fidelity-2026-11-26.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-conditional-hit-rate-2026-08-19.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-entry-axis-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/xrp-pullback-joint-geometry-2026-08-23.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

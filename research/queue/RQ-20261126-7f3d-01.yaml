@@ -3,7 +3,7 @@
 id: RQ-20261126-7f3d-01
 title: 'ML-VOL-LABEL-LIVE-VERIFY step 2, WHERE the replayed BTC vol labels diverge: per-COLUMN diff of the LIVE per-bar feature rows of btc-regime-15m-lgbm-fc-pcv-v2
   (shadow_predictions snapshot, 199 bars 11-24..11-26) vs the offline market_features BTCUSDT/15m/v002 rows of the same bars'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -119,3 +119,16 @@ related:
 - REGIME-LIVE-VETO-COUNTERFACTUAL
 - comms/live_parity/vol_featdiff_20261126/
 last_dispatched_at: '2026-11-26T03:29:34+00:00'
+grading:
+  attested: RULE-RQ-20261126-7f3d-01-FEATDIFF
+  auto: true
+  decision_rule_id: RULE-RQ-20261126-7f3d-01-FEATDIFF
+  evidence:
+  - research/results/RQ-20261126-7f3d-01/45747447003.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

@@ -1,0 +1,182 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 6,
+  "population": "ml_entry_eq pool tickers ['FB', 'INFO', 'NFX', 'ULTI', 'UN', 'SIX'] (+ control ['META']); Alpaca 1Day 2019-01-01..2025-07-01 and 1Hour 2021-01-01..2025-07-01, adjustment=split, feed=sip; gap rule >= 30 days",
+  "note": "two securities inside the training window under ticker(s) ['FB', 'INFO'] | DEV window scored the old security for ['FB', 'INFO', 'NFX', 'ULTI', 'UN', 'SIX'] | early (pre-2022-07) training bars for ['FB', 'INFO', 'SIX']",
+  "records": [
+    {
+      "symbol": "FB",
+      "dev_daily_bars": 505,
+      "dev_median_dollar_volume": 3651958826.4199996,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2022-06-08 04:00:00+00:00",
+          "bars": 866
+        },
+        {
+          "first": "2025-06-26 04:00:00+00:00",
+          "last": "2025-06-30 04:00:00+00:00",
+          "bars": 3
+        }
+      ],
+      "daily_close_by_run": [
+        226.68,
+        40.2489
+      ],
+      "train_hourly_bars": 5602,
+      "train_runs": [
+        {
+          "first": "2021-01-01 00:00:00+00:00",
+          "last": "2022-06-08 23:00:00+00:00",
+          "bars": 5584
+        },
+        {
+          "first": "2025-06-26 13:00:00+00:00",
+          "last": "2025-06-30 19:00:00+00:00",
+          "bars": 18
+        }
+      ],
+      "dev_scored_old_security": true,
+      "train_two_securities": true
+    },
+    {
+      "symbol": "INFO",
+      "dev_daily_bars": 505,
+      "dev_median_dollar_volume": 144092673.48000002,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2025-06-30 04:00:00+00:00",
+          "bars": 1632
+        }
+      ],
+      "daily_close_by_run": [
+        108.61
+      ],
+      "train_hourly_bars": 2769,
+      "train_runs": [
+        {
+          "first": "2021-01-01 00:00:00+00:00",
+          "last": "2022-02-25 21:00:00+00:00",
+          "bars": 2391
+        },
+        {
+          "first": "2024-10-10 14:00:00+00:00",
+          "last": "2025-06-30 17:00:00+00:00",
+          "bars": 378
+        }
+      ],
+      "dev_scored_old_security": true,
+      "train_two_securities": true
+    },
+    {
+      "symbol": "NFX",
+      "dev_daily_bars": 30,
+      "dev_median_dollar_volume": 126653287.52000001,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2019-02-13 05:00:00+00:00",
+          "bars": 30
+        }
+      ],
+      "daily_close_by_run": [
+        17.865000000000002
+      ],
+      "train_hourly_bars": 0,
+      "train_runs": [],
+      "dev_scored_old_security": true,
+      "train_two_securities": false
+    },
+    {
+      "symbol": "ULTI",
+      "dev_daily_bars": 84,
+      "dev_median_dollar_volume": 153006808.1,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2019-05-02 04:00:00+00:00",
+          "bars": 84
+        }
+      ],
+      "daily_close_by_run": [
+        330.45
+      ],
+      "train_hourly_bars": 0,
+      "train_runs": [],
+      "dev_scored_old_security": true,
+      "train_two_securities": false
+    },
+    {
+      "symbol": "UN",
+      "dev_daily_bars": 482,
+      "dev_median_dollar_volume": 75258008.80000001,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2020-11-27 05:00:00+00:00",
+          "bars": 482
+        }
+      ],
+      "daily_close_by_run": [
+        58.385000000000005
+      ],
+      "train_hourly_bars": 0,
+      "train_runs": [],
+      "dev_scored_old_security": true,
+      "train_two_securities": false
+    },
+    {
+      "symbol": "SIX",
+      "dev_daily_bars": 505,
+      "dev_median_dollar_volume": 60023989.4,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2024-07-01 04:00:00+00:00",
+          "bars": 1383
+        }
+      ],
+      "daily_close_by_run": [
+        28.99
+      ],
+      "train_hourly_bars": 8240,
+      "train_runs": [
+        {
+          "first": "2021-01-04 14:00:00+00:00",
+          "last": "2024-07-01 20:00:00+00:00",
+          "bars": 8240
+        }
+      ],
+      "dev_scored_old_security": true,
+      "train_two_securities": false
+    },
+    {
+      "symbol": "META",
+      "dev_daily_bars": 505,
+      "dev_median_dollar_volume": 3651958826.4199996,
+      "daily_runs": [
+        {
+          "first": "2019-01-02 05:00:00+00:00",
+          "last": "2025-06-30 04:00:00+00:00",
+          "bars": 1632
+        }
+      ],
+      "daily_close_by_run": [
+        269.2
+      ],
+      "train_hourly_bars": 17687,
+      "train_runs": [
+        {
+          "first": "2021-01-01 00:00:00+00:00",
+          "last": "2025-06-30 23:00:00+00:00",
+          "bars": 17687
+        }
+      ],
+      "dev_scored_old_security": true,
+      "train_two_securities": false
+    }
+  ]
+}

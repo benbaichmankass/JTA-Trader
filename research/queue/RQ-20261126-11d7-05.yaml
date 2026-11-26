@@ -1,7 +1,7 @@
 # Authored 2026-11-26 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager order (MG1 execution-convention audit, practice review 2026-11-25 sec 6 M3 / S89; tool HARNESS-ENTRY-NEXT-OPEN, #28955). Rule registered BEFORE the run. Gates this adds or changes: none.
 id: RQ-20261126-11d7-05
 title: 'MG1 audit, mhg_pullback_1d: same-bar close fill vs t+1 next-open fill on the SAME signals, paired per-trade dR net of the full cost stack'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -101,4 +101,17 @@ roadmap:
 related:
 - research/levers/mhg_pullback_1d.yaml
 - scripts/research/exit_lever_ablation.py
-last_dispatched_at: '2026-11-26T03:05:47+00:00'
+last_dispatched_at: '2026-11-26T03:18:36+00:00'
+grading:
+  attested: RULE-RQ2026112611d705-MG1-NEXT-OPEN
+  auto: true
+  decision_rule_id: RULE-RQ2026112611d705-MG1-NEXT-OPEN
+  evidence:
+  - research/results/RQ-20261126-11d7-05/45746727845.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

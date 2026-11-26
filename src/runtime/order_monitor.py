@@ -11627,7 +11627,9 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
                 "venue_holding_protected", account_id, symbol, row["id"],
                 f"venue {venue_qty} vs journal {journal_qty} (mixed={mixed}) — "
                 f"one OCO for the {venue_qty} held, at row {pick['id']}'s stop "
-                f"{pick['stop_loss']} (tightest non-marketable)")
+                f"{pick['stop_loss']} (tightest non-marketable)", verb="proceeding")
+            # ALPACA-TP-PARTIAL-CANCELS-STOP-1125 (b): this branch POSTS the OCO, so it logs/pages as a PROCEEDING
+            # re-arm, not "REFUSED" (USO trade 8521, 2026-11-25: a re-arm that worked read as a refusal).
             return "protect_venue_holding", {"row": pick, "qty": venue_qty, "side": want}
     if row_qty > venue_qty + 1e-9:
         _page_rearm_refusal("row_shares_gone", account_id, symbol, row["id"],

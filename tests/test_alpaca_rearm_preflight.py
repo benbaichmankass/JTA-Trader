@@ -1032,3 +1032,21 @@ def test_target_gone_with_a_live_position_still_pages_target_naked(world):
     s = om._check_broker_naked_equity_positions(db)
     assert s["target_flat"] == 0
     assert s["target_naked"] == 1 and len(alerts) == 1
+
+
+def test_venue_holding_protected_pages_as_proceeding_not_refused(world, caplog):
+    """ALPACA-TP-PARTIAL-CANCELS-STOP-1125 (b): the venue-holding branch POSTS the OCO, so its log line and page
+    say PROCEEDING, never REFUSED (USO trade 8521, 2026-11-25: a working re-arm read as a refusal)."""
+    db, pages, mp = world
+    _set_rows(db, [
+        (1, "alpaca_portfolio", "QQQ", "long", 10.0, 700.0, 790.0, "2026-09-18T16:00:00+00:00"),
+        (2, "alpaca_portfolio", "QQQ", "long", 10.0, 725.0, 780.0, "2026-09-19T16:00:00+00:00"),
+        (3, "alpaca_portfolio", "QQQ", "long", 20.0, 710.0, 785.0, "2026-09-20T16:00:00+00:00"),
+    ])
+    _use(mp, _Venue(qty=30.0, price=735.0))
+    with caplog.at_level("WARNING"):
+        om._check_broker_naked_equity_positions(db)
+    page = [k for _a, k in pages if k.get("kind") == "venue_holding_protected"]
+    assert page and "re-arm proceeding" in page[0]["reason"] and "refused" not in page[0]["reason"]
+    lines = [r.getMessage() for r in caplog.records if "venue_holding_protected" in r.getMessage()]
+    assert lines and all("PROCEEDING" in m and "REFUSED" not in m for m in lines)

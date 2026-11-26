@@ -1,0 +1,7 @@
+candle dataset: served binance__ADAUSDT__240 (10981 rows, last 2026-11-17 20:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ADAUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 6.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-083/45802803091/arms/A__trades.jsonl --json comms/research/RQ-20261126-083/45802803091/arms/A__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 4.0 --tp-revision donchian_measured_move --tp-revision-width-mult 0.5
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=17.4696 > 0 with 3/4 positive folds at this arm's cost stack"
+}

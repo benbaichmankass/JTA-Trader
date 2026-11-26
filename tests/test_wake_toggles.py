@@ -139,3 +139,34 @@ def test_the_real_config_classifies_both_mirrors_as_portfolio_and_routes_them_to
         assert account_class(acct) == "paper_portfolio"
         assert wt.ltr_keys_for_accounts([acct]) == ["ltr_real_money"]
     assert wt.ltr_keys_for_accounts(["bybit_1"]) == ["ltr_paper"]
+
+
+def test_connector_write_logs_the_named_actor_not_the_operator(monkeypatch):
+    """WAKE-TOGGLE-ACTOR-ATTRIBUTION: a session flip was logged as 'console (operator Google sign-in)'."""
+    import json
+    from src.console_connector import server as s
+    monkeypatch.setenv("CONSOLE_CONNECTOR_AUTH", "google")
+    monkeypatch.setenv("WAKE_TOGGLES_WRITE_TOKEN", "t")
+    seen = []
+
+    class _R:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    def fake_open(req, timeout=0):
+        seen.append(json.loads(req.data)["by"])
+        return _R()
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", fake_open)
+    s.call_tool("set_wake_toggle", {"key": "desk_wake", "on": True, "actor": "Manager Session 2026-11-26a"})
+    s.call_tool("set_wake_toggle", {"key": "desk_wake", "on": True})
+    assert seen[0] == "console connector, actor: Manager Session 2026-11-26a"
+    assert seen[1] == "console connector (Google sign-in; caller not identified)"
+    assert all("operator" not in b for b in seen)

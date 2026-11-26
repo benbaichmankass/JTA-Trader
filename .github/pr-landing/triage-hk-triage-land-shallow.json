@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "scripts/research/stamp_pr_triage.py only (+ its tests): the watchdog triage's land path becomes shallow-safe (depth-1 fetches + git plumbing to build the merge commit, no history download) and failures are contained per PR, after run 431 showed a 300 s git fetch timeout in the runner's depth-1 checkout killing the whole triage run. Acts only on the bot's own stamp/receipt/grade branches, only when dirty. Tooling only; no order-path, strategy, risk or runtime change; adds no gate."
+}

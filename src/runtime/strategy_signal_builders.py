@@ -6929,15 +6929,28 @@ def _ml_entry_pending(name: str, symbol: str, refs: Any) -> Dict[str, Any]:
                                        "meta": {"strategy_name": name, "reason": reason}})
 
 
-def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None) -> str:
+def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None,
+                            meta: Any = None) -> str:
     """The one INFO line per symbol per ml_entry closed-bar decision (observability only, no behaviour): symbol, bars available,
     outcome = evaluated (a package) | no_signal (below_tau) | no_decision_bar | refused: <reason>. Row ML-ENTRY-SERVE-FIXES: the
-    journal used to say only 'returned no actionable signal', so 'refused insufficient_bars' could not be told from 'no signal'."""
+    journal used to say only 'returned no actionable signal', so 'refused insufficient_bars' could not be told from 'no signal'.
+    2026-11-26 (manager-approved, Tier 1, logging only): a ``no_signal`` line now CARRIES the model's numbers from the
+    ``below_tau:pred=..;p_long=..;p_short=..;tau=..;n_ref=..`` reason (the decision itself is unchanged: the reason string is
+    built by ``ml_entry.order_package`` before this line runs), and an evaluated line carries p_long / p_short / tau / n_ref
+    from the package meta, so how far a bar sat from tau is readable from the journal."""
     if reason is None:
         outcome = f"evaluated side={side}"
+        if isinstance(meta, dict):
+            nums = ";".join(f"{k}={meta[k]}" for k in ("p_long", "p_short", "tau", "n_reference") if meta.get(k) is not None)
+            if nums:
+                outcome += f" ({nums})"
     else:
         r = str(reason)
-        outcome = "no_signal" if r.startswith("below_tau") else "no_decision_bar" if r == "not_a_decision_bar" else f"refused: {r}"
+        if r.startswith("below_tau"):
+            detail = r.split(":", 1)[1] if ":" in r else ""
+            outcome = f"no_signal ({detail})" if detail else "no_signal"
+        else:
+            outcome = "no_decision_bar" if r == "not_a_decision_bar" else f"refused: {r}"
     return f"ml_entry_decision symbol={symbol} bars={bars} outcome={outcome}"
 
 
@@ -7014,7 +7027,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
                                            "meta": {"strategy_name": NAME, "reason": str(exc)}})
     _record_closed_decision(key, frame, timeframe, vcfg, _now)
     side = "buy" if pkg["direction"] == "long" else "sell"
-    logger.info(_ml_entry_decision_line(symbol, len(df), side=pkg["direction"]))
+    logger.info(_ml_entry_decision_line(symbol, len(df), side=pkg["direction"], meta=pkg.get("meta")))
     try:
         log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
                     "side": side, "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],

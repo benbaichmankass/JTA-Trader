@@ -559,17 +559,66 @@ def run_policy_shard(shard, chunks, jobs, heads, vm: ValueModels, out: Path, cls
 
 
 # ---- reduce ------------------------------------------------------------------------------------------------------------
-def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None, claim: bool, n_control: int = N_CONTROL) -> dict:
+def scope_filter(recs: list, strategies: Sequence[str] | None = None, symbols: Sequence[str] | None = None) -> list:
+    """Restrict the replayed trades to the named strategies and/or symbols (the Q10 one-leg re-scope). Each trade's replay is independent of every
+    other trade's, so filtering at reduce grades exactly what a replay of only those trades would. Empty / None = no filter (the original behaviour)."""
+    st = {s for s in (strategies or []) if s}
+    sy = {s for s in (symbols or []) if s}
+    return [r for r in recs if (not st or str(r.get("st")) in st) and (not sy or str(r.get("sy")) in sy)]
+
+
+def paired_stats(recs: list, cls: str, n_control: int) -> dict:
+    """Per-trade paired delta (arm net R - HOLD net R; 0 where the lever never fired) over one segment: n, n_fired, mean, sd, t, and the share of the
+    matched random re-timings of the same action whose mean delta the arm's mean delta beats. The statistic for a one-leg re-scope, where the
+    book-level RULE-AM-RISK-ADJUSTED-V1 clauses (folds, drawdown) cannot be read on a few hundred trades."""
+    import math
+    n = len(recs)
+    if n == 0:
+        return {"n": 0, "n_fired": 0, "mean_delta_r": None, "sd_delta_r": None, "t": None, "n_control": 0, "share_controls_beaten": None}
+    d, ctl_sum, n_fired = [], [0.0] * n_control, 0
+    for r in recs:
+        h = float(r["b"][0])
+        a = r["a"].get(cls, {"n": 0})
+        if a.get("n"):
+            n_fired += 1
+            d.append(float(a["p"][0]) - h)
+            for k in range(min(n_control, len(a.get("cn", [])))):
+                ctl_sum[k] += float(a["cn"][k]) - h
+        else:
+            d.append(0.0)
+    mean = sum(d) / n
+    sd = math.sqrt(sum((x - mean) ** 2 for x in d) / (n - 1)) if n > 1 else None
+    t = mean / (sd / math.sqrt(n)) if sd else None
+    ctl_means = [c / n for c in ctl_sum]
+    beaten = sum(1 for c in ctl_means if mean > c)
+    return {"n": n, "n_fired": n_fired, "mean_delta_r": round(mean, 5), "sd_delta_r": round(sd, 5) if sd is not None else None,
+            "t": round(t, 3) if t is not None else None, "n_control": n_control,
+            "share_controls_beaten": round(beaten / n_control, 4) if n_control else None}
+
+
+def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None, claim: bool, n_control: int = N_CONTROL,
+               strategies: Sequence[str] | None = None, symbols: Sequence[str] | None = None, entry_from: str = "") -> dict:
+    """``entry_from`` (YYYY-MM-DD, >= HOLDOUT_START) moves the holdout segment's start to that date, so a re-scope chosen on the corpus can be graded
+    ONLY on trades entering after the choice (disjoint, out-of-time). The dev segment is unchanged; the claim window starts at ``entry_from``."""
     recs, metas = P.read_shards(out)
+    n_corpus = len(recs)
+    recs = scope_filter(recs, strategies, symbols)
+    hold_start = P.HOLDOUT_START
+    if entry_from:
+        if entry_from < P.HOLDOUT_START:
+            raise ValueError(f"entry_from {entry_from} is before HOLDOUT_START {P.HOLDOUT_START}")
+        hold_start = entry_from
     dev = [r for r in recs if str(r["e"])[:10] < P.DEV_END]
-    hold = [r for r in recs if str(r["e"])[:10] >= P.HOLDOUT_START]
+    hold = [r for r in recs if str(r["e"])[:10] >= hold_start]
     claim_rec = None
     if claim:
         import holdout_lock
-        end_day = max((str(r["e"])[:10] for r in recs), default=P.HOLDOUT_START)
-        claim_rec = holdout_lock.claim_read(f"AM-HEADS-av-{cls}", P.HOLDOUT_START, max(end_day, P.HOLDOUT_START), unit, reader,
-                                            ledger or holdout_lock.LEDGER, train_end=P.HOLDOUT_TRAIN_END, family="AM-HEADS")
+        end_day = max((str(r["e"])[:10] for r in recs), default=hold_start)
+        claim_rec = holdout_lock.claim_read(f"AM-HEADS-av-{cls}", hold_start, max(end_day, hold_start), unit, reader,
+                                            ledger or holdout_lock.LEDGER, train_end=P.HOLDOUT_TRAIN_END, family="AM-HEADS",
+                                            symbols=sorted(set(symbols or [])) or None)
         (out / "holdout_claims.jsonl").write_text(json.dumps(claim_rec) + "\n")
+    paired = {"dev": paired_stats(dev, cls, n_control), "holdout": paired_stats(hold, cls, n_control)}
     if cls in ("mf_tighten_random", "mf_tighten_causal"):
         n_control = 0
     seg_dev = P._segment(dev, cls, n_control)
@@ -587,11 +636,17 @@ def reduce_run(out: Path, cls: str, unit: str, reader: str, ledger: Path | None,
     pop = (f"{len(recs)} replayed backtest trades (run-w corpus sha 1eb164f4, crypto legs with Binance Vision bars, entry in a fold with a value model, "
            f"i.e. 2022-07-01..end): {len(dev)} dev (entry < {P.DEV_END}), {len(hold)} claimed holdout; arm {cls} vs HOLD (replayed_actual) and "
            f"{n_control} matched random re-timings of the same action; R in the original stop distance, full cost stack; per-trade-R SCREEN")
+    if strategies or symbols or entry_from:
+        pop += (f"; SCOPED to strategies={sorted(set(strategies or [])) or 'all'} symbols={sorted(set(symbols or [])) or 'all'} "
+                f"({len(recs)} of {n_corpus} replayed trades); holdout = entry >= {hold_start}")
     return {"schema": SCHEMA, "rule_id": RULE_ID_R123 if cls in ("mf_tighten_random", "mf_tighten_causal") else RULE_ID, "unit": unit, "class": cls, "verdict": verdict, "read_state": "measured", "n": len(recs),
             "population": pop, "dev": seg_dev, "holdout": seg_hold,
             "lever": {"trades_fired": sum(1 for c in fired if c["n"]), "share_fired": round(sum(1 for c in fired if c["n"]) / len(recs), 4) if recs else None,
                       "kinds": dict(kinds)},
-            "could_not_replay": dict(could), "n_shards": len(metas), "reported_cuts": cuts, "holdout_claim": claim_rec, "graduation_eligible": False,
+            "could_not_replay": dict(could), "n_shards": len(metas), "reported_cuts": cuts,
+            "paired": paired,
+            "scope": {"strategies": sorted(set(strategies or [])) or None, "symbols": sorted(set(symbols or [])) or None, "holdout_start": hold_start,
+                      "n_corpus": n_corpus}, "holdout_claim": claim_rec, "graduation_eligible": False,
             "note": "SCREEN under RULE-AM-RISK-ADJUSTED-V1 (per-trade R books); a PASS is a fresh-window confirmation input, then a Tier-3 proposal input.",
             "provenance": "ESTIMATED"}
 
@@ -655,6 +710,9 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--ledger", default="")
     r.add_argument("--no-claim", action="store_true")
     r.add_argument("--n-control", type=int, default=N_CONTROL)
+    r.add_argument("--strategies", default="", help="comma list: grade only these strategies' trades (empty = all)")
+    r.add_argument("--symbols", default="", help="comma list: grade only these symbols' trades (empty = all)")
+    r.add_argument("--entry-from", default="", help="YYYY-MM-DD >= HOLDOUT_START: the holdout is trades entering on/after this date (out-of-time)")
     a = ap.parse_args(argv)
     if a.cmd == "fit-merge":
         man = fit_merge(Path(a.models))
@@ -669,7 +727,9 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "reduce":
-        res = reduce_run(out, a.classes, a.unit, a.reader, Path(a.ledger) if a.ledger else None, not a.no_claim, a.n_control)
+        res = reduce_run(out, a.classes, a.unit, a.reader, Path(a.ledger) if a.ledger else None, not a.no_claim, a.n_control,
+                         strategies=[x.strip() for x in a.strategies.split(",") if x.strip()],
+                         symbols=[x.strip() for x in a.symbols.split(",") if x.strip()], entry_from=a.entry_from.strip())
         (out / "grade_full.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
         (out / "verdict.json").write_text(json.dumps(brief(res), indent=1, default=str) + "\n")
         print(json.dumps({k: res[k] for k in ("verdict", "class", "n")}))
