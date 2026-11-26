@@ -1,0 +1,9 @@
+candle dataset: served binance__ETHUSDT__120 (21961 rows, last 2026-11-17 22:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ETHUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-157/45837813934/arms/A__trades.jsonl --json comms/research/RQ-20261126-157/45837813934/arms/A__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 6.0
+[side_long] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ETHUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-157/45837813934/arms/side_long__trades.jsonl --json comms/research/RQ-20261126-157/45837813934/arms/side_long__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 6.0 --side-filter long
+[side_short] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ETHUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 3.5 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-157/45837813934/arms/side_short__trades.jsonl --json comms/research/RQ-20261126-157/45837813934/arms/side_short__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 6.0 --side-filter short
+{
+ "verdict": "fail",
+ "label": "no_reachable_lever_beats_removed",
+ "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+}
