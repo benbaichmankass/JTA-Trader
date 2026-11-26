@@ -91,7 +91,18 @@ def grade(recs: List[Dict[str, Any]], failed: List[str]) -> Dict[str, Any]:
     return {"verdict": v, "read_state": "measured" if not failed else "producer_failed" if len(failed) == len(AUDIT) else "measured",
             "n": len(aud), "population": f"ml_entry_eq pool tickers {AUDIT} (+ control {CONTROL}); Alpaca 1Day {DEV[0]}..2025-07-01 and "
             f"1Hour {TRAIN[0]}..{TRAIN[1]}, adjustment=split, feed=sip; gap rule >= {GAP_DAYS} days",
-            "note": note, "records": recs}
+            "note": note, "measurement": {"records": recs},
+            "records": [fanout_row(r, v) for r in recs]}
+
+
+def fanout_row(rec: Dict[str, Any], verdict: str) -> Dict[str, Any]:
+    """One E5 row per ticker: the emitter (research_result.py) refuses a measured row without verdict, population and an
+    integer population.n (the 7c11-01 run 45763324547 could not land: its rows were the bare audit dicts). n = bars read for
+    the ticker (dev 1Day + training 1Hour); the audit dict rides in the row's measurement."""
+    return {"verdict": verdict, "read_state": "measured",
+            "population": (f"{rec['symbol']}{' (control)' if rec['symbol'] in CONTROL else ''}: Alpaca 1Day bars {DEV[0]}..{DEV[1]} "
+                           f"({rec['dev_daily_bars']}) + 1Hour bars {TRAIN[0]}..{TRAIN[1]} ({rec['train_hourly_bars']}), bars read"),
+            "n": int(rec["dev_daily_bars"]) + int(rec["train_hourly_bars"]), "measurement": rec}
 
 
 def self_test() -> None:
@@ -103,6 +114,8 @@ def self_test() -> None:
     assert not r2["dev_scored_old_security"] and not r2["train_two_securities"] and r2["train_hourly_bars"] == 0
     g = grade([r, r2], [])
     assert g["verdict"] == "fail" and "FB" in g["note"], g
+    assert all(x["verdict"] == "fail" and x["read_state"] == "measured" and isinstance(x["n"], int) and x["population"]
+               for x in g["records"]), g["records"]
     assert grade([r2], [])["verdict"] == "pass"
     assert grade([r2], ["NFX"])["verdict"] == "indeterminate"
     print("SELF-TEST PASS")
