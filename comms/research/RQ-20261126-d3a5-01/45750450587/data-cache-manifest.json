@@ -1,0 +1,806 @@
+{
+  "note": "data caches NOT committed; they live only in the (expiring) Actions artifact",
+  "artifact": "research-script-run-RQ-20261126-d3a5-01-45750450587",
+  "skipped": [
+    {
+      "path": "work/ada_pullback_2h.csv",
+      "bytes": 2144589,
+      "sha256": "74ef5f9ce0b05e6b78d618b46a0c80e3e33a5fa8727bd768129e614d5ecf7f62"
+    },
+    {
+      "path": "work/ada_pullback_2h.log",
+      "bytes": 1309,
+      "sha256": "7ed0d150a5a470ddb92039fc0b9e8d1025c57c593d2bb686cade3594bfef2366"
+    },
+    {
+      "path": "work/ada_pullback_2h__bt.json",
+      "bytes": 2236,
+      "sha256": "77288fc3ad2d15a05f6f2f8eb935e27a7566079deb6850835798499dcfb991dd"
+    },
+    {
+      "path": "work/ada_pullback_2h__trades.jsonl",
+      "bytes": 213566,
+      "sha256": "ea41525a63fa7ed60dbf986c37056eceac1be9aa6c9e7aec04965b733ca642b8"
+    },
+    {
+      "path": "work/avax_pullback_2h.csv",
+      "bytes": 1922734,
+      "sha256": "61e80b8f55242c834fe7543dd2c1a694e618914c658b8c4c4d45eca4466e37dc"
+    },
+    {
+      "path": "work/avax_pullback_2h.log",
+      "bytes": 1312,
+      "sha256": "5810f3518a8a63278326872b3a2b3f13f97c83418a6ed40918699e4a624c9e6c"
+    },
+    {
+      "path": "work/avax_pullback_2h__bt.json",
+      "bytes": 2238,
+      "sha256": "9983f5aa64e72fc8043180d79f05c4db6fa8a4a1cb30e975863b13a758f44357"
+    },
+    {
+      "path": "work/avax_pullback_2h__trades.jsonl",
+      "bytes": 229599,
+      "sha256": "0d08707165bd888c25f7bcb3b7bad7455695f92a554d100b5ea1967d588eaa5e"
+    },
+    {
+      "path": "work/eth_pullback_2h.csv",
+      "bytes": 2199855,
+      "sha256": "34a44c4aaf65217d32a4f60593c2b7058a8522e7b5e4a11e1f4f731a63be2a2d"
+    },
+    {
+      "path": "work/eth_pullback_2h.log",
+      "bytes": 1228,
+      "sha256": "e105cdbc783c607ca9344eab47ca676c398d0c3dd490545058cb556649126202"
+    },
+    {
+      "path": "work/eth_pullback_2h__bt.json",
+      "bytes": 2144,
+      "sha256": "347ac846ea148f9510eb726e7eefcfb2ad2a5aaaf495811dce4b80ca349697e1"
+    },
+    {
+      "path": "work/eth_pullback_2h__trades.jsonl",
+      "bytes": 210272,
+      "sha256": "39423f5808a03a4082cf5bb5dee1e1e0dff5a4b88f8b1ce29190fb2888f8c794"
+    },
+    {
+      "path": "work/eth_pullback_prop_2h.csv",
+      "bytes": 2199855,
+      "sha256": "34a44c4aaf65217d32a4f60593c2b7058a8522e7b5e4a11e1f4f731a63be2a2d"
+    },
+    {
+      "path": "work/eth_pullback_prop_2h.log",
+      "bytes": 1235,
+      "sha256": "3edfa377923d992171e5cf161ccdfefe06bf34df3130520640ccfba67f1f5b56"
+    },
+    {
+      "path": "work/eth_pullback_prop_2h__bt.json",
+      "bytes": 2141,
+      "sha256": "218506d8961058d94416b560b1b8c5ad3533083017e28065fb06d44c2e2c50c4"
+    },
+    {
+      "path": "work/eth_pullback_prop_2h__trades.jsonl",
+      "bytes": 201187,
+      "sha256": "c9c6780e8f3c0121e2c54e4a008de84fab9d5005ed3b4f2cf29c0c35ed8bc155"
+    },
+    {
+      "path": "work/fade_breakout_4h.csv",
+      "bytes": 1108455,
+      "sha256": "d42a9b03e8f045046d4826c5b4b26c28b5ff74b6c3244295bf9734b5f3d02519"
+    },
+    {
+      "path": "work/fade_breakout_4h.log",
+      "bytes": 995,
+      "sha256": "91e2bc032f4f9d688ea15e35b54c1d4958558b8cb702908d3c6e5418d7b75937"
+    },
+    {
+      "path": "work/fade_breakout_4h__bt.json",
+      "bytes": 1667,
+      "sha256": "9d5da98142a2151a53b9c638d5c085c4c9bd387623519b6a7b9f0b8a93d49771"
+    },
+    {
+      "path": "work/fade_breakout_4h__trades.jsonl",
+      "bytes": 70576,
+      "sha256": "905b06b4270686a0c28674832f13c5378e27b3680551101a2d6812de85b63d0f"
+    },
+    {
+      "path": "work/gdx_pullback_1d.csv",
+      "bytes": 77845,
+      "sha256": "0e47b03df748c9308c45e988cf12d8a791e20df205c23706a3fd9006d1aa192b"
+    },
+    {
+      "path": "work/gdx_pullback_1d.log",
+      "bytes": 1384,
+      "sha256": "50687927a5bd9e756ae66d52252f732fcfad09432ccdc4cde4525d38e7f77501"
+    },
+    {
+      "path": "work/gdx_pullback_1d__bt.json",
+      "bytes": 2069,
+      "sha256": "23e05bfc5b761cc378d8e7df47ff5c65ea9b6e66b8331cc33bf4d2f40ed9b2d8"
+    },
+    {
+      "path": "work/gdx_pullback_1d__trades.jsonl",
+      "bytes": 25552,
+      "sha256": "c97e88a242f79f8adbb992379c0a97bbed69d2372b39790822f310b78ad14e05"
+    },
+    {
+      "path": "work/gld_pullback_1d.csv",
+      "bytes": 82475,
+      "sha256": "f5fb7b4f7baaa52349d4e6ee8bc1ea5cbd5d0a314fbcf39d10b1209e08bad4de"
+    },
+    {
+      "path": "work/gld_pullback_1d.log",
+      "bytes": 1497,
+      "sha256": "d5d8e0cf4a243bf187f066e409426d41abf7b8feaf1ec4c997e2939af38ee3c2"
+    },
+    {
+      "path": "work/gld_pullback_1d__bt.json",
+      "bytes": 2558,
+      "sha256": "3699112d7812dce70c8d4c6ee2272b0b0270a71eb486ac133996bbdf12e15813"
+    },
+    {
+      "path": "work/gld_pullback_1d__trades.jsonl",
+      "bytes": 25491,
+      "sha256": "4fc46886b24fe9b388f4443d62637b286d63782358a5a55a828d62cc6908f810"
+    },
+    {
+      "path": "work/htf_pullback_trend_2h.csv",
+      "bytes": 2198984,
+      "sha256": "bf28de25d01726927be2064c077318772188300d269e408055ad6d54ce96667a"
+    },
+    {
+      "path": "work/htf_pullback_trend_2h.log",
+      "bytes": 1206,
+      "sha256": "099b5950d153c35c303824e9ee34b47c375db774bffdcb7e5914347de2e0f7d9"
+    },
+    {
+      "path": "work/htf_pullback_trend_2h__bt.json",
+      "bytes": 2106,
+      "sha256": "6237d67eb9d96973bf8f657686c964d67efa7211029d0903fbab0b933ec52e62"
+    },
+    {
+      "path": "work/htf_pullback_trend_2h__trades.jsonl",
+      "bytes": 218342,
+      "sha256": "c1a4ac58a5ecb1d45ccc02813f2f5018c5893648b15f78936e4849555bd4ac81"
+    },
+    {
+      "path": "work/iaum_pullback_1d.csv",
+      "bytes": 82475,
+      "sha256": "f5fb7b4f7baaa52349d4e6ee8bc1ea5cbd5d0a314fbcf39d10b1209e08bad4de"
+    },
+    {
+      "path": "work/iaum_pullback_1d.log",
+      "bytes": 1501,
+      "sha256": "241c4702287a1c08213ca69f8c7f51eada29c596e576011dcbba9f82cf474db8"
+    },
+    {
+      "path": "work/iaum_pullback_1d__bt.json",
+      "bytes": 2559,
+      "sha256": "5c59fd6a3258e3699a42b3184ef5edbe323b4a72a839f48ce10d862fe71f8e71"
+    },
+    {
+      "path": "work/iaum_pullback_1d__trades.jsonl",
+      "bytes": 25538,
+      "sha256": "ef5bdafffe93cd4b026383a41f160b9cb26c28caecab4c81191a7afe174266e3"
+    },
+    {
+      "path": "work/ief_pullback_1d.csv",
+      "bytes": 77254,
+      "sha256": "486d4af7debb3e34a6298b849bb9e631737c0235a1ffe81c864e2b4895f9b1f4"
+    },
+    {
+      "path": "work/ief_pullback_1d.log",
+      "bytes": 1369,
+      "sha256": "58e73a7d3ad330b2d5a87263902ba0abf4c9cc876ef3257b446fcefc49a04c2c"
+    },
+    {
+      "path": "work/ief_pullback_1d__bt.json",
+      "bytes": 2045,
+      "sha256": "487013a29bbe700ab10d5e109a61d014d979b1ba5c618d82c244ed5fa4992d13"
+    },
+    {
+      "path": "work/ief_pullback_1d__trades.jsonl",
+      "bytes": 17704,
+      "sha256": "84d71d2a741fff9b2a3455e41e8abe42fa0dc9fab6d10800f44b3c2897feef94"
+    },
+    {
+      "path": "work/iwm_trend_long_1d.csv",
+      "bytes": 85566,
+      "sha256": "ab5c33fb76d2318a3d2ffdda8c1e9d668ac7178fbe9ff8a99999511a72255cfb"
+    },
+    {
+      "path": "work/iwm_trend_long_1d.log",
+      "bytes": 1164,
+      "sha256": "ba8b85e866693242830e2b7f34dd431e75c2b541e84c79ee3248b277634e1b25"
+    },
+    {
+      "path": "work/iwm_trend_long_1d__bt.json",
+      "bytes": 1983,
+      "sha256": "918eca55c942186b3a1fedd5dccaa51814b49192103c9725a56ad23b046973b9"
+    },
+    {
+      "path": "work/iwm_trend_long_1d__trades.jsonl",
+      "bytes": 12928,
+      "sha256": "96c9e5765e8b6134b146aae27a5ac143217d3676ed183c195147c93c8bbb43f7"
+    },
+    {
+      "path": "work/mes_trend_long_1d.csv",
+      "bytes": 112842,
+      "sha256": "1973756ec3557e56caf5b6b1d1ff3c51f063fcc8f04845ee49110fdda170b2c6"
+    },
+    {
+      "path": "work/mes_trend_long_1d.log",
+      "bytes": 1078,
+      "sha256": "078035bceb92ff3ccfca4b0c5a99329a8fd9e130caffa4f7132e8a556769d75e"
+    },
+    {
+      "path": "work/mes_trend_long_1d__bt.json",
+      "bytes": 1890,
+      "sha256": "ba3b794b7045f982a817b3a955d78e6610990f04c5d280335038956216a94258"
+    },
+    {
+      "path": "work/mes_trend_long_1d__trades.jsonl",
+      "bytes": 14045,
+      "sha256": "95a0db11d5e7c349cc91d914eecd92126a87ef219377778eb63eb94a1c6737e6"
+    },
+    {
+      "path": "work/mgc_pullback_1d.csv",
+      "bytes": 112241,
+      "sha256": "c3c8a45771e273c1de4daa2cdd79be632f6bf0152e617aa5458d97a9923524f2"
+    },
+    {
+      "path": "work/mgc_pullback_1d.log",
+      "bytes": 1390,
+      "sha256": "d6e3a660a1f7693c4aea2d9415c1b8997fcda91b2c0fde64c44870a05d6cd261"
+    },
+    {
+      "path": "work/mgc_pullback_1d__bt.json",
+      "bytes": 2075,
+      "sha256": "1164c9f16ba19298c58046a7fbcc3ebe685ef9c22f8b4ae09f927e6a5175e809"
+    },
+    {
+      "path": "work/mgc_pullback_1d__trades.jsonl",
+      "bytes": 25968,
+      "sha256": "ac21cf32883669127eebb2579d6f1da5bd026528264009509173bf0b9ba8bb55"
+    },
+    {
+      "path": "work/mgc_trend_1h.csv",
+      "bytes": 2432640,
+      "sha256": "a754e7dadba13d7681f3fe1c85497837df019d8b136fdb6fd1eaaa75a72211cc"
+    },
+    {
+      "path": "work/mgc_trend_1h.log",
+      "bytes": 921,
+      "sha256": "25fb238677af8f0e049420ad4e2714f9cb70cc29fa4c47dd98747e28a9c1f87e"
+    },
+    {
+      "path": "work/mgc_trend_1h__bt.json",
+      "bytes": 1986,
+      "sha256": "01392f9dd6cd79b5452199b096ed88bb6b9d9e22e3de0bbd72d31fc4d7a4887b"
+    },
+    {
+      "path": "work/mgc_trend_1h__trades.jsonl",
+      "bytes": 304758,
+      "sha256": "c3d6aebea5afb7f4da197152c5f7979bc4521e5164fc79ade08249cb62a3a045"
+    },
+    {
+      "path": "work/qqq_pullback_1h.csv",
+      "bytes": 697249,
+      "sha256": "cccb11f4787897633099e6a68ae6554443a8bd3a91d7247b1859cb545139d9ba"
+    },
+    {
+      "path": "work/qqq_pullback_1h.log",
+      "bytes": 1175,
+      "sha256": "4c8e77c84090bd27206c6d0eacca91b87a02e36742e4b1ea60b984aa27f772eb"
+    },
+    {
+      "path": "work/qqq_pullback_1h__bt.json",
+      "bytes": 2082,
+      "sha256": "fec36105a65d6d8186adf0a7895c2f66eafcdb088dc798dcde088e029acf70c1"
+    },
+    {
+      "path": "work/qqq_pullback_1h__trades.jsonl",
+      "bytes": 97220,
+      "sha256": "f1cbe2dc6c646c1a24a7d96a825e5d76b0543850672b33dcaa7a62b169dcc637"
+    },
+    {
+      "path": "work/qqq_trend_long_1d.csv",
+      "bytes": 87334,
+      "sha256": "e7ce1d42c37b45d3d94669ab92b1f2adbc4ce9f2ed3220335dd62ec2af1b2b21"
+    },
+    {
+      "path": "work/qqq_trend_long_1d.log",
+      "bytes": 1164,
+      "sha256": "ff84510d9451fe9d1a2c31ad248836f122e4bddf39b0c7d62d80678cada5429c"
+    },
+    {
+      "path": "work/qqq_trend_long_1d__bt.json",
+      "bytes": 1984,
+      "sha256": "21d641b8e5ff754ad8e6ae40f5134633fcb1e3cf63cb297635dca4cd4bb02d89"
+    },
+    {
+      "path": "work/qqq_trend_long_1d__trades.jsonl",
+      "bytes": 13377,
+      "sha256": "400203f67fc33a21dc01dfa80b36ca138299a0f3ae71ab3c9cee8ff52edc37fd"
+    },
+    {
+      "path": "work/scha_trend_long_1d.csv",
+      "bytes": 85566,
+      "sha256": "ab5c33fb76d2318a3d2ffdda8c1e9d668ac7178fbe9ff8a99999511a72255cfb"
+    },
+    {
+      "path": "work/scha_trend_long_1d.log",
+      "bytes": 1076,
+      "sha256": "8ebc5e9e56e86926c2c396bbf80eacd378dac11d2030930d9f1d76c789fbbba5"
+    },
+    {
+      "path": "work/scha_trend_long_1d__bt.json",
+      "bytes": 1877,
+      "sha256": "4fdc461c0ba8c9166b139cef97020afd80889c84558c1d72bd55e4bd20285cd5"
+    },
+    {
+      "path": "work/scha_trend_long_1d__trades.jsonl",
+      "bytes": 11091,
+      "sha256": "31529c8483776ad971bb32b94abc721f6013fd5d0fbe28d2f8ee7b47c9a92823"
+    },
+    {
+      "path": "work/slv_pullback_1d.csv",
+      "bytes": 75400,
+      "sha256": "fff4e71eb22595eb097c1099b9d4efbfb5d0a1641c8c83e59694e0a4df2de1c2"
+    },
+    {
+      "path": "work/slv_pullback_1d.log",
+      "bytes": 1375,
+      "sha256": "d066fe74d696984221194cf2ec5dd41d8d2412d53994b23acaa97c5a8f4f2dc7"
+    },
+    {
+      "path": "work/slv_pullback_1d__bt.json",
+      "bytes": 2056,
+      "sha256": "07c0d2b235483a0d45a01af328c38630ff7afe0ffc7de6127edc0de8aa9475ed"
+    },
+    {
+      "path": "work/slv_pullback_1d__trades.jsonl",
+      "bytes": 26585,
+      "sha256": "c862b2348d25f3c693ea6d5e4811b0f5f6d2ee593430cb830731755549f57e88"
+    },
+    {
+      "path": "work/slv_trend_1h.csv",
+      "bytes": 623064,
+      "sha256": "f2c53f6e00868d1d538ed14ebff2236164437293312b84a5f490fb8277508d9f"
+    },
+    {
+      "path": "work/slv_trend_1h.log",
+      "bytes": 889,
+      "sha256": "6d0832627c4b18a76cceb38c35392685930a86bb2703552d141ead62a28c18a9"
+    },
+    {
+      "path": "work/slv_trend_1h__bt.json",
+      "bytes": 1929,
+      "sha256": "3fb8ba9492ce92dbd302912d1612d4b820531eb2dca320df6c5b604cfc1ff660"
+    },
+    {
+      "path": "work/slv_trend_1h__trades.jsonl",
+      "bytes": 144516,
+      "sha256": "3ea062402c935118c8c6422b3a5758e785f4e8208699b3224c0be28466e6973a"
+    },
+    {
+      "path": "work/sol_pullback_2h.csv",
+      "bytes": 1969391,
+      "sha256": "46d7c71e643944f0d5d9466c69b38da292d1c4d40b36bab9d30bc9884b74ac57"
+    },
+    {
+      "path": "work/sol_pullback_2h.log",
+      "bytes": 1213,
+      "sha256": "d167fcf4f807821ffe105f9f4afa04674f74fc634838157142f8063b74158f88"
+    },
+    {
+      "path": "work/sol_pullback_2h__bt.json",
+      "bytes": 2129,
+      "sha256": "65df4ff34e74c0d590ab45b9a5aa6f21f970b7cdce48f925856616ca64fc8b32"
+    },
+    {
+      "path": "work/sol_pullback_2h__trades.jsonl",
+      "bytes": 72716,
+      "sha256": "4a84a78f3fdf78087a57ddf74cfa98ecd4768fa93f5733bb85fbee273048a5b1"
+    },
+    {
+      "path": "work/splg_trend_long_1d.csv",
+      "bytes": 84861,
+      "sha256": "ff0182362624b8b2d430994e731a3b2c6d60992d71e80f08d29bdde954d126c1"
+    },
+    {
+      "path": "work/splg_trend_long_1d.log",
+      "bytes": 1165,
+      "sha256": "7aba62a73524828965666b2ed6b7fdb96328d552c058fc3369046d5cec2cd45f"
+    },
+    {
+      "path": "work/splg_trend_long_1d__bt.json",
+      "bytes": 1986,
+      "sha256": "111c4f1cfce49ba3a42fef66b601ca5b74a18167cb2e51608beb88663ddb39d2"
+    },
+    {
+      "path": "work/splg_trend_long_1d__trades.jsonl",
+      "bytes": 13490,
+      "sha256": "f5c7068cfeda1a4eea5f727f6f8740cab0739cf50fefde891dc8e770596d898b"
+    },
+    {
+      "path": "work/spy_pullback_1h.csv",
+      "bytes": 682697,
+      "sha256": "66fcd6c77c195f0d87440b2dfaf255115defe1eca1f3cbba6b2b62440716aa5b"
+    },
+    {
+      "path": "work/spy_pullback_1h.log",
+      "bytes": 1180,
+      "sha256": "4196cb7d3151eafb4917d1d669310dd6b8b1a04d92bd2563fa5d2cd712b7dee7"
+    },
+    {
+      "path": "work/spy_pullback_1h__bt.json",
+      "bytes": 2093,
+      "sha256": "be1f9b4d19bbce08d4be6d2a7b555b9a3ab12ab5a0466f03e16cd27e8cf0162a"
+    },
+    {
+      "path": "work/spy_pullback_1h__trades.jsonl",
+      "bytes": 117192,
+      "sha256": "94f67718c89c0e34160323ba3851b8adac54cdaf53966ee50788434577e784fe"
+    },
+    {
+      "path": "work/spy_trend_long_1d.csv",
+      "bytes": 84861,
+      "sha256": "ff0182362624b8b2d430994e731a3b2c6d60992d71e80f08d29bdde954d126c1"
+    },
+    {
+      "path": "work/spy_trend_long_1d.log",
+      "bytes": 1077,
+      "sha256": "d45c32a04f06a25516ce0248c3d7ae9fce44b62b22094b29eee78c981e0996bc"
+    },
+    {
+      "path": "work/spy_trend_long_1d__bt.json",
+      "bytes": 1885,
+      "sha256": "4ec1fc4a5e4c9d739d6eb9955a164d83f30ad25393d95587278bf46e2042bc7b"
+    },
+    {
+      "path": "work/spy_trend_long_1d__trades.jsonl",
+      "bytes": 21527,
+      "sha256": "0f9000b540176ee1a9c1474ab54c6412dbb81e38ea876582188824647aba05cb"
+    },
+    {
+      "path": "work/squeeze_breakout_4h.csv",
+      "bytes": 1108455,
+      "sha256": "d42a9b03e8f045046d4826c5b4b26c28b5ff74b6c3244295bf9734b5f3d02519"
+    },
+    {
+      "path": "work/squeeze_breakout_4h.log",
+      "bytes": 910,
+      "sha256": "4bf3565cfa642af7645cb2ac29b9d70355ec797da44a86d2bc6326df33c3da1b"
+    },
+    {
+      "path": "work/squeeze_breakout_4h__bt.json",
+      "bytes": 1899,
+      "sha256": "4ca9be9113f1573f53e15b85ba6c6cecc13fca4b4277aeab334ee1d696b869a4"
+    },
+    {
+      "path": "work/squeeze_breakout_4h__trades.jsonl",
+      "bytes": 52620,
+      "sha256": "9e801b0bf2655d896200ccb96d44941af169bfb861f0142ef4863b5f50e07bc0"
+    },
+    {
+      "path": "work/tlt_pullback_1d.csv",
+      "bytes": 79046,
+      "sha256": "3f3daf04e084c57fcce50ffdadc9c5e1a2d6f496d461d7fd1bf8c816ab49da7d"
+    },
+    {
+      "path": "work/tlt_pullback_1d.log",
+      "bytes": 1372,
+      "sha256": "4b1203e825e51243c244432519853706604e41f87e5f92ac3dbb1fe0aaeec441"
+    },
+    {
+      "path": "work/tlt_pullback_1d__bt.json",
+      "bytes": 2051,
+      "sha256": "adb898b76ded55f130d2c8b4d688edcb33a16bf21d67dae715f3a1d36ca6abbe"
+    },
+    {
+      "path": "work/tlt_pullback_1d__trades.jsonl",
+      "bytes": 15856,
+      "sha256": "8b5defc9440965d4654df85d2227528b8c6c771537db8845d0f349ac1f39f759"
+    },
+    {
+      "path": "work/tlt_pullback_1h.csv",
+      "bytes": 647168,
+      "sha256": "4e20021163b1495223ee39e9758e84973427642103bb4e4f49dce57623321d5b"
+    },
+    {
+      "path": "work/tlt_pullback_1h.log",
+      "bytes": 1152,
+      "sha256": "dc4af4c9fc1501436da96f85d0d5d3e47d92b463cbd904ba5c0db3c674f12546"
+    },
+    {
+      "path": "work/tlt_pullback_1h__bt.json",
+      "bytes": 2050,
+      "sha256": "6fbd56e5f7ff8aea4fd441f026ee2cbf43f57e353ab9807fa0c9c02361cf9e8a"
+    },
+    {
+      "path": "work/tlt_pullback_1h__trades.jsonl",
+      "bytes": 87858,
+      "sha256": "632ba604b65bd9a680cae7346785a6181ffc95d058f13c2ac6a63e5c753e725f"
+    },
+    {
+      "path": "work/trend_donchian.csv",
+      "bytes": 4361495,
+      "sha256": "509523ee437fd5762163455c7d35d4f793f63768db4ee780a2090e2b596beaaf"
+    },
+    {
+      "path": "work/trend_donchian.log",
+      "bytes": 982,
+      "sha256": "defcc670e6617a148c6804c959eea3b343fad384a1451bfb97f2d1aee67acf82"
+    },
+    {
+      "path": "work/trend_donchian_1h.csv",
+      "bytes": 4361495,
+      "sha256": "509523ee437fd5762163455c7d35d4f793f63768db4ee780a2090e2b596beaaf"
+    },
+    {
+      "path": "work/trend_donchian_1h.log",
+      "bytes": 916,
+      "sha256": "21b9cb49588faae0da7f6105344fca93da4e3db9dc94fd8499dd9ccc2e906f69"
+    },
+    {
+      "path": "work/trend_donchian_1h__bt.json",
+      "bytes": 1965,
+      "sha256": "2a55701c9d9defcd6487682973056f7f1a9338bf9917122cbf9de82f5a0a4cdb"
+    },
+    {
+      "path": "work/trend_donchian_1h__trades.jsonl",
+      "bytes": 457733,
+      "sha256": "48c593c5abf686cf61c136ace3d735e4b1a418e599da451b64c93045dea9af8f"
+    },
+    {
+      "path": "work/trend_donchian__bt.json",
+      "bytes": 2046,
+      "sha256": "bfb622289845bbcb2de1c2d3c842b588134ee7c297ef455c9d30169b8418bcf3"
+    },
+    {
+      "path": "work/trend_donchian__trades.jsonl",
+      "bytes": 209205,
+      "sha256": "9ff50236eeae0162a7a1d619585a8cd4f1e3961059655f27000c9cff48369575"
+    },
+    {
+      "path": "work/trend_donchian_ada_4h.csv",
+      "bytes": 1079442,
+      "sha256": "00436c76fe41a72c25500e46109cc8bd232b54e581541532a8589ccfa7e37d01"
+    },
+    {
+      "path": "work/trend_donchian_ada_4h.log",
+      "bytes": 903,
+      "sha256": "457abdafebfb07659bd257cb291a87d15d3f02287ad9aa616e7f1939d2ff3bf4"
+    },
+    {
+      "path": "work/trend_donchian_ada_4h__bt.json",
+      "bytes": 1931,
+      "sha256": "8059cec5f7d92117752ebc8624371accaf6cbeca1892c258620ac6a5ee76bc99"
+    },
+    {
+      "path": "work/trend_donchian_ada_4h__trades.jsonl",
+      "bytes": 119108,
+      "sha256": "9f60bb88f79d7f65f8b8cf2d110a8fed6cb487e0f343976547522596f7db7d4e"
+    },
+    {
+      "path": "work/trend_donchian_avax_4h.csv",
+      "bytes": 970114,
+      "sha256": "751cb2d90f80eac4cdd3474abebcee619472451fb24957ec4f79c2fa44f3f871"
+    },
+    {
+      "path": "work/trend_donchian_avax_4h.log",
+      "bytes": 989,
+      "sha256": "f5b0a6f9aeee26f845d62f664fb1b6a6b9020e0bf87d3f67deb70b6ec2a7d7b6"
+    },
+    {
+      "path": "work/trend_donchian_avax_4h__bt.json",
+      "bytes": 2022,
+      "sha256": "b8ffa90eff253ed983511c02e9ce813b0f7cd995ddbe35af9ef3b4ef42e7f194"
+    },
+    {
+      "path": "work/trend_donchian_avax_4h__trades.jsonl",
+      "bytes": 124126,
+      "sha256": "af0f5bf075a9acab918309fc0a4b7b1c5c518d9b96037f99432e7ae6826f2520"
+    },
+    {
+      "path": "work/trend_donchian_eth.csv",
+      "bytes": 4362955,
+      "sha256": "03f204baf1dd7ed9aefcae0737f57dee2b7db5d32737753768591e4672fe3dc7"
+    },
+    {
+      "path": "work/trend_donchian_eth.log",
+      "bytes": 995,
+      "sha256": "b6216d961a47f15fb9911be7f5be623e3d1f214736c04afd8d9a1d6dbc4663de"
+    },
+    {
+      "path": "work/trend_donchian_eth_4h.csv",
+      "bytes": 1108232,
+      "sha256": "4088da31004acba1afab6f9b94e3ea638a3fced8b87dc355eacab2b3c815b38a"
+    },
+    {
+      "path": "work/trend_donchian_eth_4h.log",
+      "bytes": 1121,
+      "sha256": "e2aad0f5469e4bb5fc8f8505652db3ab9a7d4f99d3353fe4c32acc7fdc42f7ad"
+    },
+    {
+      "path": "work/trend_donchian_eth_4h__bt.json",
+      "bytes": 2181,
+      "sha256": "8d1d8c0c07c5319e7c5ec82918f479b5dd551ca82346cb63ad2ebd3dfc922a44"
+    },
+    {
+      "path": "work/trend_donchian_eth_4h__trades.jsonl",
+      "bytes": 126628,
+      "sha256": "0cd4d46c838ea68441a42a1656e8e12e2368fbb2d36043d2ccf9c1b410f7b922"
+    },
+    {
+      "path": "work/trend_donchian_eth__bt.json",
+      "bytes": 2049,
+      "sha256": "c83f52fce945fe822f10f2385459a7074d4f71d43059f44ec784e7d57494c4bd"
+    },
+    {
+      "path": "work/trend_donchian_eth__trades.jsonl",
+      "bytes": 341569,
+      "sha256": "dd4fd96c70d29679917c635c8d5af9204d7b860c7fda635c5efe0fd31db6371c"
+    },
+    {
+      "path": "work/trend_donchian_eth_prop.csv",
+      "bytes": 4362955,
+      "sha256": "03f204baf1dd7ed9aefcae0737f57dee2b7db5d32737753768591e4672fe3dc7"
+    },
+    {
+      "path": "work/trend_donchian_eth_prop.log",
+      "bytes": 995,
+      "sha256": "e933695736c469ef4ecdd2f0ee37c60bbaa6fdf021fdfccf5dc11538c8ee7aaa"
+    },
+    {
+      "path": "work/trend_donchian_eth_prop__bt.json",
+      "bytes": 2035,
+      "sha256": "ab6d5bd9bbab8c2bf252e1c6d5877703abcdc0c66f55fbdd5f125f77e7092b03"
+    },
+    {
+      "path": "work/trend_donchian_eth_prop__trades.jsonl",
+      "bytes": 400313,
+      "sha256": "bfddbbb207645cdd5ec5375950522ffc91b5255ce03b3318d0b165d37d5e827e"
+    },
+    {
+      "path": "work/trend_donchian_sol.csv",
+      "bytes": 3906034,
+      "sha256": "069e197f91e8c891853214d5be1810e9d65183a9cb96a72263394921e4a8c69a"
+    },
+    {
+      "path": "work/trend_donchian_sol.log",
+      "bytes": 899,
+      "sha256": "5f836f4c3e015d2368bfc978c4e7120c7049cab7f4b1ba2872cd160ca208f72d"
+    },
+    {
+      "path": "work/trend_donchian_sol_4h.csv",
+      "bytes": 993489,
+      "sha256": "cab0919af79e9a2679371e10860abf5415129cfb741daf5c758e22dc4482f873"
+    },
+    {
+      "path": "work/trend_donchian_sol_4h.log",
+      "bytes": 988,
+      "sha256": "1b84652a8fd597cc66dd0590778dc18f71be78ce9cb3a3ad77b8ccee8780f4d7"
+    },
+    {
+      "path": "work/trend_donchian_sol_4h__bt.json",
+      "bytes": 2032,
+      "sha256": "57919497109e3db9b722ce8dfb9ba1c787dc66b7f2c0a30985fa8ef0de715457"
+    },
+    {
+      "path": "work/trend_donchian_sol_4h__trades.jsonl",
+      "bytes": 125856,
+      "sha256": "19049fd5d29cf9e84395c6d98be039691b5eb4fd129b53e9cb5eca5f92fb8183"
+    },
+    {
+      "path": "work/trend_donchian_sol__bt.json",
+      "bytes": 1942,
+      "sha256": "f6ec0ab191f6533f939862bf494f5910fa6d74d8bf1d2c476d949f1b5bf07545"
+    },
+    {
+      "path": "work/trend_donchian_sol__trades.jsonl",
+      "bytes": 178947,
+      "sha256": "8d21620622eba36a0bd8fd5f5ef33aea6b0952824ef9d2a05e1b7820015883ea"
+    },
+    {
+      "path": "work/trend_donchian_sol_prop.csv",
+      "bytes": 3906034,
+      "sha256": "069e197f91e8c891853214d5be1810e9d65183a9cb96a72263394921e4a8c69a"
+    },
+    {
+      "path": "work/trend_donchian_sol_prop.log",
+      "bytes": 911,
+      "sha256": "216ea43a1377b1819d02f7f8f8c0f60dfe44d93439987b8f8bc23df27f206979"
+    },
+    {
+      "path": "work/trend_donchian_sol_prop__bt.json",
+      "bytes": 1942,
+      "sha256": "6d11a1b1a07c7eaaa0fca2e521781d44e75cdcf99b7bbcce89a496b2af4612b0"
+    },
+    {
+      "path": "work/trend_donchian_sol_prop__trades.jsonl",
+      "bytes": 182865,
+      "sha256": "1a3d1300885a662a781f2344d5cdd666c0cb6b1612ca20c097e53507ee48182a"
+    },
+    {
+      "path": "work/trend_donchian_xrp_4h.csv",
+      "bytes": 1074571,
+      "sha256": "b95ceb03cc2a4a332a36c347a4f8c6a85b4179961f762fdcaebd61e30ca1d836"
+    },
+    {
+      "path": "work/trend_donchian_xrp_4h.log",
+      "bytes": 1134,
+      "sha256": "4e04b67c88af89e72e6f296c76f954062b128eeac18dbc2d2f104831bde3bfd8"
+    },
+    {
+      "path": "work/trend_donchian_xrp_4h__bt.json",
+      "bytes": 2200,
+      "sha256": "5c2df0d0451169e5111f8d5b2b05ec5ab1e85721d5c81d243057fd04295c10b1"
+    },
+    {
+      "path": "work/trend_donchian_xrp_4h__trades.jsonl",
+      "bytes": 31603,
+      "sha256": "5286217373fa1325be240355206c55e74c6556776ae5c77dd69ee157de4be6f0"
+    },
+    {
+      "path": "work/trend_donchian_xrp_adx25.csv",
+      "bytes": 1074571,
+      "sha256": "b95ceb03cc2a4a332a36c347a4f8c6a85b4179961f762fdcaebd61e30ca1d836"
+    },
+    {
+      "path": "work/trend_donchian_xrp_adx25.log",
+      "bytes": 1241,
+      "sha256": "696d5bfd20dc7f12491300d4b00811789e45bbbc935f1d71cf274424230e33ad"
+    },
+    {
+      "path": "work/trend_donchian_xrp_adx25__bt.json",
+      "bytes": 2317,
+      "sha256": "b76ee459a610da9f106026720923ec63919a1ebf44a62b7603d0ff8d8a5aae88"
+    },
+    {
+      "path": "work/trend_donchian_xrp_adx25__trades.jsonl",
+      "bytes": 38872,
+      "sha256": "01e400ccbd8761620e32e2e85742813978fdc8f119684a83ca08c0d0f16e1d66"
+    },
+    {
+      "path": "work/uso_trend_1h.csv",
+      "bytes": 635927,
+      "sha256": "43c57d7c59bbcbc14ec01ecc87a7e985f646075a2b098546a50a9a216e20f273"
+    },
+    {
+      "path": "work/uso_trend_1h.log",
+      "bytes": 945,
+      "sha256": "c8f0ca487dfb60b809eab4b633adaca5279d189621fd78296133a1218cf4e1f7"
+    },
+    {
+      "path": "work/uso_trend_1h__bt.json",
+      "bytes": 2005,
+      "sha256": "17308a4f7f833817998511e4bdf6c0e5a6379cf12b02b7070146a3950fb33b88"
+    },
+    {
+      "path": "work/uso_trend_1h__trades.jsonl",
+      "bytes": 96530,
+      "sha256": "247c899483fb894fe08a0e39ec30c80917ab734648b2450bf9ad1bd6126a061b"
+    },
+    {
+      "path": "work/xrp_pullback_2h.csv",
+      "bytes": 2131902,
+      "sha256": "2c5c2ab0a2a895de9bb8ea24a8801733007092ce0de7be7b5cba2fbafdff6117"
+    },
+    {
+      "path": "work/xrp_pullback_2h.log",
+      "bytes": 1338,
+      "sha256": "1d05b99abdb330c7f555ba8fb6b4f1cde64b87947e5536240cf25cc004524b32"
+    },
+    {
+      "path": "work/xrp_pullback_2h__bt.json",
+      "bytes": 2636,
+      "sha256": "c354c14e871a447e95487de3b066d08003d80b77287cbf2c3bd820d2153174df"
+    },
+    {
+      "path": "work/xrp_pullback_2h__trades.jsonl",
+      "bytes": 216763,
+      "sha256": "1ea74cb85f2131e0d1270e2a59a43ada9b4692183ac19fd0041b3b3fb9f6a635"
+    }
+  ]
+}

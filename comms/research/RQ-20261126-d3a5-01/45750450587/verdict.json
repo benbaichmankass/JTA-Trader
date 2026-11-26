@@ -1,0 +1,721 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 10313,
+ "note": "diff -0.0172 R, CI [-0.149, 0.1161], placebo share 0.82: not separable, not ruled out",
+ "population": "40 of 43 ALL rostered legs (crypto via the evidence builder's feed + non-crypto via Dukascopy) (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (10313 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "rule": {
+  "id": "RULE-DESK-3A-EVENTDAY-20261126",
+  "min_abs_diff_r": 0.1,
+  "equivalence_r": 0.1,
+  "max_placebo_share": 0.05,
+  "min_flagged": 200,
+  "n_boot": 1000,
+  "n_placebo": 200
+ },
+ "data_window": {
+  "start": "2020-09-01",
+  "end": "2026-10-26",
+  "legs": [
+   "ada_pullback_2h",
+   "avax_pullback_2h",
+   "eth_pullback_2h",
+   "eth_pullback_prop_2h",
+   "fade_breakout_4h",
+   "gdx_pullback_1d",
+   "gld_pullback_1d",
+   "htf_pullback_trend_2h",
+   "iaum_pullback_1d",
+   "ief_pullback_1d",
+   "iwm_trend_long_1d",
+   "mes_trend_long_1d",
+   "mgc_pullback_1d",
+   "mgc_trend_1h",
+   "mhg_pullback_1d",
+   "qld_trend_long_1d",
+   "qqq_pullback_1h",
+   "qqq_trend_long_1d",
+   "scha_trend_long_1d",
+   "slv_pullback_1d",
+   "slv_trend_1h",
+   "sol_pullback_2h",
+   "splg_trend_long_1d",
+   "spy_pullback_1h",
+   "spy_trend_long_1d",
+   "squeeze_breakout_4h",
+   "tlt_pullback_1d",
+   "tlt_pullback_1h",
+   "tqqq_trend_long_1d",
+   "trend_donchian",
+   "trend_donchian_1h",
+   "trend_donchian_ada_4h",
+   "trend_donchian_avax_4h",
+   "trend_donchian_eth",
+   "trend_donchian_eth_4h",
+   "trend_donchian_eth_prop",
+   "trend_donchian_sol",
+   "trend_donchian_sol_4h",
+   "trend_donchian_sol_prop",
+   "trend_donchian_xrp_4h",
+   "trend_donchian_xrp_adx25",
+   "uso_trend_1h",
+   "xrp_pullback_2h"
+  ]
+ },
+ "measurement": {
+  "covered_window": [
+   "2021-01-08",
+   "2026-11-11"
+  ],
+  "n_trades": 9761,
+  "excluded_outside_history": 552,
+  "classes": {
+   "fomc_decision": {
+    "n_flagged": 461,
+    "n_other": 9300,
+    "mean_flagged": 0.0542,
+    "mean_other": 0.0936,
+    "diff_r": -0.0394,
+    "ci95": [
+     -0.2982,
+     0.2182
+    ],
+    "placebo_share": 0.78,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 18,
+      "n_other": 388,
+      "diff_r": 0.0999
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 17,
+      "n_other": 436,
+      "diff_r": 0.4698
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 11,
+      "n_other": 390,
+      "diff_r": -0.8749
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 11,
+      "n_other": 374,
+      "diff_r": -0.838
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 8,
+      "n_other": 158,
+      "diff_r": 0.8271
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 21,
+      "n_other": 416,
+      "diff_r": -0.0711
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 40,
+      "n_other": 578,
+      "diff_r": -0.1296
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 10,
+      "n_other": 193,
+      "diff_r": 0.1643
+     },
+     "slv_trend_1h": {
+      "n_flagged": 25,
+      "n_other": 275,
+      "diff_r": -0.8648
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 18,
+      "n_other": 224,
+      "diff_r": 1.145
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 10,
+      "n_other": 169,
+      "diff_r": -0.2619
+     },
+     "trend_donchian": {
+      "n_flagged": 17,
+      "n_other": 399,
+      "diff_r": -0.2555
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 40,
+      "n_other": 870,
+      "diff_r": -0.172
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 8,
+      "n_other": 228,
+      "diff_r": 1.2111
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 11,
+      "n_other": 242,
+      "diff_r": 0.7381
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 35,
+      "n_other": 649,
+      "diff_r": 0.0632
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 10,
+      "n_other": 243,
+      "diff_r": -0.2595
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 35,
+      "n_other": 763,
+      "diff_r": -0.1231
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 18,
+      "n_other": 347,
+      "diff_r": -0.3521
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 7,
+      "n_other": 242,
+      "diff_r": 1.729
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 18,
+      "n_other": 355,
+      "diff_r": -0.2571
+     },
+     "uso_trend_1h": {
+      "n_flagged": 11,
+      "n_other": 186,
+      "diff_r": -0.575
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 18,
+      "n_other": 340,
+      "diff_r": 0.1891
+     }
+    },
+    "read_state": "measured"
+   },
+   "cpi": {
+    "n_flagged": 735,
+    "n_other": 9026,
+    "mean_flagged": 0.0902,
+    "mean_other": 0.0919,
+    "diff_r": -0.0017,
+    "ci95": [
+     -0.1958,
+     0.203
+    ],
+    "placebo_share": 0.985,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 36,
+      "n_other": 370,
+      "diff_r": -0.1092
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 33,
+      "n_other": 420,
+      "diff_r": -0.1731
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 28,
+      "n_other": 373,
+      "diff_r": 0.0884
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 24,
+      "n_other": 361,
+      "diff_r": -0.0074
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 7,
+      "n_other": 159,
+      "diff_r": -0.3391
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 33,
+      "n_other": 404,
+      "diff_r": 0.2782
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 48,
+      "n_other": 570,
+      "diff_r": -0.4056
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 21,
+      "n_other": 182,
+      "diff_r": 0.0898
+     },
+     "qqq_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 22,
+      "diff_r": -0.1398
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 6,
+      "n_other": 50,
+      "diff_r": 0.3615
+     },
+     "slv_trend_1h": {
+      "n_flagged": 22,
+      "n_other": 278,
+      "diff_r": 0.6484
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 8,
+      "n_other": 129,
+      "diff_r": 0.063
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 25,
+      "n_other": 217,
+      "diff_r": -0.4737
+     },
+     "spy_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 40,
+      "diff_r": -0.9614
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 8,
+      "n_other": 107,
+      "diff_r": -0.2793
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 14,
+      "n_other": 165,
+      "diff_r": -0.3068
+     },
+     "trend_donchian": {
+      "n_flagged": 35,
+      "n_other": 381,
+      "diff_r": 0.1734
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 72,
+      "n_other": 838,
+      "diff_r": 0.2281
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 18,
+      "n_other": 218,
+      "diff_r": 0.1128
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 13,
+      "n_other": 240,
+      "diff_r": 0.1502
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 52,
+      "n_other": 632,
+      "diff_r": -0.2238
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 23,
+      "n_other": 230,
+      "diff_r": -0.3299
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 51,
+      "n_other": 747,
+      "diff_r": 0.1161
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 28,
+      "n_other": 337,
+      "diff_r": 0.0204
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 12,
+      "n_other": 237,
+      "diff_r": 0.5259
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 28,
+      "n_other": 345,
+      "diff_r": -0.0475
+     },
+     "uso_trend_1h": {
+      "n_flagged": 21,
+      "n_other": 176,
+      "diff_r": -0.104
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 23,
+      "n_other": 335,
+      "diff_r": -0.5813
+     }
+    },
+    "read_state": "measured"
+   },
+   "nfp": {
+    "n_flagged": 647,
+    "n_other": 9114,
+    "mean_flagged": 0.0678,
+    "mean_other": 0.0934,
+    "diff_r": -0.0257,
+    "ci95": [
+     -0.2259,
+     0.1557
+    ],
+    "placebo_share": 0.835,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 20,
+      "n_other": 386,
+      "diff_r": -0.2114
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 29,
+      "n_other": 424,
+      "diff_r": 0.2763
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 24,
+      "n_other": 377,
+      "diff_r": -0.2617
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 22,
+      "n_other": 363,
+      "diff_r": -0.3908
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 5,
+      "n_other": 161,
+      "diff_r": 0.3861
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 36,
+      "n_other": 401,
+      "diff_r": 0.0034
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 46,
+      "n_other": 572,
+      "diff_r": 0.3438
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 22,
+      "n_other": 181,
+      "diff_r": 0.1589
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 5,
+      "n_other": 51,
+      "diff_r": -0.4342
+     },
+     "slv_trend_1h": {
+      "n_flagged": 21,
+      "n_other": 279,
+      "diff_r": -0.3136
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 10,
+      "n_other": 127,
+      "diff_r": 0.5739
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 21,
+      "n_other": 221,
+      "diff_r": 0.8158
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 9,
+      "n_other": 106,
+      "diff_r": -0.1345
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 18,
+      "n_other": 161,
+      "diff_r": -0.27
+     },
+     "trend_donchian": {
+      "n_flagged": 29,
+      "n_other": 387,
+      "diff_r": -0.0374
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 54,
+      "n_other": 856,
+      "diff_r": 0.113
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 15,
+      "n_other": 221,
+      "diff_r": 0.1403
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 12,
+      "n_other": 241,
+      "diff_r": -0.2748
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 45,
+      "n_other": 639,
+      "diff_r": -0.0699
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 16,
+      "n_other": 237,
+      "diff_r": -0.6481
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 52,
+      "n_other": 746,
+      "diff_r": -0.1024
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 21,
+      "n_other": 344,
+      "diff_r": -0.2217
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 16,
+      "n_other": 233,
+      "diff_r": -0.4856
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 22,
+      "n_other": 351,
+      "diff_r": -0.1832
+     },
+     "uso_trend_1h": {
+      "n_flagged": 23,
+      "n_other": 174,
+      "diff_r": -0.3011
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 26,
+      "n_other": 332,
+      "diff_r": 0.0042
+     }
+    },
+    "read_state": "measured"
+   },
+   "any": {
+    "n_flagged": 1804,
+    "n_other": 7957,
+    "mean_flagged": 0.0777,
+    "mean_other": 0.0949,
+    "diff_r": -0.0172,
+    "ci95": [
+     -0.149,
+     0.1161
+    ],
+    "placebo_share": 0.82,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 72,
+      "n_other": 334,
+      "diff_r": -0.0574
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 74,
+      "n_other": 379,
+      "diff_r": 0.1802
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 63,
+      "n_other": 338,
+      "diff_r": -0.2441
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 57,
+      "n_other": 328,
+      "diff_r": -0.3548
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 20,
+      "n_other": 146,
+      "diff_r": 0.3352
+     },
+     "gdx_pullback_1d": {
+      "n_flagged": 9,
+      "n_other": 44,
+      "diff_r": 0.7196
+     },
+     "gld_pullback_1d": {
+      "n_flagged": 7,
+      "n_other": 38,
+      "diff_r": 0.7014
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 90,
+      "n_other": 347,
+      "diff_r": 0.1005
+     },
+     "iaum_pullback_1d": {
+      "n_flagged": 7,
+      "n_other": 38,
+      "diff_r": 0.7014
+     },
+     "ief_pullback_1d": {
+      "n_flagged": 5,
+      "n_other": 31,
+      "diff_r": 0.2662
+     },
+     "iwm_trend_long_1d": {
+      "n_flagged": 7,
+      "n_other": 19,
+      "diff_r": 0.392
+     },
+     "mes_trend_long_1d": {
+      "n_flagged": 5,
+      "n_other": 24,
+      "diff_r": 0.4941
+     },
+     "mgc_pullback_1d": {
+      "n_flagged": 8,
+      "n_other": 44,
+      "diff_r": -0.578
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 132,
+      "n_other": 486,
+      "diff_r": -0.058
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 49,
+      "n_other": 154,
+      "diff_r": -0.0048
+     },
+     "qqq_trend_long_1d": {
+      "n_flagged": 12,
+      "n_other": 16,
+      "diff_r": -0.6246
+     },
+     "scha_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 16,
+      "diff_r": 0.1619
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 13,
+      "n_other": 43,
+      "diff_r": 0.0003
+     },
+     "slv_trend_1h": {
+      "n_flagged": 67,
+      "n_other": 233,
+      "diff_r": -0.2098
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 19,
+      "n_other": 118,
+      "diff_r": 0.2895
+     },
+     "splg_trend_long_1d": {
+      "n_flagged": 7,
+      "n_other": 21,
+      "diff_r": -0.3535
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 63,
+      "n_other": 179,
+      "diff_r": 0.3338
+     },
+     "spy_trend_long_1d": {
+      "n_flagged": 13,
+      "n_other": 33,
+      "diff_r": -0.5981
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 21,
+      "n_other": 94,
+      "diff_r": -0.4731
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 39,
+      "n_other": 140,
+      "diff_r": -0.3823
+     },
+     "trend_donchian": {
+      "n_flagged": 80,
+      "n_other": 336,
+      "diff_r": 0.0242
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 162,
+      "n_other": 748,
+      "diff_r": 0.1364
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 40,
+      "n_other": 196,
+      "diff_r": 0.3573
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 36,
+      "n_other": 217,
+      "diff_r": 0.2098
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 130,
+      "n_other": 554,
+      "diff_r": -0.0893
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 49,
+      "n_other": 204,
+      "diff_r": -0.4835
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 136,
+      "n_other": 662,
+      "diff_r": -0.0191
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 66,
+      "n_other": 299,
+      "diff_r": -0.1608
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 34,
+      "n_other": 215,
+      "diff_r": 0.4018
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 67,
+      "n_other": 306,
+      "diff_r": -0.1502
+     },
+     "trend_donchian_xrp_4h": {
+      "n_flagged": 8,
+      "n_other": 56,
+      "diff_r": 0.7316
+     },
+     "trend_donchian_xrp_adx25": {
+      "n_flagged": 8,
+      "n_other": 56,
+      "diff_r": 0.4626
+     },
+     "uso_trend_1h": {
+      "n_flagged": 55,
+      "n_other": 142,
+      "diff_r": -0.3541
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 64,
+      "n_other": 294,
+      "diff_r": -0.1099
+     }
+    },
+    "read_state": "measured"
+   }
+  },
+  "verdict": "indeterminate",
+  "why": "diff -0.0172 R, CI [-0.149, 0.1161], placebo share 0.82: not separable, not ruled out"
+ }
+}
