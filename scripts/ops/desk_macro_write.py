@@ -12,7 +12,11 @@ Rules (spec section 2):
     p_hit in [REACH_FLOOR, 1)); timeframe 1d; symbol in the desk's universe (claude_desk.symbols; a wider universe needs its own
     population test, operator rule "an account configures strategies, never symbols"); expected_r_net < tp R; no size-shaped key
   - informs: leg exists in config/strategies.yaml; until > judged_at
-  - events: class in the v1 taxonomy; no_trade_reason required when trades == []
+  - events: class in the v1 taxonomy
+  - packet: packet_path names the desk_macro_packet the brief was drafted from (scripts/ops/desk_macro_packet.py); its sha256 must
+    equal packet_sha and its built_at must be <= judged_at
+  - trades == [] is REFUSED unless that packet itself shows prices could_not_look (operator 2026-11-26: "it needs to be proposing
+    trades"); a thesis-free day still lists its best-ranked candidate trades, each with judge_prior. no_trade_reason is then required
   - write-once: an existing comms/desk/macro/<date>.json is never overwritten (a correction is a new brief with `supersedes`)
 
   python3 scripts/ops/desk_macro_write.py validate BRIEF.json
@@ -38,6 +42,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 from src.runtime.target_expectation import SENTINEL_R_FLOOR  # noqa: E402  (the fleet's sentinel idiom)
 from src.runtime.tp_venue_cap import TP_VENUE_CAP_PCT  # noqa: E402
+from scripts.ops.desk_macro_packet import prices_could_not_look, sha_ok  # noqa: E402
 
 SCHEMA = "desk_macro_brief/1"
 REACH_FLOOR = 0.10                     # scripts/ci/check_desk_records.py REACH_FLOOR (same TP-doctrine floor)
@@ -118,7 +123,41 @@ def trade_problems(t: dict, i: int, universe: set) -> list[str]:
     return out
 
 
-def problems(b: dict, universe: set | None = None, legs: set | None = None) -> list[str]:
+def load_packet(b: dict) -> tuple[dict | None, str | None]:
+    """The packet the brief names, or (None, why)."""
+    ref = b.get("packet_path")
+    if not ref:
+        return None, "packet_path is required (run scripts/ops/desk_macro_packet.py first and draft from it)"
+    path = Path(ref) if Path(ref).is_absolute() else REPO / ref
+    try:
+        return json.loads(path.read_text()), None
+    except (OSError, ValueError) as e:
+        return None, f"packet_path {ref}: cannot read ({type(e).__name__})"
+
+
+def packet_problems(b: dict, pkt: dict | None, why: str | None) -> list[str]:
+    if pkt is None:
+        return [why or "packet missing"]
+    out = []
+    if not sha_ok(pkt):
+        out.append("packet: its packet_sha does not match its body (edited after build?)")
+    if b.get("packet_sha") != pkt.get("packet_sha"):
+        out.append("packet_sha does not match the packet at packet_path")
+    try:
+        if _ts(pkt["built_at"]) > _ts(b["judged_at"]):
+            out.append("packet built_at is after judged_at")
+    except (KeyError, ValueError):
+        out.append("packet built_at missing or not ISO")
+    if not b["trades"]:
+        if not prices_could_not_look(pkt):
+            out.append("trades == [] is refused: the packet shows prices were read, so list the best-ranked candidate trades "
+                       "(each with judge_prior); an empty list is allowed only when packet prices are could_not_look")
+        elif not b.get("no_trade_reason"):
+            out.append("no_trade_reason is required when trades == []")
+    return out
+
+
+def problems(b: dict, universe: set | None = None, legs: set | None = None, packet: dict | None = None) -> list[str]:
     if universe is None or legs is None:
         universe, legs = desk_universe()
     out = [f"missing key {k}" for k in REQUIRED if k not in b]
@@ -165,8 +204,8 @@ def problems(b: dict, universe: set | None = None, legs: set | None = None) -> l
             out.append(f"events[{i}]: published_at is after judged_at")
     for i, t in enumerate(b["trades"]):
         out += trade_problems(t, i, universe)
-    if not b["trades"] and not b.get("no_trade_reason"):
-        out.append("no_trade_reason is required when trades == []")
+    pkt, why = (packet, None) if packet is not None else load_packet(b)
+    out += packet_problems(b, pkt, why)
     for i, f in enumerate(b["informs"]):
         if f.get("leg") not in legs:
             out.append(f"informs[{i}]: leg {f.get('leg')!r} is not in config/strategies.yaml")
@@ -201,8 +240,9 @@ def render(b: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: set | None = None) -> Path:
-    probs = problems(b, universe, legs)
+def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: set | None = None,
+          packet: dict | None = None) -> Path:
+    probs = problems(b, universe, legs, packet)
     if probs:
         raise ValueError("refused:\n  " + "\n  ".join(probs))
     day = _ts(b["judged_at"]).strftime("%Y-%m-%d")
@@ -219,7 +259,7 @@ def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: s
 # ---- self-test ------------------------------------------------------------------------------------------------------------
 GOOD = {
     "schema": SCHEMA, "brief_id": "DMB-20261126T1307Z", "judged_at": "2026-11-26T13:07:00Z", "info_cutoff_at": "2026-11-26T13:00:00Z",
-    "model": "opus-tier", "skill_sha": "x", "packet_sha": "y",
+    "model": "opus-tier", "skill_sha": "x", "packet_sha": None, "packet_path": "PKT",
     "sources": [{"source_id": "S1", "kind": "econ_calendar", "ref": "comms/macro/econ_calendar_upcoming.json",
                  "retrieved_at": "2026-11-26T13:01:00Z", "content_sha256": hashlib.sha256(b"x").hexdigest(), "influence": "decisive"}],
     "regime": {"call": "neutral", "axes": {"growth": 0, "inflation": 0, "liquidity": 0, "vol": 0}, "confidence": 0.5, "basis": "S1 shows a quiet week"},
@@ -236,20 +276,29 @@ GOOD = {
 }
 
 
+def _pkt(prices_state: str = "measured", built_at: str = "2026-11-26T13:00:00Z") -> dict:
+    p = {"schema": "desk_macro_packet/1", "packet_id": "DMP-x", "built_at": built_at,
+         "parts": {"prices": {"read_state": prices_state}}}
+    p["packet_sha"] = hashlib.sha256(json.dumps(p, sort_keys=True, default=str).encode()).hexdigest()
+    return p
+
+
 def self_test() -> int:
     uni, legs = {"TLT", "SPY", "BTCUSDT"}, {"claude_desk", "trend_donchian"}
     ok = True
+    PKT = _pkt()
+    GOOD["packet_sha"] = PKT["packet_sha"]
 
     def check(name, cond):
         nonlocal ok
         ok &= bool(cond)
         print(("  ok   " if cond else "  FAIL ") + name)
 
-    def bad(fn):
+    def bad(fn, pkt=None):
         b = copy.deepcopy(GOOD)
         fn(b)
-        return problems(b, uni, legs)
-    check("a good brief passes", problems(GOOD, uni, legs) == [])
+        return problems(b, uni, legs, pkt or PKT)
+    check("a good brief passes", problems(GOOD, uni, legs, PKT) == [])
     check("retrieved_at after judged_at is refused", bad(lambda b: b["sources"][0].update(retrieved_at="2026-11-26T13:30:00Z")))
     check("a model id instead of a tier is refused", bad(lambda b: b.update(model="claude-x-1")))
     check("wrong geometry is refused", bad(lambda b: b["trades"][0]["proposal"]["tp"].update(level=87.0)))
@@ -259,14 +308,26 @@ def self_test() -> int:
     check("a size key is refused", bad(lambda b: b["trades"][0]["proposal"].update(qty=10)))
     check("an uncited judgement is refused", bad(lambda b: b["tilts"][0].update(basis="no citation")))
     check("an unknown taxonomy class is refused", bad(lambda b: b["calendar"][0].update(**{"class": "scheduled.macro.vibes"})))
-    check("no trades without a reason is refused", bad(lambda b: b.update(trades=[])))
+    check("no trades is refused when the packet read prices, even WITH a reason",
+          bad(lambda b: b.update(trades=[], no_trade_reason="quiet day")))
+    dead = _pkt("could_not_look")
+    check("no trades + reason passes only when packet prices are could_not_look",
+          bad(lambda b: b.update(trades=[], no_trade_reason="price API down", packet_sha=dead["packet_sha"]), dead) == [])
+    check("no trades without a reason is refused even then",
+          bad(lambda b: b.update(trades=[], packet_sha=dead["packet_sha"]), dead))
+    check("a packet_sha that does not match the packet is refused", bad(lambda b: b.update(packet_sha="0" * 64)))
+    tampered = dict(PKT, parts={"prices": {"read_state": "could_not_look"}})
+    check("a packet edited after build is refused", bad(lambda b: None, tampered))
+    late = _pkt(built_at="2026-11-26T14:00:00Z")
+    check("a packet built after judged_at is refused", bad(lambda b: b.update(packet_sha=late["packet_sha"]), late))
+    check("a brief naming no packet is refused", problems(dict(GOOD, packet_path=None), uni, legs))
     check("an unknown leg in informs is refused", bad(lambda b: b["informs"].append({"leg": "nope", "action": "note", "until": "2026-11-27T00:00:00Z"})))
     check("gate_eligible true is refused", bad(lambda b: b["training"].update(gate_eligible=True)))
     with tempfile.TemporaryDirectory() as td:
-        p = write(copy.deepcopy(GOOD), Path(td), uni, legs)
+        p = write(copy.deepcopy(GOOD), Path(td), uni, legs, PKT)
         check("write creates json + md", p.exists() and (Path(td) / "2026-11-26.md").exists())
         try:
-            write(copy.deepcopy(GOOD), Path(td), uni, legs)
+            write(copy.deepcopy(GOOD), Path(td), uni, legs, PKT)
             check("write-once: a second write is refused", False)
         except FileExistsError:
             check("write-once: a second write is refused", True)
