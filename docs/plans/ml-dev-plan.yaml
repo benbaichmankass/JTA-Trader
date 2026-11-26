@@ -409,8 +409,8 @@ lines:
       fail: the c692-06 five coins stay the population (record in comms/ml_universe/ml_entry.json, PR #25535)
   next_weeks:
     W47: 'RESID-ENTRY FAIL (4654-01); b602/b606 dev candidates PASS but the combined held-out read a474-04 FAIL (11-15, VG -0.039 vs base +0.007); every ranked ENTRY lever tried so far has failed its held-out read; next: population test (filter registered first) and the weekly forward grade as the demotion read'
-    W48: 'combined held-out read under ML-LEVER-PLAN if any lever passed dev folds; weekly forward grade continues'
-    W49: 'population test done (2e3b-01 FAIL on frozen v1); served-refit re-test not powered before ~2027-03 (n ~4,900 needed for +0.037 R at t=2)'
+    W48: '11-25: every recipe lever on dev folds within noise (f1a0-10..34: inputs, execution, sizing, bracket width, target, horizon 8h/24h/48h); cost per R is the binding constraint (gross ~0.067 vs cost ~0.064). Operator W48 Q1/Q2: no demotion path, iteration only; served reverted to ml_decision_entry_v1 (#28890). Queued: F8 cross-asset/macro inputs RQ-20261125-f8a1-01 (#28944); the 11-29 ml-entry-retrain graded under Amendment 4 (disjoint confirmation half) is the next swap candidate'
+    W49: 'grade f8a1-01; read the 11-29 retrain grade; population test 2e3b-01 FAIL stands; served-refit re-test not powered before ~2027-03'
     W50: 'review the forward grade series as the demotion read'
   exhaustion: >-
     the mirror net-of-cost window crosses the declared demotion read (ML-D3-HEAD-TO-HEAD § "Declared demotion signals": mean < 0 at
@@ -707,14 +707,16 @@ lines:
   kind: model
   subject: setup-candidates-metalabel-p2pool-v2 (KEEP for its open unit)
   consumer: {class: none}
-  stage: stuck
+  stage: passed_waiting
   row: MLP-D4-SETUP-METALABEL
   carried_by: [ML-KEEP-ITERATION-COVERAGE]
   state:
-    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 RQ-20261119-3e98-01 (rostered PAPER book, n 1,053) graded INDETERMINATE: PASS with estimated outcomes (value +0.0585, deflated LB +0.0164), FAIL on the 698 measured rows (LB -0.0061, take 0.043 < 0.05). Iteration 3 (threshold lever on train folds, then measured-only re-read): PI-20261119-RIMARY12-0006.'
+    summary: 'Iteration 1 (78fc-02) graded FAIL 2026-11-19 on the cost gate (value -0.0035 R/opp vs take-none 0, n_eval 434); 240 of its 308 BTC eval rows are the retired vwap book. Iteration 2 RQ-20261119-3e98-01 (rostered PAPER book, n 1,053) graded INDETERMINATE: PASS with estimated outcomes (value +0.0585, deflated LB +0.0164), FAIL on the 698 measured rows (LB -0.0061, take 0.043 < 0.05). Iteration 3 RQ-20261119-2780-04 graded PASS 2026-11-20 (threshold 0.48 chosen on TRAINING OOF folds only; ONE read on the MEASURED rostered paper book: value +0.0362 R/opp vs take_all -0.0304, take_none 0, matched random -0.0018; n_eval 698, all measured). Its registered pass action is ONE out-of-time confirmation before any Tier-3 proposal: RQ-20261120-2cb9-01 (blocked on accrual: ~600 rows entered after the v024 build, ~2027-01-15 at the measured rate). Not stuck: waiting on data (2026-11-25, ML-PRIMARY).'
     evidence:
       - {record: research/queue/RQ-20261101-78fc-02.yaml, provenance: MEASURED}
       - {record: comms/ml-plan/p1_costnet_verdict_v023.json, provenance: MEASURED}
+      - {record: research/queue/RQ-20261119-2780-04.yaml, provenance: MEASURED}
+      - {record: research/queue/blocked/RQ-20261120-2cb9-01.yaml, provenance: MEASURED}
   levers_tried:
     - {lever: P1 read on gross costs, ref: ML-P1, verdict: 'indeterminate (n_eval 144 < 200; PI-20261029-MLP1-0001)'}
     - {lever: eval population = rostered paper book (v024), ref: RQ-20261119-3e98-01, verdict: 'INDETERMINATE (primary PASS n 1,053; measured-only FAIL n 698; provenance clause)'}
@@ -725,9 +727,9 @@ lines:
       baseline: take-all on the same legs, and same-rate random skip, net of cost
       pass: a reduce/annotate proposal for the legs in its population (Tier 3)
       fail: a family-review record (retirement only via family_retirement_policy.yaml)
-  next_weeks: {W47: 'name the blocker owner on ML-KEEP-ITERATION-COVERAGE', W48: run if unblocked, W49: grade, W50: none}
+  next_weeks: {W47: 'name the blocker owner on ML-KEEP-ITERATION-COVERAGE', W48: '2780-04 PASS recorded; confirmation 2cb9-01 waits on accrual (~2027-01-15); owner ML-PRIMARY', W49: 'accrual count check', W50: 'accrual count check'}
   exhaustion: 78fc-02 FAIL on a powered population, or the population cannot reach the registered n because the legs lack declared initial risk (then a data row, not more arms).
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: [ML-M5]
 
 - id: MLP-D4-CONVICTION-META
@@ -736,11 +738,11 @@ lines:
   kind: model
   subject: conviction-meta-v1 (KEEP for its open unit)
   consumer: {class: none, note: 'shadow conviction stamps must not resize (ML-SHADOW-NEVER-ORDERS)'}
-  stage: stuck
+  stage: retired
   row: MLP-D4-CONVICTION-META
   carried_by: [ML-KEEP-ITERATION-COVERAGE]
   state:
-    summary: Iteration 1 blocked; demoted shadow->candidate 2026-09-29 (PI-20260929-K85Q64SF-0001).
+    summary: 'RETIRED 2026-11-25 (manager 2026-11-25b accepted, under the operator decision of 2026-11-12): its only lever (a conviction retrain on cost-stamped rows) needed ML-P4-CONVICTION-REGATE, which the operator DROPPED 2026-11-12 (decisions page w1, verbatim "Kill all of them (except the git-history one, asked below)"); its unit RQ-20261101-78fc-06 was retired 2026-11-13 for that reason (MEASURED on the work store: ML-P4-CONVICTION-REGATE state=dropped). Before that: iteration 1 blocked; demoted shadow->candidate 2026-09-29 (PI-20260929-K85Q64SF-0001). Re-open only if a conviction retrain is re-approved.'
     evidence:
       - {record: research/queue/blocked/RQ-20261101-78fc-06.yaml, provenance: MEASURED}
   levers_tried:
@@ -751,9 +753,9 @@ lines:
       baseline: take-all and the confidence-only rule on the same rows, net of cost
       pass: a D4 consumer proposal
       fail: proposed retirement
-  next_weeks: {W47: name the blocker owner, W48: run if unblocked, W49: grade, W50: none}
+  next_weeks: {W47: name the blocker owner, W48: 'RETIRED (manager accepted 2026-11-25)', W49: none, W50: none}
   exhaustion: 78fc-06 FAIL.
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: []
 
 - id: MLP-D4-METALABEL-TEST-RESULTS
@@ -1305,7 +1307,7 @@ lines:
   kind: idea
   subject: GRU over windows of engineered features
   consumer: {class: none}
-  stage: stuck
+  stage: queued
   row: MLP-F-SEQUENCE-GRU
   carried_by: [ML-PROGRAMME-CONSOLIDATION]
   state:
@@ -1319,9 +1321,9 @@ lines:
       baseline: frozen v1 on the same folds, net of cost
       pass: joins ML-LEVER-PLAN
       fail: closes
-  next_weeks: {W47: none, W48: none, W49: none, W50: none}
+  next_weeks: {W47: none, W48: 'RQ-20261125-9e71-01 authored + merged 11-25 (#28941): GRU vs LightGBM on IDENTICAL features, 1h regime log-loss, published BTC/ETH/SOL, Kaggle GPU, paired block-bootstrap rule (resolves F29)', W49: 'grade 9e71-01; PASS -> author the entry-label GRU arm (ml_entry_fix_arms) as its own unit; FAIL -> line closes', W50: 'entry-label arm runs if authored'}
   exhaustion: the entry-label arm FAILs.
-  owner: AM-ML
+  owner: ML-PRIMARY
   plan_items: [ML-F22, ML-F22L, ML-F29, ML-F7, ML-F8, ML-F9, ML-F11, ML-F13, ML-F16, ML-F17, ML-F18, ML-F19, ML-F21]
 
 # =====================================================================================================================

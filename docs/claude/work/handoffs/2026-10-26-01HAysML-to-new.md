@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-26 (session_01HAysMLfF9dYpi92YMqYxEq -> new)
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
+> **Doc status:** `historical` · category `history` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../../docs/DOCUMENT-INDEX.md) · **nobody has verified this document's status — do not act on it as current**
 
 Reason: context 636k at 18:29Z (threshold ~650k, operator 2026-10-24). Old manager stays responsible until V1-V5 pass.
 
