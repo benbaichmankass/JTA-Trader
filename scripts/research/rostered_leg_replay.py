@@ -69,7 +69,7 @@ RULE_MS_FRESH = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH-20261125")
 #: REPORTED beside it (inverse-variance pooled), never part of its verdict.
 FRESH_SYMBOLS_2 = ("DOTUSDT", "ATOMUSDT", "BCHUSDT", "ETCUSDT")
 RULE_MS_FRESH2 = dict(RULE_MS, id="RULE-REGIME-METASTATE-FRESH2-20261125")
-_FETCHED: Dict[Tuple[str, str], str] = {}
+_FETCHED: Dict[Tuple[str, str], Tuple[str, Dict[str, Any]]] = {}
 #: INTRADAY STATE (RQ-20261125-f1a0-32): the metastate machinery with the DAILY own-symbol + BTC block replaced by the leg's OWN-TIMEFRAME state at
 #: entry (the REGIME-PROGRAM next form after f1a0-30 FAIL). Features from the last bar fully CLOSED at or before the entry time.
 ID_FEATS = ["id_rangepos48", "id_volburst", "id_ret12", "id_hi96", "dir", "leg", "fam"]
@@ -78,12 +78,21 @@ MS_MIN_TRAIN = 300
 # ENTRY FILTER (--mode filter, unit RQ-20261125-f1a0-35, the registered fail_action of f1a0-32): the f1a0-26 walk-forward model, but a trade whose
 # prediction is below the TRAINING predictions' 1/3 quantile is SKIPPED (contributes 0 R), every other trade taken at size 1; no renormalisation.
 RULE_FILTER = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-20261125")
+# EQUITIES / FUTURES UNIVERSE (--universe equities, unit RQ-20261126-e9a4-01; the registered next subject after the crypto regime forms closed with
+# f1a0-35 and the F8 regime-as-input FAIL): the same frozen recipe on the ROSTERED non-crypto legs (Alpaca ETFs, IB micro futures), candles from the
+# Dukascopy lane (research-script-run installs dukascopy-python, not yfinance; some symbols resolve to a PROXY instrument, recorded per leg), and the
+# market anchor block (the btc_* columns) built from SPY daily closes instead of BTC. Nothing re-tuned.
+RULE_FILTER_EQ = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-EQ-20261126")
+RULE_MS_EQ = dict(RULE_MS, id="RULE-REGIME-METASTATE-EQ-20261126")
+EQ_ANCHOR = {"symbols": ["SPY"], "timeframe": "1d"}
+NON_CRYPTO_SOURCE = "auto"
 RULE = {"id": "RULE-REGIME-R3-CONFIRM-ROSTERED-20261125", "min_delta_r": 0.01, "min_t": 2.0, "max_random_share": 0.05 / 3,
         "min_years_positive": 4, "n_test_years": 5, "fail_random_share": 0.5}
 
 
-def rostered_legs(root: Path = REPO) -> Dict[str, Dict[str, Any]]:
-    """Crypto legs on a `mode: live` book whose cfg classifies into FAMILIES: {leg: {cfg, book, harness}}."""
+def rostered_legs(root: Path = REPO, universe: str = "crypto") -> Dict[str, Dict[str, Any]]:
+    """Legs on a `mode: live` book whose cfg classifies into FAMILIES: {leg: {cfg, book, harness}}. universe crypto = USDT symbols (the original);
+    equities = every other symbol (ETFs, futures)."""
     import yaml
     import regime_debt_matrix as rdm
     spec = importlib.util.spec_from_file_location("mlc", root / "scripts/ci/check_research_queue_ml_consumer.py")
@@ -98,7 +107,7 @@ def rostered_legs(root: Path = REPO) -> Dict[str, Dict[str, Any]]:
             continue
         sym = (cfg.get("symbols") or [None])[0]
         h = rdm.classify(cfg)
-        if str(sym).endswith("USDT") and h in FAMILIES:
+        if sym and (str(sym).endswith("USDT") == (universe == "crypto")) and h in FAMILIES:
             out[leg] = {"cfg": cfg, "book": b, "harness": h}
     return out
 
@@ -116,17 +125,16 @@ def fresh_legs(cfgs: Dict[str, Dict[str, Any]], symbols=FRESH_SYMBOLS) -> Dict[s
 
 def replay_leg(leg: str, cfg: Dict[str, Any], work: Path) -> Dict[str, Any]:
     import exit_lever_ablation as ela
-    import regime_debt_matrix as rdm
     work.mkdir(parents=True, exist_ok=True)
     csv, emit, jout, log = (str(work / f"{leg}{x}") for x in (".csv", "__trades.jsonl", "__bt.json", ".log"))
     key = (str(cfg["symbols"][0]), str(cfg.get("timeframe")))
     try:
-        if key in _FETCHED and Path(_FETCHED[key]).is_file():      # the same symbol x timeframe already fetched this run: reuse the bytes
-            shutil.copyfile(_FETCHED[key], csv)
-            feed = rdm.resolve_feed(*key)
+        if key in _FETCHED and Path(_FETCHED[key][0]).is_file():   # the same symbol x timeframe already fetched this run: reuse the bytes + feed
+            shutil.copyfile(_FETCHED[key][0], csv)
+            feed = _FETCHED[key][1]
         else:
-            feed = ela.fetch_candles(leg, cfg, FETCH_DAYS, csv)
-            _FETCHED[key] = csv
+            feed = ela.fetch_candles(leg, cfg, FETCH_DAYS, csv, non_crypto_source=NON_CRYPTO_SOURCE)
+            _FETCHED[key] = (csv, feed)
     except (subprocess.CalledProcessError, ValueError, OSError) as e:
         return {"state": "fetch_failed", "why": f"{type(e).__name__}: {e}"[:300]}
     argv, omitted = ela.build_arm_argv(leg, cfg, csv, str(feed["resample"]), emit, jout, [], WINDOW[0], WINDOW[1])
@@ -136,7 +144,7 @@ def replay_leg(leg: str, cfg: Dict[str, Any], work: Path) -> Dict[str, Any]:
         return {"state": "harness_failed", "why": f"exit {rc}", "argv": argv[1:]}
     trades = ela._load_trades(emit) if Path(emit).is_file() else []
     return {"state": "measured", "n": len(trades), "net_r": round(float(sum(t.get("net_r") or 0.0 for t in trades)), 3),
-            "omitted_levers": omitted, "argv": argv[1:], "trades": trades}
+            "omitted_levers": omitted, "argv": argv[1:], "trades": trades, "feed": {k: feed.get(k) for k in ("source", "ticker") if k in feed}}
 
 
 def trades_frame(per_leg: Dict[str, Dict[str, Any]], cfgs: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
@@ -223,11 +231,12 @@ def symbol_cell(close: pd.Series, when: pd.Series) -> pd.Series:
 
 
 def fetch_btc_closes(btc_cfg: Dict[str, Any], work: Path) -> Optional[pd.Series]:
-    """BTC daily closes for the state features when the population has no BTCUSDT leg; None (BTC features NaN, recorded) if the fetch fails."""
+    """The market ANCHOR's daily closes for the state features (BTC for crypto; SPY for --universe equities) when the population has no leg on the
+    anchor symbol; None (anchor features NaN, recorded) if the fetch fails."""
     import exit_lever_ablation as ela
     csv = work / "_btc_state.csv"
     try:
-        ela.fetch_candles("btc_state", btc_cfg, FETCH_DAYS, str(csv))
+        ela.fetch_candles("btc_state", btc_cfg, FETCH_DAYS, str(csv), non_crypto_source=NON_CRYPTO_SOURCE)
         return daily_closes(csv)
     except (subprocess.CalledProcessError, ValueError, OSError) as e:  # allow-silent: grade_metastate records btc_state "absent (NaN features)" in the measurement
         print(json.dumps({"btc_state_fetch": "failed", "why": f"{type(e).__name__}: {e}"[:200]}), flush=True)
@@ -458,6 +467,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
+    ap.add_argument("--universe", choices=["crypto", "equities"], default="crypto",
+                    help="equities: the rostered non-crypto legs, Dukascopy candles, SPY as the market anchor (filter / metastate; RULE_FILTER_EQ / RULE_MS_EQ)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -466,8 +477,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     work = Path(a.work) if a.work else out / "work"
-    cfgs = rostered_legs()
-    btc_cfg = next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
+    global NON_CRYPTO_SOURCE
+    eq = a.universe == "equities"
+    if eq:
+        if a.mode not in ("metastate", "filter") or a.population != "rostered":
+            ap.error("--universe equities is defined for --mode metastate / filter on --population rostered only")
+        NON_CRYPTO_SOURCE = "dukascopy"
+    cfgs = rostered_legs(universe=a.universe)
+    anchor_sym = "SPY" if eq else "BTCUSDT"
+    btc_cfg = EQ_ANCHOR if eq else next((v["cfg"] for v in cfgs.values() if v["cfg"]["symbols"][0] == "BTCUSDT"), None)
     if a.population in ("fresh", "fresh2"):
         if a.mode not in ("metastate", "intraday", "filter"):
             ap.error("--population fresh/fresh2 is defined for --mode metastate / intraday only")
@@ -499,25 +517,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         rule_used = RULE_ID
     elif a.mode in ("metastate", "filter"):
         closes = {leg: daily_closes(work / f"{leg}.csv") for leg, r in per.items() if r.get("state") == "measured" and (work / f"{leg}.csv").exists()}
-        btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == "BTCUSDT"), None)
+        btc_leg = next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == anchor_sym and str(cfgs[leg]["cfg"].get("timeframe")) == "1d"),
+                       None) if eq else next((leg for leg in sorted(closes) if cfgs[leg]["cfg"]["symbols"][0] == "BTCUSDT"), None)
         btc = closes.get(btc_leg)
         if btc is None and btc_cfg is not None:                    # fresh population: no BTC leg in it, so fetch BTC on the rostered BTC leg's timeframe
             btc = fetch_btc_closes(btc_cfg, work)
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
         gfn = grade_filter if a.mode == "filter" else grade_metastate
         m = gfn(tr, closes, btc) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
-        rule_used = RULE_FILTER if a.mode == "filter" else {"fresh": RULE_MS_FRESH, "fresh2": RULE_MS_FRESH2}.get(a.population, RULE_MS)
+        rule_used = ((RULE_FILTER_EQ if eq else RULE_FILTER) if a.mode == "filter"
+                     else (RULE_MS_EQ if eq else {"fresh": RULE_MS_FRESH, "fresh2": RULE_MS_FRESH2}.get(a.population, RULE_MS)))
     else:
         m = grade(tr) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE
     legs_report = {k: {x: v[x] for x in v if x != "trades"} | {"book": cfgs[k]["book"], "harness": cfgs[k]["harness"]} for k, v in per.items()}
     fsyms = {"fresh": FRESH_SYMBOLS, "fresh2": FRESH_SYMBOLS_2}.get(a.population)
-    what = f"rostered crypto leg configs on the FRESH symbols {'/'.join(fsyms)} (leg@symbol)" if fsyms else "rostered crypto legs"
+    what = (f"rostered crypto leg configs on the FRESH symbols {'/'.join(fsyms)} (leg@symbol)" if fsyms
+            else ("rostered NON-crypto legs (ETFs / micro futures; Dukascopy candles, proxies recorded per leg; anchor SPY daily)" if eq else "rostered crypto legs"))
     pop = (f"{sum(1 for v in per.values() if v.get('state') == 'measured')} of {len(per)} {what} ({'/'.join(FAMILIES)} harnesses) "
            f"replayed with DECLARED params over {WINDOW[0]}..{WINDOW[1]} ({len(tr)} trades, harness net_r full cost stack); books = leg x direction; "
            f"test weeks {RR.TEST_START}..{WINDOW[1]}")
     why = "; ".join(f"{k}: {g['verdict']} delta {g['delta']:+.4f} t {g['t']} share {g['random']['share_ge_arm']}" for k, g in (m.get("arms") or {}).items())
-    summ = {"schema": "rostered_leg_replay/1", "unit": a.unit, "mode": a.mode, "population_kind": a.population, "verdict": m["verdict"], "why": why, "rule": rule_used, "population": pop,
+    summ = {"schema": "rostered_leg_replay/1", "unit": a.unit, "mode": a.mode, "population_kind": a.population, "universe": a.universe, "verdict": m["verdict"], "why": why, "rule": rule_used, "population": pop,
             "window": WINDOW, "legs": legs_report, "measurement": m, "git_sha": RR._git_sha(), "elapsed_s": round(time.time() - t0), "read_state": "measured"}
     (out / "summary.json").write_text(json.dumps(summ, indent=1, default=str) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": m["verdict"], "read_state": "measured", "n": int(len(tr)), "note": why, "population": pop,
@@ -538,6 +559,10 @@ def _self_test() -> int:
     legs = rostered_legs()
     check("rostered legs found in the four families", len(legs) >= 10 and all(v["harness"] in FAMILIES for v in legs.values()))
     check("every rostered leg is a crypto symbol", all(str(v["cfg"]["symbols"][0]).endswith("USDT") for v in legs.values()))
+    eql = rostered_legs(universe="equities")
+    check("equities universe: rostered non-crypto legs in the families, disjoint from crypto",
+          len(eql) >= 5 and not any(str(v["cfg"]["symbols"][0]).endswith("USDT") for v in eql.values()) and not set(eql) & set(legs)
+          and all(v["harness"] in FAMILIES for v in eql.values()))
     per = {"L1": {"state": "measured", "trades": [{"entry_time": "2023-01-02 00:00:00", "direction": "long", "net_r": 1.0}]},
            "L2": {"state": "harness_failed"}}
     tf = trades_frame(per, {"L1": {"cfg": {"symbols": ["BTCUSDT"], "timeframe": "1h"}}, "L2": {"cfg": {"symbols": ["X"]}}})
