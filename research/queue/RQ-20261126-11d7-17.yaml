@@ -1,0 +1,179 @@
+# Authored 2026-11-26 by lane QUEUE-FILL-STANDING-W49 (Tier 1) from programme node P2-PR1125-D6-ceiling-two-legs (docs/research/programmes/02-AI-TRADER.md; gate b18a-03 closed fail: satisfied). Rule registered BEFORE the run. Gates this adds or changes: none.
+cadence: once
+compute: cpu_long
+decision_rule:
+  id: RULERQ2026112611d717-BRACKET-CEILING
+  unit_rule_id: RULERQ2026112611d717-BRACKET-CEILING
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  min_n: 39
+  statistic: exit_lever_ablation.py --grade replace over 2020-07-01..2026-10-15 (--days 2330), 6 calendar folds by entry time, full cost stack the harness resolves per venue,
+    baseline B = the leg as declared; delta-r 0, delta-r-per-trade 0.03, fold-majority 5 of 6, dd-tol-frac 0.35, n-floor 39 (the 2780 family bars).
+  rule: 'Registered 2026-11-26 BEFORE any run of the grid. A candidate C REPLACES B iff net_r(C) > net_r(B) AND net_r(C) - net_r(B) >= 0.03 R x n(B) AND net_r(C) >= net_r(B)
+    in >= 5 of 6 folds AND maxDD(C) <= 1.35 x maxDD(B). Several pass -> the highest net R is SELECTED. MULTIPLICITY: 19 candidates, so the bars are the stricter 0.03 R/trade
+    and 5 of 6 (not the single-arm 0.02 / 4 of 6). PASS = a SELECTION, unconfirmed: it supports nothing on the order path until the selected cell alone passes a confirmation
+    registered now: exit_lever_ablation --grade paired (selected vs B) on a disjoint window (pre-2020-07 where the feed exists, else a symbol twin), same bars. FAIL = no candidate
+    passes with n(B) >= 39: the bracket surface is flat on this leg and window, so a learned bracket has no measured headroom here. INDETERMINATE if n(B) < 39 or every candidate
+    is byte-identical to B or the producer failed. Thresholds, arms, window are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or order path; a PASS is not a promotion and a FAIL does not retire the Pointer family (family review needed, scripts/research/family_retirement_policy.yaml).
+    Per-trade R changes with the stop distance (R is stop-denominated), which the replace grade reports beside net R. The leg keeps its own declared tp_revision in every arm
+    (only atr_stop_mult and tp_r move), so arm B and the candidates differ only in the static cell.
+evidence_class:
+  claim: edge
+  holdout: in_sample
+follow_up: PASS -> author the registered paired confirmation for the selected arm (pre-window 2017-09-01..2020-06-30; SOL via the ETH/BTC windows). FAIL -> record the floor
+  on PI-20261119-RIMARY12-0004 and proceed to the D8 head levers.
+id: RQ-20261126-11d7-17
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B. The matched-random control belongs to the learned-head units (04a5-02).
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: 'RQ-20261122-b18a-03 (D6 ceiling on ada_pullback_2h: FAIL, flat surface)'
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-12-03'
+  diagnosis: 'b18a-03 (MEASURED, 2026-11-22) read the static (SL x TP) surface on ada_pullback_2h and no cell beat the declared one: no bracket headroom on that leg. One leg
+    is not the family: programme node P2-PR1125-D6-ceiling-two-legs asks the same registered grid on one trend leg and one more pullback leg before any learned-bracket unit
+    is authored. This unit is a trend leg on the money book (trend_donchian_eth_4h, ETHUSDT 4h).'
+  search: registered static grid, 2 levers (atr_stop_mult 1.0..3.0 x tp_r 3..6), 19 candidates plus the declared cell, one rule (the b18a-03 rule, bars unchanged)
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+kind: experiment
+lands:
+  assert_field: read_state
+  min_rows: 1
+  store: research/results/
+ml_consumer:
+  consumer: ML-DECISION-MODELS
+  decision: 'whether a learned entry bracket (Pointer) is worth building on trend_donchian_eth_4h: it must beat the best static cell this unit finds, or the declared cell if
+    none passes'
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+power:
+  expected_n: 270
+  min_detectable_effect: 0.03
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.2
+  basis: n ESTIMATED ~270 trades for arm B over 2020-07..2026-10 (an estimate for this leg and window, replaced by the first run). The bar is materiality plus fold stability,
+    not a significance test; n < 39 grades INDETERMINATE. sd 1.2 R ESTIMATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a pinned window; nothing accrues.
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): intervention judged against the declared setting, entries fixed, net of cost; a pre-registered
+  grid with the multiplicity stated and the bar raised for it.'
+priority: 1
+programme: P2
+question: 'On trend_donchian_eth_4h (declared atr_stop_mult 1.5, tp_r 4), 2020-07-01..2026-10-15, six equal calendar folds by entry time, net of the full cost stack: does any
+  of the 19 static (atr_stop_mult x tp_r) cells replace the declared bracket under the registered replace rule (>= +0.03 R/trade, >= 5 of 6 folds, maxDD <= 1.35x)?'
+related:
+- RQ-20261122-b18a-03
+- RQ-20261118-04a5-02
+- RQ-20261101-c692-02
+roadmap:
+- L-ML-LIVE
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 45
+  basis: 'ESTIMATE: 20 arms of one 4h leg over 2330 d; the b18a-03 sibling (2h, 20 arms) was estimated 75 min. The first run replaces it.'
+run:
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - S10T3=atr_stop_mult=1;tp_r=3
+  - --arm
+  - S10T4=atr_stop_mult=1;tp_r=4
+  - --arm
+  - S10T5=atr_stop_mult=1;tp_r=5
+  - --arm
+  - S10T6=atr_stop_mult=1;tp_r=6
+  - --arm
+  - S15T3=atr_stop_mult=1.5;tp_r=3
+  - --arm
+  - S15T5=atr_stop_mult=1.5;tp_r=5
+  - --arm
+  - S15T6=atr_stop_mult=1.5;tp_r=6
+  - --arm
+  - S20T3=atr_stop_mult=2;tp_r=3
+  - --arm
+  - S20T4=atr_stop_mult=2;tp_r=4
+  - --arm
+  - S20T5=atr_stop_mult=2;tp_r=5
+  - --arm
+  - S20T6=atr_stop_mult=2;tp_r=6
+  - --arm
+  - S25T3=atr_stop_mult=2.5;tp_r=3
+  - --arm
+  - S25T4=atr_stop_mult=2.5;tp_r=4
+  - --arm
+  - S25T5=atr_stop_mult=2.5;tp_r=5
+  - --arm
+  - S25T6=atr_stop_mult=2.5;tp_r=6
+  - --arm
+  - S30T3=atr_stop_mult=3;tp_r=3
+  - --arm
+  - S30T4=atr_stop_mult=3;tp_r=4
+  - --arm
+  - S30T5=atr_stop_mult=3;tp_r=5
+  - --arm
+  - S30T6=atr_stop_mult=3;tp_r=6
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - B
+  - --delta-r
+  - '0'
+  - --delta-r-per-trade
+  - '0.03'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261126-11d7-17
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261126-11d7-17
+status: queued
+theme: live_strategy
+title: 'D6 Pointer CEILING on trend_donchian_eth_4h: does ANY static entry bracket (atr_stop_mult x tp_r, 19 cells) beat the declared bracket (SL 1.5 ATR / TP 4R) net of the
+  full cost stack, held to a registered rule? If the surface is flat, a learned bracket has no headroom on this leg'
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'ESTIMATE: governs whether the D6 Pointer build proceeds on a money leg; not a measurement.'
+why_this_matters: D6 Pointer (predicted SL/TP at entry) has no stage and flat reads. Its static ceiling on ada_pullback_2h was flat (b18a-03); this reads the same ceiling on
+  a second family and leg, so the question 'does any money leg have bracket headroom a predictor could capture' has more than one data point. A PASS is a SELECTION (unconfirmed)
+  and a Tier-3 candidate only after its own confirmation; a FAIL closes bracket headroom for this leg on this window, not the family.
+levers:
+- name: entry_bracket
+  values:
+  - atr_stop_mult 1.0..3.0
+  - tp_r 3..6
+  hypothesised_effect: a different static stop/target cell lifts net R per trade by >= 0.03 on this leg; if none does, the surface is flat
