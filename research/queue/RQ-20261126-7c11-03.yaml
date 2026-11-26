@@ -1,0 +1,127 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row ML-ENTRY-EQ-CORP-EVENTS; Manager Session 2026-11-26a 10:20Z: "author the month/regime
+# decomposition unit for both models' confirm trades"). Gates this adds or changes: none (decision support for the operator's Tier-3
+# widening decisions on ml_entry_eq; it changes no gate, config or order path).
+# DISCLOSED: the thresholds were set knowing both models' month-clustered t (served 2.06 from RQ-20261107-98e3-06, security-keyed ~0.97
+# from RQ-20261126-7c11-02), and the script was dry-run once on the served model's committed trades while authoring (ROBUST, regime
+# not read). This is therefore a deterministic DESCRIPTION of already-graded trades, not new inferential evidence.
+id: RQ-20261126-7c11-03
+title: 'ml_entry_eq confirm-window concentration: is each model''s edge spread over months and SPY regimes, or carried by one month (the
+  7c11-02 security-keyed read has 113 of 213 trades in 2026-03)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: deterministic
+origin: diagnosis
+question: 'For the served ml_entry_eq_struct artifact (98e3-06 confirm trades, n 207, reproduced by RQ-20261119-e8a1-04) and the
+  security-keyed refit (7c11-02 confirm trades, n 213, re-derived here WITHOUT a ledger claim via --reproduce-sha), what are the by-month
+  and by-SPY-regime means, the month-clustered t, the leave-largest-month-out mean and the top-5 symbol share of net R?'
+why_this_matters: 'ml_entry_eq_struct trades real money (alpaca_live). 7c11-02 passed its registered iid bar (t 4.87) but its
+  month-clustered t is ~0.97 with 53% of trades in one month, so its pass says little about persistence; the served model reads
+  clustered t ~2.06. Manager 26a: this decomposition is read before any further real-money widening of ml_entry_eq.'
+why_not_inferential: 'Both trade sets were already graded by their own registered rules (98e3-06, 7c11-02); this unit only re-reads
+  them by month and regime. No new window is read (the security-keyed trades are re-derived with --reproduce-sha, which claims no ledger
+  read), and the thresholds below were set with both models'' clustered t known (disclosed above), so the verdict is a description.'
+evidence_class:
+  holdout: none
+  claim: data_integrity
+ml_consumer:
+  consumer: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  decision: whether a further real-money widening of ml_entry_eq_struct is proposed (Tier 3, operator); no change from this unit
+  legs:
+  - ml_entry_eq_struct
+  book: money
+baseline:
+  definition: 'Each model''s own pooled confirm mean (served +0.4922 R n 207; security-keyed +0.3891 R n 213); the decomposition is
+    read against it.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261126-7c11-03-CONCENTRATION
+  registered_at: '2026-11-26'
+  registered_before_run: false
+  statistic: 'scripts/research/eq_confirm_concentration.py: per model, by-month n / mean / sum net R; month-clustered t = mean of
+    monthly sums / (sd of monthly sums / sqrt(months)); leave-largest-month-out mean (the month with the largest positive sum removed);
+    top-5 symbol share of net R; by SPY regime cell (close vs 50d SMA x 20d realized vol vs the window median, read before the entry
+    day), reported only.'
+  rule: 'Per model: ROBUST iff leave-largest-month-out mean > 0 AND month-clustered t >= 1.3; CONCENTRATED otherwise. Run verdict:
+    pass iff the SERVED model reads ROBUST (it is what a widening scales); the security-keyed model is reported beside it.
+    INDETERMINATE iff the served trade file is missing or empty.'
+  pass_action: 'Record that the served model''s confirm edge is not one month''s; a widening proposal may cite this alongside its own
+    population test. The security-keyed read is recorded as reported.'
+  fail_action: 'Record that the served model''s confirm edge is concentrated; any real-money widening of ml_entry_eq is proposed only
+    with fresh out-of-time evidence (the live-performance path), never on the confirm read alone.'
+  proposal_mapping: pass -> widening may cite it; fail -> widening needs fresh out-of-time evidence; indeterminate -> name the missing file.
+  what_it_does_not_do: Changes no config, roster, pool, served model or order path; claims no holdout read; GET-only Alpaca SPY bars.
+  min_n: 30
+run:
+  workflow: research-script-run.yml
+  commands:
+  - - python3
+    - scripts/research/ml_entry_equity.py
+    - structure
+    - --cache
+    - /tmp/ml_entry_equity
+    - --out
+    - '{out_dir}/seckey'
+    - --unit
+    - '{unit}'
+    - --where
+    - research-script-run
+    - --security-keyed
+    - --ensemble-seeds
+    - 1,2,3,4,5
+    - --taus
+    - 0.2,0.25
+    - --min-mean
+    - '0.04'
+    - --reproduce-sha
+    - 8c3a70b5d1024229f150f06e99a2e1ad505258dd5573a76ea86633af7e0a7f26
+    - --expect-n
+    - '213'
+    - --expect-mean
+    - '0.3891090207472068'
+    - --trades-out
+    - '{out_dir}/seckey_trades.jsonl'
+    - --rule-id
+    - RULE-RQ20261126-7c11-02-SECKEY
+    - --registered-at
+    - '2026-11-26'
+  - - python3
+    - scripts/research/eq_confirm_concentration.py
+    - --trades
+    - served=comms/research/RQ-20261119-e8a1-04/44439340946/ml_entry_eq_struct__trades.jsonl
+    - --trades
+    - seckey={out_dir}/seckey_trades.jsonl
+    - --gate
+    - served
+    - --out
+    - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261126-7c11-03
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: the real-money ml_entry_eq_struct book; protects a widening decision from resting on one month.'
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): a pooled holdout mean is read with its time
+  clustering before it is trusted for scaling.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  why_runner: the security-keyed reproduction needs the paper Alpaca data pair (research-script-run only); then a seconds-long read.
+  basis: 'MEASURED analogue: RQ-20261126-7c11-02 (the same structure refit) on the runner.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-CORP-EVENTS
+- RQ-20261126-7c11-02
+- RQ-20261107-98e3-06
+- RQ-20261119-e8a1-04
