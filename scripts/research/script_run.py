@@ -381,6 +381,49 @@ def _copy_new_ledger_lines(ledger: Path, before: Optional[List[str]], dest: Path
     return len(new)
 
 
+def _run_measured(argv: List[str], *, cwd: str, env: Dict[str, str], out: Any, timeout: float):
+    """Run ``argv`` like ``subprocess.run(..., stdout=out, stderr=STDOUT, timeout=timeout)`` and ALSO measure its peak memory.
+
+    Returns ``(exit_code, timed_out, peak_rss_mb)``. ``peak_rss_mb`` is the child's ``ru_maxrss`` from ``os.wait4``: the largest
+    resident set of any ONE process in the child's tree (the child and the descendants it waited for), NOT their sum, so a
+    command that fans out workers (``--jobs 4``) is under-measured by up to that factor. It is None when the platform has no
+    ``wait4`` (the command still runs, via ``subprocess.run``) or the call failed: None means "not measured", never 0.
+    Linux reports ``ru_maxrss`` in KiB, macOS in bytes. On a timeout the child is killed, as ``subprocess.run`` does."""
+    if not hasattr(os, "wait4"):
+        try:
+            proc = subprocess.run(argv, cwd=cwd, env=env, stdout=out, stderr=subprocess.STDOUT, timeout=timeout)
+            return proc.returncode, False, None
+        except subprocess.TimeoutExpired:
+            return None, True, None
+    proc = subprocess.Popen(argv, cwd=cwd, env=env, stdout=out, stderr=subprocess.STDOUT)
+    deadline = time.monotonic() + timeout
+    timed_out = False
+    ru = None
+    status = 0
+    while True:
+        try:
+            pid, status, ru = os.wait4(proc.pid, os.WNOHANG)
+        except ChildProcessError:  # reaped elsewhere: fall back to what Popen knows, peak not measured
+            code = proc.wait()
+            return code, False, None
+        if pid:
+            break
+        if time.monotonic() >= deadline:
+            proc.kill()
+            timed_out = True
+            try:
+                pid, status, ru = os.wait4(proc.pid, 0)
+            except ChildProcessError:
+                proc.wait()
+            break
+        time.sleep(0.05)
+    proc.returncode = os.waitstatus_to_exitcode(status) if pid else None
+    peak = None
+    if ru is not None:
+        peak = round(ru.ru_maxrss / (1024.0 * 1024.0 if sys.platform == "darwin" else 1024.0), 1)
+    return (None if timed_out else proc.returncode), timed_out, peak
+
+
 def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
     """Run the plan's commands in order; write `<out_dir>/run-manifest.json`.
     Returns the manifest. Never raises for a failing command — the failure is
@@ -408,12 +451,12 @@ def execute(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
         print(f"::group::[{p.unit}] cmd {i}: {' '.join(argv)}", flush=True)
         try:
             with log.open("wb") as fh:
-                proc = subprocess.run(argv, cwd=str(repo), env=env, stdout=fh,
-                                      stderr=subprocess.STDOUT, timeout=remaining)
-            row["exit_code"] = proc.returncode
-        except subprocess.TimeoutExpired:
-            row["exit_code"] = None
-            row["timed_out"] = True
+                code, timed_out, peak_mb = _run_measured(argv, cwd=str(repo), env=env, out=fh, timeout=remaining)
+            row["exit_code"] = code
+            if timed_out:
+                row["timed_out"] = True
+            # row COMPUTE-IDLE-TRAINER-GPU-W48: the measured peak, so the router can stop guessing a unit's memory
+            row["peak_rss_mb"] = peak_mb
         except OSError as exc:
             row["exit_code"] = None
             row["error"] = f"{type(exc).__name__}: {exc}"
