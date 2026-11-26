@@ -1,0 +1,124 @@
+{
+  "leg": "slv_trend_1h",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 20.1374,
+    "n": 91,
+    "max_drawdown_r": 12.833,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=20.1374 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 91,
+      "net_r": 20.1374,
+      "net_r_fee_only": 22.8615,
+      "max_drawdown_r": 12.833,
+      "by_outcome": {
+        "trail_stop": 20,
+        "stop": 55,
+        "take_profit": 16
+      },
+      "mean_bars_held": 14.956,
+      "net_r_per_capital_day": 0.1776,
+      "cost_stack": {
+        "fee_bps_roundtrip": 0.0,
+        "slippage_bps_roundtrip": 5.0,
+        "funding_bps_per_window": 0.0
+      },
+      "params": {
+        "donchian": 24,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 4.0,
+        "min_confidence": 0.3
+      },
+      "data_start": "2024-01-16 14:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2024-01-16 14:30:00+00:00",
+          "end": "2024-10-03 16:00:00+00:00",
+          "trades": 23,
+          "net_r": 6.6875
+        },
+        {
+          "fold": 2,
+          "start": "2024-10-03 16:00:00+00:00",
+          "end": "2025-06-21 17:30:00+00:00",
+          "trades": 20,
+          "net_r": -3.4626
+        },
+        {
+          "fold": 3,
+          "start": "2025-06-21 17:30:00+00:00",
+          "end": "2026-03-09 19:00:00+00:00",
+          "trades": 26,
+          "net_r": 12.8982
+        },
+        {
+          "fold": 4,
+          "start": "2026-03-09 19:00:00+00:00",
+          "end": "2026-11-25 20:30:00+00:00",
+          "trades": 22,
+          "net_r": 4.014
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "24",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SLV",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.3",
+        "--fee-bps-roundtrip",
+        "0.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-115/45823578056/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-115/45823578056/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "yahoo",
+      "ticker": "SLV",
+      "interval": "60m",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2024-01-16 14:30:00+00:00",
+      "2024-10-03 16:00:00+00:00",
+      "2025-06-21 17:30:00+00:00",
+      "2026-03-09 19:00:00+00:00",
+      "2026-11-25 20:30:00+00:00"
+    ]
+  }
+}
