@@ -1,0 +1,7 @@
+candle dataset: served binance__SOLUSDT__60 (43801 rows, last 2026-11-17 23:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_trend.py --donchian 20 --data <data> --symbol SOLUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.8 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-134/45832727149/arms/A__trades.jsonl --json comms/research/RQ-20261126-134/45832727149/arms/A__bt.json --long-only --tp-cap-pct 0.099 --tp-r 50.0
+{
+ "verdict": "pass",
+ "label": "stage0_edge",
+ "why": "net_r=12.1222 > 0 with 3/4 positive folds at this arm's cost stack"
+}
