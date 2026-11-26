@@ -17,7 +17,7 @@ Rules (spec section 2):
     fill it (the venue's own answer, else the symbol is rostered on that venue). Shadow proposals only; real money follows the ladder
   - management: every trade carries a `management` block for the live-trade-review sessions that would manage it (operator
     2026-11-26: "specific instructions for the LTR sessions ... and how the trade was designed"): design, expected_path,
-    watch_for[], catalyst_timing[], tighten_if[], exit_early_if[], do_not[], thesis_invalidated_by. watch_for / tighten_if /
+    watch_for[], catalyst_timing[], tighten_if[], exit_early_if[], do_not[], thesis_invalidated_by (watch_for non-empty; the other lists may be empty). watch_for / tighten_if /
     exit_early_if items are {signal, source_ids?, check?}; an optional check {kind: close_above|close_below|high_above|low_below,
     level} is machine-evaluated by desk_macro_outcomes on the replay window
   - informs: leg exists in config/strategies.yaml; until > judged_at
@@ -102,7 +102,7 @@ def _size_keys(v, path="") -> list[str]:
 
 MGMT_TEXT = ("design", "expected_path", "thesis_invalidated_by")
 MGMT_LISTS = ("watch_for", "catalyst_timing", "tighten_if", "exit_early_if", "do_not")
-MGMT_NONEMPTY = ("watch_for", "exit_early_if")
+MGMT_NONEMPTY = ("watch_for",)   # the operator asked for "anything specific that they should look out for"
 CHECK_KINDS = ("close_above", "close_below", "high_above", "low_below")
 
 
@@ -114,7 +114,7 @@ def management_problems(m, tag: str, sids: set) -> list[str]:
     for k in MGMT_LISTS:
         v = m.get(k)
         if not isinstance(v, list):
-            out.append(f"{tag}.management.{k}: a list is required (empty only for catalyst_timing / tighten_if / do_not)")
+            out.append(f"{tag}.management.{k}: a list is required (it may be empty except watch_for)")
             continue
         if k in MGMT_NONEMPTY and not v:
             out.append(f"{tag}.management.{k}: at least one item is required")
@@ -548,7 +548,8 @@ def self_test() -> int:
     check("a fetch retrieved after judged_at is refused", with_fetch(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL"), late_f))
     check("a tampered fetch file is refused", with_fetch(lambda b: b["trades"][0]["proposal"].update(symbol="AAPL"), dict(fb, retrieved_at="2026-11-26T13:01:00Z")))
     check("a trade without a management block is refused", bad(lambda b: b["trades"][0].pop("management")))
-    check("management without an exit_early_if item is refused", bad(lambda b: b["trades"][0]["management"].update(exit_early_if=[])))
+    check("management without a watch_for item is refused", bad(lambda b: b["trades"][0]["management"].update(watch_for=[])))
+    check("an empty exit_early_if list is allowed", not bad(lambda b: b["trades"][0]["management"].update(exit_early_if=[])))
     check("a malformed machine check is refused", bad(lambda b: b["trades"][0]["management"]["exit_early_if"][0].update(check={"kind": "vibes", "level": 1})))
     check("a brief with no own forecast is refused", bad(lambda b: b.update(forecasts=[])))
     check("a forecast resolving before judged_at is refused", bad(lambda b: b["forecasts"][0]["target"].update(resolves_at="2026-11-01T00:00:00Z")))

@@ -264,7 +264,6 @@ async def get_candles(
 _TRADABLE_CACHE: Dict[str, tuple[float, Dict[str, Any]]] = {}
 _TRADABLE_TTL_S = 6 * 3600.0
 _BYBIT_INSTRUMENTS = "https://api.bybit.com/v5/market/instruments-info"
-MAX_TRADABLE_SYMBOLS = 60
 
 
 def parse_bybit_instrument(symbol: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -327,13 +326,13 @@ def _tradable_many(symbols: List[str]) -> Dict[str, Dict[str, Any]]:
 
 
 @router.get("/tradable")
-async def get_tradable(symbols: str = Query(..., max_length=2000)) -> Dict[str, Any]:
+async def get_tradable(symbols: str = Query(...)) -> Dict[str, Any]:
     """Per symbol: the venue that would fill it and whether it is tradable there now.
 
     Wire shape: ``{symbols: {SYM: {read_state, exchange, tradable, basis, ...}}, n, as_of}``. ``tradable`` is null
     (never false) when the venue could not be read. Tier 1: read-only, no secrets in the response, cached 6 h.
     """
-    syms = [x.strip().upper() for x in symbols.split(",") if x.strip()][:MAX_TRADABLE_SYMBOLS]
+    syms = list(dict.fromkeys(x.strip().upper() for x in symbols.split(",") if x.strip()))
     loop = asyncio.get_running_loop()
     res = await loop.run_in_executor(None, _tradable_many, syms)
     return {"symbols": res, "n": len(res), "as_of": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}

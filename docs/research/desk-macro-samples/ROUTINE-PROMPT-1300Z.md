@@ -36,7 +36,7 @@ built here."
    tp.p_hit, judge_prior, catalyst, invalidation and cited sources. On a thesis-free day, still list them; a low judge_prior is
    the honest record. The writer refuses trades == [] unless the packet's prices part is could_not_look.
    Every trade carries a `management` block for the live-trade-review sessions (operator 2026-11-26): design, expected_path,
-   watch_for[] ({signal, source_ids, check?}), catalyst_timing[], tighten_if[], exit_early_if[] (>= 1), do_not[],
+   watch_for[] ({signal, source_ids, check?}), catalyst_timing[], tighten_if[], exit_early_if[], do_not[],
    thesis_invalidated_by. Give an item a machine check {kind: close_above|close_below|high_above|low_below, level} wherever
    it is a price level; the outcomes replay grades those.
    Run python3 scripts/ops/desk_macro_analysis.py --packet <packet> --candidates CANDS.json for each candidate's empirical
