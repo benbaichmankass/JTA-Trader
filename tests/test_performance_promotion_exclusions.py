@@ -76,6 +76,8 @@ def test_an_entry_naming_another_account_does_not_exclude(db, monkeypatch):
     assert victim in _ids(out, "realMoney") and out["realMoney"]["promotionExcluded"] == []
 
 
+# collapsed-state: unreadable — this test pins the promotion-exclusions readState (ok | unreadable) published by /performance/recent
+# and /performance/trade-series; it is NOT broker_truth.read_state. The ok branch is pinned by the other tests in this file.
 def test_an_unreadable_file_is_published_not_read_as_none(db, monkeypatch):
     def boom(path=None):
         raise ValueError("broken yaml")
