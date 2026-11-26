@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "scripts/research/stamp_pr_triage.py + .github/workflows/research-watchdog.yml (triage step only): the existing stamp-PR triage now also judges research-queue-receipt PRs (latest-wins on the receipt timestamp) and its landing path (merge main, stamp = max) is switched on with the PAT this workflow already uses, so a dirty automation PR is closed or landed within a watchdog run instead of tripping conflicted_automation. Acts only on automation/research-queue-stamp-* and -receipt-* branches, only when dirty. Tooling/CI only; no order-path, strategy, risk or runtime change; adds no gate."
+}

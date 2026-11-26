@@ -16,7 +16,12 @@ PER UNIT, a stamp S against main's `last_dispatched_at` M (read from the checked
                   for a re-run, so landing S would drop it out of the queue. NEVER landed. (The exception, in code, with a test.)
   needs_land      anything else: S is newer than M and matters (a recurring cadence, or an unstamped unit with no failed result).
 
-PER PR (only `automation/research-queue-stamp-*`, only `dirty` and older than --min-age-min -- never another branch):
+RECEIPT PRs (`automation/research-queue-receipt-<run>-<n>`, added 2026-11-26 after three watchdog incidents in one night). The liveness
+receipt is ONE whole file every dispatcher run rewrites, latest-wins. The dispatcher closes an older receipt PR only when a NEWER
+receipt PR opens, so after a quiet spell one sat dirty 50+ min and tripped conflicted_automation. Here a dirty receipt PR is
+judged on its `timestamp`: main's >= the PR's -> CLOSE (superseded); the PR's is newer -> LAND (merge main, keep the PR's file).
+
+PER PR (only `automation/research-queue-stamp-*` / `-receipt-*`, only `dirty` and older than --min-age-min -- never another branch):
   every unit superseded / moot_once / keep_unstamped  -> CLOSE with a per-unit comment.
   any needs_land                                      -> with --land: merge main into the branch resolving each unit file to
                                                          main's text with the stamp set to max(S, M), push (token must be able to
@@ -38,6 +43,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _REPO = Path(__file__).resolve().parents[2]
 STAMP_PREFIX = "automation/research-queue-stamp-"
+RECEIPT_PREFIX = "automation/research-queue-receipt-"
+RECEIPT_PATH = "docs/claude/work/research-queue-dispatch-receipt.json"
 QUEUE_PREFIX = "research/queue/"
 STAMP_LINE = re.compile(r"^(last_dispatched_at:[ \t]*)([^\s#]+)([ \t]*(?:#.*)?)$", re.M)
 SUPERSEDED, MOOT_ONCE, KEEP_UNSTAMPED, NEEDS_LAND, COULD_NOT_LOOK = (
@@ -148,6 +155,46 @@ def decide_pr(files: List[dict], main_reader: Callable[[str], Optional[str]],
     return {"action": action, "why": why, "units": units}
 
 
+def receipt_stamp(text: Optional[str]) -> Optional[str]:
+    """The `timestamp` of a receipt json's text, or None when it is unreadable."""
+    try:
+        v = json.loads(text or "").get("timestamp")
+    except (ValueError, AttributeError):
+        return None
+    return str(v) if v else None
+
+
+def patch_receipt_stamp(patch: str) -> Optional[str]:
+    """The timestamp a receipt PR file patch ADDS (`+  "timestamp": "..."`), or None."""
+    m = re.search(r'^\+\s*"timestamp":\s*"([^"]+)"', patch or "", re.M)
+    return m.group(1) if m else None
+
+
+def decide_receipt(files: List[dict], main_reader: Callable[[str], Optional[str]]) -> Dict[str, Any]:
+    """Latest-wins decision for one receipt PR: 'close' (main's receipt is as new or newer), 'land' (the PR's is newer), 'leave'."""
+    names = [f.get("filename") or "" for f in files]
+    stray = [n for n in names if n != RECEIPT_PATH and not (n.startswith(".github/merge-slots/") or n.startswith(".github/pr-landing/")
+                                                          or n.startswith(".github/pr-automerge-requests/"))]
+    if RECEIPT_PATH not in names or stray:
+        return {"action": "leave", "units": [], "receipt": True,
+                "why": "no receipt file in the diff" if RECEIPT_PATH not in names else f"touches non-receipt paths {stray[:3]}"}
+    patch = next((f.get("patch") or "" for f in files if f.get("filename") == RECEIPT_PATH), "")
+    pr_raw, main_raw = patch_receipt_stamp(patch), receipt_stamp(main_reader(RECEIPT_PATH))
+    pr_ts, main_ts = _ts(pr_raw), _ts(main_raw)
+    if pr_ts is None or main_ts is None:
+        return {"action": "leave", "receipt": True, "why": "a receipt timestamp could not be read",
+                "units": [{"unit": "receipt", "path": RECEIPT_PATH, "stamp": pr_raw, "main": main_raw, "kind": COULD_NOT_LOOK,
+                           "reason": f"unreadable timestamp (pr {pr_raw!r}, main {main_raw!r})"}]}
+    if main_ts >= pr_ts:
+        kind, action, why = SUPERSEDED, "close", "main's receipt is as new or newer: the receipt is one whole file, latest-wins"
+        reason = f"main {main_ts.isoformat()} >= receipt {pr_ts.isoformat()}"
+    else:
+        kind, action, why = NEEDS_LAND, "land", "this receipt is newer than main's"
+        reason = f"receipt {pr_ts.isoformat()} is newer than main {main_ts.isoformat()}: keep this file"
+    return {"action": action, "why": why, "receipt": True,
+            "units": [{"unit": "receipt", "path": RECEIPT_PATH, "stamp": pr_raw, "main": main_raw, "kind": kind, "reason": reason}]}
+
+
 def comment_body(decision: Dict[str, Any], did: str) -> str:
     lines = [f"Stamp-PR triage (PI-20261118-EFILLW47-0005): {did}. This PR was conflicting with main and could not merge.", ""]
     for u in decision["units"]:
@@ -195,7 +242,14 @@ def land_max(slug_repo: str, number: int, branch: str, decision: Dict[str, Any],
         return False, "could not create the worktree"
     try:
         run("git", "merge", "--no-commit", "--no-ff", "refs/remotes/stamp/main", cwd=str(wt))   # conflicts expected; resolved below
-        for u in decision["units"]:
+        if decision.get("receipt"):                         # a whole-file latest-wins receipt: keep the PR's file
+            for u in decision["units"]:
+                mine = run("git", "show", f"refs/remotes/stamp/{branch}:{u['path']}", cwd=str(wt)).stdout
+                if not mine or receipt_stamp(mine) is None:
+                    return False, f"cannot read the branch's {u['path']}"
+                (wt / u["path"]).write_text(mine, encoding="utf-8")
+                run("git", "add", "--", u["path"], cwd=str(wt))
+        for u in ([] if decision.get("receipt") else decision["units"]):
             m = _ts(u["main"])
             s = _ts(u["stamp"])
             best = max([d for d in (m, s) if d is not None]) if (m or s) else None
@@ -208,7 +262,7 @@ def land_max(slug_repo: str, number: int, branch: str, decision: Dict[str, Any],
         if left:
             return False, f"unresolved conflicts remain: {left[:4]}"
         c = run("git", "-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-                "commit", "-q", "-m", "stamp-pr-triage: merge main, resolve unit stamps to max(stamp, main)", cwd=str(wt))
+                "commit", "-q", "-m", "stamp-pr-triage: merge main, resolve stamps to max(stamp, main) / keep the newer receipt", cwd=str(wt))
         if c.returncode and "nothing to commit" not in (c.stdout + c.stderr):
             return False, "commit failed: " + (c.stderr or c.stdout)[:200]
         if run("git", "push", "-q", url, f"HEAD:refs/heads/{branch}", cwd=str(wt)).returncode:
@@ -228,8 +282,9 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
     results = []
     for p in prs:
         ref = str(((p.get("head") or {}).get("ref")) or "")
-        if not ref.startswith(STAMP_PREFIX):
-            continue                                        # ONLY the bot's stamp branches
+        is_receipt = ref.startswith(RECEIPT_PREFIX)
+        if not (ref.startswith(STAMP_PREFIX) or is_receipt):
+            continue                                        # ONLY the bot's stamp and receipt branches
         n = int(p["number"])
         created = _ts(p.get("created_at"))
         age = (now - created).total_seconds() / 60 if created else 0
@@ -244,7 +299,7 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
         if files is None:
             out(f"#{n} {ref}: could not read the PR files (could_not_look): left alone")
             continue
-        d = decide_pr(files, main_reader(), latest_read_state)
+        d = decide_receipt(files, main_reader()) if is_receipt else decide_pr(files, main_reader(), latest_read_state)
         row = {"pr": n, "ref": ref, "age_min": round(age), **d, "live": live, "done": None}
         out(f"#{n} {ref} age {round(age)} min: {d['action'].upper()} ({d['why']})")
         for u in d["units"]:
@@ -258,7 +313,8 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
             row["done"] = "landed" if ok else f"land_failed: {why}"
             if ok:
                 _gh(["pr", "comment", str(n), "--repo", repo_slug, "--body-file", "-"],
-                    comment_body(d, "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run"))
+                    comment_body(d, ("merged main into the branch, this receipt kept (latest wins); auto-merge can now run" if is_receipt else
+                              "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run")))
         out(f"    -> {row['done'] or ('dry run: nothing done' if not live else 'reported only')}")
         results.append(row)
     return results
