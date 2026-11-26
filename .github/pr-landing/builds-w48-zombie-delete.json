@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Adds a DELETE mode (dry_run default true) to cancel-queued-runs.yml for never-started zombie runs. Destructive capability, so held for the manager merge. The live delete additionally needs the operator decision on record.",
+  "why": "ACTIONS-ZOMBIE-QUEUED-RUNS: cancel and force-cancel both return HTTP 409 for these runs; DELETE is the only API path left. CI workflow only; no runtime, config or order path."
+}
