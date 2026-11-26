@@ -1,7 +1,7 @@
 {
   "account_id": "bybit_2",
   "exchange": "bybit",
-  "captured_at": "2026-11-25T17:11:55.414480+00:00",
+  "captured_at": "2026-11-26T16:56:53.262085+00:00",
   "source": "GET /api/diag/broker_account_status?account_id=bybit_2",
   "schema": 2,
   "balance_committed": false,
@@ -60,26 +60,28 @@
     "fade_breakout_4h": {
       "config_fingerprint": "sha256:c2144450e5f46d784ad9144dc515e7d1",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/fade_breakout_4h__trades.jsonl",
+      "refuse": "0 of 28 permitted setups size above zero on bybit_2 (balance read, not committed) at fade_breakout_4h's latest committed price 83299.90 (2026-10-13 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 28,
       "setups_permitted": 28,
-      "setups_sized": 27,
+      "setups_sized": 0,
       "ref_price": 83299.9,
       "ref_price_at": "2026-10-13 00:00:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "fvg_range_15m": {
       "config_fingerprint": "sha256:d3da4e4d4bb72f53abf4fcbc0bcce5a7",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/fvg_range_15m__trades.jsonl",
+      "refuse": "0 of 18 permitted setups size above zero on bybit_2 (balance read, not committed) at fvg_range_15m's latest committed price 80378.70 (2026-10-26 10:15:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 18,
       "setups_permitted": 18,
-      "setups_sized": 18,
+      "setups_sized": 0,
       "ref_price": 80378.7,
       "ref_price_at": "2026-10-26 10:15:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "gdx_pullback_1d": {
       "config_fingerprint": "sha256:cab6c11de85a8832f24e151dcd553d0c",
@@ -311,7 +313,7 @@
       "affordable": false
     },
     "ml_entry_eq_struct": {
-      "config_fingerprint": "sha256:8254a2f0f9e9d5dadd6f0d295ead86d6",
+      "config_fingerprint": "sha256:fdf4ef2674d5cf4f5c1962eab887044e",
       "source_run": "comms/research/RQ-20261119-e8a1-04/44439340946/ml_entry_eq_struct__trades.jsonl",
       "refuse": "source_run 'comms/research/RQ-20261119-e8a1-04/44439340946/ml_entry_eq_struct__trades.jsonl' carries no setup with entry/sl/direction -- nothing to size",
       "setups_in_run": 0,
@@ -434,14 +436,15 @@
     "squeeze_breakout_4h": {
       "config_fingerprint": "sha256:b6195a3f5f171379130a953a7c73baa1",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/squeeze_breakout_4h__trades.jsonl",
+      "refuse": "0 of 14 permitted setups size above zero on bybit_2 (balance read, not committed) at squeeze_breakout_4h's latest committed price 80775.20 (2026-10-27 16:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 14,
       "setups_permitted": 14,
-      "setups_sized": 14,
+      "setups_sized": 0,
       "ref_price": 80775.2,
       "ref_price_at": "2026-10-27 16:00:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "tlt_pullback_1d": {
       "config_fingerprint": "sha256:49a29ebd9a0ca04ac20cefb9c10e6db4",
@@ -482,14 +485,15 @@
     "trend_donchian": {
       "config_fingerprint": "sha256:0f168b935aa033bcf756897861d7c6de",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian__trades.jsonl",
+      "refuse": "0 of 71 permitted setups size above zero on bybit_2 (balance read, not committed) at trend_donchian's latest committed price 84530.00 (2026-10-21 14:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 71,
       "setups_permitted": 71,
-      "setups_sized": 71,
+      "setups_sized": 0,
       "ref_price": 84530.0,
       "ref_price_at": "2026-10-21 14:00:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian_1h": {
       "config_fingerprint": "sha256:c50404b3a8619fbe8929cf58aa501592",
