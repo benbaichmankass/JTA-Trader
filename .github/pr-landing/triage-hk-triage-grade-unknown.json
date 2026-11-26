@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "scripts/research/stamp_pr_triage.py only (+ its tests): the watchdog's existing triage re-reads mergeable_state once when GitHub answers unknown, and closes a dirty automation/research-queue-grade-* PR after 30 min because grading is derived data that queue_grade.py re-derives from the committed tree on the next run (verified in the PR body). Acts only on the bot's own stamp/receipt/grade branches, only when dirty. Tooling only; no order-path, strategy, risk or runtime change; adds no gate."
+}
