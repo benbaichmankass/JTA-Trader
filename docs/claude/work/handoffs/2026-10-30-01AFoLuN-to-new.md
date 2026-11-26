@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-30: 01AFoLuN (Manager Session 2026-10-30a) to new
 
-> **Doc status:** `unknown` · category `unknown` · written 2026-10-30 ~06:57Z by the outgoing manager.
+> **Doc status:** `historical` · category `history` · written 2026-10-30 ~06:57Z by the outgoing manager.
 
 Outgoing session: `session_01AFoLuN7eK1S1a4nLsZ8A5m`, depth 6/8, ~616k tokens at 06:54Z (rotation at the ~650k bar).
 Incoming title: **Manager Session 2026-10-30b**.

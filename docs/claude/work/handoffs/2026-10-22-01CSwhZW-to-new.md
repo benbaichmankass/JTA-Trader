@@ -1,6 +1,6 @@
 # Manager handover 2026-10-22: session_01CSwhZWiw15rVCkjsJ8Cpuh → (new)
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `history` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 Discretionary rotation (manager SKILL § "Manager handover"): the old manager's context reached ~474k tokens at the
 10:41Z rotation check (threshold ~300k). Boundary chosen: after the Thursday walk-through + planning and after the
