@@ -1,0 +1,22 @@
+{
+  "id": "ALPACA-PAPER-SH-FRACTIONAL-ORPHANS",
+  "title": "alpaca_paper SH: a 0.5-share long remainder re-appears at the venue about every 32 min and is bare-adopted then flattened (trades 8488, 8489, 8490 on 2026-11-24), cause unestablished (equity path, separate from the options-close row)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "2026-11-25 housekeeping lane (manager request, split out of AUD-20261125-OPTIONS-CLOSE-LEAVES-LEGS). MEASURED (/api/diag/journal?table=trades&limit=200 read 2026-11-25 ~22:57Z, ids 8416..8615): 3 rows, all alpaca_paper SH, direction long, position_size 0.5, strategy_name orphan_adopt, setup_type adopted_orphan, adopted_by reverse_reconciler at 2026-11-24 13:02:37Z / 13:35:37Z / 14:07:38Z, each closed by exit_coverage_resolver about 2-3 min later (13:05:36Z, 13:37:37Z, 14:09:38Z; reason 'no recoverable strategy / order package - flattened'), exit_reason exit_coverage_no_strategy, pnl +0.01015 each, exit_price_source exchange_fill, opened_at NULL. Interval between adoptions is about 32-33 min, three times in ~1 h, i.e. something re-creates or leaves a 0.5-share SH long at the venue each time. Class: live-money class by account family but PAPER money (alpaca_paper), small size: 0.5 share. NOT established: what keeps producing the 0.5-share remainder (an unfilled/partial entry or exit on an SH leg, a fractional rounding on a close, or a shared-login position from another account); the audit row's 'fractional remainder re-appears' is a hypothesis, not read from code. Next: find the strategy/leg that trades SH on alpaca_paper (config/accounts.yaml roster, journal rows for symbol SH with a package), read its order/close rows around 13:00Z and 14:00Z on 11-24 for a 0.5-share leg, and check whether the 11-24 pattern stopped (journal rows for SH since 11-24 14:09Z: none in ids 8491..8615 above as orphan_adopt SH). Any fix touching the equity close/rounding path is Tier 2. CHECK {command: diag journal trades, rule: 0 orphan_adopt rows on alpaca_paper for SH in 7 d, resolves_when: next audit window clean}.",
+  "phase": "investigate",
+  "updated_at": "2026-11-25T22:59:51Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
+}

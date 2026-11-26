@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "An NFP consensus feed is verified and backfilled, or the decision is recorded that NFP stays out of G3; and KXCPIYOY is either added to the backfill config or declared out of scope.",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261012-WEPEG3B-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "WEPE-G3-BACKFILL 2026-10-12 (PR #17742)",
+    "rerun": "grep -c nonfarm_payrolls comms/macro/econ_calendar_snapshots_survey_backfill.jsonl -- finding holds while there are 0 headline-NFP consensus rows"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent DATA-FEEDS-NEWS-CALENDAR state landed_un)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row DATA-FEEDS-NEWS-CALENDAR is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist:DATA-FEEDS-NEWS-CALENDAR",
+  "state": "routed",
+  "what": "WEPE G3 on history (RQ-20261012-904) cannot score headline NFP (no consensus in comms/macro) nor give CPI YoY / core CPI MoM a Kalshi arm (backfill has KXCPI = MoM only). The Kalshi-matched sample is CPI MoM (56 questions / 32 releases) + FOMC (26) only. Extending needs an NFP consensus source verified point-in-time (macro-research invariant 3) and, for CPI YoY, collecting KXCPIYOY."
+}

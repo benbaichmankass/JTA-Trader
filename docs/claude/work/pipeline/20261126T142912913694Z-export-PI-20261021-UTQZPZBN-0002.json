@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a 7-day audit_query shows zero status=dry_run pipeline_result rows and the status is dropped, or rows exist and the keep is recorded",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261021-UTQZPZBN-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01FShRZU9iZpU36ZuTqzpZbN (RETIRE-GLOBAL-POSCAP lane, PR #19375)",
+    "rerun": "scripts/ops/diag_fetch.sh audit_query (since=7d) and count status=dry_run; grep -rn '\"dry_run\"' src/runtime/pipeline.py"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent LIVE-SILENCE-DIAG state done: OPS backlo)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, LIVE-SILENCE-DIAG, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "LIVE-SILENCE-DIAG (REGISTER-SWEEP-W43 2026-10-24: liveness watchdog dry_run rows)",
+  "state": "routed",
+  "what": "Liveness watchdog still counts a top-level status 'dry_run' audit row as actionable (liveness_watchdog._ACTIONABLE_STATUSES). RETIRE-GLOBAL-POSCAP only excludes multi_account_dispatched rows with accounts_placed == 0. Kept on purpose (the docstring wants an all-on-dry-run alarm) but unverified whether any pipeline path still writes that status after E1-F1. Check live audit rows for status=dry_run in a 7-day window; if none, drop it from the set."
+}

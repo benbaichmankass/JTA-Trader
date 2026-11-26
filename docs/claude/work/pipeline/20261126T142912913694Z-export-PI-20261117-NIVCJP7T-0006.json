@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "after the weekly reset of Wed 2026-11-18 18:00Z, a lane is dispatched that runs DESK-PACKET-REDESIGN arms B/C with Claude judging, and claude_desk has an iteration unit or graded result",
+    "conditions": [
+      "date:2026-11-18",
+      "manual:a Claude-judging lane for DESK-PACKET-REDESIGN arms B/C is dispatched after the 18:00Z reset"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261117-NIVCJP7T-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "manager session_01AFoLuHbhd9wFuGJfWRqyoV relayed the operator's popup answer at 2026-11-17 ~10:30Z to lane RESEARCH-OPS-20261117-1006",
+    "rerun": "python3 scripts/research/iteration_orphans.py --levers | grep -E 'claude_desk'"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row DESK-PACKET-REDESIGN is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist row DESK-PACKET-REDESIGN",
+  "state": "routed",
+  "what": "claude_desk: dispatch the Claude-judging lane for DESK-PACKET-REDESIGN arms B/C after the Wed 2026-11-18 18:00Z reset. Operator popup (2026-11-17 ~10:30Z, verbatim): \"Run it after the reset (Recommended)\". Context: claude_desk is an orphan testing leg with no Stage-0 record and no test runnable without Claude judging; last lever d18c-01 FAILED. || [2026-11-20 AM-OPS-11 2e] Operator popup 'Run it after the reset': reset passed. The arms B/C question is row DESK-PACKET-REDESIGN (landed_unproven, manager)."
+}

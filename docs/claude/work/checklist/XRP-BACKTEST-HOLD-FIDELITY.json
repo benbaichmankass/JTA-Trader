@@ -1,0 +1,23 @@
+{
+  "id": "XRP-BACKTEST-HOLD-FIDELITY",
+  "title": "trend_donchian_xrp_4h (REAL-MONEY leg): does the book-engine head-to-head mis-simulate holds? Solo n_oos 65 over 3.40 capital-days (~1.25 h avg hold on a 4h leg), net -9.17 R, vs Stage-0 record +3.48 R over 46 OOS trades. Diagnose engine vs record; result decides whether the Stage-0 record or the engine is wrong. Tier-1 diagnostic, no config change.",
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuN8NxfFJFAnKFYpTFt",
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "filed by BACKLOG-DRAIN-20261126 from PI-20261120-D3GR4UKX-0003; manager to map at weekly pass",
+  "priority_rank": 1,
+  "ceiling_usd": 8.0,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-29",
+  "note": "2026-11-26 11:50Z ML-PRIMARY read a1f0-01/-02/-03 (fixed engine, OOS from 2025-01-01, net of fee 7.5 + slip 3 + funding), all read_state measured, verdict pass = all arms measured (allocation input, no exclusion). Per-leg net R/capital-day, NEW vs OLD engine: XRP xrp_4h +0.0013 (n 25) vs -0.156 (n 74); xrp_pullback_2h +0.0011 (n 127) vs +0.0116 (n 115); together -0.0209 (n 148) vs +0.0044. ETH eth_4h +0.096 (n 101) vs +0.027; eth_prop +0.074 (n 275) vs -0.170; together +0.017 vs -0.173. SOL sol_4h +0.137 (n 92) vs +0.181; sol_prop +0.050 (n 119) vs +0.188; together +0.097 vs +0.202. Pattern on all 3 symbols under the new engine: TOGETHER (shared slot) < each solo leg -- e.g. XRP solos +0.03R and +0.46R but together -8.5R; ETH solos +18.8R/+10.8R, together +3.2R. CAVEAT: xrp_4h's 25 entries are exactly the BACKTEST-SYSTEM-MONITOR-NATIVE-FRAME gap (engine +0.03R vs Stage-0 +4.23R on the same entries) -- no leg-level conclusion from this engine until that gap is bridged. Descriptive allocation input only; no roster change. Timestamp correction: ML-PRIMARY's previous note on this row is stamped 11:50Z or 12:10Z; it was actually written ~11:30Z on 2026-11-26 (clock read from send_later's now).",
+  "phase": "backlog-drain",
+  "updated_at": "2026-11-26T11:34:07Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

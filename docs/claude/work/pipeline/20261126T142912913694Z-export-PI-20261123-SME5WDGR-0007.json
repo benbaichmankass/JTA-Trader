@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the ML programme owner has recorded a retirement (or an explicit keep-blocked reason) for RQ-20261101-b609-01 in research/queue/blocked/, and its blocked_on no longer points at the b608 stack as an open dependency",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261123-SME5WDGR-0007",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane QUEUE-FILL-STANDING-W48 2026-11-23, manager ruling on b609-01",
+    "rerun": "read research/queue/blocked/RQ-20261101-b609-01.yaml blocked_on/clears_when; read the b608-01 landed result (sealed W1 -0.1161 n=320 vs v1 -0.0405; forward -0.0443 n=948 vs v1 +0.0245)"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane, now re-owned by the manager) [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane QUEUE-FILL-STANDING-W48 2026-11-23, manager ruling on b609-01; routing-alarm rule]",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "RQ-20261101-b609-01 is blocked on the b608 winning stack, which is now technically available, but b608-01's stack already failed its sealed W1 read and its forward read, so unblocking b609-01 would re-read a spent W1 window. Manager ruling 2026-11-23: leave it blocked; the retirement is for the ML programme owner to record, not this lane. Needs a retirement record (with the lever-exhaustion basis) or an explicit keep-blocked reason."
+}

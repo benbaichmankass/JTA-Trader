@@ -1,31 +1,31 @@
 {
   "id": "COST-STACK-RECOST-SWEEP",
   "title": "Operator choice: re-cost committed crypto Stage-0 evidence records at the measured 11.0 bps Bybit fee",
-  "phase": null,
   "state": "landed_unproven",
-  "owner": "session_01AFoLuMzDa4jg4s82k6mX8c",
+  "owner": "manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: session_01AFoLuMzDa4jg4s82k6mX8c)",
   "lane": null,
   "model": null,
-  "ceiling_usd": 8,
-  "spend_usd": null,
   "tier": 2,
-  "prs": [],
-  "blocked_on": [],
-  "note": "2026-10-28 sweep done: 28 legs re-run at 11.0 bps; fee-isolated shifts 0.61-1.40x of prediction (none >2x); eth_15m flip confirmed; xrp_15m NOT positive on re-measured window (window drift); 5 pass->fail flips, all bybit_1-only. Result: comms/research/desk_edge/levers/bybit-fee-recost-sweep-result-2026-10-28.json. PR held for manager merge. [2026-11-03 06:04Z manager] DECISION (manager, data-backed, not an operator preference): option (b): re-cost only the 28 crypto legs in testing/production (status derived by scripts/ops/strategy_status.py) with the harness resolver; leave other evidence records for future runs only. Basis: BACKLOG-DRAIN-20261103 measured shifts -0.008..-0.083 R/trade and ONE sign flip (ict_scalp_eth_15m); only the live-status legs feed a decision. Done = each of the 28 has a re-costed evidence record on main; ict_scalp_eth_15m's flip is put to a demotion check under the ladder (OPERATING-PLAN s2) as a Tier-3 proposal with the record, not a silent change. Next BACKLOG-DRAIN picks this up.",
-  "updated_at": "2026-11-03T06:03:17Z",
-  "updated_by": "session_01AFoLuJ1apgy8sfngu4WyNH",
   "roadmap": [
     "L-LADDER"
   ],
+  "ceiling_usd": 8,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-30",
+  "_seq": 746,
+  "note": "2026-10-28 sweep done: 28 legs re-run at 11.0 bps; fee-isolated shifts 0.61-1.40x of prediction (none >2x); eth_15m flip confirmed; xrp_15m NOT positive on re-measured window (window drift); 5 pass->fail flips, all bybit_1-only. Result: comms/research/desk_edge/levers/bybit-fee-recost-sweep-result-2026-10-28.json. PR held for manager merge. [2026-11-03 06:04Z manager] DECISION (manager, data-backed, not an operator preference): option (b): re-cost only the 28 crypto legs in testing/production (status derived by scripts/ops/strategy_status.py) with the harness resolver; leave other evidence records for future runs only. Basis: BACKLOG-DRAIN-20261103 measured shifts -0.008..-0.083 R/trade and ONE sign flip (ict_scalp_eth_15m); only the live-status legs feed a decision. Done = each of the 28 has a re-costed evidence record on main; ict_scalp_eth_15m's flip is put to a demotion check under the ladder (OPERATING-PLAN s2) as a Tier-3 proposal with the record, not a silent change. Next BACKLOG-DRAIN picks this up.",
   "observation": {
-    "what": "PR #20966 merged to main: the 28 Bybit-linear comms/strategy_evidence records carry fee_bps_roundtrip 11.0 and a rebaseline_history entry",
+    "due_by": "2026-10-31",
     "how_to_check": "git show origin/main:comms/strategy_evidence/ict_scalp_eth_15m.json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(d[\\\"fee_bps_roundtrip\\\"],len(d[\\\"rebaseline_history\\\"]))\" -> 11.0 1",
-    "due_by": "2026-10-31"
+    "what": "PR #20966 merged to main: the 28 Bybit-linear comms/strategy_evidence records carry fee_bps_roundtrip 11.0 and a rebaseline_history entry"
   },
+  "phase": null,
+  "updated_at": "2026-11-25T18:45:48Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
-    "roadmap": "none: evidence re-baseline only, no milestone line changes",
-    "arch": "none: no architecture section changes"
-  },
-  "due_by": "2026-11-06",
-  "_seq": 746
+    "arch": "none: no architecture section changes",
+    "roadmap": "none: evidence re-baseline only, no milestone line changes"
+  }
 }

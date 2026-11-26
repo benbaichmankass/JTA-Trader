@@ -1,0 +1,21 @@
+{
+  "id": "COMPUTE-TRAINER-GPU-PLAN-GAP",
+  "title": "Trainer + Kaggle GPU have almost no runnable plan-derived units: the trainer/GPU-shaped plan nodes are gated on builds (COMPUTE-FILL-W48 finding, 2026-11-25)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "MEASURED 2026-11-25 ~23:30Z over research/queue status queued, cadence once, ungraded, no blocked_on (57 units, ~52 h est): first-choice trainer 0 h, GPU 0 h. Eligible including the router overflow of PR compute-fill-w48: trainer 0.7 h (5 units declaring <=1 GB), Kaggle GPU 14.5 h (16 units, overflow only). Dispatcher run 45712315025 (22:26Z): runner 4/4 with 13 due, trainer/kaggle_cpu/kaggle idle, GPU 1.46 of 30 h used. GATING BUILDS per plan node: MLP-F-COVARIATE-TSFM <- FUNDING-OI-DATASETS-ETH-SOL (queued) + a covariate side-stream for Chronos-2/TiRex-2; D8 exit-now <- ML-EXITHEAD-ROWS-KAGGLE (in_flight); D7 Stage B v2 <- ML-AM-NEXT-LIVE + TMBENCH-V2-TRAIN-INPUT; D9 <- MLP-D9-WHIPPET. EXHAUSTED by evidence (no unit): MLP-F-CONFORMAL entry arm = RQ-20261112-4654-08 FAIL; MLP-F-TABULAR-FM entry arm = RQ-20261118-dbf8-01 FAIL + frontier scan 11-25 dropped regression TFMs. ML-PRIMARY owns the GPU-shaped GRU entry-label unit. LEVER TO WIDEN HONESTLY: most units declare peak_memory_gb 4-8 GB by default, which keeps them off the 1 GB trainer overflow; a measured peak-RSS per run (run-manifest) would let small units take the trainer. RQ-20261014-9807-01 is NOT stuck: 9 weekly results, last 2026-11-19T19:41Z, next due 11-26 (dispatcher: 'cadence weekly not yet elapsed'). Done when: the trainer and the Kaggle GPU each hold runnable plan-derived units for the coming week, or the manager records the plan decision that they won't. 2026-11-25 23:27Z Manager 2026-11-25b decision: prioritise the gating builds, not overflow-only (operator 11-25 'free compute must never sit idle'). Order: ML-EXITHEAD-ROWS-KAGGLE (rank 2), FUNDING-OI-DATASETS-ETH-SOL + covariate builder (rank 3), MLP-D9-WHIPPET (rank 4); owner lane COMPUTE-FILL-W48. Interim: #28948 routes CPU overflow to the idle trainer and Kaggle kernels.",
+  "phase": null,
+  "updated_at": "2026-11-25T23:25:43Z",
+  "updated_by": "session_01AFoLuLQFssGpLecWsHu6Cr"
+}

@@ -1,0 +1,31 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "resolution_criteria: EITHER (a) a decision-value read for MES-5m exists (P5) and either restores it (value > 0 net on a leg it feeds) or the operator records a soft-off/retire to shadow (Tier-3); OR (b) 3 refinement attempts without a re-gate -> retire to candidate per docs/claude/model-refinement-lifecycle.md. A macro-F1 margin alone does not resolve it.",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261028-GNVUF1ES-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "registry margin series + whether any consumer reads mes-regime-5m-lgbm-v2 (C3)",
+    "what": "decision value of MES-5m on the legs it feeds, or a wiring/retire call"
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "ml-review 2026-10-28 (ML-REVIEW-20261028, lane ML-FRONTIER-PREP-20261028)",
+    "rerun": "GET /api/bot/ml/registry -> runs[].metrics.macro_f1 for mes-regime-5m-lgbm-v2 and mes-regime-5m-baseline-v1 per cycle date; and the C3 map (config/regime_policy.yaml trend_vol + config/strategies.yaml exit_head_action) for which legs read MES-5m"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 202)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, ML-HYGIENE, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (live checklist row, manager; W48 planning disposition) -- BACKLOG-TRIAGE-W48 2026-11-25 re-route: previous owner row ML-HYGIENE is done in the work store (manager request, ML-FRONTIER-PREP-20261125 P-7); item left open, not closed. | was: ML-HYGIENE (refinement; MES-5m advisory)",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 3,
+  "what": "[refinement] mes-regime-5m-lgbm-v2 (ADVISORY): the registered margin rule of PI-20261004-AHCVAAF5-0001 FIRED -- advisory-minus-baseline macro_f1 margin < 4.0 pts on 3 consecutive cycles (3.95 / 3.91 / 3.84 on 2026-10-23..25; then 4.04 / 3.97 / 4.19 on 10-26..28; registry runs, read 2026-10-28 ~19:00Z by ML-REVIEW-20261028). Hypothesis H0 (favoured): no capability loss -- 6-cycle mean 3.98, sd 0.12, so the 4.0 threshold sits inside the series' noise; H1: dataset/regime-mix shift (drift-remediation step 2). Decisive context: MES-5m advisory changes 0 rostered legs (C3 business-use map: no trend_vol cell, no exit-head action reads it), so this is a wiring-or-retire question, not a promotion one. Attempt 1 of 3: price the head's decision value (proposal P5 of docs/reviews/2026-10-28-weekly-walkthrough.md) and replace the macro-F1 margin rule with it."
+}

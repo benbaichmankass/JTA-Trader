@@ -1,0 +1,22 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261010-UYZJSGJY-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "PHONE-AUTOLOGIN-2 (docs/integrations/breakout-phone-executor-DESIGN.md 7.17)",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2' and read phone_heartbeat.state bg/bg_runs/bg_ok/bg_last plus phone_events: bg_ok growing with bg_last logged_in+posted means the overlay engine works on this phone and can carry tickets; bg_last no_answer means it needs a different host"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk): routed to its owning row ROUTE-PROP-TRACKIN)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row ROUTE-PROP-TRACKING is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "ROUTE-PROP-TRACKING | [ROUTING-ALARM-20261014] routed from daily review WR-20261014-0530Z; the row owns this item and carries the rerun command",
+  "state": "routed",
+  "what": "Phone executor: move the whole tick loop (pending peek, login, account read AND ticket claim/fill) from MainActivity into the foreground service so no step needs bring-to-front (operator 2026-10-10: 'the more automated and backgrounded it could be, the better'). PHONE-AUTOLOGIN-2 moved login checks, re-login and the account read into BgWeb (overlay WebView); tickets still bring the Activity forward, which Android background-activity-start limits can refuse (MEASURED 2026-10-10 ~12:33Z 'bring-to-front already requested'). Next: after the PHONE-AUTOLOGIN-2 APK is installed, read the heartbeat bg fields for 24 h; if the engine answers, design ticket execution in the service-owned WebView (Tier-2, order path) and propose it to the manager."
+}

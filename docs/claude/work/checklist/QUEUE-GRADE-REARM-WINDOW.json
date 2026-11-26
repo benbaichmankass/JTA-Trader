@@ -1,7 +1,7 @@
 {
   "id": "QUEUE-GRADE-REARM-WINDOW",
   "title": "queue_grade honours rearmed_at: a re-armed unit is graded only on results after the re-arm",
-  "state": "landed_unproven",
+  "state": "dropped",
   "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
   "lane": null,
   "model": null,
@@ -17,8 +17,9 @@
   ],
   "blocked_on": [],
   "due_by": "2026-11-18",
-  "note": "Filed 2026-11-15 by AM-OPS from the 08:56Z '[RUN failure] research-queue-grade' incident. The run failure was a transient race (one re-run succeeded). Separately, grade_unit_full counted result rows from before a unit's rearmed_at, so a re-armed unit could be graded on its pre-re-arm rows. Fix: #26256 (since = max(since, rearmed_at); planted/clean tests in tests/test_queue_grade_rearm_window.py), merged by manager 15a 2026-11-15 10:53Z as 3c6c61e3. Merged, not yet observed. Observation that closes it: the next research-queue-grade run on main passes, and a unit with rearmed_at has its grading.n count only rows generated after rearmed_at.",
+  "note": "[CLOSED 2026-11-25 BACKLOG-TRIAGE-W48: BACKLOG-TRIAGE-W48 rule (b) owned by a finished session with no next action (operator popup 2026-11-25 ~18:00Z 'Approve all'). DATA: state landed_unproven (merged, effect never observed -- closed as DROPPED, not done, no verification claimed); owner/lane NgwFbFmx=ABSENT(created<2026-11-12); created 2026-11-15; due 2026-11-18; no observation/observe/clears_when/next_action/blocked_on field; tier 1, roadmap ['unmapped']; not in a live-money/order-path/prop/security carve-out.] Filed 2026-11-15 by AM-OPS from the 08:56Z '[RUN failure] research-queue-grade' incident. The run failure was a transient race (one re-run succeeded). Separately, grade_unit_full counted result rows from before a unit's rearmed_at, so a re-armed unit could be graded on its pre-re-arm rows. Fix: #26256 (since = max(since, rearmed_at); planted/clean tests in tests/test_queue_grade_rearm_window.py), merged by manager 15a 2026-11-15 10:53Z as 3c6c61e3. Merged, not yet observed. Observation that closes it: the next research-queue-grade run on main passes, and a unit with rearmed_at has its grading.n count only rows generated after rearmed_at.",
   "phase": null,
-  "updated_at": "2026-11-15T11:02:33Z",
-  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+  "terminal_reason": "BACKLOG-TRIAGE-W48 rule (b) owned by a finished session with no next action (operator popup 2026-11-25 ~18:00Z 'Approve all'). DATA: state landed_unproven (merged, effect never observed -- closed as DROPPED, not done, no verification claimed); owner/lane NgwFbFmx=ABSENT(created<2026-11-12); created 2026-11-15; due 2026-11-18; no observation/observe/clears_when/next_action/blocked_on field; tier 1, roadmap ['unmapped']; not in a live-money/order-path/prop/security carve-out.",
+  "updated_at": "2026-11-25T18:33:28Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
 }

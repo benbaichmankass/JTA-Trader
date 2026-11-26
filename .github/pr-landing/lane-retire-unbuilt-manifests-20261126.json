@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Moves two never-trained candidate manifests (exit-policy-v1, setup-candidates-metalabel-paper-v1) and their lifecycle plans into ml/configs/retired/ and ml/lifecycle/plans/retired/, so the trainer's nightly roster (every top-level ml/configs/*.yaml) stops skipping them every cycle. They never trained in ~122 days because nothing builds their datasets (exit_candidates; setup_candidates v030). No model, served artifact, config, order path or live service is touched; the trainer picks it up on its next git sync. Revert: git revert (move both back).",
+  "why": "Row ML-TRAINER-NEVER-TRAINED-MANIFESTS (manager-approved disposition 02:19Z: fix or retire with a named reason per manifest)."
+}

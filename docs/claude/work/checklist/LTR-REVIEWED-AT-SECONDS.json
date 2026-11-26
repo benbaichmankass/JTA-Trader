@@ -2,8 +2,8 @@
   "id": "LTR-REVIEWED-AT-SECONDS",
   "title": "Live-review writer: stamp reviewed_at to the second and refuse info_cutoff_at > reviewed_at in check_live_review_records.py",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 720,
   "note": "[2026-10-26 research-SLO authoring lane] Owner for PI-20261026-DTRPDXRH-0001. MEASURED by the filing lane on main 2026-10-26: 8 of 24 comms/live_review/reviews.jsonl rows (the 12:26Z batch) have info_cutoff_at 8 s AFTER reviewed_at because the writer minute-truncates reviewed_at. Fix the live-review record path (skill live-trade-review) and the validator, then drop the claude_judgments builder tolerance (CJ-2) from 60 s to 0. Closes when the rerun in the pipeline item prints 0 for rows written after the fix.",
   "phase": null,
-  "updated_at": "2026-10-26T16:10:20Z",
-  "updated_by": "cse_017ew3v5tfqjsM1AnCPNYmbs",
+  "updated_at": "2026-11-26T06:11:29Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

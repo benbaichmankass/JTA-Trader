@@ -2,8 +2,8 @@
   "id": "IB-PAPER-INTRADE-EXECUTOR",
   "title": "ib_paper has NO in-trade executor (scripts/ops/live_review_apply.py::ACTION_PATHS: interactive_brokers -> 'other' -> frozenset()), so every MD-LTR-PAPER-AUTO call on an ib_paper leg refuses no_action_path:<action> and IB paper builds no applied evidence. Build an IB executor (close / reduce / move_tp / widen_sl / tighten) with venue read-back of both brackets; paper first under MD-LTR-PAPER-AUTO",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -13,11 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-11-30",
   "_seq": 877,
-  "note": "Filed 2026-11-01 by lane MD-LTR-BYBIT1-AUTO at the manager's direction (trigger trig_01SPuNwfaKGNgiqtCm8QZ9Yu). Open ib_paper leg at filing: MGC pkg-d76f1b15923e4282. Done when an applied ib_paper close or bracket move is read back at the venue with both brackets present, and the journal records the close reason. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. No in-trade executor for ib_paper yet; build lane needed (order-path, Tier 2).",
+  "note": "Filed 2026-11-01 by lane MD-LTR-BYBIT1-AUTO at the manager's direction (trigger trig_01SPuNwfaKGNgiqtCm8QZ9Yu). Open ib_paper leg at filing: MGC pkg-d76f1b15923e4282. Done when an applied ib_paper close or bracket move is read back at the venue with both brackets present, and the journal records the close reason. 2026-11-06 BACKLOG-DRAIN-20261106: RE-DATED to 2026-11-09. No in-trade executor for ib_paper yet; build lane needed (order-path, Tier 2). 2026-11-25 21:20Z Manager 2026-11-25b: live symptom \u2014 TLT pkg-5d5da98c1c054fe5 DIVERGENT: LTR tighten applied to alpaca_paper (SL 79.80) but ib_paper leg 7586 stays 78.25 (no ib executor). EXIT-PATH GAP alert 20:19Z. Paper only.",
   "phase": null,
-  "updated_at": "2026-11-06T06:00:02Z",
-  "updated_by": "lane-BACKLOG-DRAIN-20261106",
+  "updated_at": "2026-11-26T06:10:17Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

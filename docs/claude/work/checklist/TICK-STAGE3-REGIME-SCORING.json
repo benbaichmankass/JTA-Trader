@@ -2,8 +2,8 @@
   "id": "TICK-STAGE3-REGIME-SCORING",
   "title": "TICK stage 3: profile and cut pipeline.regime_bar_scoring (12 s per trader tick) using the config.yaml_* counters shipped in PR #23029",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -14,11 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-11-30",
   "_seq": 920,
   "note": "[from TICK-DURATION-115S, profile doc section 6] MEASURED 2026-11-04 tick_cost: 851 calls x 0.522 s = 12.0 s per tick; nested fetches only ~1.2 s per tick, so ~10.8 s is model compute/loading. Could not be profiled locally (no model registry in the container): profile on the VM or trainer first. It is labelled observe-only but publishes the in-process cache ml_vol_verdict reads, so moving it off-loop is a decision-path question; prove regime verdicts unchanged. DETECTOR: pipeline.regime_bar_scoring mean < 0.1 s or moved off-loop with verdict equivalence shown.",
   "phase": null,
-  "updated_at": "2026-11-16T11:02:44Z",
-  "updated_by": "session_01AFoLuHbhd9wFuGJfWRqyoV",
+  "updated_at": "2026-11-26T06:11:43Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

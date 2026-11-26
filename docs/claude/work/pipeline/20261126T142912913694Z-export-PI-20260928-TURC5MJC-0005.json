@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v3",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "PR #13508 merges (before that no such PR can exist). Then build the alarm, or kill it with a stated reason if the operator accepts the silent-unmerged window",
+    "conditions": [
+      "pr_merged:13508",
+      "manual:PR #13508 merges (before that no such PR can exist). Then build the alarm, or kill it with a stated reason if the operator accepts the silent-unmerged window"
+    ],
+    "kind": "event",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20260928-TURC5MJC-0005",
+  "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-13",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane JC-GIT session_01GxXaAMqxdL3p1XTuRC5mjc; manager review of #13508 head 4ddc26b2b (should-fix)",
+    "rerun": "curl -s 'https://api.github.com/repos/benbaichmankass/Metis-Insights/pulls?state=open&per_page=100' | jq '.[] | select(.head.ref|startswith(\"automation/set-account-mode-\")) | {number, created_at}'; grep -n 'automation/set-account-mode' .github/workflows/*.yml"
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row JC-GIT is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "JC-GIT (re-pointed from JC-GIT (BACKLOG-BURNDOWN-2 2026-10-04)) (BACKLOG-BURNDOWN-2 2026-10-04)",
+  "state": "routed",
+  "what": "No alarm fires for a set-account-mode PR left OPEN and UNMERGED (review finding on #13508, 2026-09-28, manager session_01KAQRJxRbRwpYTkPgBjNVyQ). Once #13508 lands, a mode flip is a Tier-3 hold PR (branch automation/set-account-mode-<run_id>) that changes nothing until someone merges it. account-mode-verify.yml fires only on the MERGE. So a PR that is never merged reports nothing, and the account silently stays in its old mode. The operator believes it flipped because the system-action issue reported 'PR opened'. Proposed: a scheduled check that lists open PRs whose head matches automation/set-account-mode-* and are older than N minutes (N to be decided; about 60?). For each it sends a send-ping naming the account, the target mode and the PR. Tier 1 (read-only + ping)."
+}

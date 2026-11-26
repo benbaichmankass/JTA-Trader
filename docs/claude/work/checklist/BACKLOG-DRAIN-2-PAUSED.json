@@ -2,14 +2,15 @@
   "id": "BACKLOG-DRAIN-2-PAUSED",
   "title": "BACKLOG-DRAIN-2: paused for usage hold; continue the landed_unproven drain",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "ceiling_usd": null,
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-09",
   "_seq": 884,
   "note": "[2026-11-01 15:40Z] paused for usage hold to the 11-04 reset. DONE: PR #22176 (48 rows: 34 done, 14 pending) and PR #22179 (13 rows: 6 done, 1 dropped, 2 failed observations reopened ROUTE-AND-ASK-TRIAGE and SIGNAL-CATALOG, 4 pending; new defect row PAPER-SPY-UNJOURNALED-1101), both auto-merge armed, CI queued when I stopped (check they merged). NEXT: ~187 untouched landed_unproven rows (list = state landed_unproven and note lacking BACKLOG-DRAIN); trainer relay issue #22177 (labelled trainer-vm-diag-request) holds the reads for TRAINER-CATCHUP-0800, TRAINER-RUNAWAY-PROC, DRIFT-SCAN-RETIRE, read its comment and disposition those 3; then prop/phone, LTR/desk, ML, remaining research-ops rows. Method notes: direct diag_fetch works for /api/diag; journalctl lines<=2000 with since/grep, read_state must be complete to call a negative; a closed row owning a registry entry breaks shadowed-features-guard; new rows need a roadmap ref.",
   "observation": {
@@ -25,7 +26,7 @@
   },
   "phase": "W6",
   "roadmap": "L-OPS",
-  "updated_at": "2026-11-01T15:36:10Z",
-  "updated_by": "BACKLOG-DRAIN-20261101b",
+  "updated_at": "2026-11-26T06:11:37Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

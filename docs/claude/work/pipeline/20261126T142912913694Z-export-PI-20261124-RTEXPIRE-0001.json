@@ -1,0 +1,17 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261124-RTEXPIRE-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, research loss detector alert 2026-11-24T00:10Z",
+    "rerun": "research loss detector workflow run 45294201604, check C_expiring_unlanded_artifacts"
+  },
+  "state": "done",
+  "terminal_reason": "Both artifacts read before expiry. watchdog-rows (45069395246): its land job was cancelled, the single resolved row landed in comms/research/ops/watchdog_incidents.jsonl. research-store-bundle (45094782352): research-store job succeeded, 50 grade events re-derived (50/50 unit dirs on main); dispositioned landed_elsewhere. Record: docs/research/loss-disposition-expiring-artifacts-2026-11-25.md + RESEARCH-LOSS-DISPOSITIONS.json. Lane RT-EXPIRE-1125.",
+  "what": "Two unlanded research artifacts expire soon (RESEARCH LOSS DETECTOR 2026-11-24T00:07:40Z, check C): research-store-bundle run 45094782352 expires 2026-11-26T01:34Z; watchdog-rows run 45069395246 expires 2026-11-25T21:02Z. The first was already flagged 2026-11-23T07:59Z. Land them (or record why they are superseded) BEFORE expiry. Handled in the Wed 11-25 18:00Z reset stuck-work sweep (watchdog-rows expires ~3h after the reset)."
+}

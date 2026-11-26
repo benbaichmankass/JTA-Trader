@@ -1,0 +1,23 @@
+{
+  "id": "TRAINER-LIGHT-READS",
+  "title": "Standing weekly trainer light reads (<=1 GB): served-head feature pre-flight + vol-head label audit",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY",
+  "lane": "ML-PRIMARY",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    29057
+  ],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "Manager 2026-11-26 05:07Z: the trainer does not stay idle (operator standing rule). Units RQ-20261126-f17a-01 (weekly registry-wide feature pre-flight over shadow/advisory heads) and RQ-20261126-f17a-02 (weekly vol-head label audit: live label vs realized forward vol, kappa >= 0.2 and Brier skill > 0 at n >= 200). f17a-02 is also the streamed scorer for the (c) out-of-time re-score after #29052 + the fc side-stream rebuild. Plus RQ-20261126-7f3e-01 (SOL featdiff, #29048). Done when both weekly units have landed a first measured record. 2026-11-26 05:50Z: #29057 MERGED. Units f17a-01 (weekly registry feature pre-flight) and f17a-02 (weekly vol-head label audit) are on main, queued for the trainer backend. Row stays in_flight until both land a first measured record (check the dispatcher's trainer routing and the first verdicts). 2026-11-26 09:15Z ML-PRIMARY: first records (both runs could not land: bare per-head records -> emit refused -> dispatcher red; fixed + landed in PR #29112). f17a-01 run 45774478743 (trainer, 07:19Z): PASS, 19/19 served heads see every feature column, no unseen categorical (4 baseline heads have 0 feature columns by design; 15 others check 6-20 columns on 2,000 tail rows). f17a-02 run 45773199101 (07:09Z): FAIL per rule (kappa >= 0.2 AND Brier skill > 0 at n >= 200): passes btc-15m-lgbm-fc-pcv-v2 (advisory; kappa 0.80, BSS 0.59) and mes-5m-lgbm-v2 (advisory; 0.31, 0.08); fails 10 incl. sol-15m-fc-pcv-v2 (advisory; kappa 0.55 but BSS -0.11) and the 5m shadow heads with BSS -1.2 to -4.1. UNVERIFIED: BSS that negative at kappa ~0.1 suggests the probability used for Brier may be mis-specified (wrong class column / uncalibrated proba) -- verify vol_head_label_audit's Brier computation against one head by hand before treating it as a model defect. Also: the trainer run-manifest records commit_sha/run_url null (filed here; the collector supplies headSha, a hand landing must look it up). 2026-11-26 09:20Z ML-PRIMARY: f17a-02 Brier VERIFIED (read label_metrics + per-head rows): the computation is correct as registered -- BSS = 1 - Brier/(b(1-b)) with b = the window's own realized volatile share. The window was calm: realized volatile share 1.9% on the 5m heads (n 8,548) vs predicted 10.5-13.8%, so the in-window climatology reference is very low (0.0185) and a head trained at a higher base rate scores BSS -3 to -4. The 5m FAILs are still substantive: precision 7.6-7.9%, kappa 0.10-0.11 (weak discrimination in this window). Advisory heads: btc-15m-fc PASS (kappa 0.80, BSS 0.59), mes-5m PASS (0.31, 0.08), sol-15m-fc fails on BSS only (kappa 0.55, BSS -0.11). No serve change proposed from one calm window; the weekly re-run accrues out-of-time windows. Possible rule refinement for a future unit (not this one): a BSS reference at the head's TRAINING base rate alongside the in-window one. 2026-11-26 09:36Z: #29112 MERGED (b1ac6c9715): both light-read producers fan out emit-valid rows; f17a-01/-02 results landed on main.",
+  "phase": "research",
+  "updated_at": "2026-11-26T09:35:35Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

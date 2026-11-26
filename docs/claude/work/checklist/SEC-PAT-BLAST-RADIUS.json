@@ -2,8 +2,8 @@
   "id": "SEC-PAT-BLAST-RADIUS",
   "title": "Security: BRANCH_PROTECTION_TOKEN (admin-capable PAT) is exposed to 56 workflows; its scope is documented two ways",
   "state": "queued",
-  "owner": "AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx)",
-  "lane": "session_01AFoLuJUGfpon2bNgwFbFmx",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS (session_01AFoLuJUGfpon2bN)",
+  "lane": null,
   "model": null,
   "tier": null,
   "roadmap": [
@@ -16,8 +16,10 @@
   "prs": null,
   "blocked_on": null,
   "next_action": null,
-  "due_by": "2026-11-18",
+  "due_by": "2026-11-30",
   "note": "REPO READ 2026-11-11: the PAT is used by 56 of 166 workflows to sync branch protection, mint runner registration tokens (infra-runner-install.yml:51-59), write Actions secrets (init-actions-secrets, phone-executor-apk), open PRs and push to protected main. infra-runner-install.yml:7 says fine-grained Administration read+write; init-actions-secrets.yml:24-26 says classic repo scope. UNVERIFIED: the real scope and expiry (only visible in the operator's GitHub settings). Also gradle/actions/setup-gradle@v4 (mutable tag, the only third-party action) runs in the job that holds the APK signing keys and this PAT (phone-executor-apk.yml:100-150). Proposed: one narrow token per job class, SHA-pin the gradle action, record scope and expiry in one place.",
   "parent": "SECURITY-HARDENING-AUDIT",
+  "updated_at": "2026-11-26T06:11:34Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }
