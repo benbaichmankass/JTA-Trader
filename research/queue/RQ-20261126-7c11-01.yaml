@@ -1,0 +1,104 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row ML-ENTRY-EQ-CORP-EVENTS, step (c), moved FIRST by the manager on 2026-11-26: "touch a LIVE
+# real-money model's training population: make that audit step (c) the FIRST thing"). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261126-7c11-01
+title: 'ml_entry_eq pool ticker-reuse audit: did six pool tickers (FB, INFO, NFX, ULTI, UN, SIX) carry an OLD company''s bars into POOL_RULE''s
+  2019-2020 liquidity screen or into the 2021-2025 training window of the models alpaca_live trades?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+kind: deterministic
+origin: diagnosis
+question: For each of FB / INFO / NFX / ULTI / UN / SIX, do Alpaca's 1Day bars 2019-2020 exist (the dev-window liquidity screen scored a
+  security that is not today's ETF), and do its 1Hour bars inside 2021-01-01..2025-07-01 (train_end_exclusive of ml_entry_eq v1 / v2_struct /
+  v3_struct_ens5) form two runs separated by >= 30 days (two securities under one ticker)?
+why_this_matters: 'ml_entry_eq_struct is rostered on alpaca_live (real money) and alpaca_portfolio, and ml_entry_eq on alpaca_paper (config/accounts.yaml,
+  read 2026-11-26). All three artifacts share POOL_RULE''s 173 pool_symbols. The six tickers are ETFs in nasdaqtraded TODAY (fetched 2026-11-26:
+  FB = ProShares S&P 500 Dynamic Buffer ETF, INFO = Harbor PanAgora Dynamic Large Cap Core ETF, NFX = Corgi NFLX 2x Daily ETF, UN = Corgi UNH 2x
+  Daily ETF, SIX = Global X Magnificent Six ETF; ULTI absent from the file today). In 2019-2020 the same tickers were Facebook, IHS Markit,
+  Newfield, Ultimate Software, Unilever NV and Six Flags. Live affordability reads (RQ-20261106-d5a1-01) price them at today''s ETF levels
+  (FB 44.55, INFO 26.75, UN 21.35, ULTI 5.24), so the books trade the new securities. Whether the screen and the training rows used the OLD
+  ones has not been read: a41f-01''s fetch started 2025-05-01, and no committed training record carries per-symbol bar history. A FAIL means
+  the live model learned from, and was screened on, a different security under the same ticker.'
+evidence_class:
+  holdout: none
+  claim: data_integrity
+why_not_inferential: 'A census of six named tickers plus a positive control, read in full from the source the pool rule and the training
+  table use. The answer per ticker is a fact about the bar history (one security or two inside a fixed window), with no sampling error and no
+  effect size; the verdict counts tickers meeting a fixed rule.'
+ml_consumer:
+  consumer: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+baseline:
+  definition: 'Positive control META (Facebook, renamed 2022-06-09): continuous daily bars 2019-2025 if Alpaca keys history to the current symbol.
+    It is reported so that a null on FB reads correctly.'
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/pool_ticker_reuse_audit.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 30
+  inputs:
+    research_unit: RQ-20261126-7c11-01
+decision_rule:
+  id: RULE-EQ-POOL-TICKER-REUSE-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: META positive control (reported)
+  statistic: 'scripts/research/pool_ticker_reuse_audit.py: per ticker, Alpaca 1Day bars 2019-01-01..2025-07-01 and 1Hour bars 2021-01-01..2025-07-01
+    (adjustment=split, feed=sip, the pool rule''s own endpoint); runs of bars separated by gaps >= 30 calendar days; dev_daily_bars (2019-2020) and
+    the dev median dollar volume; the median close of each daily run.'
+  rule: 'FAIL iff >= 1 of the six tickers has >= 2 hourly runs inside 2021-01-01..2025-07-01 (two securities in the training window).
+    PASS iff none does and all six were read. INDETERMINATE iff a ticker could not be read. DEV-window presence (the screen scored an old
+    security) and training bars dated before 2022-07 are REPORTED for every ticker and never decide.'
+  pass_action: 'Record that the training window holds one security per ticker. The DEV finding still decides whether POOL_RULE''s screen
+    admitted a ticker on another company''s liquidity; if it did, file the pool-rule fix (screen on the security, not the ticker) as the
+    next ML-ENTRY-EQ-CORP-EVENTS step. Advice only.'
+  fail_action: 'Tier-3 proposal to the operator for the real-money model: list the contaminated tickers and their training-row share, and
+    propose (a) excluding them from ml_entry_eq_struct''s live pool now and (b) a retrain on a security-keyed pool with its own Stage-0
+    population test. Nothing changes without that decision.'
+  proposal_mapping: fail -> Tier-3 exclusion + retrain proposal; pass -> pool-rule fix only if DEV shows an old security; indeterminate ->
+    name the unread ticker and re-run.
+  what_it_does_not_do: Changes no config, roster, pool or model; GET-only Alpaca market-data reads; writes only under --out.
+  min_n: 6
+compute: cpu_light
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: six of 173 pool symbols on a real-money book; a contaminated training population is a model-integrity risk, not a measured loss.'
+intervention_controls:
+  matched_random:
+    description: not applicable - a census of six named tickers with a positive control, no intervention
+    draws: 0
+  hold_to_bracket: true
+  hold_to_bracket_note: no trade or bracket is touched; bars only
+  best_static:
+    grid:
+    - none - one fixed gap rule (30 days), fixed windows from the artifacts' own train_end_exclusive
+    excludes_test_folds: true
+    note: nothing searched
+  bootstrap_group: none
+practice_precedent: survivorship / ticker-reuse checks on an equity universe before trusting a trained population (principle M13, data
+  provenance before modelling).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 5
+  why_runner: the paper Alpaca data pair exists only on research-script-run
+  basis: 7 symbols x 2 bar requests; ~25k hourly bars per symbol at most.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- ML-ENTRY-EQ-CORP-EVENTS
+- scripts/research/ml_entry_alpaca_score.py
+- ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+- config/accounts.yaml
