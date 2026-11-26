@@ -176,3 +176,27 @@ def test_manifest_only_fetch_fails_closed_and_downloads_only_the_manifest():
     from scripts.research import published_data as pd_
 
     assert pd_._self_test() == 0   # includes the manifest-only cases: zipped manifest, one unreadable part, nothing listed
+
+
+# ── ML-DATA-PUBLISH-WIDEN-BP2 (2026-11-26): the second published dataset has its own allowlist ──────────────────────────
+BP2_ADA = f"datasets-out/market_features/ADAUSDT/1h/{mde.BP2_VERSION}/data.jsonl"
+
+
+def test_bp2_allowlist_is_market_only_and_60_symbols():
+    al = mde.allow_for(mde.BP2_SLUG)
+    syms = {rel.split("/")[1] for rel in al}
+    assert len(syms) == 60 and {"BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT"} <= syms
+    assert all(rel.split("/")[0] in ("market_features", "market_raw") and rel.split("/")[2] == "1h"
+               and rel.split("/")[3] == mde.BP2_VERSION for rel in al), al[:4]
+
+
+def test_bp2_unit_routes_to_kaggle_gpu_and_claims_are_per_dataset():
+    cfg = cr.load_config()
+    u = _unit(path=BP2_ADA, needs_gpu=True, published_data="metis-market-bp2")
+    p = cr.plan(u, cfg)
+    assert p.ok and p.backend == "kaggle" and p.cls == "gpu", p
+    glob_u = _unit(path=f"datasets-out/market_features/*/1h/{mde.BP2_VERSION}/data.jsonl", needs_gpu=True, published_data="metis-market-bp2")
+    assert cr.plan(glob_u, cfg).ok
+    # a bp2 path claimed under the OTHER dataset, and a Bybit v002 path claimed under bp2, are both refused
+    assert not cr.plan(_unit(path=BP2_ADA, published_data="metis-market-data"), cfg).ok
+    assert not cr.plan(_unit(path=BTC, published_data="metis-market-bp2"), cfg).ok

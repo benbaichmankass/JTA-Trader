@@ -29,6 +29,9 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
         target: regime_label
         features: [log_return, ...]
         group_col: symbol             # optional (single-frame multi-group)
+        # POOLED (ML-GRU-POOLED-BP2, 2026-11-26): ``paths: <glob>`` reads EVERY match (tail_rows applies per file) into ONE
+        # group "POOLED"; ``entity_col: symbol`` sorts rows by (ts, entity) so row folds are calendar folds across all
+        # entities, and torch_gru builds its windows INSIDE each entity (a window never spans two symbols). Absent = unchanged.
         holdout_after: '2025-09-01'   # optional extra window ("holdout") graded by the same rule
       cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}    # purged expanding walk-forward
       # optional: cv.row_bootstrap: {block_rows: 96, n_boot: 1000, seed: 0} -- a paired moving-block bootstrap of the
@@ -525,6 +528,7 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
         raise Unavailable("torch_gru patience / calibrate need val_frac > 0")
     if calibrate not in ("none", "temperature"):
         raise Unavailable(f"torch_gru calibrate {calibrate!r} not in none|temperature")
+    ent_tr, ent_te = params.pop("_entity_tr", None), params.pop("_entity_te", None)
     mu, sd = np.nanmean(Xtr, axis=0), np.nanstd(Xtr, axis=0) + 1e-9
     mu = np.nan_to_num(mu)
 
@@ -534,9 +538,14 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
         idx = np.arange(len(Z))[:, None] + np.arange(W)[None, :]
         return torch.from_numpy(Zp[idx])  # (n, W, F)
 
-    Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
-    if len(Xw) > cap:
-        Xw, yt = Xw[-cap:], yt[-cap:]
+    if ent_tr is None:
+        Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
+        if len(Xw) > cap:
+            Xw, yt = Xw[-cap:], yt[-cap:]
+    else:   # pooled: windows inside each entity; the newest `cap` rows are chosen BEFORE windows are materialised
+        keep = np.arange(max(0, len(Xtr) - cap), len(Xtr))
+        Xw = torch.from_numpy(entity_windows(np.nan_to_num((Xtr - mu) / sd).astype(np.float32), ent_tr, W, keep))
+        yt = torch.from_numpy(ytr[keep].astype(np.int64))
     Xv = yv = None
     if val_frac > 0.0:
         nv = max(1, int(round(len(Xw) * val_frac)))
@@ -601,8 +610,33 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
     TORCH_GRU_FIT_INFO.append({"epochs_run": ran, "best_epoch": best["epoch"] if Xv is not None else None,
                                "best_val_logloss": round(best["loss"], 6) if Xv is not None else None,
                                "temperature": round(temp, 4), "n_train": int(len(Xw)), "n_val": int(len(Xv)) if Xv is not None else 0})
-    lt = logits_of(windows(Xte))
+    if ent_te is None:
+        lt = logits_of(windows(Xte))
+    else:
+        Zte = np.nan_to_num((Xte - mu) / sd).astype(np.float32)
+        lt = logits_of(torch.from_numpy(entity_windows(Zte, ent_te, W, np.arange(len(Xte)))))
     return torch.softmax(lt / temp, dim=1).numpy() if len(lt) else np.zeros((0, k))
+
+
+def entity_windows(Z: np.ndarray, ent: np.ndarray, W: int, keep: np.ndarray) -> np.ndarray:
+    """(len(keep), W, F) trailing windows for rows ``keep`` of a time-ordered pooled block, built INSIDE each row's entity:
+    row i sees only earlier rows of its own entity within this block, the first W-1 rows of an entity edge-padded with
+    that entity's first row (the single-entity case equals ``_fit_torch_gru.windows``). ML-GRU-POOLED-BP2."""
+    n = len(Z)
+    order = np.lexsort((np.arange(n), ent))                 # by entity, then time position
+    ent_sorted = ent[order]
+    first = np.searchsorted(ent_sorted, ent_sorted, side="left")   # start (in `order`) of each sorted row's entity
+    rank = np.empty(n, dtype=np.int64)
+    rank[order] = np.arange(n) - first
+    start = np.empty(n, dtype=np.int64)
+    start[order] = first
+    r, s0 = rank[keep][:, None], start[keep][:, None]
+    off = np.arange(W)[None, :] - (W - 1)                   # -(W-1) .. 0
+    idx = order[s0 + np.maximum(r + off, 0)]
+    return Z[idx]
+
+
+ENTITY_AWARE = {"torch_gru"}
 
 
 TORCH_DEVICES_USED: List[str] = []
@@ -687,6 +721,25 @@ def _resolve_path(p: str) -> Path:
     raise FileNotFoundError(f"dataset path {p!r} not found (tried {[str(c) for c in cand]})")
 
 
+POOLED_FILES: List[str] = []
+
+
+def _resolve_all(p: str) -> List[str]:
+    """Every match of a pooled ``paths`` glob, from the first root that has any ($ML_DATA_ROOT, cwd, repo). Each file is
+    named on stderr and recorded (POOLED_FILES -> result.measurement.pooled_files) so the population is explicit."""
+    cand = [Path(p)]
+    root = os.environ.get("ML_DATA_ROOT")
+    if root:
+        cand.insert(0, Path(root) / p)
+    cand.append(_REPO / p)
+    for c in cand:
+        hits = sorted(glob.glob(str(c)))
+        if hits:
+            print(f"ml_bakeoff: pooled dataset {p!r} -> {len(hits)} file(s) under {c}", file=sys.stderr)
+            return hits
+    raise FileNotFoundError(f"pooled dataset paths {p!r} matched nothing (tried {[str(c) for c in cand]})")
+
+
 def synthetic_frame(n: int, seed: int, signal: float, n_classes: int = 3):
     import pandas as pd
     rng = np.random.default_rng(seed)
@@ -710,6 +763,7 @@ def load_groups(ds: Dict[str, Any]) -> Dict[str, Any]:
         return out
     want = [c for c in dict.fromkeys([ds.get("ts_col", "ts"), ds["target"], *list(ds["features"]),
                                       *([ds["group_col"]] if ds.get("group_col") else []),
+                                      *([ds["entity_col"]] if ds.get("entity_col") else []),
                                       *list(ds.get("extra_columns") or [])])]
 
     def read(path: str):
@@ -731,6 +785,12 @@ def load_groups(ds: Dict[str, Any]) -> Dict[str, Any]:
             tail = int(ds.get("tail_rows") or 0)
             return pd.DataFrame(rows[-tail:] if tail else rows)
         return pd.read_csv(p, usecols=lambda c: c in set(want))
+    if ds.get("paths"):
+        files = _resolve_all(str(ds["paths"]))
+        frames = [read(f) for f in files]
+        POOLED_FILES[:] = [str(f) for f in files]
+        out["POOLED"] = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=want)
+        return out
     if isinstance(ds.get("groups"), dict):
         for g, gs in ds["groups"].items():
             out[str(g)] = read(gs["path"])
@@ -762,7 +822,13 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
               status: Dict[str, Optional[str]]) -> Dict[str, Any]:
     ds, cv = spec["dataset"], spec.get("cv") or {}
     ts_col, target = ds.get("ts_col", "ts"), ds["target"]
-    df = df.dropna(subset=[target]).sort_values(ts_col).reset_index(drop=True)
+    ent_col = ds.get("entity_col")
+    if ent_col:   # pooled: calendar order across entities, ties broken by entity (stable, deterministic)
+        df = df.dropna(subset=[target]).sort_values([ts_col, ent_col], kind="mergesort").reset_index(drop=True)
+        ent_all = df[ent_col].astype("category").cat.codes.to_numpy()
+    else:
+        df = df.dropna(subset=[target]).sort_values(ts_col).reset_index(drop=True)
+        ent_all = None
     if spec.get("task", "classification") == "classification":
         classes = sorted(df[target].dropna().unique().tolist(), key=str)
         cmap = {c: i for i, c in enumerate(classes)}
@@ -817,7 +883,10 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
             for wname, wf in windows.items():
                 vals, ntest, oos = [], 0, []
                 for tr, te in wf:
-                    out = fit(X[tr], y_all[tr], X[te], k, dict(ls.get("params") or {}))
+                    prm = dict(ls.get("params") or {})
+                    if ent_all is not None and ls["kind"] in ENTITY_AWARE:
+                        prm["_entity_tr"], prm["_entity_te"] = ent_all[tr], ent_all[te]
+                    out = fit(X[tr], y_all[tr], X[te], k, prm)
                     vals.append(compute_metric(metric, y_all[te], out, classes))
                     ntest += len(te)
                     if keep:
@@ -831,6 +900,8 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         except Exception as e:  # allow-silent: one arm breaking is contained and recorded as status=error + reason in the result
             arm = {"status": "error", "reason": f"{type(e).__name__}: {e}"}
         res["arms"][name] = arm
+    if ent_col:
+        res["n_entities"] = int(df[ent_col].nunique())
     if cv.get("row_bootstrap"):
         res["_y"], res["_classes"] = y_all, classes
     return res
@@ -1090,6 +1161,9 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
                    "headline_checks": headline_checks(rule, deltas, baseline),
                    "licences": licences, "n_folds_cv_min_over_groups": folds_seen,
                    "seconds": round(time.time() - t0, 1)}
+    if POOLED_FILES:   # pooled population, named file by file (ML-GRU-POOLED-BP2)
+        measurement["pooled_files"] = {"n": len(POOLED_FILES), "files": [os.path.relpath(f, os.environ.get("ML_DATA_ROOT") or ".")
+                                                                        for f in POOLED_FILES]}
     if not base_ok:
         return {"verdict": "not_applicable", "read_state": "producer_failed", "n": None,
                 "population": f"{unit}: the BASELINE arm {baseline!r} could not run ({arm_status.get(baseline)}) — NEVER MEASURED",
