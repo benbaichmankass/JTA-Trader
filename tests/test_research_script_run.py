@@ -217,3 +217,50 @@ def test_the_dispatcher_keeps_other_workflows_inputs_verbatim_and_reads_absence_
     assert dropped == [] and inputs["only"] == "eth_pullback_2h" and inputs["power_state"] == "runnable"
     assert dq.declared_inputs("no-such-workflow.yml", repo=tmp_path) is None, \
         "an unreadable workflow is 'could not look', never 'declares nothing'"
+
+
+# ── peak memory (row COMPUTE-IDLE-TRAINER-GPU-W48) ──────────────────────────
+
+
+def _measured(argv, tmp_path, timeout=30):
+    with (tmp_path / "log").open("wb") as fh:
+        return script_run._run_measured(argv, cwd=str(tmp_path), env=dict(__import__("os").environ), out=fh, timeout=timeout)
+
+
+@pytest.mark.skipif(not hasattr(__import__("os"), "wait4"), reason="peak RSS needs os.wait4")
+def test_peak_rss_is_measured_and_reflects_an_allocation(tmp_path):
+    code, timed_out, peak = _measured([sys.executable, "-c", "x = bytearray(120 * 1024 * 1024); x[::4096] = b'a' * len(x[::4096])"],
+                                      tmp_path)
+    assert (code, timed_out) == (0, False)
+    assert peak is not None and peak >= 100, peak          # a 120 MiB buffer is resident; an idle python is ~10-20 MiB
+
+
+@pytest.mark.skipif(not hasattr(__import__("os"), "wait4"), reason="peak RSS needs os.wait4")
+def test_exit_code_and_timeout_behave_like_subprocess_run(tmp_path):
+    code, timed_out, peak = _measured([sys.executable, "-c", "raise SystemExit(3)"], tmp_path)
+    assert (code, timed_out) == (3, False) and peak is not None
+    code, timed_out, peak = _measured([sys.executable, "-c", "import time; time.sleep(30)"], tmp_path, timeout=0.5)
+    assert code is None and timed_out is True              # killed, as subprocess.run does; no exit code
+
+
+def test_a_missing_command_still_raises_oserror_for_execute_to_record(tmp_path):
+    with pytest.raises(OSError):
+        _measured(["/no/such/binary-xyz"], tmp_path)
+
+
+def test_execute_records_peak_rss_mb_per_command_never_zero_for_unmeasured(tmp_path):
+    (tmp_path / "scripts" / "research").mkdir(parents=True)
+    (tmp_path / "scripts" / "research" / "s.py").write_text("print('ok')\n")
+    q = tmp_path / "q"
+    q.mkdir()
+    (q / "RQ-20260101-002.yaml").write_text(yaml.safe_dump({
+        "id": "RQ-20260101-002", "title": "t", "question": "q", "status": "queued", "cadence": "once",
+        "run": {"workflow": script_run.WORKFLOW, "command": ["python3", "scripts/research/s.py"],
+                "inputs": {"research_unit": "RQ-20260101-002"}},
+        "decision_rule": {"id": "R", "registered_at": "2026-01-01"},
+        "lands": {"store": "research/results/"}}))
+    p = script_run.plan("RQ-20260101-002", run_id="t", queue_dir=q, repo=tmp_path)
+    manifest = script_run.execute(p, repo=tmp_path)
+    row = manifest["commands"][0]
+    assert "peak_rss_mb" in row
+    assert row["peak_rss_mb"] is None or row["peak_rss_mb"] > 0      # None = not measured; a measured value is never 0

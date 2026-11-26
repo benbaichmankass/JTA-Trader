@@ -67,7 +67,9 @@ def _briefs(d: Path) -> list[dict]:
             continue
         if isinstance(b, dict) and b.get("schema") == "desk_macro_brief/1":
             out.append(b)
-    return out
+    # v1.1: a brief another brief supersedes is a corrected draft; only the head is graded (its trades and forecasts)
+    superseded = {b.get("supersedes") for b in out if b.get("supersedes")}
+    return [b for b in out if b.get("brief_id") not in superseded]
 
 
 def _done(outcomes: Path) -> set[str]:

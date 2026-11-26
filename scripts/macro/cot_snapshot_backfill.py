@@ -66,7 +66,8 @@ def backfill(
         key = m["key"]
         rows = (market_rows or {}).get(key)
         if rows is None:
-            rows = fetch_cot_market_history(m["name"], base=base, limit=limit, urlopen=urlopen, timeout=timeout)
+            rows = fetch_cot_market_history(m["name"], base=base, limit=limit, urlopen=urlopen, timeout=timeout,
+                                            code=m.get("code"))
         snaps = build_cot_snapshots(
             m, rows, lookback=lookback, release_lag_days=release_lag_days, min_history=min_history,
         )

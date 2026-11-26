@@ -33,6 +33,8 @@ Rules (spec section 2):
     sha valid, same packet, computed_at <= judged_at), consensus (or null) and own_minus_consensus = own_point - consensus.
     trades[].forecast_ids, when given, must name known forecasts
   - write-once: an existing comms/desk/macro/<date>.json is never overwritten (a correction is a new brief with `supersedes`)
+  - same-day correction (v1.1): a brief whose `supersedes` names the day's CURRENT head brief_id is written as
+    <date>_<brief_id>.json; any other second brief that day is refused. desk_macro_outcomes grades only the head.
 
   python3 scripts/ops/desk_macro_write.py validate BRIEF.json
   python3 scripts/ops/desk_macro_write.py write BRIEF.json [--out-dir comms/desk/macro]
@@ -366,6 +368,9 @@ def problems(b: dict, universe: set | None = None, legs: set | None = None, pack
         out.append("info_cutoff_at is after judged_at")
     if b["brief_id"] != f"DMB-{jt.strftime('%Y%m%dT%H%MZ')}":
         out.append(f"brief_id must be DMB-{jt.strftime('%Y%m%dT%H%MZ')} (from judged_at)")
+    sup = b.get("supersedes")
+    if sup is not None and (not re.fullmatch(r"DMB-\d{8}T\d{4}Z", str(sup)) or str(sup) >= str(b["brief_id"])):
+        out.append("supersedes must be an EARLIER brief_id (DMB-YYYYMMDDTHHMMZ)")
     if not re.fullmatch(r"[a-z]+-tier", str(b["model"])):
         out.append("model must be a TIER like 'opus-tier', never a model identifier (desk rule 6)")
     sids = set()
@@ -483,11 +488,33 @@ def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: s
     out_dir.mkdir(parents=True, exist_ok=True)
     p = out_dir / f"{day}.json"
     if p.exists():
-        raise FileExistsError(f"{p} exists: a brief is written once; a correction is a new brief with `supersedes`")
+        head = day_head(out_dir, day)
+        if b.get("supersedes") is None or b["supersedes"] != head:
+            raise FileExistsError(f"{p} exists: a brief is written once; a same-day correction must carry "
+                                  f"`supersedes` = the day's current head brief_id ({head})")
+        p = out_dir / f"{day}_{b['brief_id']}.json"
+        if p.exists():
+            raise FileExistsError(f"{p} exists: a brief is written once")
     body = json.dumps(b, indent=1, sort_keys=False) + "\n"
     p.write_text(body)
-    (out_dir / f"{day}.md").write_text(render(b))
+    p.with_suffix(".md").write_text(render(b))
     return p
+
+
+def day_head(out_dir: Path, day: str) -> str | None:
+    """The brief_id of the day's CURRENT head: the one brief of that day no other brief of that day supersedes."""
+    ids, sup = [], set()
+    for f in sorted(out_dir.glob(f"{day}*.json")):
+        try:
+            x = json.loads(f.read_text())
+        except (OSError, ValueError):  # allow-silent: an unreadable file is not a brief
+            continue
+        if isinstance(x, dict) and x.get("schema") == SCHEMA:
+            ids.append(x.get("brief_id"))
+            if x.get("supersedes"):
+                sup.add(x["supersedes"])
+    heads = [i for i in ids if i not in sup]
+    return max(heads) if heads else None
 
 
 # ---- self-test ------------------------------------------------------------------------------------------------------------
@@ -617,6 +644,18 @@ def self_test() -> int:
             check("write-once: a second write is refused", False)
         except FileExistsError:
             check("write-once: a second write is refused", True)
+        fix = copy.deepcopy(GOOD)
+        fix.update(brief_id="DMB-20261126T1407Z", judged_at="2026-11-26T14:07:00Z", supersedes="DMB-20261126T1307Z")
+        p2 = write(fix, Path(td), uni, legs, PKT)
+        check("a same-day correction superseding the head is written beside it",
+              p2.name == "2026-11-26_DMB-20261126T1407Z.json" and day_head(Path(td), "2026-11-26") == "DMB-20261126T1407Z")
+        stale = copy.deepcopy(GOOD)
+        stale.update(brief_id="DMB-20261126T1507Z", judged_at="2026-11-26T15:07:00Z", supersedes="DMB-20261126T1307Z")
+        try:
+            write(stale, Path(td), uni, legs, PKT)
+            check("a correction superseding a NON-head brief is refused", False)
+        except FileExistsError:
+            check("a correction superseding a NON-head brief is refused", True)
     real_legs = desk_universe()[1]
     check("the real roster loads (informs[] legs)", "claude_desk" in real_legs)
     print("SELF-TEST " + ("PASS" if ok else "FAIL"))
