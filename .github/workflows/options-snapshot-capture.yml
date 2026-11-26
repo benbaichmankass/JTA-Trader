@@ -116,22 +116,32 @@ jobs:
           ALPACA_API_KEY_ID_LIVE: ${{ secrets.ALPACA_API_KEY_ID_LIVE }}
           ALPACA_API_SECRET_KEY_LIVE: ${{ secrets.ALPACA_API_SECRET_KEY_LIVE }}
         run: python3 -u scripts/ops/capture_options_snapshot.py --mode capture --source alpaca --out store
-      - name: Capture today's chain slice (CBOE delayed quotes, keyless; adds open interest + volume)
+      # CBOE-OPTIONS-SOURCE-BLOCKED, option A (manager GO 2026-11-26). cdn.cboe.com answered HTTP 403 for all 55 underlyings from the runner
+      # (run 45750248501) and the series has no new day since 2026-11-19, so it is no longer fetched. Open interest and volume now come from
+      # Alpaca under source=alpaca. The step id stays so the red-flag condition below is unchanged. The CBOE series is NOT backfilled and
+      # never carries Alpaca numbers: its provenance file says blocked (written once, never overwritten).
+      - name: CBOE series is blocked (no fetch attempted); record its provenance
         id: fetch_cboe
         if: steps.mode.outputs.mode == 'capture'
-        continue-on-error: true
-        run: python3 -u scripts/ops/capture_options_snapshot.py --mode capture --source cboe --out store
-      - name: Verify (days, last capture, IV coverage, freshness; both sources)
+        run: |
+          set -euo pipefail
+          mkdir -p store/cboe
+          if [ ! -s store/cboe/PROVENANCE.json ]; then
+            printf '%s\n' '{"source": "cboe", "status": "blocked", "last_good_capture": "2026-11-19", "blocked_after": "2026-11-19", "observed": "2026-11-26: HTTP 403 from cdn.cboe.com for all 55 underlyings from GitHub-hosted runners (run 45750248501); the script already sends a User-Agent", "carried_finding": "row CBOE-OPTIONS-SOURCE-BLOCKED: Cloudflare block via 307 to cdn-api.cboe.com (not re-verified 2026-11-26)", "replacement": "open_interest, volume, open_interest_date and volume_date are captured under source=alpaca from 2026-11-26", "backfill": "none: the cboe series is never filled with Alpaca numbers and keeps its last_good_capture end date", "row": "CBOE-OPTIONS-SOURCE-BLOCKED"}' > store/cboe/PROVENANCE.json
+          fi
+          cat store/cboe/PROVENANCE.json
+      - name: Verify (days, last capture, IV / open interest / volume coverage, freshness; alpaca; cboe is recorded as blocked)
         id: verify
         if: steps.mode.outputs.mode != 'probe'
         continue-on-error: true
         run: |
           rc=0
           : > verify.md
-          for src in alpaca cboe; do
+          for src in alpaca; do
             echo "### source=$src" >> verify.md
             python3 scripts/ops/capture_options_snapshot.py --mode verify --source "$src" --out store >> verify.md 2>&1 || rc=1
           done
+          echo "### source=cboe: BLOCKED, not fetched, not verified (last good capture 2026-11-19; see store/cboe/PROVENANCE.json)" >> verify.md
           cat verify.md
           exit "$rc"
       - name: Push the store to the trainer (add/replace only)
@@ -165,5 +175,5 @@ jobs:
       - name: Red flag on a failed fetch or stale/missing series (ONE flag; the next run retries)
         if: always() && (steps.fetch.outcome == 'failure' || steps.fetch_cboe.outcome == 'failure' || steps.verify.outcome == 'failure')
         run: |
-          echo "::error::options-snapshot: fetch=${{ steps.fetch.outcome }} cboe=${{ steps.fetch_cboe.outcome }} verify=${{ steps.verify.outcome }} (see steps above)"
+          echo "::error::options-snapshot: fetch=${{ steps.fetch.outcome }} cboe=blocked-not-attempted verify=${{ steps.verify.outcome }} (see steps above)"
           exit 1

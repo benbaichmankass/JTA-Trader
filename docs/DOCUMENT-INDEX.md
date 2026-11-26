@@ -542,6 +542,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/claude/work/handoffs/2026-11-15-manager-14a-to-new.md` | history | historical | — | 2026-11-15 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/handoffs/2026-11-25-22a-to-new.md` | history | historical | — | never | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/handoffs/2026-11-25-25a-to-new.md` | history | historical | — | 2026-11-25 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
+| `docs/claude/work/handoffs/2026-11-26-25b-to-new.md` | history | historical | — | 2026-11-26 | `dir:handoffs-record-manager-transitions / dir:record-of-a-completed-session` | — |
 | `docs/claude/work/triage-2026-09-28.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/claude/workplan.md` | plan | historical | — | 2026-09-07 | `name:workplan-is-a-forward-commitment / mi159:plan-status-header:historical` | — |
 | `docs/cross-asset-regime-conviction-DESIGN.md` | architecture | unknown | — | never | `name:design-declares-a-contract / not-assessed` | — |

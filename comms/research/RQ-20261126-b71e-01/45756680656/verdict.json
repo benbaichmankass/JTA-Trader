@@ -1,0 +1,115 @@
+{
+ "verdict": "fail",
+ "read_state": "measured",
+ "n": 1063,
+ "note": "rates_shock_skip: fail delta -0.0160 t -0.603 share 0.26",
+ "population": "7 of 7 rostered NON-crypto legs (ETFs / micro futures; Dukascopy candles, proxies recorded per leg; anchor SPY daily) (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (1063 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "rule": {
+  "id": "RULE-REGIME-RATES-SHOCK-20261126",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "data_window": {
+  "start": "2020-09-01",
+  "end": "2026-10-26",
+  "legs": [
+   "gld_pullback_1d",
+   "iaum_pullback_1d",
+   "ief_pullback_1d",
+   "mgc_pullback_1d",
+   "mgc_trend_1h",
+   "tlt_pullback_1d",
+   "tlt_pullback_1h"
+  ]
+ },
+ "measurement": {
+  "arms": {
+   "rates_shock_skip": {
+    "n_trades": 831,
+    "money_base": 0.10984,
+    "money_arm": 0.09382,
+    "delta": -0.01602,
+    "se_week_boot": 0.02656,
+    "t": -0.603,
+    "random": {
+     "draws": 200,
+     "kind": "raw tilts permuted within leg x month",
+     "mean": -0.02541,
+     "p95": -0.00314,
+     "share_ge_arm": 0.26
+    },
+    "yearly_delta": {
+     "2022": 0.0231,
+     "2023": -0.052,
+     "2024": -0.0721,
+     "2025": -0.0478,
+     "2026": 0.084
+    },
+    "share_tilted": 0.1252,
+    "share_up_tilt": 0.0,
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": false,
+     "years_positive": false
+    },
+    "verdict": "fail",
+    "skipped": {
+     "n": 104,
+     "share": 0.1252,
+     "mean_net_r": 0.12803,
+     "kept_mean_net_r": 0.10724
+    },
+    "by_leg_reported": {
+     "gld_pullback_1d": {
+      "n": 36,
+      "skipped": 3,
+      "delta": -0.2746
+     },
+     "iaum_pullback_1d": {
+      "n": 36,
+      "skipped": 3,
+      "delta": -0.2746
+     },
+     "ief_pullback_1d": {
+      "n": 29,
+      "skipped": 0,
+      "delta": -0.0
+     },
+     "mgc_pullback_1d": {
+      "n": 42,
+      "skipped": 6,
+      "delta": -0.29963
+     },
+     "mgc_trend_1h": {
+      "n": 510,
+      "skipped": 72,
+      "delta": 0.02889
+     },
+     "tlt_pullback_1d": {
+      "n": 29,
+      "skipped": 0,
+      "delta": -0.0
+     },
+     "tlt_pullback_1h": {
+      "n": 149,
+      "skipped": 20,
+      "delta": 0.02891
+     }
+    },
+    "rule": {
+     "series": "DFII10",
+     "lookback_obs": 20,
+     "shock_bp": 20.0,
+     "applies_to": "long entries"
+    }
+   }
+  },
+  "verdict": "fail",
+  "n_legs": 7
+ }
+}
