@@ -132,6 +132,8 @@ def unit_dataset_paths(entry: Dict[str, Any]) -> List[str]:
     """Every dataset path an ml_bakeoff unit reads (single `dataset.path` and per-group `groups.*.path`)."""
     ds = (entry.get("ml_bakeoff") or {}).get("dataset") or {}
     out = [str(ds["path"])] if ds.get("path") else []
+    if ds.get("paths"):   # ml_bakeoff POOLED mode (ML-GRU-POOLED-BP2): every glob match is read, so the glob is checked
+        out.append(str(ds["paths"]))
     groups = ds.get("groups")
     for g in (groups.values() if isinstance(groups, dict) else []):     # a list of group names (synthetic data) has no paths
         if isinstance(g, dict) and g.get("path"):
@@ -180,7 +182,10 @@ def published_problem(entry: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[st
     if not paths:
         return "routing.published_data is set but the unit declares no ml_bakeoff.dataset path to check it against"
     from scripts.research import market_data_export as mde  # noqa: PLC0415
-    bad = [p for p in paths if not mde.covers(p)]
+    # Each published dataset has its own allowlist (ML-DATA-PUBLISH-WIDEN-BP2): a path is covered only by the dataset the
+    # unit names (kaggle_dataset slug), so a unit cannot claim metis-market-bp2 while reading a metis-market-data shard.
+    slug = str((reg[str(name)] or {}).get("kaggle_dataset") or name)
+    bad = [p for p in paths if not mde.covers(p, dataset=slug)]
     return (f"routing.published_data {name!r} but these dataset paths are NOT in the published allowlist: {bad}") if bad else None
 
 

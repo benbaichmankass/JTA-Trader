@@ -44,6 +44,40 @@ VERSION = "v002"
 ALLOW: List[str] = [f"{fam}/{sym}/{tf}/{VERSION}/{f}"
                     for fam in FAMILIES for sym in SYMBOLS for tf in TIMEFRAMES for f in FILES]
 
+#: ML-DATA-PUBLISH-WIDEN-BP2 (2026-11-26): a SECOND private dataset, built on a GitHub runner (never the trainer) from public
+#: data.binance.vision USD-M perp 1h klines for the frozen bp2 60-perp universe (scripts/research/market_data_bp2.py).
+#: Version dir v102 (the v002 builder schema, Binance-vision source; metadata requires vNNN) so no path here ever names the trainer's Bybit v002 shards.
+#: Each published dataset has its OWN allowlist: a unit claiming dataset X is checked against X's list only.
+BP2_SLUG = "metis-market-bp2"
+BP2_VERSION = "v102"
+BP2_MANIFEST = Path(__file__).resolve().parents[2] / "comms/research/broad_paths/bp2-f4271084b120/manifest.json"
+
+
+def bp2_symbols() -> List[str]:
+    """The frozen bp2 universe (the same list ml_decision_entry.universe() reads). Empty if the manifest is unreadable."""
+    try:
+        m = json.loads(BP2_MANIFEST.read_text(encoding="utf-8"))
+        return [str(s["symbol"]) for s in m["hash_inputs"]["symbols"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+
+
+DATASETS: Dict[str, Dict[str, Any]] = {
+    DATASET_SLUG: {"contents": "MARKET DATA ONLY: Bybit public klines/funding/OI/order-flow, public macro, model embeddings of the close series"},
+    BP2_SLUG: {"contents": "MARKET DATA ONLY: Binance USD-M perp public 1h klines (data.binance.vision) for the bp2 60-perp universe; "
+                           "market_raw OHLCV + a kline-only market_features projection (no side-stream columns)"},
+}
+
+
+def allow_for(dataset: str = DATASET_SLUG, symbols: Optional[List[str]] = None) -> List[str]:
+    """The allowlist of one published dataset (paths relative to datasets-out/). Unknown dataset -> [] (covers nothing)."""
+    if dataset == DATASET_SLUG:
+        return list(ALLOW)
+    if dataset == BP2_SLUG:
+        syms = symbols if symbols is not None else bp2_symbols()
+        return [f"{fam}/{sym}/1h/{BP2_VERSION}/{f}" for fam in FAMILIES for sym in syms for f in FILES]
+    return []
+
 #: Column names that would mean a shard carries OUR data. `order_imbalance` / `order_flow` are market taker-flow
 #: columns, so the order tokens are the package/account-shaped ones only.
 OURS_COLUMN = re.compile(
@@ -52,22 +86,24 @@ OURS_COLUMN = re.compile(
     re.I)
 
 
-def allowed(rel: str) -> bool:
+def allowed(rel: str, dataset: str = DATASET_SLUG, allow: Optional[List[str]] = None) -> bool:
     rel = rel.replace("\\", "/").lstrip("/")
-    return ".." not in rel.split("/") and rel in ALLOW
+    return ".." not in rel.split("/") and rel in (allow if allow is not None else allow_for(dataset))
 
 
-def covers(dataset_path: str) -> bool:
+def covers(dataset_path: str, dataset: str = DATASET_SLUG, allow: Optional[List[str]] = None) -> bool:
     """True when `dataset_path` (as a unit writes it, e.g. datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl,
-    optionally a glob) names only published files. Used by the router: a unit may not claim published data it is not."""
+    optionally a glob) names only files published in `dataset`. Used by the router: a unit may not claim published data
+    it is not."""
+    al = allow if allow is not None else allow_for(dataset)
     p = dataset_path.replace("\\", "/").lstrip("/")
     if not p.startswith(ROOT + "/"):
         return False
     rel = p[len(ROOT) + 1:]
     if any(ch in rel for ch in "*?["):
-        hits = [a for a in ALLOW if fnmatch.fnmatch(a, rel)]
-        return bool(hits) and all(allowed(a) for a in hits)
-    return allowed(rel)
+        hits = [a for a in al if fnmatch.fnmatch(a, rel)]
+        return bool(hits) and all(allowed(a, allow=al) for a in hits)
+    return allowed(rel, allow=al)
 
 
 def _sha256(path: Path) -> str:
@@ -136,7 +172,8 @@ def integrity_problem(rel: str, rows: int, src: Path) -> Optional[str]:
     return None
 
 
-def build(src: Path, out: Path, *, username: str = "", now: Optional[datetime] = None, link: bool = True) -> Dict[str, Any]:
+def build(src: Path, out: Path, *, username: str = "", now: Optional[datetime] = None, link: bool = True,
+          dataset: str = DATASET_SLUG, allow: Optional[List[str]] = None) -> Dict[str, Any]:
     """Stage `src` (a tree laid out as datasets-out/) into `out` and write MANIFEST.json + dataset-metadata.json.
     Missing allowed files are recorded as `absent`, never invented. Raises SystemExit on any guard violation."""
     now = now or datetime.now(timezone.utc)
@@ -144,7 +181,9 @@ def build(src: Path, out: Path, *, username: str = "", now: Optional[datetime] =
     files: List[Dict[str, Any]] = []
     absent: List[str] = []
     withheld: List[Dict[str, str]] = []
-    for rel in ALLOW:
+    if dataset not in DATASETS:
+        raise SystemExit(f"REFUSED: unknown dataset {dataset!r} (have {sorted(DATASETS)})")
+    for rel in (allow if allow is not None else allow_for(dataset)):
         s = src / rel
         if not s.is_file():
             absent.append(rel)
@@ -177,13 +216,13 @@ def build(src: Path, out: Path, *, username: str = "", now: Optional[datetime] =
         files.append(rec)
     if not files:
         raise SystemExit("REFUSED: no allowed shard found under the source tree -- nothing to publish")
-    manifest = {"schema": SCHEMA, "dataset": DATASET_SLUG, "generated_at": now.isoformat(), "private": True,
-                "contents": "MARKET DATA ONLY: Bybit public klines/funding/OI/order-flow, public macro, model embeddings of the close series",
+    manifest = {"schema": SCHEMA, "dataset": dataset, "generated_at": now.isoformat(), "private": True,
+                "contents": DATASETS[dataset]["contents"],
                 "files": files, "absent": absent, "withheld": withheld,
                 "stale_shards": [f["path"] for f in files if (f.get("stale_days") or 0) > 3.0]}
     (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
     (out / "dataset-metadata.json").write_text(json.dumps({
-        "title": DATASET_SLUG, "id": f"{username or 'USER'}/{DATASET_SLUG}", "isPrivate": True,
+        "title": dataset, "id": f"{username or 'USER'}/{dataset}", "isPrivate": True,
         "licenses": [{"name": "other"}],
         "description": "Private. Market-only ML shards for the research queue (see MANIFEST.json)."}, indent=1) + "\n",
         encoding="utf-8")
@@ -221,6 +260,15 @@ def _self_test() -> int:
     assert not covers("datasets-out/market_features/MES/15m/v002/data.jsonl")
     assert not covers("datasets-out/trade_outcomes/all/all/v002/data.jsonl")
     assert not covers("data/trade_journal.db")
+    # per-dataset allowlists (ML-DATA-PUBLISH-WIDEN-BP2): each dataset covers only its own paths
+    bp2 = allow_for(BP2_SLUG, ["ADAUSDT"])
+    assert covers(f"datasets-out/market_features/ADAUSDT/1h/{BP2_VERSION}/data.jsonl", dataset=BP2_SLUG, allow=bp2)
+    assert covers(f"datasets-out/market_features/*/1h/{BP2_VERSION}/data.jsonl", dataset=BP2_SLUG, allow=bp2)
+    assert not covers(f"datasets-out/market_features/ADAUSDT/1h/{BP2_VERSION}/data.jsonl"), "not in metis-market-data"
+    assert not covers("datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl", dataset=BP2_SLUG, allow=bp2), "bybit v002 is not bp2"
+    assert allow_for("no-such-dataset") == [] and not covers("datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl", dataset="x")
+    if BP2_MANIFEST.is_file():
+        assert len(bp2_symbols()) == 60, len(bp2_symbols())
     assert column_violations(["ts", "order_imbalance", "ofi", "vpin", "funding_rate"]) == []
     assert column_violations(["ts", "pnl", "order_package_id", "account_id"]) == ["pnl", "order_package_id", "account_id"]
     now = datetime(2026, 10, 13, tzinfo=timezone.utc)
@@ -272,8 +320,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("self-test")
-    sub.add_parser("list-paths", help="print the allowlisted paths relative to datasets-out/ (an rsync --files-from list)")
+    lp = sub.add_parser("list-paths", help="print the allowlisted paths relative to datasets-out/ (an rsync --files-from list)")
+    lp.add_argument("--dataset", default=DATASET_SLUG, choices=sorted(DATASETS))
     b = sub.add_parser("build")
+    b.add_argument("--dataset", default=DATASET_SLUG, choices=sorted(DATASETS))
     b.add_argument("--src", required=True)
     b.add_argument("--out", required=True)
     b.add_argument("--username", default="")
@@ -283,10 +333,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.cmd == "self-test":
         return _self_test()
     if a.cmd == "list-paths":
-        print("\n".join(ALLOW))
+        print("\n".join(allow_for(a.dataset)))
         return 0
     if a.cmd == "build":
-        m = build(Path(a.src), Path(a.out), username=a.username)
+        m = build(Path(a.src), Path(a.out), username=a.username, dataset=a.dataset)
         print(json.dumps({"files": len(m["files"]), "absent": len(m["absent"]), "withheld": m["withheld"], "stale_shards": m["stale_shards"],
                           "bytes": sum(f["bytes"] for f in m["files"])}))
         return 0

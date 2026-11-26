@@ -82,6 +82,17 @@ published_data:
     exporter: .github/workflows/ml-data-export-kaggle.yml
     refresh: "daily 06:40Z, after the nightly shard rebuild"
     env: ML_DATA_ROOT                      # the dir that CONTAINS datasets-out/ ; ml_bakeoff resolves relative paths from it
+  # BP2 WIDENED MARKET DATA (2026-11-26, ML-DATA-PUBLISH-WIDEN-BP2). market_raw + a kline-only market_features 1h projection
+  # for the frozen bp2 60-perp universe, built on a GitHub runner from public data.binance.vision USD-M perp klines
+  # (scripts/research/market_data_bp2.py; the trainer does no work). Paths: datasets-out/<family>/<SYM>/1h/v102/... (v102 =
+  # the v002 builder schema from Binance-vision; never the trainer's Bybit v002). Allowlist: market_data_export.allow_for
+  # ("metis-market-bp2"). Unlocks pooled 60-perp GPU units (ML-GRU-POOLED-BP2). ROLLBACK: delete this entry (units naming it
+  # are then refused by compute_router.published_problem); the dataset itself is private and inert.
+  metis-market-bp2:
+    kaggle_dataset: metis-market-bp2       # owner = the KAGGLE_API_TOKEN user
+    exporter: .github/workflows/ml-data-export-bp2-kaggle.yml
+    refresh: "weekly Mon 07:13Z, and on dispatch"
+    env: ML_DATA_ROOT
   # LAKE MIRROR, MANIFEST ONLY (2026-11-08, PROP-ML-NEW-DATA step 1; manager 2026-11-07a ruling). The frozen crypto history of the HF lake
   # (private HF storage is at its cap and returns 403) is mirrored as private Kaggle datasets metis-market-lake-pNNN
   # (scripts/data_lake/kaggle_pilot.py, kaggle-cold-lake-copy.yml). `fetch: manifest_only` downloads ONLY each part's MANIFEST.json
