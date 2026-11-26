@@ -848,7 +848,7 @@ def self_test() -> int:
     # (dbf8-02 run 45797062321 crashed the whole command on exactly this before 2026-11-26)
 
     class _OomAtPredict:
-        def predict(self, x):
+        def predict(self, x):  # inert: x — a stub that fails before reading its input, as the real OOM did
             raise RuntimeError("CPU memory allocation failed (CUDA error: out of memory) [self-test]")
 
     def fit_oom(t, arm, **kw):
