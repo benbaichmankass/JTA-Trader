@@ -1,0 +1,150 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (REGIME-PROGRAM; the registered next form after the learned entry filters failed on crypto f1a0-35 and
+# non-crypto e9a4-01; manager 03:31Z: queue the rates/risk-off hand rule after the ADX-cell confirmation). Rule registered BEFORE any run; only trade
+# and skip COUNTS were read (local equities replay + FRED), never a net R. Gates this adds or changes: none.
+id: RQ-20261126-b71e-01
+title: 'REGIME-PROGRAM rates / risk-off HAND RULE: on the rostered bond and gold legs, does skipping each LONG entry taken after a US 10-year REAL-yield
+  shock (FRED DFII10 up > 20 bp over the prior 20 observations, read before the entry day) beat taking every trade by +0.01 R per available trade,
+  and beat random skips of the same count within leg-month, net of the full cost stack?'
+status: queued
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261126-e9a4-01/45745918400
+  verdict_read: fail
+  diagnosis: 'The learned entry-filter recipe (walk-forward LightGBM on own-symbol + market-anchor daily state) failed on both asset classes:
+    f1a0-35 on crypto (-0.0026 R) and e9a4-01 on 19 non-crypto legs (-0.045 R, t -1.56; the skipped tercile still averaged +0.153 R; random share
+    0.44). The model ranks weakly (prediction-vs-R correlation 0.02-0.13 by year), so a learned state adds nothing. The registered next form is a
+    HAND rule with a mechanism: duration and gold both price off the real rate, so a sharp real-yield rise is a direct headwind to their long
+    entries. One threshold, chosen from that mechanism before the run, not fitted.'
+  hypothesis: long bond and gold entries taken right after a real-yield shock lose money relative to the leg's other entries
+  search: 'one fixed rule: DFII10 change over the prior 20 observations > +20 bp, the last observation dated strictly before the entry day; skip LONG
+    entries only, on the 7 rostered bond / gold legs; no threshold, lookback or series search.'
+  levers:
+  - regime
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 15
+  due_by: '2026-12-03'
+question: On the 7 rostered bond and gold legs (tlt_pullback_1d/1h, ief_pullback_1d, gld_pullback_1d, iaum_pullback_1d, mgc_pullback_1d, mgc_trend_1h;
+  own harness, Dukascopy candles), does skipping each LONG entry taken after a DFII10 rise of more than 20 bp over the prior 20 observations add >=
+  +0.01 R per available trade over taking every trade (t >= 2, >= 4 of 5 test years positive) and beat 200 random skips of the same count within
+  each leg x month (share <= 0.05), net of the full cost stack?
+why_this_matters: 'It is the first regime test with a stated economic mechanism and no fitted model, on the asset classes where a macro state should
+  matter most. A pass is an input to a Tier-3 entry-filter proposal for those legs (strategy logic; the operator decides) after a fresh-window
+  confirmation; a fail closes the real-rate axis for these legs.'
+power:
+  expected_n: 831
+  min_detectable_effect: 0.042
+  effect_units: metric
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED counts only (local replay with the runner pin dukascopy-python 4.0.1 + FRED DFII10, 2026-11-26; no net R read): 831 test-window
+    trades on the 7 legs (518 longs), 104 of them skipped by the rule (12.5%; mgc_trend_1h 72, tlt_pullback_1h 20, mgc_pullback_1d 6, gld 3, iaum 3,
+    tlt_1d 0, ief 0); DFII10 is in a shock state on 27% of test-window days. delta = -(sum of skipped net R) / 831, so with sd ~1.2 R (ESTIMATE) SE ~
+    1.2 x sqrt(104) / 831 = 0.015 R and MDE ~0.042 R per available trade (skipped trades averaging ~-0.34 R). The t >= 2 clause binds: a pass needs the
+    skipped longs to average about -0.24 R or worse. INDETERMINATE is likely and stated now; the result is dominated by mgc_trend_1h.'
+  feasibility:
+    source: none
+    accrual_basis: The trades are replayed at run time from the legs' harness path over a pinned window and DFII10 is read from FRED at run time; nothing
+      accrues. The counts above came from a local replay, not a committed verdict, so the source is none.
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: an entry filter (skip a long entry) on the bond and gold legs by the real-rate state
+  legs:
+  - tlt_pullback_1h
+  - mgc_trend_1h
+  - tlt_pullback_1d
+  - ief_pullback_1d
+  - gld_pullback_1d
+  - iaum_pullback_1d
+  - mgc_pullback_1d
+  book: money
+baseline:
+  definition: Equal risk per trade on the same replayed trades (take every trade); and 200 permutations of the 0/1 keep flags within each leg x month.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - ratesrule
+  - --universe
+  - equities
+  - --legs
+  - tlt_pullback_1d,tlt_pullback_1h,ief_pullback_1d,gld_pullback_1d,iaum_pullback_1d,mgc_pullback_1d,mgc_trend_1h
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261126-b71e-01
+decision_rule:
+  id: RULE-REGIME-RATES-SHOCK-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: take every replayed trade at equal risk (the same trades); 200 random skips of the same count within each leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode ratesrule --universe equities (fetch_fred DFII10, rates_shock, grade_ratesrule -> grade_raw
+    normalise=False): delta = -(sum of skipped net R) / all test trades (a skipped trade contributes 0 R); se from 1,000 entry-week bootstrap draws;
+    permutation share = share of 200 within leg x month permutations of the 0/1 keep flags with delta >= the arm; yearly delta; skipped and kept mean net
+    R; per-leg delta reported.'
+  rule: PASS iff delta >= +0.01 R per available trade AND t >= 2 AND permutation share <= 0.05 AND >= 4 of 5 test years > 0; FAIL iff delta <= 0 or share >= 0.5;
+    else INDETERMINATE. An unreadable FRED series is INDETERMINATE (could_not_look). Fixed now (the RULE_MS thresholds, unchanged).
+  pass_action: 'Fresh-WINDOW confirmation first (trades after 2026-10-26 once enough accrue), plus the regime-selectivity walk-forward rule; then a Tier-3
+    entry-filter PROPOSAL for the bond / gold legs to the manager with this evidence record. A filter is strategy logic: the operator decides.'
+  fail_action: Record that this RULE (skip bond / gold longs after a 20 bp / 20-observation real-yield rise) failed on the rostered legs; REGIME-PROGRAM's
+    next form is authored from this result (the equities intraday state, or a credit-spread state on the index legs).
+  proposal_mapping: pass -> fresh-window confirmation -> Tier-3 entry-filter proposal; fail or indeterminate -> the next regime form from this diagnosis.
+  what_it_does_not_do: Changes no config, sizing, filter or order path; adds no gate. Re-runs the evidence builder's harness path read-only and reads FRED;
+    writes only under --out.
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  basis: 'stand-in: 7 rostered bond / gold legs, 1 of them real money (tlt_pullback_1h on alpaca_live; the rest demo floor); not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: the 0/1 keep flags permuted within each leg x calendar month (200 draws, same skip count per leg-month, no renormalisation); the arm must
+      beat >= 95% of draws
+    draws: 200
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: a kept trade keeps its harness bracket at size 1; a skipped trade is not entered (0 R, no cost)'
+  best_static:
+    grid:
+    - take every trade at size 1 (the registered comparator)
+    excludes_test_folds: true
+    note: one fixed hand rule from a stated mechanism; no threshold, lookback or series was searched
+  bootstrap_group: week
+practice_precedent: rule registered before the run with an economic mechanism and no fitted parameters, net of the full cost stack, matched random
+  control and week-clustered se (principles R5, M6, M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 20
+  why_runner: Keyless Dukascopy candles for 7 legs (research-script-run installs dukascopy-python 4.0.1) + the keyless FRED fredgraph CSV (the
+    index_signal_etf_harness route) + the repo harnesses; no model fit.
+  basis: 'MEASURED: the local replay of these legs took a few minutes inside the 22-leg equities replay (~15 min total); the grade adds 1,000 bootstraps
+    + 200 permutations.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- RQ-20261126-e9a4-01
+- RQ-20261125-f1a0-35
+- REGIME-PROGRAM
+- .claude/skills/regime-selectivity/SKILL.md
