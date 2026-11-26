@@ -2,7 +2,7 @@
 id: RQ-20261126-a1f0-03
 title: 'RE-RUN on the native-frame monitor() + live side_filter engine fix: RE-RUN on the fixed backtest_system engine (#27655) of RQ-20261018-001: Same-symbol overlap read, SOLUSDT (bybit_2 book): per-leg OOS net R per capital-day, solo vs shared
   slot, for trend_donchian_sol_4h and trend_donchian_sol_prop'
-status: queued
+status: done
 cadence: once
 roadmap:
 - M18
@@ -115,3 +115,13 @@ generated:
   params:
     node: P3-Q8-sol4h-overlap
 last_dispatched_at: '2026-11-26T10:16:13+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-P3-Q8-SOL4H-OVERLAP-REPORT-RERUN-NATIVE-FRAME-SIDEFILTER-B
+  evidence:
+  - research/results/RQ-20261126-a1f0-03/45797068572.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

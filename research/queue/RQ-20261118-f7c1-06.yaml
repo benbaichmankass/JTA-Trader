@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-06
 title: 'Deep tabular learner on a MONEY label (D3 Foxhound): does an FT-Transformer on the same features and raw net-R target, trained on a Kaggle GPU,
   beat LightGBM on the trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -117,8 +117,22 @@ related:
 - FRONTIER-LEVER-TABULAR
 population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
   in 13 x 28-day windows; a recipe comparison, not a promotion read.
-last_dispatched_at: '2026-11-26T12:16:08+00:00'  # re-armed 2026-11-26 by ML-PRIMARY (research-ops folded in): run of 06:50:39Z failed at Kaggle startup on the missing bp2 manifest; fixed by #29092 (bundle_paths); retry 2 of 2
+last_dispatched_at: '2026-11-26T12:22:42+00:00'  # re-armed 2026-11-26 by ML-PRIMARY (research-ops folded in): run of 06:50:39Z failed at Kaggle startup on the missing bp2 manifest; fixed by #29092 (bundle_paths); retry 2 of 2
 lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+grading:
+  attested: RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  auto: true
+  decision_rule_id: RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  evidence:
+  - research/results/RQ-20261118-f7c1-06/45771042469.jsonl
+  - research/results/RQ-20261118-f7c1-06/45802782002.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

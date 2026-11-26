@@ -1,7 +1,7 @@
 id: RQ-20261125-0838-01
 title: 'D5 position aggregation CONFIRMATION on 2021-06..2023-04 (history 0104-08, a474-02 and fa22-06 never used): does the 0104-08 PASS of rule arms A1-A3 over
   today''s rule A0 hold?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -165,3 +165,16 @@ related:
 - RQ-20261122-fa22-06
 - RQ-20261115-a474-02
 last_dispatched_at: '2026-11-25T21:04:46+00:00'
+grading:
+  attested: RULE-RQ20261125-0838-01-D5-ARMS-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261125-0838-01-D5-ARMS-CONFIRM
+  evidence:
+  - research/results/RQ-20261125-0838-01/45701019549.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

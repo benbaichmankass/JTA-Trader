@@ -1,0 +1,7 @@
+candle dataset: served binance__ADAUSDT__120 (21961 rows, last 2026-11-17 22:00:00+00:00) from metis-research-candles
+[A] /usr/bin/python3 /tmp/repo/scripts/backtest_pullback.py --trend-lookback 40 --pullback-lookback 10 --pullback-frac 0.5 --data <data> --symbol ADAUSDT --resample 2h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 6.0 --min-confidence 0.0 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261126-099/45818176688/arms/A__trades.jsonl --json comms/research/RQ-20261126-099/45818176688/arms/A__bt.json --adx-min 25 --tp-cap-pct 0.099 --tp-r 3.0 --tp-target-r 3.0 --tp-extend-r 1.0 --tp-approach-frac 0.85 --tp-max-extends 3 --tp-thesis native
+{
+ "verdict": "fail",
+ "label": "stage0_no_edge",
+ "why": "net_r=18.8048 with 2/4 positive folds (needs > 0 and >= 3)"
+}
