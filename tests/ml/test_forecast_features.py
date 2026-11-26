@@ -306,3 +306,40 @@ def test_build_forecasts_cli_backend_sets_model_id_and_records_it(tmp_path, monk
                     "--context-len", "8", "--min-context", "8", "--stride", "4"]) == 0
     meta = json.loads((out / "metadata.json").read_text())
     assert seen["m"] == "amazon/chronos-2" and meta["backend"] == "chronos-2" and meta["model_id"] == "amazon/chronos-2"
+
+
+# --- FC-STRIDE-PHASE (2026-11-26): epoch-anchored stride phase --------------------------------------------------
+
+
+def test_epoch_phase_picks_the_same_bars_in_any_window():
+    from ml.datasets.forecast_features import _epoch_strided_indices
+    from datetime import datetime, timedelta, timezone
+    base = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
+    ts = [(base + timedelta(minutes=15 * i)).isoformat() for i in range(64)]
+    full = {ts[i] for i in _epoch_strided_indices(ts, 4)}
+    assert full == {t for t in ts if t[14:16] == "00"}            # 15m x 4 = the top of each hour
+    for lo in range(0, 20):                                      # any trailing window picks the same bars
+        sub = ts[lo:]
+        assert {sub[i] for i in _epoch_strided_indices(sub, 4)} == {t for t in sub if t in full}
+
+
+def test_epoch_phase_reads_epoch_numbers_and_numeric_strings():
+    from ml.datasets.forecast_features import _epoch_strided_indices
+    ms = [1767225600000 + 900_000 * i for i in range(8)]          # 2026-01-01T00:00Z in epoch ms, 15m apart
+    assert _epoch_strided_indices(ms, 4) == [0, 4]
+    assert _epoch_strided_indices([str(x) for x in ms], 4) == [0, 4]
+    assert _epoch_strided_indices(ms, 4, tf_seconds=900) == [0, 4]
+
+
+def test_row_phase_default_is_unchanged():
+    rows = _bar_rows(20)
+    a = compute_forecast_feature_rows(rows, context_len=8, stride=4, min_context=8, forecast_fn=_stub_forecast())
+    b = compute_forecast_feature_rows(rows, context_len=8, stride=4, min_context=8, forecast_fn=_stub_forecast(), phase="row")
+    assert a == b
+
+
+def test_unknown_phase_is_refused():
+    import pytest
+    with pytest.raises(ValueError):
+        compute_forecast_feature_rows(_bar_rows(20), context_len=8, stride=4, min_context=8,
+                                      forecast_fn=_stub_forecast(), phase="bogus")
