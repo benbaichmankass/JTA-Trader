@@ -21,9 +21,9 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
-import twin_design as td
+import twin_design as td  # noqa: E402
 
-from scripts.research import queue_replenish as qr
+from scripts.research import queue_replenish as qr  # noqa: E402
 
 DAY = "2026-11-26"
 
