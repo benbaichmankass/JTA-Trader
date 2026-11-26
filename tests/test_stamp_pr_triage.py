@@ -269,7 +269,8 @@ def test_an_unknown_state_is_re_read_once_before_it_is_read_as_not_dirty(monkeyp
     reads = _seq_api(monkeypatch, [_pr(1, ref)], ["unknown", "dirty"], [_file("RQ-A", "2026-11-18T19:30:00+00:00")])
     rows = t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append)
     assert len(reads) == 2 and slept == [t.UNKNOWN_RETRY_SLEEP_S] and rows[0]["done"] == "closed"
-    calls.clear(); slept.clear()
+    calls.clear()
+    slept.clear()
     reads = _seq_api(monkeypatch, [_pr(1, ref)], ["unknown"], [_file("RQ-A", "2026-11-18T19:30:00+00:00")])   # still unknown: ONE re-read, no loop
     assert t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append) == []
     assert len(reads) == 2 and calls == []
