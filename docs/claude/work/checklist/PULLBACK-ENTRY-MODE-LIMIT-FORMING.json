@@ -1,0 +1,22 @@
+{
+  "id": "PULLBACK-ENTRY-MODE-LIMIT-FORMING",
+  "title": "Forming-bar limit-entry fill model for backtest_pullback (Alpaca 1h + 1Min replay)",
+  "state": "queued",
+  "owner": "QUEUE-FILL-STANDING-W49",
+  "lane": "QUEUE-FILL-STANDING-W49",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "priority_rank": 5,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26 as the manager asked when approving the reduced scope of PULLBACK-ENTRY-MODE-LIMIT (#28989, closed-bar only; forming path raises like ict_scalp). DESIGN NOTE: the live decision is on the still-forming bar (forming_bar_entries.forming_entry_override, 1m ticks at ~2 min cadence), so a limit there rests from the decision TICK, not the bar close: fill when a later 1m low trades strictly through the limit (long) within expire_bars of the strategy timeframe; entry_time = decision tick; SL anchored to the decision price; the fill 1m bar stop-only; remainder of the entry bar via the existing rest_high/rest_low path. Needs the 1m frame already passed as decision_1m and a per-tick fill scan; maker/taker fees as in the closed-bar mode (0/0 on Alpaca). Closed-bar and forming paths are not interchangeable (A arm -4.94 R closed-bar at zero slippage vs +8.17 R forming-path record on tlt_pullback_1h), so the closed-bar limit unit cannot stand in for it. Re-entry test: the closed-bar limit unit (blocked on #28989) returns a fill rate; if the fill rate is below 30 pct the forming version is moot. RESUME STATE 2026-11-26 (lane throttled until the 12-02 reset). Not started beyond the design note. Re-entry test: the closed-bar limit units (tlt RQ-20261126-11d7-16, queued, not yet run) return a fill rate per arm in the arm params (limit_fill_rate); if the best arm's fill rate is below 30 pct, or no arm clears the 27 R bar, the forming version is moot. Implementation outline: scripts/backtest_pullback.py forming path (forming_bar_entries.forming_entry_override, 1m ticks): rest the limit from the decision TICK, fill on a later 1m low strictly through the limit within expire_bars of the strategy timeframe, entry_time = decision tick, SL anchored to the decision price, the fill 1m bar stop-only; keep the SL-first structural test (tests/test_backtest_trend_live_tp.py) green by using a named helper (see _fill_bar_stopped); run every test file that imports backtest_pullback before pushing.",
+  "phase": "research",
+  "updated_at": "2026-11-26T07:22:31Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

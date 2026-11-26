@@ -13,16 +13,16 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-02",
   "lane_history": [
     {
       "archived_at": "2026-11-18T18:19:41Z",
       "lane": "session_01AFoLuJkXEM1EigH9mSfz1F"
     }
   ],
-  "note": "WEEKLY-AUDIT-20261111 deep pass 2 MODULARITY. MEASURED: 4 files define exclude_reconciler/superseded predicates (canonical + 3 fallbacks); component_edge_report.py fallback matches canonical; build_research_panel.py does not (line ~97). Fix (Tier 1): delete the fallbacks, or fail loudly (could_not_look) when _clean_trades cannot import. DETECTOR: extend the single-owner pattern (check_cost_model_single_owner.py) to the predicate names, report-only (operator 11-06: non-blocking detectors OK). CHECK: {command: grep -rn 'def exclude_reconciler_predicate' scripts src, rule: 1 definition or all byte-equal, resolves_when: true}.",
+  "note": "WEEKLY-AUDIT-20261111 deep pass 2 MODULARITY. MEASURED: 4 files define exclude_reconciler/superseded predicates (canonical + 3 fallbacks); component_edge_report.py fallback matches canonical; build_research_panel.py does not (line ~97). Fix (Tier 1): delete the fallbacks, or fail loudly (could_not_look) when _clean_trades cannot import. DETECTOR: extend the single-owner pattern (check_cost_model_single_owner.py) to the predicate names, report-only (operator 11-06: non-blocking detectors OK). CHECK: {command: grep -rn 'def exclude_reconciler_predicate' scripts src, rule: 1 definition or all byte-equal, resolves_when: true}. WEEKLY-AUDIT-2026-11-25: stalled (no state change since 11-18; handed to AM-OPS-7, archived 11-19). Thursday 11-26 planning gives it a live lane + due_by or kills it with a reason (AUD-20261125-HANDOFF-TO-DYING-LANE). 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'ML'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-02 with NO substantive progress read this pass -- dispatch or kill at that date.",
   "phase": "ops",
-  "updated_at": "2026-11-18T18:19:43Z",
-  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "updated_at": "2026-11-26T06:12:51Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

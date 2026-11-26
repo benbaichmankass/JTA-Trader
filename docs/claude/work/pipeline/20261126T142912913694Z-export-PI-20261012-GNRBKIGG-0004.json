@@ -1,0 +1,27 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261012-GNRBKIGG-0004",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "the rerun command above, plus the phone_events / Telegram 'REPORT-ONLY' lines",
+    "what": "a clean live Positions read on breakout_2 (positions_state == read) whose positions match the terminal, and the REPORT-ONLY 'WOULD ...' alerts that follow it agreeing with what actually happened; then the YAML key flipped to write in a Tier-2 PR"
+  },
+  "origin": {
+    "kind": "audit",
+    "ref": "review of PR #17745 (manager 2026-10-12T15:05Z), blocking item 1",
+    "rerun": "grep -n -A1 'reconcile:' config/prop_platforms.yaml; curl -s 'https://ict-bot.duckdns.org/api/bot/prop/status?account_id=breakout_2' | jq '.status.raw|fromjson|.positions_state' -- holds while the key reads report_only."
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk): routed to its owning row ROUTE-PROP-TRACKIN)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row ROUTE-PROP-TRACKING is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "ROUTE-PROP-TRACKING (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target PROP-TRACKING is done; item still open) | was: checklist row PROP-TRACKING (research-ops 2026-10-16 08:47Z)",
+  "state": "routed",
+  "what": "PROP-TRACKING reconcile is REPORT-ONLY (config/prop_platforms.yaml phone_accounts.breakout_2.reconcile: report_only, review of #17745): it alerts what it WOULD close/open but writes nothing, because no live capture of Breakout's Positions DOM existed. Flip to `write` once the first clean live Positions read is observed and its 'WOULD ...' alerts match the terminal."
+}

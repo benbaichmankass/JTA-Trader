@@ -1,0 +1,34 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-14",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261122-RESEARCH-FILL-20261122",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-14",
+    "how_to_check": "the next export's summary no longer lists RESEARCH-FILL-20261122 as held",
+    "what": "RESEARCH-FILL-20261122 lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45024327810; held item RESEARCH-FILL-20261122",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row STORE-EXPORT-BACKFILL-258 is queued (due_by now 2026-12-14); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "unmapped"
+  ],
+  "routed_to": "STORE-EXPORT-BACKFILL-258 (checklist row: work-store rows that fail the export guards); the held-back record is that row's class [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin scripts/ops/work.py export --to-files https://github.com/benbaichmanka; routing-alarm rule]",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [RESEARCH-FILL-20261122] held back from the work-store export of 2026-11-22: the store row fails the guard row check -- checklist row RESEARCH-FILL-20261122 enters landed_unproven with no soak contract (add a contract with id 'RESEARCH-FILL-20261122' to docs/claude/work/SOAKS.json: the mechanical checklist and n_needed <= 2) — or, for a one-shot check, an `observation: {what, how_to_check, due_by}` on the row."
+}

@@ -2,8 +2,8 @@
   "id": "DECISION-BAR-SESSION-INSTRUMENT",
   "title": "Build: forming-vs-closed replay for the US-session legs (alpaca_live ief/slv/iaum_pullback_1d + 11 paper/ib legs) -- the instrument RQ-20261018-2a10-01 could not use",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,6 +13,7 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 568,
   "note": "Lever filed by research-ops 2026-10-18 14:47Z for PI-20261018-WCDIDFTE-0001. scripts/research/decision_bar_holdout.py replays Binance USD-M 1m klines only, so the 14 legs on _fetch_session_frame (REAL-MONEY alpaca_live ief_pullback_1d / slv_pullback_1d / iaum_pullback_1d) have no closed-vs-forming measurement. Needs: an intraday (1m/5m) session-bar source for the ETF symbols (Alpaca historical bars, keyless path or runner secret) feeding the same boundary/holdout rule as RULE-RQ-20261018-2a10-01; then a pre-registered queue unit. Done when a unit with a registered rule lands a measured record for the alpaca_live legs. Not blocking trading.",
   "observation": {
@@ -21,7 +22,7 @@
     "what": "a research/queue unit measuring forming-vs-closed for the alpaca_live pullback legs lands a measured record"
   },
   "phase": "research",
-  "updated_at": "2026-10-18T14:58:07Z",
-  "updated_by": "session_018VBCoW9AZb2xcyTDUPxAii",
+  "updated_at": "2026-11-26T06:11:27Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

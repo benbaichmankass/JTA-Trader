@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "due_date": "2026-12-02",
+    "kind": "date",
+    "last_checked": "2026-11-11"
+  },
+  "id": "PI-20261015-SBAQDDVQ-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "TRAINER-RUNAWAY-PROC lane; ML-FRONTIER diag run 38717446413 sampled 2026-10-15T10:03Z",
+    "rerun": "trainer-vm-diag: ps -eo pid,etimes,cmd | grep -E 'backtest_ict_scalp|_trainer_heavy_lock' ; ls -l runtime_logs/trainer/.heavy.lock  # a holder with etimes>3600 = still open"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-DATA-OFF-TRAINER state landed_unprove)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row ML-DATA-OFF-TRAINER is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "ML-DATA-OFF-TRAINER (REGISTER-SWEEP-W43 2026-10-24: trainer heavy-lock hold)",
+  "severity": "medium",
+  "state": "routed",
+  "tier": 1,
+  "what": "Trainer heavy-lock hold: scripts/backtest_ict_scalp.py (a calibration corpus run) held runtime_logs/trainer/.heavy.lock (0-byte flock, holder found via ps) for 70+ min on 2026-10-15 (ML-FRONTIER finding), producing 3600 s heavy-lock waits that waste research runs and GitHub runners. NOT investigated by the TRAINER-RUNAWAY-PROC lane: it is unclear whether the hold is legitimate runtime of one big job or a missing per-job cap; the lock path was only learned from the manager. Question to answer: what is the expected runtime of the calibration corpus run, and should heavy-lock holders carry a cap or a queue-depth signal?"
+}

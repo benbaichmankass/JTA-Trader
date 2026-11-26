@@ -2,7 +2,7 @@
   "id": "HEALTH-20261118-OOH-FALSE-FLAT",
   "title": "Out-of-hours Alpaca market brackets are false-closed exchange_flat_reconciled and re-entered every ~7 min (SLV 877 / QQQ 1981 stacked on paper; journal tracks 6 / 2)",
   "state": "queued",
-  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "owner": "manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL))",
   "lane": null,
   "model": null,
   "tier": 2,
@@ -13,9 +13,9 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-20",
-  "note": "Root cause and arithmetic on PI-20261118-JFWRQYOV-0004 (HEALTH-REVIEW-20261118). Change: in order_monitor._reconcile_orphan_exchange_positions, a row whose own entry order is still OPEN at the broker is not flat (read alpaca open orders by broker_order_id before arming), and/or stop 1h equity legs from sending market brackets outside RTH. Premortem: a not-flat rule keyed on open orders could strand a row whose entry was cancelled at the venue; resolve on order status filled/cancelled, never on age. Closes when: the next pre-market 1h equity signal yields ONE package and ONE open row that survives the open, INV-JOURNAL-EXCHANGE passes on alpaca_paper/alpaca_portfolio, and the 871 SLV / 1979 QQQ untracked shares are adopted or flattened by record. Gates this adds: none.",
+  "due_by": "2026-11-30",
+  "note": "Root cause and arithmetic on PI-20261118-JFWRQYOV-0004 (HEALTH-REVIEW-20261118). Change: in order_monitor._reconcile_orphan_exchange_positions, a row whose own entry order is still OPEN at the broker is not flat (read alpaca open orders by broker_order_id before arming), and/or stop 1h equity legs from sending market brackets outside RTH. Premortem: a not-flat rule keyed on open orders could strand a row whose entry was cancelled at the venue; resolve on order status filled/cancelled, never on age. Closes when: the next pre-market 1h equity signal yields ONE package and ONE open row that survives the open, INV-JOURNAL-EXCHANGE passes on alpaca_paper/alpaca_portfolio, and the 871 SLV / 1979 QQQ untracked shares are adopted or flattened by record. Gates this adds: none. HEALTH-REVIEW-20261125 Layer 0: PI-20261118-JFWRQYOV-0004 is done (11-19) and the window 11-18 19:00Z..11-25 18:30Z shows 0 alpaca exchange_flat_reconciled rows (journal trades offset 0 + 500, 1000 rows, ids from 11-16) and INV-JOURNAL-EXCHANGE pass n=7; alpaca_paper venue qty = journal qty on QQQ 519 / SPY 1164. This row is still queued 5 d past due_by 11-20: owner, close it done with that observation or say what is left.",
   "phase": null,
-  "updated_at": "2026-11-19T06:19:34Z",
-  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+  "updated_at": "2026-11-25T18:42:02Z",
+  "updated_by": "session_01AFoLuMH8nrsuFCQzohVsUA"
 }

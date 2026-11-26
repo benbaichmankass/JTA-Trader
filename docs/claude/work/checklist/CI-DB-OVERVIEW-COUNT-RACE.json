@@ -1,0 +1,22 @@
+{
+  "id": "CI-DB-OVERVIEW-COUNT-RACE",
+  "title": "test_a_real_slow_count_is_interrupted_and_reported_not_zeroed races a real 1 ms interrupt timer against COUNT(*) on 1.5M rows and loses on fast CI runners",
+  "state": "queued",
+  "owner": "manager",
+  "lane": "session_01AFoLuLpCY5gABbqk3EBUeV",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 6,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26 10:35Z by ML-PRIMARY. MEASURED: pytest-run run 45796368419 (PR #29091 head 86a5d2f4d) failed only this test: assert (1500000, 'read') == (None, 'count_timed_out') -- COUNT(*) finished inside the 1 ms budget. The neighbouring _CountAlwaysInterrupted docstring records the same race lost at 300k rows (0.5 ms) on fast runners on 2026-11-12 (#25216 runs 43254089052 x2, run 43250084800); the size was raised to 1.5M then, and fast runners now win again. A real-timer race is non-deterministic by construction. Fix options (no skip): make the slow side deterministic (e.g. a user-defined SQL function that sleeps per row, or a recursive CTE large enough relative to the budget), or assert only that a timed-out result is never reported as 0 (null-vs-zero honesty) and leave the interrupt mechanism to the deterministic sibling. Not order-path; unrelated to #29091's diff.",
+  "phase": "tooling",
+  "updated_at": "2026-11-26T10:32:17Z",
+  "updated_by": "session_01AFoLuMcAX3vds2zhVYyMPA"
+}

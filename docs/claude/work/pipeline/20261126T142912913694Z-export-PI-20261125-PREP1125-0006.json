@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "a performance review records count_untriaged 0 and C5/C8/C9/C11 run",
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0006",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 4",
+    "rerun": "python3 scripts/ops/review_followthrough.py --source performance-review --window-days 7"
+  },
+  "owner": "PERF-REVIEW-PREP (next weekly run)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "state": "queued",
+  "tier": 1,
+  "what": "[performance][backlog] The 2026-11-25 performance review left C12 incomplete: 27 of 34 open performance-review records were not re-checked (only the 7 PREP1118 items were). C5 realized_slippage, C8 classify_paper_records, the C9 grade-vs-outcome cohort table, the C11 paper-book tracker append and the comms/reviews JSON record were also not produced. The next run (or perf-followup) drains the 27 and runs the four checks."
+}

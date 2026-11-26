@@ -1,0 +1,22 @@
+{
+  "id": "HEALTH-20261125-TRAINER-NO-TRAINS",
+  "title": "Trainer ran 2 cycles/day rc 0 but the last cycle trained 0 models and the registry stayed at 100 rows for the whole week (11-18 -> 11-25); training_staleness: stale 2, never_trained 2. Hand to /ml-review (rows recorded but never trained?)",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "HEALTH-REVIEW-20261125 C9. Source /api/bot/ml/status 18:25Z. Also trainer disk 85.1% used (+1.5 pts/wk; crosses 90% ~2026-12-16; ict-trainer-disk-alarm.timer is the detector). Closes when /ml-review names whether 0 trained is expected (no due manifests) or a defect, with its row. 2026-11-26 02:2xZ ML-PRIMARY read /api/bot/ml/status (trainer mirror, age 74 s). MEASURED: last_cycle at 02:06Z, outcome trained, TRAINED 24, skipped 3, failed 0, overall_rc 0; manifests_24h ok 24 / skipped 3 / failed 0; cycles_24h 2. So the trainer IS training now. The 11-25 0-trained cycle is not the current state. registry: 100 rows / 100 models (advisory 3, shadow 16, candidate 80, research_only 1) with 24 trained in one cycle, so the flat 100-row count is NOT evidence of no training. NOT VERIFIED: whether rows are keyed by model_id (a retrain overwrites, so the count stays flat) or the registry is capped. training_staleness: stale 2, never_trained 2, awaiting_source 1 of 27 scanned (threshold 7d); those 5 are the real residual. Separately, the 11-29 ml_entry retrain does NOT use the trainer: it is the GitHub workflow ml-entry-retrain.yml (cron Sun 04:00Z; runs 11-15 and 11-22 succeeded), so it is scheduled. Proposed disposition: close the 'trainer not training' reading as superseded by 02:06Z, and keep a row for the 2 stale + 2 never-trained manifests (names via the trainer training_staleness detail). CLOSED superseded (manager-approved 2026-11-26 02:19Z). Evidence: /api/bot/ml/status last_cycle 2026-11-26T02:06Z trained 24, failed 0, rc 0, so the trainer IS training. The 11-25 0-trained cycle was not a stall. The residual 2 never-trained manifests (not 4; stale and never_trained count the same two) move to ML-TRAINER-NEVER-TRAINED-MANIFESTS (owner ML-PRIMARY). Registry: keyed by model_id (append RunRecord per retrain), not capped at 100.",
+  "phase": null,
+  "terminal_reason": "superseded: trainer measured training (24 models, 02:06Z cycle); residual moved to ML-TRAINER-NEVER-TRAINED-MANIFESTS",
+  "updated_at": "2026-11-26T02:22:56Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

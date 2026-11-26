@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "close 6470 is root-caused to a named close path and either fixed or shown intended, and a new ib_paper close carries a TP/SL/strategy closeReason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261025-KERS1025-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane BLOCKERS-1025 reading GET /api/bot/trades/closed?account_id=ib_paper&include_paper=true&limit=20",
+    "rerun": "curl -sS 'https://ict-bot.duckdns.org/api/bot/trades/closed?account_id=ib_paper&include_paper=true&limit=20' and list rows whose closeReason is not tp/sl/strategy"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent IB-PAPER-CLOSE-6470 state dropped: OPS b)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, IB-PAPER-CLOSE-6470, is dropped in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist:IB-PAPER-CLOSE-6470",
+  "state": "routed",
+  "what": "ib_paper close 6470 (MES mes_trend_long_1d, 17 contracts, opened 2026-10-06, closed 2026-10-23T13:34Z, realizedPnl -16256.25 measured) carries closeReason 'other' and journalTrust 'no_record'. A close that is not TP/SL/strategy-close is a bug to root-cause: find which path closed it (reconciler? flatten?) and why no journal record exists. Paper account, no live money."
+}

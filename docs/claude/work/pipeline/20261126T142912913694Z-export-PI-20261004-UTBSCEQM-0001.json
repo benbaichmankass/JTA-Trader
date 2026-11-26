@@ -1,0 +1,27 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-09",
+    "kind": "date"
+  },
+  "id": "PI-20261004-UTBSCEQM-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-09",
+    "how_to_check": "Actions API: latest stale-automation-sweep run, Sweep step TRIAGE `refresh` count; then that run's '#N ... refreshed and pushed' PRs' merge state. For (b), the next automation/research-result-* PR's file list.",
+    "what": "stale-automation-sweep refreshes > 0 PRs and each refreshed PR lands; a non-main-dispatched research run opens a result-only automation PR"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "lane CI-AUTOMERGE 2026-10-04 (#16494)",
+    "rerun": "Read the latest stale-automation-sweep run's 'Sweep' step: the TRIAGE block's `refresh` count and the '#N refresh ... refreshed and pushed' lines. >0 refreshed after #16494 is on main means fixed."
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent AUTOMERGE-STALE-HEAD state landed_unprov)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row AUTOMERGE-STALE-HEAD is landed_unproven (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist row AUTOMERGE-STALE-HEAD | [BACKLOG-DRAIN-20261015 (session_019p3X1tJAdUdV2dKaw9no8r) 2026-10-15 re-route]",
+  "state": "routed",
+  "what": "OBSERVE #16494 in production. (a) The first stale-automation-sweep run on a main that carries #16494 reports refresh > 0, and each refreshed PR then lands. The dry-run before merge graded 12 refresh, against 0 on run 37229187372. (b) The next research run dispatched from a non-main ref opens an automation PR whose diff is only its own result + landing files (the commit-to-main replay). Until both are observed, #16494 is merged, not done."
+}
