@@ -40,7 +40,8 @@ baseline:
 decision_rule:
   id: RULE-RQ20261126-7c11-03-CONCENTRATION
   registered_at: '2026-11-26'
-  registered_before_run: false
+  registered_before_run: true
+  registration_note: registered before this unit runs; one local dry-run of the served trades during authoring is disclosed in the header (ROBUST, regime not read)
   statistic: 'scripts/research/eq_confirm_concentration.py: per model, by-month n / mean / sum net R; month-clustered t = mean of
     monthly sums / (sd of monthly sums / sqrt(months)); leave-largest-month-out mean (the month with the largest positive sum removed);
     top-5 symbol share of net R; by SPY regime cell (close vs 50d SMA x 20d realized vol vs the window median, read before the entry
