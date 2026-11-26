@@ -217,7 +217,7 @@ def aggregate(rows: list[dict], population: str) -> dict[str, Any]:
             "unverified_usd": round(net_by[prov.UNVERIFIED], 2), "unverified_n": counts[prov.UNVERIFIED],
             "fabricated_usd": round(net_by[prov.FABRICATED], 2), "fabricated_n": counts[prov.FABRICATED],
         },
-        # Operator 2026-11-25 (W48 Q3): trades in config/promotion_exclusions.yaml are out of every promotion/demotion read but
+        # Operator 2026-11-25 (W48 Q3): trades in comms/promotion_exclusions.yaml are out of every promotion/demotion read but
         # stay in net_usd above and are listed here, labelled.
         "promotion_exclusions": _promotion_exclusion_block(rows, pnls),
     }
@@ -555,7 +555,7 @@ def render_lines(sb: dict | None) -> list[str]:
         px = (i.get("promotion_exclusions") or {})
         if px.get("n"):
             L.append(f"- {sb['books'][b]['label']}: {px['n']} trade(s) excluded from promotion/demotion reads (operator 2026-11-25, "
-                     f"config/promotion_exclusions.yaml): " + "; ".join(f"id {r['trade_id']} {fmt_money(r['pnl'])} {r['provenance']}" for r in px["rows"]) + ".")
+                     f"comms/promotion_exclusions.yaml): " + "; ".join(f"id {r['trade_id']} {fmt_money(r['pnl'])} {r['provenance']}" for r in px["rows"]) + ".")
     L += ["", "Paper and mirror dollars are paper notional, not money. % = net / broker equity at window start "
           "(`balance_snapshots`; prop: declared `account_size_usd`); `—` where no start equity could be read."]
     c = sb["cost"]

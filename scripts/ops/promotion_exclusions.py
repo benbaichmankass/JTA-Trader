@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # wiring: library - imported by scripts/research/live_bar.py and scripts/ops/scoreboard.py (no entry point of its own).
-"""Trades the operator excluded from every promotion/demotion read (config/promotion_exclusions.yaml).
+"""Trades the operator excluded from every promotion/demotion read (comms/promotion_exclusions.yaml).
 
 Operator decision 2026-11-25 (W48 planning Q3), verbatim: "Exclude it from every promotion/demotion read, keep it visible and
 labelled (Recommended)". ``split`` returns (kept, excluded); callers MUST report the excluded list beside their verdict, never
@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Tuple
 
 REPO = Path(__file__).resolve().parents[2]
-DEFAULT_PATH = REPO / "config" / "promotion_exclusions.yaml"
+DEFAULT_PATH = REPO / "comms" / "promotion_exclusions.yaml"
 
 
 def load(path: Path | None = None) -> List[Dict[str, Any]]:

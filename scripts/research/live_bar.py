@@ -97,7 +97,7 @@ def confirmed_r_rows(trades: Iterable[Mapping], packages: Mapping[str, Any]) -> 
 
 
 def live_bar(trades: Iterable[Mapping], packages: Mapping[str, Any], min_n: int = MIN_N) -> Dict[str, Any]:
-    # Operator 2026-11-25 (W48 Q3): trades in config/promotion_exclusions.yaml never enter a promotion/demotion read; they are
+    # Operator 2026-11-25 (W48 Q3): trades in comms/promotion_exclusions.yaml never enter a promotion/demotion read; they are
     # reported beside the verdict (``excluded``), never dropped silently.
     from scripts.ops.promotion_exclusions import split
     trades, excluded = split(trades)
