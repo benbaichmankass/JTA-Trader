@@ -414,13 +414,15 @@ def test_a_peak_inside_the_pre_entry_decision_bar_is_not_the_trades():
     df = _frame(last_open="2026-11-26T15:00:00Z", lows=lows)
     pkg = _pkg(entry_time="2026-11-26T15:00:00+00:00")
     pkg["created_at"] = "2026-11-26T16:04:14+00:00"       # the fill
-    # Layer 1 (#29249): since_entry itself now anchors on the fill, so the decision bar is not in its window.
-    assert len(exit_levers.since_entry(df, pkg)) == 0
-    # Layer 2 (#29238): build_record's own post-fill cut refuses the bar even when a caller hands it an
-    # old-style window that still holds it (the pre-#29249 since_entry kept the bar containing entry_time).
-    w = df.tail(1)
-    assert len(w) == 1
+    w = exit_levers.since_entry(df, pkg)
+    assert len(w) == 0                                    # #29249 anchors since_entry on the fill, so the decision bar is gone
     rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=w, direction="short", current_price=100.1)
+    assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
+    # #29238's own layer, independent of since_entry: handed an old-style window that still holds the decision bar
+    # (what since_entry returned before #29249), build_record's post-fill cut must still refuse it.
+    old = df.tail(1)
+    assert len(old) == 1
+    rec = pt.build_record(open_pkg=pkg, meta=pkg["meta"], window=old, direction="short", current_price=100.1)
     assert rec["peak_r"] is None and rec["peak_state"] == "thin_window" and rec["giveback_r"] is None
 
 

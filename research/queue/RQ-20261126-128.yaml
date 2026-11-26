@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-128
 title: 'Config-exact timeframe twin of trend_donchian_avax_4h: 1d (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -132,3 +132,18 @@ generated:
     twin: 1d
     twin_key: timeframe:1d
 last_dispatched_at: '2026-11-26T13:47:48+00:00'
+grading:
+  auto: true
+  confirm_unit: RQ-20261126-ebd6-01
+  decision_rule_id: RULE-TPL-LEG-TWIN-TIMEFRAME-STAGE0
+  discovery: unconfirmed
+  evidence:
+  - research/results/RQ-20261126-128/45830425524.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'single-window PASS selected from an unrecorded number of cell(s): a discovery, not a confirmation.
+    RQ-20261126-ebd6-01 re-asks on a disjoint window; no Tier-3 proposal from this unit until it CONFIRMS'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  selected_from_cells: null
+  verdict: pass
