@@ -1021,6 +1021,142 @@ def run_verify(
 
 
 # ---------------------------------------------------------------------------
+# featdiff -- per-COLUMN serve-path diff (ML-VOL-LABEL-LIVE-VERIFY, PI-20261118-ZZUFKM1F-0001)
+# ---------------------------------------------------------------------------
+#: ``verify`` says THAT the replayed label disagrees with live (aadc-01: BTC kappa 0.24); this says WHERE. It joins the LIVE
+#: per-bar feature rows the shadow predictor logged (runtime_logs/shadow_predictions.jsonl, ``feature_row`` per record,
+#: ml/predictors/shadow.py) to the OFFLINE dataset row of the same bar and diffs every column the two share.
+#: BAR ALIGNMENT: the per-bar scorer scores the last CLOSED bar shortly after its close, so the live row of the bar that OPENS at
+#: T is logged at T + tf + (seconds). Bar open = floor(predicted_at, tf) - tf, cross-checked against the row's own
+#: ``hour_of_day`` (a mismatch is counted, never silently re-aligned).
+FEATDIFF_REL_TOL = 1e-6
+
+
+def _parse_utc(v: Any) -> Optional[datetime]:
+    try:
+        t = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def live_bar_open(predicted_at: Any, tf_seconds: int) -> Optional[datetime]:
+    t = _parse_utc(predicted_at)
+    if t is None:
+        return None
+    e = int(t.timestamp())
+    return datetime.fromtimestamp(e - e % tf_seconds - tf_seconds, tz=timezone.utc)
+
+
+def run_featdiff(*, live_path: Path, dataset_path: Path, model_id: Optional[str] = None, tf_seconds: int = 900,
+                 fc_prefix: str = "fc_") -> Dict[str, Any]:
+    """Per-column agreement of LIVE feature rows vs the OFFLINE dataset rows of the same bars. Never raises on a bad row:
+    unparseable / unaligned rows are COUNTED (population line), so a small join is visible, not hidden."""
+    live: Dict[str, Dict[str, Any]] = {}
+    counts = {"live_records": 0, "other_model": 0, "unparseable": 0, "hour_mismatch": 0, "duplicate_bar": 0}
+    prev_fc: Optional[tuple] = None
+    stale_fc: set = set()
+    with Path(live_path).open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                counts["unparseable"] += 1
+                continue
+            counts["live_records"] += 1
+            if model_id and rec.get("model_id") != model_id:
+                counts["other_model"] += 1
+                continue
+            fr = rec.get("feature_row") or {}
+            bo = live_bar_open(rec.get("predicted_at_utc"), tf_seconds)
+            if bo is None:
+                counts["unparseable"] += 1
+                continue
+            if fr.get("hour_of_day") is not None and int(fr["hour_of_day"]) != bo.hour:
+                counts["hour_mismatch"] += 1
+                continue
+            key = bo.strftime("%Y-%m-%dT%H:%M")
+            if key in live:
+                counts["duplicate_bar"] += 1
+                continue
+            fc = tuple(fr.get(c) for c in sorted(fr) if str(c).startswith(fc_prefix))
+            if fc and prev_fc is not None and fc == prev_fc:
+                stale_fc.add(key)
+            prev_fc = fc
+            live[key] = fr
+    cols = sorted({c for fr in live.values() for c in fr} - {"symbol", "timeframe", "event_source"})
+    offline: Dict[str, Dict[str, Any]] = {}
+    for row in iter_projected_rows(Path(dataset_path), cols):
+        t = _parse_utc(row.get("ts"))
+        if t is None:
+            continue
+        key = t.strftime("%Y-%m-%dT%H:%M")
+        if key in live:
+            offline[key] = row
+    joined = sorted(set(live) & set(offline))
+    per_col: Dict[str, Any] = {}
+    for c in cols:
+        st = {"compared": 0, "missing_live": 0, "missing_offline": 0, "agree": 0, "agree_fresh_fc_bars": 0,
+              "compared_fresh_fc_bars": 0, "abs_diff": []}
+        for k in joined:
+            a, b = live[k].get(c), offline[k].get(c)
+            if a is None:
+                st["missing_live"] += 1
+                continue
+            if b is None or (isinstance(b, float) and b != b):
+                st["missing_offline"] += 1
+                continue
+            st["compared"] += 1
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+                d = abs(float(a) - float(b))
+                ok = d <= FEATDIFF_REL_TOL * max(1.0, abs(float(b)))
+                st["abs_diff"].append(d)
+            else:
+                ok = str(a) == str(b)
+            st["agree"] += int(ok)
+            if k not in stale_fc:
+                st["compared_fresh_fc_bars"] += 1
+                st["agree_fresh_fc_bars"] += int(ok)
+        ad = sorted(st.pop("abs_diff"))
+        st["agree_pct"] = round(100.0 * st["agree"] / st["compared"], 2) if st["compared"] else None
+        st["agree_pct_fresh_fc_bars"] = (round(100.0 * st["agree_fresh_fc_bars"] / st["compared_fresh_fc_bars"], 2)
+                                         if st["compared_fresh_fc_bars"] else None)
+        st["median_abs_diff"] = ad[len(ad) // 2] if ad else None
+        st["p95_abs_diff"] = ad[min(len(ad) - 1, int(0.95 * len(ad)))] if ad else None
+        per_col[c] = st
+    worst = sorted((v["agree_pct"], c) for c, v in per_col.items() if v["agree_pct"] is not None)[:6]
+    return {"schema": "vol_label_featdiff/1", "model_id": model_id, "tf_seconds": tf_seconds, "live_path": str(live_path),
+            "dataset": str(dataset_path), "population": dict(counts, live_bars=len(live), offline_bars_found=len(offline),
+                                                              joined_bars=len(joined), stale_fc_bars=len(stale_fc & set(joined))),
+            "bar_range": [joined[0], joined[-1]] if joined else None, "columns": per_col,
+            "worst_agreement": [{"column": c, "agree_pct": p} for p, c in worst],
+            "read_state": "measured" if joined else "no_overlap"}
+
+
+#: Registered rule of the featdiff read (RQ-20261126-7f3d-01): a shared column "agrees" when live == offline within
+#: FEATDIFF_REL_TOL on >= this share of joined bars. PASS = every shared column agrees (the served feature row is the offline
+#: row, so the label disagreement must come from head identity / threshold / alignment, not features); FAIL = at least one
+#: column does not (the named columns are the serve-path divergence); INDETERMINATE = fewer than FEATDIFF_MIN_BARS joined.
+FEATDIFF_MIN_AGREE_PCT = 99.0
+FEATDIFF_MIN_BARS = 50
+
+
+def featdiff_verdict(rep: Dict[str, Any], min_agree_pct: float = FEATDIFF_MIN_AGREE_PCT) -> Dict[str, Any]:
+    n = int(rep["population"]["joined_bars"])
+    bad = [(c, v["agree_pct"]) for c, v in rep["columns"].items() if v["agree_pct"] is not None and v["agree_pct"] < min_agree_pct]
+    if n < FEATDIFF_MIN_BARS:
+        verdict, note = "indeterminate", f"only {n} joined bars (< {FEATDIFF_MIN_BARS})"
+    elif bad:
+        verdict, note = "fail", "serve-path divergence in: " + ", ".join(f"{c} {p}%" for c, p in sorted(bad, key=lambda x: x[1]))
+    else:
+        verdict, note = "pass", f"every shared column agrees on >= {min_agree_pct}% of {n} joined bars"
+    return {"verdict": verdict, "read_state": rep["read_state"] if n else "no_overlap", "n": n, "note": note,
+            "population": rep["population"], "measurement": {"worst_agreement": rep["worst_agreement"], "bar_range": rep["bar_range"]}}
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1031,6 +1167,14 @@ def main(argv: List[str]) -> int:
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    fd = sub.add_parser("featdiff", help="per-column diff of LIVE shadow feature rows vs the offline dataset rows of the same bars")
+    fd.add_argument("--live", required=True, help="JSONL of shadow_predictions records (feature_row per record)")
+    fd.add_argument("--dataset", required=True, help="the offline market_features data.jsonl the head was trained on")
+    fd.add_argument("--model-id", default=None, help="keep only this model_id's live records")
+    fd.add_argument("--tf-seconds", type=int, default=900)
+    fd.add_argument("--out", default=None, help="write the JSON report here")
+    fd.add_argument("--out-dir", default=None, help="research-runner mode: write featdiff.json + verdict.json here")
+    fd.add_argument("--min-agree-pct", type=float, default=FEATDIFF_MIN_AGREE_PCT)
     r = sub.add_parser("replay", help="score a built dataset into per-bar vol labels")
     r.add_argument("--symbol", required=True, help="e.g. BTCUSDT (head resolved per-SYMBOL, as live does)")
     r.add_argument("--dataset", required=True, help="market_features data.jsonl the head's features live in")
@@ -1099,6 +1243,20 @@ def main(argv: List[str]) -> int:
                 print(f"           {ex}")
             print(f"VERDICT  {'ok' if rep['ok'] else 'FAILED'}")
         return 0 if rep["ok"] else 3
+
+    if a.cmd == "featdiff":
+        rep = run_featdiff(live_path=Path(a.live), dataset_path=Path(a.dataset), model_id=a.model_id, tf_seconds=a.tf_seconds)
+        txt = json.dumps(rep, indent=2, default=str)
+        if a.out:
+            Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+            Path(a.out).write_text(txt + "\n")
+        if a.out_dir:
+            od = Path(a.out_dir)
+            od.mkdir(parents=True, exist_ok=True)
+            (od / "featdiff.json").write_text(txt + "\n")
+            (od / "verdict.json").write_text(json.dumps(featdiff_verdict(rep, a.min_agree_pct), indent=1, default=str) + "\n")
+        print(txt)
+        return 0 if rep["read_state"] == "measured" else 2
 
     if a.cmd == "replay":
         m = run_replay(

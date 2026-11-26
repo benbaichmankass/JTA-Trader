@@ -498,7 +498,15 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
 
     DEVICE (row ML-BAKEOFF-TORCH-DEVICE, 2026-11-17): ``params.device`` = ``auto`` (default: cuda when
     ``torch.cuda.is_available()``, else cpu) | ``cpu`` | ``cuda`` (``Unavailable`` if no GPU). The device used is
-    logged to stderr and recorded in ``TORCH_DEVICES_USED`` so a GPU-routed unit can show it ran on the GPU."""
+    logged to stderr and recorded in ``TORCH_DEVICES_USED`` so a GPU-routed unit can show it ran on the GPU.
+
+    EARLY STOPPING + CALIBRATION (RQ-20261126-9e72-01, the re-open of 9e71-01 whose GRU was worse than the class prior =
+    overconfident): all OPT-IN, absent = byte-identical to before. ``val_frac`` (0 < f < 0.5) holds out the NEWEST f of
+    the (capped) train windows, chronologically, as a validation set; ``patience`` (>= 1, needs val_frac) stops when the
+    validation log-loss has not improved for that many epochs and restores the best epoch's weights (``epochs`` is then a
+    maximum); ``calibrate: temperature`` (needs val_frac) fits one scalar T > 0 on the validation logits by minimising NLL
+    and divides the test logits by it; ``weight_decay`` is passed to Adam. Nothing from the test block is used. The epochs
+    run, best epoch, best validation log-loss and T per fit are appended to ``TORCH_GRU_FIT_INFO``."""
     try:
         import torch
         from torch import nn
@@ -509,6 +517,14 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
     epochs, batch = int(params.get("epochs", 8)), int(params.get("batch_size", 256))
     lr, seed = float(params.get("lr", 3e-3)), int(params.get("seed", 0))
     cap = int(params.get("max_train_windows", 20000))
+    val_frac, patience = float(params.get("val_frac", 0.0)), int(params.get("patience", 0))
+    calibrate, wd = str(params.get("calibrate", "none")).lower(), float(params.get("weight_decay", 0.0))
+    if not 0.0 <= val_frac < 0.5:
+        raise Unavailable(f"torch_gru val_frac {val_frac} not in [0, 0.5)")
+    if (patience or calibrate != "none") and val_frac <= 0.0:
+        raise Unavailable("torch_gru patience / calibrate need val_frac > 0")
+    if calibrate not in ("none", "temperature"):
+        raise Unavailable(f"torch_gru calibrate {calibrate!r} not in none|temperature")
     mu, sd = np.nanmean(Xtr, axis=0), np.nanstd(Xtr, axis=0) + 1e-9
     mu = np.nan_to_num(mu)
 
@@ -521,6 +537,10 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
     Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
     if len(Xw) > cap:
         Xw, yt = Xw[-cap:], yt[-cap:]
+    Xv = yv = None
+    if val_frac > 0.0:
+        nv = max(1, int(round(len(Xw) * val_frac)))
+        Xw, Xv, yt, yv = Xw[:-nv], Xw[-nv:], yt[:-nv], yt[-nv:]
     torch.manual_seed(seed)
     torch.set_num_threads(max(1, int(params.get("threads", 1))))
     dev = _torch_device(torch, params.get("device", "auto"))
@@ -538,26 +558,55 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
             return self.head(o[:, -1])
 
     net = Net().to(dev)
-    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd) if wd else torch.optim.Adam(net.parameters(), lr=lr)
     lossf = nn.CrossEntropyLoss()
     g = torch.Generator().manual_seed(seed)
-    net.train()
-    for _ in range(epochs):
+
+    def logits_of(X):
+        net.eval()
+        out = []
+        with torch.no_grad():
+            for a in range(0, len(X), 2048):
+                out.append(net(X[a:a + 2048].to(dev)).cpu())
+        return torch.cat(out) if out else torch.zeros((0, k))
+
+    best = {"loss": float("inf"), "epoch": -1, "state": None}
+    ran, bad = 0, 0
+    for ep in range(epochs):
+        net.train()
         perm = torch.randperm(len(Xw), generator=g)
         for a in range(0, len(perm), batch):
             b = perm[a:a + batch]
             opt.zero_grad()
             lossf(net(Xw[b].to(dev)), yt[b].to(dev)).backward()
             opt.step()
-    net.eval()
-    Tw, outs = windows(Xte), []
-    with torch.no_grad():
-        for a in range(0, len(Tw), 2048):
-            outs.append(torch.softmax(net(Tw[a:a + 2048].to(dev)), dim=1).cpu().numpy())
-    return np.vstack(outs) if outs else np.zeros((0, k))
+        ran = ep + 1
+        if Xv is not None:
+            vl = float(nn.functional.cross_entropy(logits_of(Xv), yv))
+            if vl < best["loss"] - 1e-6:
+                best = {"loss": vl, "epoch": ep, "state": {kk: vv.detach().clone() for kk, vv in net.state_dict().items()}}
+                bad = 0
+            else:
+                bad += 1
+                if patience and bad >= patience:
+                    break
+    if patience and best["state"] is not None:
+        net.load_state_dict(best["state"])
+    temp = 1.0
+    if calibrate == "temperature":
+        lv = logits_of(Xv)
+        grid = np.exp(np.linspace(np.log(0.05), np.log(20.0), 121))
+        nll = [float(nn.functional.cross_entropy(lv / float(t), yv)) for t in grid]
+        temp = float(grid[int(np.argmin(nll))])
+    TORCH_GRU_FIT_INFO.append({"epochs_run": ran, "best_epoch": best["epoch"] if Xv is not None else None,
+                               "best_val_logloss": round(best["loss"], 6) if Xv is not None else None,
+                               "temperature": round(temp, 4), "n_train": int(len(Xw)), "n_val": int(len(Xv)) if Xv is not None else 0})
+    lt = logits_of(windows(Xte))
+    return torch.softmax(lt / temp, dim=1).numpy() if len(lt) else np.zeros((0, k))
 
 
 TORCH_DEVICES_USED: List[str] = []
+TORCH_GRU_FIT_INFO: List[Dict[str, Any]] = []
 
 
 def _torch_device(torch, want: Any = "auto"):
@@ -1036,7 +1085,7 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
                    "metric_caveats": caveats,
                    "delta_sign": "positive = learner better than reference", "baseline": baseline,
                    "controls": controls, "candidates": candidates, "arm_status": arm_status,
-                   "torch_devices": sorted(set(TORCH_DEVICES_USED)),
+                   "torch_devices": sorted(set(TORCH_DEVICES_USED)), "torch_gru_fit": list(TORCH_GRU_FIT_INFO),
                    "groups": groups, "deltas": deltas, "rule_evaluation": graded,
                    "headline_checks": headline_checks(rule, deltas, baseline),
                    "licences": licences, "n_folds_cv_min_over_groups": folds_seen,
