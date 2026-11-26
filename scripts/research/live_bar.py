@@ -97,6 +97,10 @@ def confirmed_r_rows(trades: Iterable[Mapping], packages: Mapping[str, Any]) -> 
 
 
 def live_bar(trades: Iterable[Mapping], packages: Mapping[str, Any], min_n: int = MIN_N) -> Dict[str, Any]:
+    # Operator 2026-11-25 (W48 Q3): trades in comms/promotion_exclusions.yaml never enter a promotion/demotion read; they are
+    # reported beside the verdict (``excluded``), never dropped silently.
+    from scripts.ops.promotion_exclusions import split
+    trades, excluded = split(trades)
     rows = confirmed_r_rows(trades, packages)
     by: Dict[str, List[Dict[str, Any]]] = {}
     for r in rows:
@@ -112,7 +116,7 @@ def live_bar(trades: Iterable[Mapping], packages: Mapping[str, Any], min_n: int 
         legs[leg] = v
     return {"rule": {"min_n": min_n, "lcb": "one-sided 80% (z 0.8416)", "r_population": "R on the declared_initial basis (signal-time risk); stop_unmoved subset reported, not used",
                      "pooling": "demo floor + real money of the same leg pooled"},
-            "population": {"confirmed_r_trades": len(rows)}, "legs": legs}
+            "population": {"confirmed_r_trades": len(rows)}, "excluded_from_promotion_read": excluded, "legs": legs}
 
 
 #: The daily ladder feed (LIVE-BAR-LADDER-FEED, OPERATING-PLAN § 2 "Live-performance promotion path").

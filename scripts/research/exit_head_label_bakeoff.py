@@ -30,6 +30,7 @@ import argparse
 import json
 import math
 import os
+import random
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -184,11 +185,8 @@ def judge(arm_d: Dict[str, List[float]], z: float = None, pass_dr: float = None)
             "why": "an arm is below n_oos or between the pass bar and the fail floor", "arms": stats}
 
 
-def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, harness, conf) -> Dict[str, Any]:
-    import exit_head_walkforward_multifold as MF
-    import train_exit_head as teh
-    from exit_head_replay import replay_trade
-
+def _leg_backtest(strategy: str, symbol: str, a, harness, conf) -> Dict[str, Any]:
+    """The leg's live-faithful harness trades on its candles: {df, ordered, candle_source} or a producer_failed row."""
     cfg = conf.get("strategies", conf).get(strategy)
     if not isinstance(cfg, dict):
         return {"leg": strategy, "read_state": "producer_failed", "why": f"no strategy {strategy!r} in config"}
@@ -212,6 +210,19 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
         timeout_bars=200, cooldown_bars=1, timeframe=a.timeframe, symbol=symbol,
         min_confidence=float(cfg.get("min_confidence", 0.0)), long_only=bool(cfg.get("long_only")), trades_out=trades)
     ordered = sorted(trades, key=lambda t: t.entry_time)
+    return {"df": df, "ordered": ordered, "candle_source": {"path": str(path), "resampled_to": resample, "bars": len(df)}}
+
+
+def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, harness, conf) -> Dict[str, Any]:
+    import exit_head_walkforward_multifold as MF
+    import train_exit_head as teh
+    from exit_head_replay import replay_trade
+
+    bt = _leg_backtest(strategy, symbol, a, harness, conf)
+    if bt.get("read_state") == "producer_failed":
+        return bt
+    df, ordered = bt["df"], bt["ordered"]
+    path, resample = bt["candle_source"]["path"], bt["candle_source"]["resampled_to"]
     fold_defs, block_n = MF._fold_boundaries([_epoch(t.entry_time) for t in ordered], a.num_folds)
     emb = a.embargo_days * 86400
     folds, recs = [], []
@@ -255,6 +266,118 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
             "n_total_trades": len(ordered), "block_n": block_n, "folds": folds, "records": recs}
 
 
+def run_pooled(legs: List[tuple], rows: List[dict], arms: List[str], a, conf) -> List[Dict[str, Any]]:
+    """POOLED calendar folds across legs (COMPUTE-FILL-W48, 2026-11-25; plan node P2-PR1125-D8-exit-now-powered: the D8
+    exit head on a WIDENED POOLED corpus). Per-leg folding (run_leg) needs >= MIN_FOLD_TEST_N (64) test trades per fold per
+    leg, i.e. ~6 x 64 trades per leg: a 4h donchian twin holds ~100-200 trades over 2020-2026, so a wide 4h universe
+    graded per leg yields ZERO measured folds. Here every leg's trades (same harness call as run_leg) are pooled, sorted by
+    entry time and cut by exit_head_walkforward_multifold._fold_boundaries on the POOLED entry times; per fold ONE head per
+    arm is trained on rows with bar_t <= fold start - embargo (the rows are already pooled), and every test trade is
+    replayed on ITS OWN symbol's candles. Floors are unchanged (64 test trades, 500 train rows per fold). Costs: the
+    replay's delta is on gross r_multiple exactly as in run_leg (the trade loop reads no cost term)."""
+    import exit_head_walkforward_multifold as MF
+    import train_exit_head as teh
+    from exit_head_replay import _apply_venue_cost_policy, _load_harness, replay_trade
+
+    pool, out_legs = [], []
+    for strategy, symbol in legs:
+        harness = _load_harness()
+        _apply_venue_cost_policy(harness, symbol)
+        bt = _leg_backtest(strategy, symbol, a, harness, conf)
+        if bt.get("read_state") == "producer_failed":
+            out_legs.append(bt)
+            continue
+        out_legs.append({"leg": strategy, "symbol": symbol, "candle_source": bt["candle_source"], "read_state": "pooled",
+                         "n_total_trades": len(bt["ordered"])})
+        pool += [(_epoch(t.entry_time), strategy, symbol, bt["df"], t) for t in bt["ordered"]]
+    pool.sort(key=lambda x: x[0])
+    fold_defs, block_n = MF._fold_boundaries([x[0] for x in pool], a.num_folds) if pool else ([], 0)
+    emb = a.embargo_days * 86400
+    folds, recs, ctl_folds = [], [], []
+    for fd in fold_defs:
+        test = pool[fd["test_start_idx"]:fd["test_end_idx"]]
+        cut = fd["test_start_ts"] - emb
+        train = [r for r in rows if float(r.get("bar_t", 0)) <= cut]
+        f = {"fold_index": fd["index"], "n_test_trades": len(test), "train_rows_n": len(train),
+             "test_symbols": len({x[2] for x in test})}
+        if len(test) < MF.MIN_FOLD_TEST_N or len(train) < MF._MIN_FOLD_TRAIN_ROWS:
+            f.update({"read_state": "unestablishable", "reason": f"test n {len(test)} / train rows {len(train)} under floor"})
+            folds.append(f)
+            continue
+        per_arm: Dict[str, List[dict]] = {}
+        for arm in arms:
+            tr = with_target(train, arm)
+            if tr is None or len({int(r[CHAMPION]) for r in tr}) < 2:
+                continue
+            feats = arm_features(teh, arm)
+            if feature_coverage(tr, feats, teh.FEATURES) < FEATURE_COVERAGE_MIN:
+                continue
+            booster = train_with_features(teh, tr, feats)
+            art = {"features": feats, "shape": SHAPE}
+
+            def predict(vec, _b=booster):
+                # provenance: predict_proba — P(class=1) of the binary booster for this arm's target (as run_leg)
+                return float(_b.predict_proba(vec)[0][1])
+            per_arm[arm] = [replay_trade(x[3], x[4], art, predict, ACTION, lookback=a.lookback) for x in test]
+        if CHAMPION not in per_arm:
+            f.update({"read_state": "unestablishable", "reason": "champion did not train"})
+            folds.append(f)
+            continue
+        for i, x in enumerate(test):
+            recs.append({"leg": x[1], "symbol": x[2], "fold": fd["index"], "baseline_r": float(x[4].r_multiple),
+                         **{f"r_{arm}": float(per_arm[arm][i]["replayed_r"]) for arm in per_arm},
+                         **{f"fired_{arm}": bool(per_arm[arm][i]["exit_head_fired"]) for arm in per_arm}})
+        f.update({"read_state": "measured", "arms_trained": sorted(per_arm),
+                  "n_fired": {arm: sum(1 for r in per_arm[arm] if r["exit_head_fired"]) for arm in per_arm}})
+        if a.random_control > 0:
+            ctl_folds.append(_causal_random_fold(test, per_arm[CHAMPION], a.random_control, seed=1000 + fd["index"]))
+        folds.append(f)
+        print(json.dumps({"pooled": True, **{k: f[k] for k in ("fold_index", "n_test_trades", "n_fired")}}), flush=True)
+    pooled = {"leg": "POOLED", "symbol": "*", "read_state": "measured" if recs else "unestablishable",
+              "n_total_trades": len(pool), "block_n": block_n, "folds": folds, "records": recs}
+    if a.random_control > 0 and recs:
+        pooled["random_control"] = _causal_random_summary(recs, ctl_folds, a.random_control)
+    out_legs.append(pooled)
+    return out_legs
+
+
+def _causal_random_fold(test: list, champ: List[dict], draws: int, seed: int) -> List[float]:
+    """CAUSAL matched random-exit control for one fold (the AM v2 lesson: c7e3-05's control placed actions with exit-time
+    knowledge, docs/reviews/2026-11-25-weekly-walkthrough.md). Each draw picks as many test trades as the champion head
+    closed in this fold; each picked trade gets an age k sampled from the head's close AGES in this fold (a fold-level
+    distribution, no per-trade information) and the rule 'close at bar age k if still open' -- decided before the trade
+    runs, so a trade that ends before age k keeps its declared exit. Returns, per draw, the summed dR (random minus declared)."""
+    rng = random.Random(seed)
+    ages = [int(r["exit_bar_index"]) - (x[4].entry_index + 1) for x, r in zip(test, champ) if r.get("exit_head_fired")]
+    if not ages:
+        return [0.0] * draws
+    k_fire = len(ages)
+    sums = []
+    for _ in range(draws):
+        tot = 0.0
+        for j in rng.sample(range(len(test)), min(k_fire, len(test))):
+            _ts, _leg, _sym, df, t = test[j]
+            i = t.entry_index + 1 + rng.choice(ages)
+            if i <= t.exit_index:
+                close = float(df["close"].iloc[i])
+                r = ((close - t.entry) if t.direction == "long" else (t.entry - close)) / t.risk
+                tot += r - float(t.r_multiple)
+        sums.append(tot)
+    return sums
+
+
+def _causal_random_summary(recs: List[dict], ctl_folds: List[List[float]], draws: int) -> Dict[str, Any]:
+    """Head mean dR per trade (champion replay minus declared, every OOS trade) vs the causal control's distribution."""
+    n = len(recs)
+    head = sum(r[f"r_{CHAMPION}"] - r["baseline_r"] for r in recs) / n
+    ctl = sorted(sum(f[d] for f in ctl_folds) / n for d in range(draws))
+    q = lambda p: ctl[min(len(ctl) - 1, int(p * len(ctl)))]   # noqa: E731
+    return {"n_oos": n, "draws": draws, "head_mean_dr_per_trade": round(head, 5), "control_p50": round(q(0.5), 5),
+            "control_p95": round(q(0.95), 5), "head_beats_share": round(sum(1 for c in ctl if head > c) / len(ctl), 4),
+            "design": "causal: per fold, matched count of trades closed at an age drawn from the head's fold-level close ages; "
+                      "a trade shorter than the age keeps its declared exit"}
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--rows", default="datasets-out/exit_head/1h/donchian/rows.jsonl")
@@ -276,6 +399,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--rule-id", default=RULE_ID)
     ap.add_argument("--registered-at", default="2026-11-17", help="the unit's decision_rule.registered_at (default aadc-04/-11's)")
     ap.add_argument("--json", dest="json_out", required=False)
+    ap.add_argument("--random-control", type=int, default=0,
+                    help="with --pool-folds: draws of the CAUSAL matched random-exit control (0 = off)")
+    ap.add_argument("--pool-folds", action="store_true",
+                    help="calendar folds on the POOLED entry times of every leg (run_pooled), not per leg")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -318,7 +445,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     conf = yaml.safe_load(open(os.path.join(_REPO_ROOT, "config/strategies.yaml"), encoding="utf-8"))
     legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
     out_legs, cost = [], {}
-    for strategy, symbol in legs:
+    if a.pool_folds:
+        for _s, symbol in legs:
+            cost[symbol] = _apply_venue_cost_policy(_load_harness(), symbol)
+        out_legs = run_pooled(legs, rows, arms, a, conf)
+    for strategy, symbol in ([] if a.pool_folds else legs):
         harness = _load_harness()
         cost[symbol] = _apply_venue_cost_policy(harness, symbol)
         out_legs.append(run_leg(strategy, symbol, rows, arms, a, harness, conf))
@@ -336,7 +467,7 @@ def main(argv: Optional[List[str]] = None) -> int:
            "read_state": "measured" if measured else "producer_failed",
            "verdict": j["verdict"] if measured else "not_applicable", "note": j["why"], "n": n,
            "population": (f"OOS harness trades of {[leg for leg, _ in legs]} ({a.timeframe}), {a.num_folds}-fold sequential "
-                          f"walk-forward per leg, one head per target retrained per fold on pooled rows.jsonl (n {len(rows)}) "
+                          f"walk-forward {'on POOLED entry times' if a.pool_folds else 'per leg'}, one head per target retrained per fold on pooled rows.jsonl (n {len(rows)}) "
                           f"bar_t <= fold start - {a.embargo_days} d; paired per-trade replayed R vs the holding_pays champion"),
            "decision_rule": {"id": a.rule_id, "registered_at": a.registered_at, "registered_before_run": True},
            "measurement": {"judge": j, "arm_dr_vs_hold_context": context, "fired": fired, "target_coverage": coverage,
