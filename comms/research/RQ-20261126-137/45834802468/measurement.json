@@ -1,0 +1,169 @@
+{
+  "leg": "trend_donchian_sol_prop",
+  "label": "stage0_no_edge",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": 13.2932,
+    "n": 154,
+    "max_drawdown_r": 9.1421,
+    "folds_positive": 2,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=13.2932 with 2/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 154,
+      "net_r": 13.2932,
+      "net_r_fee_only": 16.5907,
+      "max_drawdown_r": 9.1421,
+      "by_outcome": {
+        "trail_stop": 51,
+        "take_profit": 41,
+        "stop": 61,
+        "timeout": 1
+      },
+      "mean_bars_held": 22.409,
+      "net_r_per_capital_day": 0.0462,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.5,
+        "min_confidence": 0.8
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:45:00+00:00",
+          "trades": 34,
+          "net_r": -3.0689
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:45:00+00:00",
+          "end": "2024-05-24 23:30:00+00:00",
+          "trades": 45,
+          "net_r": 13.9088
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 23:30:00+00:00",
+          "end": "2025-08-25 11:15:00+00:00",
+          "trades": 42,
+          "net_r": 4.0289
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 11:15:00+00:00",
+          "end": "2026-11-25 23:00:00+00:00",
+          "trades": 33,
+          "net_r": -1.5758
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-137/45834802468/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-137/45834802468/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "60",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2021-11-22 00:00:00+00:00",
+      "2023-02-22 11:45:00+00:00",
+      "2024-05-24 23:30:00+00:00",
+      "2025-08-25 11:15:00+00:00",
+      "2026-11-25 23:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-137/45834802468/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-137/45834802468/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar"
+      ],
+      "routed_cfg_keys": []
+    }
+  }
+}
