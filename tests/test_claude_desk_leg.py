@@ -69,7 +69,7 @@ def test_missing_bracket_is_refused(over, why):
 @pytest.mark.parametrize("over,prefix", [
     ({"tp": {"level": 99.0, "basis": "x", "p_hit": 0.1}}, "bracket_geometry"),
     ({"side": "short"}, "bracket_geometry"),
-    ({"entry": {"type": "limit", "level": 100.0, "good_till_bars": 4}}, "entry_type_unsupported:limit"),
+    ({"entry": {"type": "stop", "level": 100.0, "good_till_bars": 4}}, "entry_type_unsupported:stop"),  # limit is leg-held since DESK-MACRO v2 (b1)
     ({"side": "flat"}, "side_invalid"),
 ])
 def test_incoherent_proposals_refused(over, prefix):
