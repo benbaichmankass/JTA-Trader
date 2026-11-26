@@ -21,7 +21,17 @@ receipt is ONE whole file every dispatcher run rewrites, latest-wins. The dispat
 receipt PR opens, so after a quiet spell one sat dirty 50+ min and tripped conflicted_automation. Here a dirty receipt PR is
 judged on its `timestamp`: main's >= the PR's -> CLOSE (superseded); the PR's is newer -> LAND (merge main, keep the PR's file).
 
-PER PR (only `automation/research-queue-stamp-*` / `-receipt-*`, only `dirty` and older than --min-age-min -- never another branch):
+GRADE PRs (`automation/research-queue-grade-<run>-<n>`, added 2026-11-26 after run 429 named #28990). The mechanical-grading PR is DERIVED
+data: `queue_grade.py run()` is a pure function of the committed tree (every research/queue unit plus its committed result rows) and the
+grading date, so the next research-queue-grade run re-derives every disposition from scratch, not as a delta on this PR. commit-to-main
+refreshes such a PR once (refresh-command: queue_grade.py --write) and main then moves again, so it sits dirty. A dirty grade PR older
+than GRADE_MIN_AGE_MIN (after that one refresh) whose diff is only research/queue/ is CLOSED with a regeneration comment. Cost: gradings
+land up to one cron period (6 h) later. Never landed here (a max-merge does not fit derived data).
+
+UNKNOWN STATE: GitHub often answers mergeable_state "unknown" on the first read after main moves; it is re-read ONCE after a short sleep
+so a conflicting PR is not skipped for a whole watchdog run.
+
+PER PR (only `automation/research-queue-stamp-*` / `-receipt-*` / `-grade-*`, only `dirty` and older than --min-age-min -- never another branch):
   every unit superseded / moot_once / keep_unstamped  -> CLOSE with a per-unit comment.
   any needs_land                                      -> with --land: merge main into the branch resolving each unit file to
                                                          main's text with the stamp set to max(S, M), push (token must be able to
@@ -37,6 +47,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -45,6 +56,9 @@ _REPO = Path(__file__).resolve().parents[2]
 STAMP_PREFIX = "automation/research-queue-stamp-"
 RECEIPT_PREFIX = "automation/research-queue-receipt-"
 RECEIPT_PATH = "docs/claude/work/research-queue-dispatch-receipt.json"
+GRADE_PREFIX = "automation/research-queue-grade-"
+GRADE_MIN_AGE_MIN = 30.0     # commit-to-main's single refresh happens within minutes of a conflict; only then is the PR beyond saving
+UNKNOWN_RETRY_SLEEP_S = 4.0
 QUEUE_PREFIX = "research/queue/"
 STAMP_LINE = re.compile(r"^(last_dispatched_at:[ \t]*)([^\s#]+)([ \t]*(?:#.*)?)$", re.M)
 SUPERSEDED, MOOT_ONCE, KEEP_UNSTAMPED, NEEDS_LAND, COULD_NOT_LOOK = (
@@ -195,7 +209,25 @@ def decide_receipt(files: List[dict], main_reader: Callable[[str], Optional[str]
             "units": [{"unit": "receipt", "path": RECEIPT_PATH, "stamp": pr_raw, "main": main_raw, "kind": kind, "reason": reason}]}
 
 
+def decide_grade(files: List[dict]) -> Dict[str, Any]:
+    """Grade PRs are derived data: 'close' when the diff is only research/queue/ (+ its own landing files), else 'leave'."""
+    names = [f.get("filename") or "" for f in files]
+    own = (".github/merge-slots/", ".github/pr-landing/", ".github/pr-automerge-requests/")
+    stray = [n for n in names if not (n.startswith(QUEUE_PREFIX) or n.startswith(own))]
+    if not any(n.startswith(QUEUE_PREFIX) for n in names) or stray:
+        return {"action": "leave", "units": [], "grade": True,
+                "why": "no research/queue edit in the diff" if not stray else f"touches non-queue paths {stray[:3]}"}
+    return {"action": "close", "units": [], "grade": True,
+            "why": "derived grading data: the next research-queue-grade run re-derives every disposition from the committed tree"}
+
+
 def comment_body(decision: Dict[str, Any], did: str) -> str:
+    if decision.get("grade"):
+        return ("Stamp-PR triage (grade family): closing as superseded. This mechanical-grading PR was conflicting with main (its one "
+                "built-in refresh was overtaken by main moving) and could not merge.\n\nNothing is lost: `queue_grade.py run()` is a pure "
+                "function of the committed tree and the grading date, so the next `research-queue-grade` run (cron `50 */6 * * *`) "
+                "re-derives every disposition from scratch, not as a delta on this PR. Cost: gradings land up to one cron period later; "
+                "child unit ids embed the grading date, so a later regeneration mints new ids (this PR's never landed)." + FOOTER)
     lines = [f"Stamp-PR triage (PI-20261118-EFILLW47-0005): {did}. This PR was conflicting with main and could not merge.", ""]
     for u in decision["units"]:
         lines.append(f"- `{u['unit']}`: **{u['kind']}** (stamp {u['stamp']}, main {u['main']}): {u['reason']}")
@@ -273,7 +305,8 @@ def land_max(slug_repo: str, number: int, branch: str, decision: Dict[str, Any],
 
 
 def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: Optional[datetime] = None,
-           token: str = "", out: Callable[[str], None] = print) -> List[Dict[str, Any]]:
+           token: str = "", out: Callable[[str], None] = print,
+           sleep: Callable[[float], None] = time.sleep) -> List[Dict[str, Any]]:
     now = now or datetime.now(timezone.utc)
     prs = _api(f"repos/{repo_slug}/pulls?state=open&per_page=100")
     if prs is None:
@@ -283,15 +316,19 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
     for p in prs:
         ref = str(((p.get("head") or {}).get("ref")) or "")
         is_receipt = ref.startswith(RECEIPT_PREFIX)
-        if not (ref.startswith(STAMP_PREFIX) or is_receipt):
-            continue                                        # ONLY the bot's stamp and receipt branches
+        is_grade = ref.startswith(GRADE_PREFIX)
+        if not (ref.startswith(STAMP_PREFIX) or is_receipt or is_grade):
+            continue                                        # ONLY the bot's stamp, receipt and grade branches
         n = int(p["number"])
         created = _ts(p.get("created_at"))
         age = (now - created).total_seconds() / 60 if created else 0
-        if age <= min_age_min:
+        if age <= (max(min_age_min, GRADE_MIN_AGE_MIN) if is_grade else min_age_min):
             continue
         detail = _api(f"repos/{repo_slug}/pulls/{n}")
         state = (detail or {}).get("mergeable_state")
+        if state == "unknown":                              # GitHub computes it lazily: ask once more before reading it as "not dirty"
+            sleep(UNKNOWN_RETRY_SLEEP_S)
+            state = (_api(f"repos/{repo_slug}/pulls/{n}") or {}).get("mergeable_state")
         if state != "dirty":
             out(f"#{n} {ref}: mergeable_state={state} (not dirty): left to auto-merge")
             continue
@@ -299,7 +336,10 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
         if files is None:
             out(f"#{n} {ref}: could not read the PR files (could_not_look): left alone")
             continue
-        d = decide_receipt(files, main_reader()) if is_receipt else decide_pr(files, main_reader(), latest_read_state)
+        if is_grade:
+            d = decide_grade(files)
+        else:
+            d = decide_receipt(files, main_reader()) if is_receipt else decide_pr(files, main_reader(), latest_read_state)
         row = {"pr": n, "ref": ref, "age_min": round(age), **d, "live": live, "done": None}
         out(f"#{n} {ref} age {round(age)} min: {d['action'].upper()} ({d['why']})")
         for u in d["units"]:
