@@ -45,6 +45,7 @@ def test_venue_capability_is_by_asset_class():
     assert VC.venue_can_trade("SPY", "interactive_brokers") and VC.venue_can_trade("MES", "interactive_brokers")
     assert not VC.venue_can_trade("MES", "alpaca") and not VC.venue_can_trade("BTCUSDT", "alpaca")
     assert not VC.venue_can_trade("SPY", "nonexistent_venue")
+    assert not VC.venue_can_trade("AAXJ", "interactive_brokers") and VC.venue_can_trade("AAXJ", "alpaca")   # IB: STK-resolved only
 
 
 def test_prop_account_takes_only_the_prop_gate_population(tmp_path, monkeypatch):

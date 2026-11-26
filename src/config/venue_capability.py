@@ -7,8 +7,8 @@ isn't trading all symbols, they should be able to accept any symbols on the brok
 * a strategy defines its own symbols (``config/strategies.yaml::<leg>.symbols``; an ML's set is its passed population
   record, ``src/config/ml_universe.py``);
 * an account trades every symbol of each rostered leg that its VENUE can trade. That is a fact about the broker, not a
-  configuration: a crypto perp venue trades crypto, Alpaca trades US equities/ETFs, IB trades US equities/ETFs and
-  futures;
+  configuration: a crypto perp venue trades crypto, Alpaca trades US equities/ETFs, IB trades futures and the US
+  equities/ETFs our IB connector resolves to a STK contract (src/units/accounts/ib_instruments.py);
 * a prop account additionally trades only the population its prop superset gate scored (``comms/prop_survival/<leg>.json
   ::symbols``; OPERATING-PLAN § 2, prop legs clear a superset), the existing gate, read as data.
 
@@ -92,8 +92,20 @@ def asset_class(symbol: str, profiles: Optional[Mapping[str, Any]] = None) -> Op
 def venue_can_trade(symbol: str, venue: Optional[str], profiles: Optional[Mapping[str, Any]] = None) -> bool:
     """True when *venue*'s broker can trade *symbol*'s asset class. An unknown venue or symbol is False (it cannot be
     routed there), never a silent pass."""
-    caps = VENUE_ASSET_CLASSES.get(str(venue or "").lower())
-    return bool(caps) and asset_class(symbol, profiles) in caps
+    v = str(venue or "").lower()
+    caps = VENUE_ASSET_CLASSES.get(v)
+    cls = asset_class(symbol, profiles)
+    if not caps or cls not in caps:
+        return False
+    if v == "interactive_brokers" and cls == "equity":
+        # IB trades US equities, but OUR IB connector places only what it resolves to an IBKR STK contract
+        # (src/units/accounts/ib_instruments.py); anything else the coordinator drops as symbol_exchange_routing.
+        try:
+            from src.units.accounts.ib_instruments import is_ib_equity_symbol
+            return bool(is_ib_equity_symbol(symbol))
+        except Exception:  # noqa: BLE001  # allow-silent: unresolvable on IB -> not tradable there (never a silent pass)
+            return False
+    return True
 
 
 def venue_symbols(symbols: Iterable[str], venue: Optional[str], profiles: Optional[Mapping[str, Any]] = None) -> List[str]:
