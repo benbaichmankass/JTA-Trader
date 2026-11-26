@@ -129,6 +129,10 @@ covered and the daily research-ops pass continues its loop. A leg already covere
 3. **Try-again loop:** if a prior unit for this leg already ran and failed, the new unit
    must change the *hypothesis*, not re-run the same parameters. Cite the prior unit id.
    (A first FAIL re-queues for a confirmatory run automatically — don't duplicate that.)
+4. **Count the tries and use the deflated bar** (row PERF-FOLLOWUP-DEFLATION, principles M5 / M13): a Track-1 re-test is another look at the same leg, so
+   the unit states `n_tries` (the arms and prior units already run on that leg and window; `holdout_lock.py families` prints it per family and window) and
+   its pass rule is the research-ops deflated bar for that count (`bar["ci_z"]` / `bar["point_t_min"]`), never the single-test bar. Reuses the
+   existing research-ops machinery; adds no gate.
 
 ### Track 2 — LESSONS: the wider-context post-mortem (not grading)
 
