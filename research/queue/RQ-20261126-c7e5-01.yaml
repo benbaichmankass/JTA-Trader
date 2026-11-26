@@ -40,22 +40,25 @@ why_this_matters: 'It is the Q10 re-scope the operator asked for, on the one ros
   disjoint evidence that an AM action class pays on a live leg: an input to a Tier-3 / mandate proposal for that leg''s live-review tighten. A fail records
   that this fixed-age tighten config does not pay on its strongest leg.'
 power:
-  expected_n: 282
+  expected_n: 283
   min_detectable_effect: 0.05
   effect_units: metric
   sd: 0.3
   design: paired
-  alpha: 0.025
+  alpha: 0.05
   power: 0.8
   basis: 'Target n FIXED ON THE DEV HALF before any grading trade exists. sd 0.3 R per-trade paired delta is an ESTIMATE (not reported by c7e3; tighten deltas
     are bounded by about half the stop distance on fired trades, and 86% fire on this leg). The run measures the dev sd (reduce paired.dev.sd_delta_r) and
-    the target becomes n* = ceil((2.8 x sd_dev / 0.05)^2); at sd 0.3, n* = 282. MDE 0.05 R is set BELOW the dev-observed +0.068 because a selected cut
-    is inflated. Accrual: ict_scalp_5m runs ~40 harness trades/month (MEASURED, cf_bulk corpus 2025-10..2026-09), so 282 trades take ~7 months:
+    the target becomes n* = ceil((2.8 x sd_dev / 0.05)^2); at sd 0.3, n* = 283 (282.2 by this formula, 282.6 by the power checker; both round up to 283). MDE 0.05 R is set BELOW the dev-observed +0.068 because a selected cut
+    is inflated. Accrual: ict_scalp_5m runs ~40 harness trades/month (MEASURED, cf_bulk corpus 2025-10..2026-09), so 283 trades take ~7 months:
     expected grading date 2027-06-15 (not_before). A run before n* is reached grades INDETERMINATE (n not reached) and re-arms.'
   feasibility:
-    source: research/queue/RQ-20261105-028.yaml
-    accrual_basis: 'The weekly ict_scalp_5m walk-forward unit (RQ-20261105-028, cadence weekly) writes fresh harness trade files under comms/research each
-      week, and the am-action-value corpus with corpus_sha empty replays the repo tree at dispatch, so post-2026-11-23 entries accrue without new tooling.'
+    source: none
+    accrual_basis: 'No observed data exists for the GRADING population yet: it is ict_scalp_5m trades entering after 2026-11-23, and the pinned corpus
+      ends there. It accrues at ~40 harness trades/month (MEASURED, cf_bulk corpus 2025-10..2026-09) through the weekly ict_scalp_5m walk-forward unit
+      RQ-20261105-028, which writes fresh harness trade files under comms/research; the am-action-value run with corpus_sha empty replays the tree at
+      dispatch. Before n* the rule grades INDETERMINATE (n not reached). At the 2027-06-15 dispatch the population exists, and this block is
+      re-pointed to source corpus then.'
 evidence_class:
   holdout: holdout_window
   claim: edge
@@ -104,7 +107,7 @@ decision_rule:
     trades get a fold. The heads artifact am-heads-45384292963 is kept only to 2026-12-24 and the value models are rebuilt here (av_run_id empty), so the
     dispatch needs a live heads artifact: precondition tracked in docs/claude/work/PIPELINE.jsonl (re-materialise before expiry).'
   - 'HOLDOUT: family AM-HEADS, 2026-11-24..end, symbols [BTCUSDT], claimed by the reduce step BEFORE the holdout books are built.'
-  min_n: 282
+  min_n: 283
 compute: cpu_long
 value:
   bucket: ai_trader
