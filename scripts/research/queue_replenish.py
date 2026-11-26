@@ -455,6 +455,11 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["theme"] = str(tpl["theme"])
     if tpl.get("priority") is not None:
         unit["priority"] = int(tpl["priority"])
+    if tpl.get("compute") and not (tpl.get("run") or {}).get("workflow"):
+        # RESEARCH-ROUTER: a template that names no workflow is placed by the compute router from its class (the
+        # kaggle_first / kaggle_overflow / trainer_overflow lists); an explicit run.workflow pins the unit to one backend, so
+        # every template that still names one renders exactly as before (this branch is not taken).
+        unit["compute"] = str(tpl["compute"])
     roadmap = tpl.get("roadmap") or FAMILY_ROADMAP.get(str(tpl.get("family")))
     if roadmap:
         # roadmap-map-guard (CLAUDE.md "The roadmap loop"): every new queue unit carries a
@@ -494,7 +499,7 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
             cmd += flat if tok == "@ARMS@" else [tok]
         run["command"] = cmd
     inputs = dict(run.get("inputs") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    if run.get("workflow") == "research-script-run.yml" or (unit.get("compute") and not run.get("workflow")):
         inputs["research_unit"] = unit_id
     run["inputs"] = inputs
     unit["run"] = run
@@ -1119,7 +1124,7 @@ def _self_test() -> int:
         assert d["decision_rule"]["registered_before_run"] is True
         assert grade_power(d).runnable, (u["id"], grade_power(d).reason)
         assert grade_route(d).runnable, (u["id"], grade_route(d).reason)
-        if d["run"]["workflow"] == "research-script-run.yml":
+        if d["run"].get("workflow") in (None, "research-script-run.yml"):    # a workflow-less (compute-routed) unit runs the same script_run plan
             from scripts.research import script_run
             with tempfile.TemporaryDirectory() as td:
                 q = Path(td)
