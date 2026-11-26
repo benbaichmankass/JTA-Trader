@@ -1,0 +1,161 @@
+{
+ "schema": "rostered_leg_replay/1",
+ "unit": "RQ-20261126-4d1c-01",
+ "mode": "adxcell",
+ "population_kind": "rostered",
+ "universe": "crypto",
+ "verdict": "fail",
+ "why": "remove_cells: fail delta -0.0257 t -0.449 share 0.535",
+ "rule": {
+  "id": "RULE-HTF-ADX-CELL-REMOVAL-20261126",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "population": "1 of 1 rostered crypto legs (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (454 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "window": [
+  "2020-09-01",
+  "2026-10-26"
+ ],
+ "legs": {
+  "htf_pullback_trend_2h": {
+   "state": "measured",
+   "n": 454,
+   "net_r": 3.596,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-4d1c-01/45763510846/work/htf_pullback_trend_2h.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "3",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-4d1c-01/45763510846/work/htf_pullback_trend_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-4d1c-01/45763510846/work/htf_pullback_trend_2h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  }
+ },
+ "measurement": {
+  "arms": {
+   "remove_cells": {
+    "n_trades": 357,
+    "money_base": -0.02095,
+    "money_arm": -0.04664,
+    "delta": -0.0257,
+    "se_week_boot": 0.0572,
+    "t": -0.449,
+    "random": {
+     "draws": 200,
+     "kind": "raw tilts permuted within leg x month",
+     "mean": -0.02554,
+     "p95": 0.00183,
+     "share_ge_arm": 0.535
+    },
+    "yearly_delta": {
+     "2022": -0.0361,
+     "2023": -0.1485,
+     "2024": 0.1447,
+     "2025": 0.0683,
+     "2026": -0.1436
+    },
+    "share_tilted": 0.9244,
+    "share_up_tilt": 0.9244,
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": false,
+     "years_positive": false
+    },
+    "verdict": "fail",
+    "dropped": {
+     "n": 330,
+     "share": 0.9244,
+     "mean_net_r": -0.0278,
+     "kept_mean_net_r": 0.06283
+    },
+    "per_cell_reported": {
+     "trending/long": {
+      "cell": "off",
+      "n": 121,
+      "mean_net_r": -0.0257,
+      "sum_net_r": -3.115
+     },
+     "trending/short": {
+      "cell": "off",
+      "n": 141,
+      "mean_net_r": -0.0174,
+      "sum_net_r": -2.451
+     },
+     "transitional/long": {
+      "cell": "on",
+      "n": 27,
+      "mean_net_r": 0.0628,
+      "sum_net_r": 1.696
+     },
+     "transitional/short": {
+      "cell": "off",
+      "n": 22,
+      "mean_net_r": -0.2727,
+      "sum_net_r": -6.0
+     },
+     "chop/long": {
+      "cell": "off",
+      "n": 27,
+      "mean_net_r": 0.0859,
+      "sum_net_r": 2.321
+     },
+     "chop/short": {
+      "cell": "off",
+      "n": 19,
+      "mean_net_r": 0.0038,
+      "sum_net_r": 0.072
+     }
+    },
+    "regime_unknown_trades": 0
+   }
+  },
+  "verdict": "fail",
+  "n_legs": 1
+ },
+ "git_sha": "1428a62f9d0c8e5c2c8f6d4d244ec954d54e4027",
+ "elapsed_s": 23,
+ "read_state": "measured"
+}
