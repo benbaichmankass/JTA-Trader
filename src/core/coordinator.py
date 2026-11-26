@@ -233,7 +233,9 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
             scopes: Dict[str, Dict[str, List[str]]] = {}
             for name, scfg in (load_strategy_config() or {}).items():
                 if isinstance(scfg, dict):
-                    scopes[str(name)] = {a: leg_symbols(scfg, a, leg=str(name)) for a in rostering_accounts(str(name))}
+                    sc = {a: leg_symbols(scfg, a, leg=str(name)) for a in rostering_accounts(str(name))}
+                    sc["__declared__"] = leg_symbols(scfg, None, leg=str(name))   # the leg's whole declared union
+                    scopes[str(name)] = sc
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
@@ -1395,9 +1397,16 @@ class Coordinator:
             # Per-account leg scope (ML-UNIVERSE-RULE): the leg's DERIVED set on
             # this account (venue capability, prop population, ML population).
             # Named, like every exclusion above.
-            if _scope is not None:
-                _acct_syms = _scope.get(str(getattr(account_obj, "name", "")), [])
-                if str(getattr(pkg, "symbol", "") or "") not in _acct_syms:
+            # An account the scope map does not hold (not in accounts.yaml / unreadable) gets NO per-account scope:
+            # the derived rule never narrows on a read it could not make (strategy_not_assigned above still applies).
+            # Only a symbol the leg DECLARES but this account's venue cannot trade is dropped; a symbol the leg does
+            # not declare at all is not this rule's business (unchanged from before ML-UNIVERSE-RULE).
+            _acct_name = str(getattr(account_obj, "name", ""))
+            _pkg_sym = str(getattr(pkg, "symbol", "") or "")
+            if (_scope is not None and _acct_name in _scope
+                    and _pkg_sym in (_scope.get("__declared__") or [])):
+                _acct_syms = _scope[_acct_name]
+                if _pkg_sym not in _acct_syms:
                     return (
                         f"leg_account_scope: {pkg.strategy} trades "
                         f"{_acct_syms} on {getattr(account_obj, 'name', '?')}, "

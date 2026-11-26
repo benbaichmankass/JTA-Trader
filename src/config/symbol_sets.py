@@ -175,7 +175,8 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
             out = syms
         else:
             out = _vc.venue_symbols(syms, venue)
-            if str(acct.get("account_class") or "").lower() == "prop":
+            from src.prop.prop_identity import is_prop_account
+            if is_prop_account(acct):
                 pop = prop_population(leg)
                 if pop is not None:
                     out = [s for s in out if s in pop]

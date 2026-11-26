@@ -68,7 +68,16 @@ _CONNECTOR_CACHE: Dict[str, Any] = {}
 
 # ML-UNIVERSE-RULE (2026-11-26): the venue classification moved to src/config/venue_capability.py so the order path
 # (src/config/symbol_sets.py::leg_symbols) and these read-only routes share ONE answer. Re-exported here for callers.
-from src.config.venue_capability import classify  # noqa: E402,F401
+from src.config import venue_capability as _vc  # noqa: E402
+
+
+def _profiles() -> Dict[str, Any]:
+    return _vc._profiles()
+
+
+def classify(symbol: str, profiles: Optional[Dict[str, Any]] = None) -> Dict[str, Optional[str]]:
+    """Which venue answers for *symbol* (src/config/venue_capability.py::classify, the one definition)."""
+    return _vc.classify(symbol, _profiles() if profiles is None else profiles)
 
 
 def _routed_settings(symbol: str, settings: Dict[str, Any]) -> Dict[str, Any]:
