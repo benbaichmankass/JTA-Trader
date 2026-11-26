@@ -1,7 +1,7 @@
 # Authored 2026-11-26 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager order (EXIT-HOLDBIAS-ATTEMPT3-LEVERS). exit-holdbias iteration 3, calibration (shrink) lever; rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261126-11d7-02
 title: 'exit-holdbias iteration 3 (head calibration shrink): shrink each head by its out-of-fold calibration slope before the argmax, graded by the unchanged 78fc-05 clauses'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -94,3 +94,14 @@ related:
 - scripts/research/exit_holdbias.py
 - PI-20261119-RIMARY12-0005
 last_dispatched_at: '2026-11-26T03:18:30+00:00'
+grading:
+  attested: RULE-RQ20261126-11d7-02-HOLDBIAS-SHRINK
+  auto: true
+  decision_rule_id: RULE-RQ20261126-11d7-02-HOLDBIAS-SHRINK
+  evidence:
+  - research/results/RQ-20261126-11d7-02/45745916339.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

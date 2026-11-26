@@ -1,7 +1,7 @@
 # Authored 2026-11-26 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager order (EXIT-HOLDBIAS-ATTEMPT3-LEVERS). exit-holdbias iteration 3, actions lever; rule registered BEFORE any run. Gates this adds or changes: none.
 id: RQ-20261126-11d7-01
 title: 'exit-holdbias iteration 3 (de-risking actions only): act only on close / tighten_sl / tp_pull_in (the actions that cannot add risk), graded by the unchanged 78fc-05 clauses'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -95,3 +95,16 @@ related:
 - scripts/research/exit_holdbias.py
 - PI-20261119-RIMARY12-0005
 last_dispatched_at: '2026-11-26T03:05:40+00:00'
+grading:
+  attested: RULE-RQ20261126-11d7-01-HOLDBIAS-ACTIONS
+  auto: true
+  decision_rule_id: RULE-RQ20261126-11d7-01-HOLDBIAS-ACTIONS
+  evidence:
+  - research/results/RQ-20261126-11d7-01/45745913952.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

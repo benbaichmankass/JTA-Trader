@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-089
 title: 'Config-exact symbol twin of trend_donchian_sol_4h: ADAUSDT (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -133,3 +133,18 @@ generated:
     twin: ADAUSDT
     twin_key: symbol:ADAUSDT
 last_dispatched_at: '2026-11-26T10:51:55+00:00'
+grading:
+  auto: true
+  confirm_unit: RQ-20261126-7b85-01
+  decision_rule_id: RULE-TPL-LEG-TWIN-SYMBOL-STAGE0
+  discovery: unconfirmed
+  evidence:
+  - research/results/RQ-20261126-089/45805327057.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'single-window PASS selected from an unrecorded number of cell(s): a discovery, not a confirmation.
+    RQ-20261126-7b85-01 re-asks on a disjoint window; no Tier-3 proposal from this unit until it CONFIRMS'
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  selected_from_cells: null
+  verdict: pass
