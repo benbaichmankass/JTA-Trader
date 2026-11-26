@@ -98,7 +98,11 @@ def default_declared(cfg: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     try:
         from regime_debt_matrix import classify
         harness = classify(cfg)
-    except Exception:   # the classifier is read-only config logic; a failure means "no defaults", never a failed unit
+    except (ImportError, KeyError, TypeError, ValueError) as exc:     # the classifier is read-only config logic
+        # "No defaults" is the safe answer (a default, never a refusal), but it must not be a SILENT one: a classifier that starts
+        # failing would otherwise read as "no leg has a direction family". Say so on stderr, where the generator's log shows it.
+        print(f"lever_design: default_declared could not classify the config ({type(exc).__name__}: {exc}); no declared defaults",
+              file=sys.stderr)
         return {}
     return {fam: [dict(e) for e in spec["entries"]] for fam, spec in DEFAULT_DECLARED.items() if harness in spec["harness"]}
 

@@ -82,3 +82,13 @@ def test_the_whole_roster_designs_without_error_and_direction_is_reachable_somew
         blk = ld.design_block(leg, "strategy_leg", cfg, {"manifest": {f: ("untested" if f == "direction" else "tested") for f in FAMS}}, FAMS)
         reachable += blk["lever"] == "direction"
     assert reachable > 0, "no roster leg can reach the direction family"
+
+
+def test_a_classifier_failure_is_logged_not_silent(monkeypatch, capsys):
+    import regime_debt_matrix as rdm
+
+    def boom(cfg):
+        raise ValueError("synthetic")
+    monkeypatch.setattr(rdm, "classify", boom)
+    assert ld.default_declared(PB) == {}                        # still a default, never a refusal ...
+    assert "could not classify" in capsys.readouterr().err      # ... but a visible one
