@@ -137,6 +137,22 @@ def _norm_edges(value: Any) -> list[dict]:
 
 
 # ── inputs ───────────────────────────────────────────────────────────────────
+def _fast_unit_load(yaml, text):
+    """`yaml.safe_load` through libyaml when the build has it (CI-BRIEF-RENDER-TIMEOUT, 2026-11-26).
+
+    MEASURED: the daily brief parsed the ~3,100-unit queue ~4x per build with the pure-Python loader -- 12,905
+    safe_load calls, 255 s of a 269 s build -- and pytest's 180 s render guard timed out on loaded CI runners. A document
+    the C loader rejects is re-parsed with the pure loader, so a caller's error text is unchanged (the
+    research_queue._fast_safe_load pattern, CI-SPEED-1026)."""
+    c_loader = getattr(yaml, "CSafeLoader", None)
+    if c_loader is not None:
+        try:
+            return yaml.load(text, c_loader)  # noqa: S506 -- CSafeLoader is the safe loader
+        except yaml.YAMLError:
+            pass
+    return yaml.safe_load(text)
+
+
 def load_units(queue_dir: Path = QUEUE_DIR, results_dir: Path = RESULTS_DIR) -> tuple[str, dict[str, dict], int]:
     """-> (read_state, {id: unit}, unparseable_count). ``results_dir`` is probed
     here so ``_has_results`` is a dict lookup."""
@@ -150,7 +166,7 @@ def load_units(queue_dir: Path = QUEUE_DIR, results_dir: Path = RESULTS_DIR) -> 
     bad = 0
     for f in sorted(queue_dir.glob("RQ-*.yaml")):
         try:
-            d = yaml.safe_load(f.read_text(encoding="utf-8"))
+            d = _fast_unit_load(yaml, f.read_text(encoding="utf-8"))
         except (OSError, yaml.YAMLError):
             bad += 1
             continue
