@@ -1,0 +1,187 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row DESK-MACRO-DAILY, build step 3b option (a), approved by the manager on 2026-11-26: "count the
+# post-10-12 events first. If the fresh window can't reach the power U05 registered, set not_before to when it will and say so. Don't run
+# it underpowered."). Rule registered BEFORE any run. Only EVENT COUNTS were read from the GDELT panel (no price, no target, no outcome).
+# Gates this adds or changes: none.
+id: RQ-20261126-5bd9-01
+title: 'NEWS-ALPHA U05 wave-2 confirmation: do U05''s six LEADS (listing_etf abnormal RV 1h/4h; macro_shock CAR 1h and abnormal RV 1h/4h/1d)
+  hold on GDELT news events after 2026-10-12, data U05 never read?'
+status: queued
+not_before: '2027-02-08T00:00:00Z'
+cadence: once
+theme: macro
+priority: 2
+roadmap:
+- M28
+program: NEWS-ALPHA-PROGRAM
+kind: experiment
+origin: iteration
+question: On crypto news events after 2026-10-12 (the same frozen entity map, panel and event definition as U05), does each of U05's six
+  unadjusted-p < 0.05 leads show the same-sign abnormal move vs a matched non-event baseline, Holm-adjusted over the six at alpha 0.05?
+why_this_matters: 'U05 (RQ-20261012-5bd1-05) FAILED with no discovery survivor but six LEADS, and its own rule says a lead "may seed a wave-2 unit
+  only on data the discovery window did not touch". The DESK-MACRO-DAILY brief needs to know whether an unscheduled crypto event (an ETF / listing
+  headline, a macro shock) changes the next hours'' volatility before it can tag one. Two harness facts change how U05 reads, and both are fixed or
+  avoided here. (1) In the event design an abnormal-RV cell could never PASS its holdout, because the outcome demanded a HAR-forecast field only
+  time-series cells carry. That is fixed in news_alpha_ic.holdout_outcome. (2) The event bootstrap''s smallest p is 1/2000 = 0.0005, above
+  wave-1 BH''s rank-1 threshold 0.10/600 = 0.00017, so U05''s best-ranked event cell could not survive discovery at any effect size. This unit''s
+  Holm over m = 6 (smallest threshold 0.0083) is resolvable.'
+levers:
+- name: news_event_class_lead_confirmation
+  values: [listing_etf|abn_rv|1h, listing_etf|abn_rv|4h, macro_shock|car|1h, macro_shock|abn_rv|1h, macro_shock|abn_rv|4h, macro_shock|abn_rv|1d]
+  hypothesised_effect: each lead's U05 sign repeats on fresh events (abnormal RV up after listing / ETF and macro-shock news; macro-shock 1h CAR
+    positive)
+evidence_class:
+  holdout: out_of_time
+  claim: information
+populations: BTC ETH SOL XRP BNB DOGE ADA AVAX LINK DOT LTC BCH TRX NEAR SUI APT ARB OP ATOM UNI (USDT perps; Binance USDM klines from
+  data.binance.vision, Bybit cost policy), exactly U05's population.
+grid:
+  cells:
+  - listing_etf|abn_rv|1h|all|all
+  - listing_etf|abn_rv|4h|all|all
+  - macro_shock|car|1h|all|all
+  - macro_shock|abn_rv|1h|all|all
+  - macro_shock|abn_rv|4h|all|all
+  - macro_shock|abn_rv|1d|all|all
+grid_cells: 6
+cell_statistic: mean abnormal log-RV (abn_rv) or mean CAR (car) of events vs a matched non-event baseline (same coin, same hour-of-week,
+  random 10:1), day-block bootstrap p (2,000 resamples), exactly U05's event_stat
+power:
+  expected_n: 88
+  min_detectable_effect: 0.3
+  effect_units: sd
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'U05''s registered floor: n ~ 7.85 / d^2 = 87.2 events per cell at d = 0.3, so 88. MEASURED event counts on the committed panel
+    (news_alpha_features.build_features + news_alpha_ic.events_of, the harness''s own path; the probe reproduces U05''s graded discovery
+    counts exactly: hack 555, enforcement 965, listing_etf 1077, macro_shock 698). Fresh window 2026-10-12 .. 2026-11-25 13:00Z (44 days):
+    listing_etf 53, macro_shock 34. Below the floor today, so this unit does NOT run now. Rates: listing_etf 1.19/day fresh, 1.48/day over the
+    prior 12 months; macro_shock 0.76/day fresh, 1.04/day over 12 months. At the lower (fresh) rate the floor is reached on 2026-12-24
+    (listing_etf) and 2027-02-04 (macro_shock, the binding class); at the 12-month rate on 2026-12-19 and 2027-01-16. not_before
+    2027-02-08 = the conservative macro_shock date + the 1d horizon + 2 days of panel / kline lag. The window itself ends by an OUTCOME-BLIND
+    rule (confirm_window_end), so running early cannot grade an underpowered window: a cell below 88 events reads INSUFFICIENT and spends no
+    ledger test.'
+  feasibility:
+    source: none
+    accrual_basis: Events accrue forward from the daily GDELT panel append (news-gdelt-panel.yml, 03:17Z daily, comms/news_alpha/gdelt_panel/).
+      The counts and rates above were measured locally on the committed panel through 2026-11-25 13:00Z; no committed verdict carries them.
+ml_consumer:
+  not_applicable: 'a news-event information study whose consumer is the DESK-MACRO-DAILY brief''s unscheduled-event informs tag, not an ML model'
+baseline:
+  definition: The same coin's non-event bars at the same hour-of-week (10 random draws per event), the matched baseline U05 registered.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/news_alpha_ic.py
+  - --unit
+  - '{unit}'
+  - --phase
+  - confirm
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261126-5bd9-01
+decision_rule:
+  id: RULE-NEWS-ALPHA-U05-CONFIRM-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: matched non-event bars (same coin, same hour-of-week, 10:1), as U05
+  statistic: 'scripts/research/news_alpha_ic.py --phase confirm (run_confirm): window = 2026-10-12 .. confirm_window_end, i.e. the first UTC
+    midnight by which EVERY class among the cells has 88 events on the panel, plus the longest horizon (1d) so the 88th event''s target has
+    closed; capped at 2027-06-30. Panel only, no outcome read. Per cell: U05''s event_stat on events in the window whose target window closes
+    inside it; L1 leakage asserted. Signs and discovery net mean come from U05''s committed discovery.json
+    (comms/research/RQ-20261012-5bd1-05/38997301553/discovery.json); every cell must be a U05 lead (p < 0.05) or the run is refused.'
+  rule: 'If any cell has n < 88 graded events: INDETERMINATE (insufficient), nothing graded, no ledger row written; re-run once the panel has
+    accrued. Otherwise Holm at alpha 0.05 over the six cells (a p counts only when the sign matches U05''s; else p = 1). ABN_RV cell: PASS iff
+    Holm rejects (abnormal RV vs matched baseline, the event design''s own vol test; a vol PASS is a sizing / risk / informs input, never
+    direction). CAR cell: PASS iff Holm rejects AND the event trade''s net mean return in the window (full cost stack: fee + slippage + funding
+    via execution_costs) has NW t >= 2 AND U05''s discovery net mean > 0; Holm reject without that = PASS_RANK_ONLY (information, not edge).
+    VERDICT: pass = >= 1 cell PASS; no_action_warranted = only PASS_RANK_ONLY; fail = every cell graded and none confirms. Each cell is
+    ledgered once in research/news_alpha (wave 2).'
+  pass_action: 'A vol PASS on a class defines the DESK-MACRO-DAILY unscheduled-event informs tag for it (expect higher realized vol for the
+    confirmed horizon). Author its net-of-cost use test (size-down / widen-stop vs random events of the same count) before the brief emits the tag;
+    advice-only until that passes. A direction PASS earns a Stage-0 new_strategy unit on an existing cost-complete harness.'
+  fail_action: 'Record that U05''s leads do not repeat on fresh events (a measured null for these six configurations, never "news"). The brief
+    emits no unscheduled-event informs tag from the GDELT classes; DESK-MACRO-DAILY moves to 3c (the macro trade arm).'
+  proposal_mapping: pass -> informs-tag unit with its own net-of-cost test; fail -> no tag, move to 3c; indeterminate (insufficient) -> re-arm
+    after the projected crossing date, never grade early.
+  what_it_does_not_do: Changes no config, roster, veto or order path; adds no gate; does not re-grade U05 (its FAIL stands as recorded; the two
+    harness defects above are disclosed, not used to change it); reads only the committed panel and public klines, writes only under --out.
+  min_n: 88
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  basis: 'stand-in: a confirmed vol response would size or widen stops around ~1-2 crypto news events a day; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: 10 matched non-event bars per event (same coin, same hour-of-week); day-block bootstrap of the event-minus-match differences
+    draws: 2000
+  hold_to_bracket: true
+  hold_to_bracket_note: no action is applied; only the event label and the forward window are read
+  best_static:
+    grid:
+    - U05's six leads, fixed by U05's committed discovery - nothing searched here
+    excludes_test_folds: true
+    note: the cells, signs, event definition, entity map and panel are all frozen before this window was read
+  bootstrap_group: day
+practice_precedent: discovery on one window, confirmation of pre-named leads on later data with a family-wise Holm adjustment and an outcome-blind
+  stopping rule (principles R5, M6, M13); U05's own wave-2 provision.
+news_alpha:
+  source: gdelt_panel
+  panel_dir: comms/news_alpha/gdelt_panel
+  price_source: binance_vision
+  discovery_start: '2026-10-12'
+  holdout:
+  - '2026-10-12'
+  - '2027-06-30'
+  design: event
+  bar: 1h
+  populations:
+    all:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - XRPUSDT
+    - BNBUSDT
+    - DOGEUSDT
+    - ADAUSDT
+    - AVAXUSDT
+    - LINKUSDT
+    - DOTUSDT
+    - LTCUSDT
+    - BCHUSDT
+    - TRXUSDT
+    - NEARUSDT
+    - SUIUSDT
+    - APTUSDT
+    - ARBUSDT
+    - OPUSDT
+    - ATOMUSDT
+    - UNIUSDT
+  confirm:
+    source_discovery: comms/research/RQ-20261012-5bd1-05/38997301553/discovery.json
+  binding_note: 'Why post-10-12 and not U05''s sealed holdout 2025-10-01..2026-09-30: U05 never read that holdout (no survivors), but its rule
+    text records it as partly viewed by RQ-20261012-2a7b-01, and it directs every follow-on to data after 2026-10-12.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 3.0
+  est_minutes: 30
+  why_runner: the committed GDELT panel plus keyless Binance Vision klines; numpy / pandas only
+  basis: 'MEASURED: building the full 2023-10..2026-11 feature panel and counting events took ~2 min locally; six event cells with 2,000
+    bootstraps each are minutes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/queue/RQ-20261012-5bd1-05.yaml
+- scripts/research/news_alpha_ic.py
+- docs/research/news-alpha-program-2026-10-12.md
+- research/news_alpha/TEST-LEDGER.jsonl
+- DESK-MACRO-DAILY
+- .claude/skills/macro-research/SKILL.md

@@ -270,6 +270,8 @@ class Spec:
     #: per-population overrides (a unit mixing hourly crypto and daily ETF cells, e.g. U07)
     pop_bar: Dict[str, str] = field(default_factory=dict)
     pop_price_source: Dict[str, str] = field(default_factory=dict)
+    #: news_alpha.confirm (a wave-2 confirmation of named LEADS on data the source discovery never touched)
+    confirm: Optional[Dict[str, Any]] = None
 
     def view(self, pop: str) -> "Spec":
         """The spec as seen by one population: its bar, its price source, only its symbols."""
@@ -325,6 +327,13 @@ def _pop_horizons(grid: Dict[str, Any], pop: str) -> List[str]:
 def enumerate_cells(unit_raw: Dict[str, Any]) -> List[Cell]:
     g = unit_raw.get("grid") or {}
     cells: List[Cell] = []
+    if "cells" in g:   # explicit registered cell ids "feature|target|horizon|population|regime" (a confirmation unit)
+        for cid in g["cells"]:
+            parts = str(cid).split("|")
+            if len(parts) != 5:
+                raise ProducerFailed(f"grid.cells entry {cid!r} is not feature|target|horizon|population|regime")
+            cells.append(Cell(*parts))
+        return cells
     if "event_classes" in g:
         pop = (list(g.get("populations") or ["all"]))[0]
         for ec_, tg, hz in product(g["event_classes"], g["targets"], g["horizons"]):
@@ -374,7 +383,8 @@ def load_spec(unit: str, queue_dir: Path) -> Spec:
         holdout_end=pd.Timestamp(na["holdout"][1], tz="UTC") + pd.Timedelta(days=1),
         floor=7.85 / mde ** 2, cells=cells, panel_dir=str(na.get("panel_dir") or "comms/news_alpha/gdelt_panel"),
         pop_bar={str(k): str(v) for k, v in (na.get("population_bars") or {}).items()},
-        pop_price_source={str(k): str(v) for k, v in (na.get("population_price_source") or {}).items()})
+        pop_price_source={str(k): str(v) for k, v in (na.get("population_price_source") or {}).items()},
+        confirm=na.get("confirm") if isinstance(na.get("confirm"), dict) else None)
     if spec.design not in ("ts", "xsec", "event"):
         raise ProducerFailed(f"news_alpha.design {spec.design!r} not in ts|xsec|event")
     for b in [spec.bar, *spec.pop_bar.values()]:
@@ -854,6 +864,26 @@ def run_discovery(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
     return doc
 
 
+def holdout_outcome(r: Dict[str, Any]) -> str:
+    """PASS / PASS_RANK_ONLY / FAIL for one holdout record carrying holm_reject.
+    VOL, ts/xsec design: Holm reject AND baseline+feature beats the HAR/AR baseline by >= 2% with DM p < 0.05.
+    VOL, EVENT design (no `improvement` key): the cell's own test IS the abnormal log-RV vs the matched non-event
+    baseline, so Holm reject (p counted only when same-sign) decides. Before 2026-11-26 this case demanded the ts-only
+    `improvement` field, so an event vol cell could never PASS.
+    DIRECTION: Holm reject plus holdout net NW t >= 2 and discovery net mean > 0 -> PASS; Holm only -> PASS_RANK_ONLY."""
+    rj = bool(r.get("holm_reject"))
+    if r["kind"] == "vol":
+        if "improvement" not in r:
+            return "PASS" if rj else "FAIL"
+        ok = rj and r.get("improvement") is not None and r["improvement"] >= VOL_IMPROVEMENT_MIN \
+            and r.get("p") is not None and r["p"] < DM_ALPHA
+        return "PASS" if ok else "FAIL"
+    dn = (r.get("discovery_net") or {}).get("mean")
+    nt = (r.get("net") or {}).get("t")
+    net_ok = nt is not None and nt >= NET_T_MIN and dn is not None and dn > 0
+    return "PASS" if (rj and net_ok) else "PASS_RANK_ONLY" if rj else "FAIL"
+
+
 def run_holdout(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
                 prices_by_bar: Dict[str, Dict[str, pd.DataFrame]], out_dir: Path,
                 ledger_rows: List[Dict[str, Any]], run_id: str, disc_doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -932,14 +962,7 @@ def run_holdout(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
     rej = holm_rejections(all_p + mine_p, cap)[len(all_p):]
     for r, rj in zip(hold, rej):
         r["holm_reject"] = bool(rj)
-        if r["kind"] == "vol":
-            ok = rj and r.get("improvement") is not None and r["improvement"] >= VOL_IMPROVEMENT_MIN \
-                and r.get("p") is not None and r["p"] < DM_ALPHA
-            r["outcome"] = "PASS" if ok else "FAIL"
-        else:
-            dn = (r.get("discovery_net") or {}).get("mean")
-            net_ok = (r["net"]["t"] is not None and r["net"]["t"] >= NET_T_MIN and dn is not None and dn > 0)
-            r["outcome"] = ("PASS" if (rj and net_ok) else "PASS_RANK_ONLY" if rj else "FAIL")
+        r["outcome"] = holdout_outcome(r)
     rows = [{"kind": "holdout_test", "family": FAMILY, "wave": 1, "unit": spec.unit, "cell": r["cell"],
              "p": r.get("p"), "same_sign": r.get("same_sign"), "holm_reject": r["holm_reject"],
              "outcome": r["outcome"], "run_id": run_id, "at": _now()} for r in hold]
@@ -947,6 +970,127 @@ def run_holdout(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
         append_ledger(out_dir, rows)
     return {"unit": spec.unit, "phase": "holdout", "run_id": run_id, "generated_at": _now(),
             "holdout_window": [str(spec.holdout_start), str(spec.holdout_end)], "holm_m": cap, "cells": hold}
+
+
+# ── confirmation of named leads (wave 2) ────────────────────────────────────────────────────────────────
+def confirm_window_end(spec: Spec, feats: pd.DataFrame) -> Tuple[pd.Timestamp, Dict[str, Any]]:
+    """OUTCOME-BLIND end of the confirmation window: the first UTC midnight by which every confirm class has
+    ceil(floor) events (panel only -- events_of on the feature panel, no price, no target) PLUS the longest
+    registered horizon, so the floor-th event's target window has closed. Capped at the registered window cap
+    (news_alpha.holdout[1]) and at the panel's last hour. Returns (end, the counts it was computed from)."""
+    need = int(math.ceil(spec.floor))
+    start, cap = spec.holdout_start, spec.holdout_end
+    syms = spec.symbols
+    f = feats[(feats["symbol"].isin(syms)) & (feats["ts"] >= start)].reset_index(drop=True)
+    h_max = max(HORIZON_MIN[c.horizon] for c in spec.cells)
+    info: Dict[str, Any] = {"need_per_class": need, "panel_last_ts": str(feats["ts"].max())}
+    reach = []
+    for cls in sorted({c.feature for c in spec.cells}):
+        t = f.loc[events_of(f, cls), "ts"].sort_values()
+        info[cls] = {"events_in_panel": int(len(t))}
+        if len(t) >= need:
+            at = t.iloc[need - 1]
+            info[cls]["floor_reached_at"] = str(at)
+            reach.append(at)
+        else:
+            reach.append(None)
+    if any(r is None for r in reach):
+        end = min(cap, feats["ts"].max().floor("D"))
+        info["floor_reached"] = False
+    else:
+        end = min(cap, (max(reach) + pd.Timedelta(minutes=h_max)).floor("D") + pd.Timedelta(days=1))
+        info["floor_reached"] = True
+    info["window_end"] = str(end)
+    return end, info
+
+
+def run_confirm(spec_all: Spec, feats_by_bar: Dict[str, pd.DataFrame],
+                prices_by_bar: Dict[str, Dict[str, pd.DataFrame]], out_dir: Path,
+                ledger_rows: List[Dict[str, Any]], run_id: str) -> Dict[str, Any]:
+    """ONE test per named lead on the fresh window, Holm at 0.05 with m = the number of named cells. Signs and
+    discovery net come from the SOURCE unit's committed discovery.json; every named cell must be a source LEAD
+    (unadjusted p < 0.05). If any cell is below the n floor the run is INSUFFICIENT and writes NO ledger row, so the
+    one test per cell is not spent on an underpowered read."""
+    cf = spec_all.confirm or {}
+    src_path = REPO / str(cf.get("source_discovery") or "")
+    if not src_path.is_file():
+        raise ProducerFailed(f"confirm.source_discovery {cf.get('source_discovery')!r} not found")
+    src = {c["cell"]: c for c in json.loads(src_path.read_text(encoding="utf-8")).get("cells", [])}
+    for c in spec_all.cells:
+        sc = src.get(c.id)
+        if sc is None or sc.get("p") is None or not (float(sc["p"]) < 0.05) or sc.get("stat") is None:
+            raise ProducerFailed(f"refused: {c.id} is not a LEAD (p < 0.05) of the source discovery {src_path.name}")
+    done = {(r["unit"], r["cell"]) for r in ledger_rows if r.get("kind") == "holdout_test"}
+    for c in spec_all.cells:
+        if (spec_all.unit, c.id) in done:
+            raise ProducerFailed(f"refused: {c.id} already has its one confirmation test ledgered")
+    if len({spec_all.view(c.population).bar for c in spec_all.cells}) != 1:
+        raise ProducerFailed("confirm phase supports one bar per unit")
+    bar = spec_all.view(spec_all.cells[0].population).bar
+    end, win = confirm_window_end(spec_all, feats_by_bar[bar])
+    rng = np.random.default_rng(SEED + 2)
+    recs: List[Dict[str, Any]] = []
+    for cell in spec_all.cells:
+        spec = spec_all.view(cell.population)
+        full = assemble(spec, feats_by_bar[spec.bar], prices_by_bar[spec.bar], cell)
+        if full.empty:
+            raise ProducerFailed(f"no price rows for {cell.id}")
+        assert_l1(full, [c for c in full.columns if c.startswith("cls_")])
+        d = full[(full["ts"] >= spec.holdout_start) & (full["t_end"] <= end)]
+        sc = src[cell.id]
+        st = event_stat(d, cell, rng) if spec.design == "event" else compute_cell(spec, cell, d, rng)
+        n = int(st.get("events") or 0) if spec.design == "event" else n_eff_of(st, spec.design, spec.h_bars(cell.horizon))
+        same = st["stat"] is not None and np.sign(st["stat"]) == np.sign(sc["stat"])
+        r: Dict[str, Any] = {"cell": cell.id, "kind": cell.kind, "n": n, "floor": spec.floor,
+                             "graded": n >= spec.floor, "stat": _clean(st["stat"]), "p": _clean(st["p"]),
+                             "same_sign": bool(same), "source_stat": sc["stat"], "source_p": sc["p"],
+                             "discovery_net": sc.get("discovery_net")}
+        if cell.kind == "direction" and spec.design == "event":
+            net = event_net_returns(spec, d, cell, 1.0 if sc["stat"] >= 0 else -1.0, rng)
+            nm, nt, nT = nw_tstat(net.values, 1)
+            r["net"] = {"mean": _clean(nm), "t": _clean(nt), "periods": nT}
+        recs.append(r)
+    doc = {"unit": spec_all.unit, "phase": "confirm", "run_id": run_id, "generated_at": _now(),
+           "window": [str(spec_all.holdout_start), str(end)], "window_rule": win, "holm_m": len(recs), "cells": recs}
+    if not all(r["graded"] for r in recs):
+        doc["note"] = "INSUFFICIENT: a named cell is below the n floor; nothing graded, no ledger row written"
+        return doc
+    pv = [(float(r["p"]) if (r["p"] is not None and r["same_sign"]) else 1.0) for r in recs]
+    for r, rj in zip(recs, holm_rejections(pv, len(recs))):
+        r["holm_reject"] = bool(rj)
+        r["outcome"] = holdout_outcome(r)
+    append_ledger(out_dir, [{"kind": "holdout_test", "family": FAMILY, "wave": 2, "unit": spec_all.unit,
+                             "cell": r["cell"], "p": r["p"], "same_sign": r["same_sign"], "holm_reject": r["holm_reject"],
+                             "outcome": r["outcome"], "run_id": run_id, "at": _now()} for r in recs])
+    return doc
+
+
+def build_confirm_verdict(spec: Spec, doc: Dict[str, Any]) -> Dict[str, Any]:
+    recs = doc["cells"]
+    pop = (f"{spec.unit}: {len(recs)} named lead cell(s) ({spec.design}, {spec.bar}), symbols {','.join(spec.symbols)}; "
+           f"fresh window {doc['window'][0][:10]}..{doc['window'][1][:10]} (outcome-blind n rule); n floor "
+           f"{spec.floor:.1f} events per cell; Holm m={doc['holm_m']}")
+    records = [{"verdict": ({"PASS": "pass", "PASS_RANK_ONLY": "no_action_warranted"}.get(r.get("outcome"), "fail")
+                            if r["graded"] and "outcome" in r else "indeterminate"),
+                "read_state": "measured", "n": r["n"],
+                "population": f"{spec.unit} cell {r['cell']} on {doc['window'][0][:10]}..{doc['window'][1][:10]}",
+                "measurement": r, "note": "" if r["graded"] else "underpowered: reported, not graded"} for r in recs]
+    n_total = int(sum(r["n"] for r in recs))
+    if "note" in doc:
+        verdict, state, note = "indeterminate", "insufficient", doc["note"]
+    else:
+        passes = [r["cell"] for r in recs if r["outcome"] == "PASS"]
+        rank = [r["cell"] for r in recs if r["outcome"] == "PASS_RANK_ONLY"]
+        if passes:
+            verdict, note = "pass", f"PASS cells: {passes}. A PASS is not a promotion."
+        elif rank:
+            verdict, note = "no_action_warranted", f"PASS_RANK_ONLY (not net of cost): {rank}"
+        else:
+            verdict, note = "fail", "no named lead confirmed on the fresh window; closes only these configurations"
+        state = "measured"
+    return {"verdict": verdict, "read_state": "measured", "result_state": state, "population": pop, "n": n_total,
+            "measurement": {"window_rule": doc["window_rule"], "cells": [r["cell"] for r in recs]},
+            "note": note, "records": records}
 
 
 # ── verdict ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -1067,7 +1211,7 @@ def load_inputs(spec: Spec, *, features_csv: Optional[Path], panel_dir: Optional
 def main(argv: Optional[Sequence[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--unit", required=True)
-    ap.add_argument("--phase", choices=["discovery", "holdout"], required=True)
+    ap.add_argument("--phase", choices=["discovery", "holdout", "confirm"], required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--queue-dir", default=str(REPO / "research" / "queue"))
     ap.add_argument("--panel-dir", default=None, help="override news_alpha.panel_dir")
@@ -1089,7 +1233,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 print("  " + c.id)
             return 0
         ledger_rows = fold_ledger(Path(a.repo_root), Path(a.ledger), out)
-        if a.phase == "holdout":
+        if a.phase == "confirm":
+            if not spec.confirm:
+                raise ProducerFailed("--phase confirm needs a news_alpha.confirm block")
+            feats, prices = load_inputs(spec, features_csv=Path(a.features_csv) if a.features_csv else None,
+                                        panel_dir=Path(a.panel_dir) if a.panel_dir else None,
+                                        prices_dir=Path(a.prices_dir) if a.prices_dir else None)
+            own = [Path(a.repo_root) / q for q in sorted(str(x.relative_to(Path(a.repo_root))) for x in
+                   Path(a.repo_root).glob(f"comms/research/{spec.unit}/*/ledger_rows.jsonl"))]
+            for p in own:   # this unit's own landed runs (RUNS_GLOB folds only the wave-1 RQ-20261012-5bd1-* runs)
+                if p.resolve() != (out / "ledger_rows.jsonl").resolve():
+                    ledger_rows += [r for r in (json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip())
+                                    if r.get("family", FAMILY) == FAMILY]
+            doc = run_confirm(spec, feats, prices, out, ledger_rows, a.run_id)
+            (out / "confirm.json").write_text(json.dumps(doc, indent=2, default=str) + "\n", encoding="utf-8")
+            verdict = build_confirm_verdict(spec, doc)
+        elif a.phase == "holdout":
             dpath = out / "discovery.json"
             if not dpath.is_file():
                 prev = out / "verdict.json"
