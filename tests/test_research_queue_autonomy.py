@@ -67,10 +67,11 @@ def test_weights_follow_the_operators_priorities():
     assert weights == {"prop-fit-breakout": 30, "m20-exit-lever": 25, "e35-bracket": 20,
                        "roster-walkforward": 15, "macro-valuation": 10,
                        "leg-corpus-s1": 1,   # manager decision 2026-10-31: a standing refresh, must not skew the split
-                       "live-decay": 1}      # LIVE-DECAY-MONITOR 2026-11-12: a standing monitor, same rule
+                       "live-decay": 1,      # LIVE-DECAY-MONITOR 2026-11-12: a standing monitor, same rule
+                       "leg-twin-symbol": 1, "leg-twin-timeframe": 1}   # W49 2026-11-26: twin units, a standing low-weight lane, same rule
     assert queue_replenish.allocate(20, weights, {k: 99 for k in weights}) == \
         {"prop-fit-breakout": 6, "m20-exit-lever": 5, "e35-bracket": 4, "roster-walkforward": 3, "macro-valuation": 2,
-         "leg-corpus-s1": 0, "live-decay": 0}
+         "leg-corpus-s1": 0, "live-decay": 0, "leg-twin-symbol": 0, "leg-twin-timeframe": 0}
 
 
 def test_generated_units_dedupe_against_the_committed_queue():
