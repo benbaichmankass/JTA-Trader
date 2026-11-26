@@ -97,3 +97,122 @@ def test_probe_shapes_never_raises_a_refused_call_is_a_finding():
     rows = {r["shape"]: r for r in c.probe_shapes(lambda p, q: {"trade": {"p": 500.0}} if "trades" in p else boom(p, q), boom, TODAY)}
     assert rows["snapshot"]["status"] == "error" and rows["contracts"]["status"] == "error" and "403" in rows["contracts"]["error"]
     assert "bars" not in rows                                                         # no symbol to ask about
+
+
+# ── option A: open interest (Trading-API contracts listing) + volume (snapshot dailyBar) filled under the ALPACA label ───────────
+def _snap_v(iv=0.2, v=321):
+    s = _snap(iv=iv)
+    s["dailyBar"] = {"o": 1.0, "c": 1.1, "v": v, "t": "2026-11-02T05:00:00Z"}
+    return s
+
+
+def getter_v(path, params):
+    if "trades/latest" in path:
+        return {"trade": {"p": 500.0}}
+    snaps = {}
+    for exp in ("261102", "261104", "261106"):
+        snaps[f"SPY{exp}C00500000"] = _snap_v(v=100)
+        snaps[f"SPY{exp}P00500000"] = _snap()                 # no dailyBar: volume stays None, never 0
+    return {"snapshots": snaps}
+
+
+def _contracts_pages():
+    return {None: {"option_contracts": [
+                {"symbol": "SPY261102C00500000", "open_interest": "25", "open_interest_date": "2026-10-30"},
+                {"symbol": "SPY261102P00500000", "open_interest": None, "open_interest_date": None}], "next_page_token": "p2"},
+            "p2": {"option_contracts": [
+                {"symbol": "SPY261104C00500000", "open_interest": "0", "open_interest_date": "2026-10-30"}], "next_page_token": None}}
+
+
+def tget_ok(path, params):
+    assert path == "/v2/options/contracts"                         # a listing GET only
+    return _contracts_pages()[params.get("page_token")]
+
+
+def test_fetch_open_interest_paginates_keeps_the_date_and_leaves_unknown_absent():
+    r = c.fetch_open_interest(tget_ok, "SPY", 500.0, TODAY, 0.06)
+    assert r["pages"] == 2 and r["contracts"] == 3 and r["complete"] is True
+    assert r["oi"] == {"SPY261102C00500000": (25, "2026-10-30"), "SPY261104C00500000": (0, "2026-10-30")}   # a real 0 is kept
+    assert "SPY261102P00500000" not in r["oi"]                      # null open interest is UNKNOWN, not 0
+    cut = c.fetch_open_interest(tget_ok, "SPY", 500.0, TODAY, 0.06, max_pages=1)
+    assert cut["complete"] is False                                  # a page cap is published as incomplete
+
+
+def test_capture_fills_volume_and_open_interest_with_their_dates_and_never_zero_for_unknown(tmp_path):
+    rec = c.capture(getter_v, tmp_path, "SPY", TODAY, 3, 0.06, "indicative", "alpaca", tget_ok)
+    assert rec["oi_read_state"] == "ok" and rec["oi_dates"] == ["2026-10-30"]
+    df = c.pd.read_parquet(tmp_path / "SPY" / f"{TODAY.isoformat()}.parquet")
+    call = df[(df["cp"] == "C") & (df["expiry"] == "2026-11-02")].iloc[0]
+    assert call["open_interest"] == 25 and call["open_interest_date"] == "2026-10-30" and call["volume"] == 100 and call["volume_date"] == "2026-11-02"
+    put = df[(df["cp"] == "P") & (df["expiry"] == "2026-11-02")].iloc[0]
+    assert c.pd.isna(put["open_interest"]) and c.pd.isna(put["volume"])                    # unknown, not 0
+    assert rec["volume_coverage"] == round(3 / 6, 3) and rec["oi_coverage"] == round(2 / 6, 3)
+    assert "feed" in df.columns and set(df["feed"]) == {"indicative"}                      # still the alpaca label, never cboe
+
+
+def test_a_failed_open_interest_read_is_published_as_could_not_look_and_the_quotes_still_land(tmp_path):
+    def boom(path, params):
+        raise RuntimeError("HTTP 500 /v2/options/contracts")
+    rec = c.capture(getter_v, tmp_path, "SPY", TODAY, 3, 0.06, "indicative", "alpaca", boom)
+    assert rec["oi_read_state"] == "could_not_look" and "500" in rec["oi_error"] and "oi_coverage" not in rec
+    df = c.pd.read_parquet(tmp_path / "SPY" / f"{TODAY.isoformat()}.parquet")
+    assert len(df) == 6 and df["open_interest"].isna().all()                                # absent, never a fabricated 0
+    assert c.capture(getter_v, tmp_path, "SPY", TODAY, 3, 0.06, "indicative", "alpaca", None)["oi_read_state"] == "not_requested"
+
+
+def test_main_turns_a_could_not_look_open_interest_into_a_failure_line_and_a_red_exit(tmp_path, monkeypatch, capsys):
+    from datetime import timedelta
+    exp = (datetime.now(timezone.utc).date() + timedelta(days=2)).strftime("%y%m%d")      # main() uses the real clock
+
+    def getter_now(path, params):
+        if "trades/latest" in path:
+            return {"trade": {"p": 500.0}}
+        return {"snapshots": {f"SPY{exp}C00500000": _snap_v(), f"SPY{exp}P00500000": _snap()}}
+
+    def boom(path, params):
+        raise RuntimeError("HTTP 500 /v2/options/contracts")
+    monkeypatch.setattr(c, "make_getter", lambda base=None: boom if base else getter_now)
+    rc = c.main(["--mode", "capture", "--source", "alpaca", "--underlyings", "SPY", "--out", str(tmp_path)])
+    assert rc == 1 and "could_not_look" in capsys.readouterr().err
+    assert (tmp_path / "alpaca" / "SPY" / f"{c.datetime.now(c.timezone.utc).date().isoformat()}.parquet").exists()   # the quotes still landed
+    monkeypatch.setattr(c, "make_getter", lambda base=None: tget_ok if base else getter_now)
+    assert c.main(["--mode", "capture", "--source", "alpaca", "--underlyings", "SPY", "--out", str(tmp_path)]) == 0
+
+
+def test_the_cboe_path_is_untouched_by_option_a(tmp_path):
+    j = {"timestamp": "2026-11-02 21:00:00", "data": {"current_price": 500.0, "options": [
+        {"option": "SPY261102C00500000", "bid": 1.0, "ask": 1.1, "iv": 0.2, "open_interest": 7, "volume": 3}]}}
+    rec = c.capture(lambda p, q: j, tmp_path, "SPY", TODAY, 3, 0.06, "indicative", "cboe")
+    assert "oi_read_state" not in rec and rec["feed"] == "cboe_delayed"
+
+
+def _wf_steps():
+    import yaml
+    wf = yaml.safe_load((Path(__file__).resolve().parents[1] / ".github/workflows/options-snapshot-capture.yml").read_text())
+    return wf["jobs"]["options-snapshot"]["steps"]
+
+
+def test_the_workflow_no_longer_fetches_or_verifies_cboe_and_records_it_as_blocked_without_overwriting():
+    import json as _json
+    import subprocess
+    steps = _wf_steps()
+    runs = "\n".join(str(s.get("run", "")) for s in steps)
+    assert "--source cboe" not in runs                                           # no fetch, no verify of the blocked source
+    assert "for src in alpaca; do" in runs and "source=cboe: BLOCKED" in runs
+    prov = next(s for s in steps if s.get("id") == "fetch_cboe")
+    assert prov.get("if") == "steps.mode.outputs.mode == 'capture'" and not prov.get("continue-on-error")
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        assert subprocess.run(["bash", "-c", prov["run"]], cwd=td, capture_output=True).returncode == 0
+        f = Path(td) / "store/cboe/PROVENANCE.json"
+        j = _json.loads(f.read_text())
+        assert j["status"] == "blocked" and j["last_good_capture"] == "2026-11-19" and "never filled" in j["backfill"]
+        f.write_text('{"kept": 1}\n')
+        assert subprocess.run(["bash", "-c", prov["run"]], cwd=td, capture_output=True).returncode == 0
+        assert _json.loads(f.read_text()) == {"kept": 1}                          # written once, never overwritten
+
+
+def test_the_red_flag_condition_is_unchanged_so_the_alarm_clears_by_itself_once_alpaca_is_green():
+    flag = next(s for s in _wf_steps() if str(s.get("name", "")).startswith("Red flag"))
+    assert flag["if"] == ("always() && (steps.fetch.outcome == 'failure' || steps.fetch_cboe.outcome == 'failure' "
+                          "|| steps.verify.outcome == 'failure')")
