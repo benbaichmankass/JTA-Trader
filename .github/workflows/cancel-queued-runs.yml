@@ -39,6 +39,16 @@ on:
         description: 'Only cancel queued runs created more than this many hours ago (default 24; never younger)'
         required: false
         default: '24'
+      delete_zombies:
+        description: 'DELETE (not cancel) never-started zombie runs: queued, older than min_age_hours, attempt 1, no job started. Default false = the normal cancel path.'
+        type: boolean
+        required: false
+        default: false
+      dry_run:
+        description: 'With delete_zombies: list what WOULD be deleted and delete nothing (default true). Set false only after the operator decision is on record.'
+        type: boolean
+        required: false
+        default: true
   repository_dispatch:  # routed by issue-router.yml (one dispatch per issue label)
     types: [cancel-queued-runs]
 
@@ -65,9 +75,49 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
       MIN_AGE_HOURS: ${{ inputs.min_age_hours || '24' }}
+      DELETE_ZOMBIES: ${{ inputs.delete_zombies && 'true' || 'false' }}
+      DRY_RUN: ${{ inputs.dry_run == false && 'false' || 'true' }}
     steps:
+      # BUILDS-W48 / row ACTIONS-ZOMBIE-QUEUED-RUNS: the plain and force cancel endpoints both return HTTP 409 for runs that are
+      # `queued` in the list but never started (282 of 283 on 2026-11-26). The only API path left is DELETE /actions/runs/{id},
+      # which removes the run. Scope is deliberately narrow: queued, older than MIN_AGE_HOURS, run_attempt 1, and NO job
+      # in_progress or completed. A run that ran is never touched. dry_run defaults TRUE: it lists, deletes nothing.
+      - name: Delete never-started zombie runs
+        id: zombies
+        if: github.event_name == 'workflow_dispatch' && inputs.delete_zombies
+        run: |
+          set -uo pipefail
+          before=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
+          echo "queued runs BEFORE: $before (dry_run=$DRY_RUN, min age ${MIN_AGE_HOURS} h)"
+          cutoff=$(date -u -d "${MIN_AGE_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
+          ids=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId,createdAt \
+                  --jq ".[] | select(.createdAt < \"$cutoff\") | .databaseId" || true)
+          cand=0; elig=0; done_n=0; kept=0; refused=0
+          for id in $ids; do
+            cand=$((cand+1))
+            info=$(gh api "repos/$REPO/actions/runs/$id" --jq '[.status,.run_attempt,.created_at]|@tsv' 2>/dev/null || echo "?")
+            started=$(gh api "repos/$REPO/actions/runs/$id/jobs" --jq '[.jobs[]|select(.status=="in_progress" or .status=="completed")]|length' 2>/dev/null || echo "?")
+            st=$(printf '%s' "$info" | cut -f1); att=$(printf '%s' "$info" | cut -f2)
+            if [ "$st" = "queued" ] && [ "$att" = "1" ] && [ "$started" = "0" ]; then
+              elig=$((elig+1))
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "WOULD DELETE $id (status=$st attempt=$att started_jobs=$started)"
+              elif gh api --method DELETE "repos/$REPO/actions/runs/$id" >/dev/null 2>/tmp/del_err; then
+                echo "deleted $id"; done_n=$((done_n+1))
+              else
+                echo "refused $id: $(tail -n1 /tmp/del_err 2>/dev/null || echo 'unknown error')"; refused=$((refused+1))
+              fi
+            else
+              echo "KEEP $id (status=$st attempt=$att started_jobs=$started): not a never-started zombie"; kept=$((kept+1))
+            fi
+          done
+          after=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
+          echo "SUMMARY: candidates(older than ${MIN_AGE_HOURS} h)=$cand eligible=$elig deleted=$done_n refused=$refused kept=$kept dry_run=$DRY_RUN"
+          echo "queued runs AFTER: $after (before: $before)"
+
       - name: Cancel all queued workflow runs
         id: cancel
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.delete_zombies) }}
         run: |
           set -euo pipefail
           before=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
