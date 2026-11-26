@@ -480,6 +480,21 @@ X_APPLIED, X_APPLY_FAILED, X_COULD_NOT_LOOK, X_REFUSED = (
 #: ``deferred`` = the venue will act at its next session, nothing was sent or journaled; the intake retries
 #: (ALPACA-LIVE-MECHANICS 2026-11-06, live_review_intent.X_DEFERRED). Exit EXIT_DEFERRED when nothing was sent.
 X_DEFERRED = lri.X_DEFERRED
+
+
+def _venue_pending(confirmed_by: str) -> Dict[str, Any]:
+    """LTR-PROP-CLOSE-FALSE-APPLIED (2026-11-26): the prop-VM and phone executors only RECORD a request on the ticket
+    (read back from the ticket); the account's own executor / phone carries it out on a later tick and its own report is
+    the venue confirmation. Such a result is X_APPLIED for the control flow (the request was placed: idempotency, pings,
+    the executor's retry and alerts are unchanged) but it is NOT a venue read-back, so it never counts toward
+    ``disposition.verified_readback`` and the receipt line reads QUEUED. Measured: LR-20261115T1141Z tradeify_1 reported
+    verified while the terminal still held the position for 204 min."""
+    return {"venue_confirmed": False, "venue_confirmed_by": confirmed_by}
+
+
+def _venue_verified(ex: Dict[str, Any]) -> bool:
+    """True only for an executor result that is X_APPLIED AND carries a venue read-back (not a queued ticket request)."""
+    return ex.get("result") == X_APPLIED and ex.get("venue_confirmed") is not False
 EXIT_DEFERRED = lri.EXIT_DEFERRED
 
 
@@ -585,7 +600,8 @@ def _exec_prop_vm(leg: Dict[str, Any], level: float, intent: lri.LiveReviewInten
     if back is None or abs(back - level) > max(level * 1e-9, 1e-12):
         return {"result": X_APPLY_FAILED, "detail": f"ticket floor reads {back!r} after the write"}
     # The terminal's own confirmation arrives as the executor's `amend` report.
-    return {"result": X_APPLIED, "detail": "meta.sl_floor recorded; the VM trail steps the terminal stop to it"}
+    return {"result": X_APPLIED, "detail": "meta.sl_floor recorded; the VM trail steps the terminal stop to it",
+            **_venue_pending("the executor's `amend` report (terminal stop at the floor)")}
 
 
 def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
@@ -603,7 +619,8 @@ def _exec_phone(leg: Dict[str, Any], level: float, intent: lri.LiveReviewIntent)
     if am.get("id") != r.get("amend_id") or _f(am.get("sl")) != _f(r.get("sl")):
         return {"result": X_APPLY_FAILED, "detail": f"emitted amend reads {am!r}"}
     return {"result": X_APPLIED, "amend_id": r.get("amend_id"), "sl": r.get("sl"),
-            "detail": "amend emitted; the phone verifies it against the venue before any click"}
+            "detail": "amend emitted; the phone verifies it against the venue before any click",
+            **_venue_pending("the phone's record_amend_result for this amend id")}
 
 
 def _ping(pkg: Dict[str, Any], account_id: str, level: Optional[float], intent: lri.LiveReviewIntent) -> None:
@@ -1122,7 +1139,8 @@ def _exec_prop_vm_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveR
     r = request_bracket(tk["ticket_id"], account_id=tk["account_id"], tp=v.level, apply=True,
                         source=lri.PROVENANCE, reason=f"mandate {intent.mandate} review {intent.review_id}")
     if r["result"] == R_QUEUED:
-        return {"result": X_APPLIED, "tp": v.level, "detail": r["detail"]}
+        return {"result": X_APPLIED, "tp": v.level, "detail": r["detail"],
+                **_venue_pending("the executor's `amend` report (terminal TP at the target)")}
     return {"result": X_REFUSED if r["result"] == R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
 
 
@@ -1144,7 +1162,8 @@ def _exec_prop_vm_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewInt
                                source=lri.PROVENANCE, review_id=intent.review_id,
                                reason=f"mandate {intent.mandate} review {intent.review_id}")
     if r["result"] == vm_close.R_QUEUED:
-        return {"result": X_APPLIED, "close_id": r.get("close_id"), "fraction": frac, "detail": r["detail"]}
+        return {"result": X_APPLIED, "close_id": r.get("close_id"), "fraction": frac, "detail": r["detail"],
+                **_venue_pending("vm_close_done.json outcome for this close_id (closed / reduced = venue flat / reduced)")}
     return {"result": X_REFUSED if r["result"] == vm_close.R_REFUSED else X_APPLY_FAILED, "detail": r["detail"]}
 
 
@@ -1161,7 +1180,8 @@ def _exec_phone_tp(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveRev
     if am.get("id") != r.get("amend_id") or am.get("kind") != "tp":
         return {"result": X_APPLY_FAILED, "detail": f"emitted amend reads {am!r}"}
     return {"result": X_APPLIED, "amend_id": r.get("amend_id"), "tp": am.get("tp"),
-            "detail": "TP amend emitted; the phone verifies it against the venue before any click"}
+            "detail": "TP amend emitted; the phone verifies it against the venue before any click",
+            **_venue_pending("the phone's record_amend_result for this amend id")}
 
 
 def _exec_phone_sl_widen(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
@@ -1178,7 +1198,8 @@ def _exec_phone_sl_widen(leg: Dict[str, Any], v: lri.AmendVerdict, intent: lri.L
     if am.get("id") != r.get("amend_id") or am.get("kind") != "sl" or not am.get("widen"):
         return {"result": X_APPLY_FAILED, "detail": f"emitted amend reads {am!r}"}
     return {"result": X_APPLIED, "amend_id": r.get("amend_id"), "sl": am.get("sl"),
-            "detail": "widen_sl amend emitted; the phone verifies it against the venue before any click"}
+            "detail": "widen_sl amend emitted; the phone verifies it against the venue before any click",
+            **_venue_pending("the phone's record_amend_result for this amend id")}
 
 
 def _exec_phone_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewIntent) -> Dict[str, Any]:
@@ -1202,7 +1223,8 @@ def _exec_phone_close(leg: Dict[str, Any], key: str, intent: lri.LiveReviewInten
     if c.get("id") != r.get("close_id"):
         return {"result": X_APPLY_FAILED, "detail": f"emitted request reads {c!r}"}
     return {"result": X_APPLIED, "close_id": r.get("close_id"), "action": r.get("action"),
-            "detail": f"{r.get('action')} request emitted; the phone verifies it on the terminal and reports"}
+            "detail": f"{r.get('action')} request emitted; the phone verifies it on the terminal and reports",
+            **_venue_pending("the phone's done / not_found / failed report for this close_id")}
 
 
 def _executor_wired(cls: str, key: str, leg: Dict[str, Any]) -> bool:
@@ -1524,9 +1546,14 @@ def run(intent: lri.LiveReviewIntent, *, apply: bool = False, db=None,
                                             if deferred_any else None),
                         "mandate": intent.mandate if applied_any else None, "action_issue": None,
                         "applied_at": datetime.now(timezone.utc).isoformat() if applied_any else None,
-                        "verified_readback": (all((a.get("executor") or {}).get("result") == X_APPLIED
+                        "verified_readback": (all(_venue_verified(a.get("executor") or {})
                                                   for a in out["accounts"] if a.get("executor"))
-                                              if applied_any else None)},
+                                              if applied_any else None),
+                        # LTR-PROP-CLOSE-FALSE-APPLIED: accounts whose request is queued at the ticket, awaiting the
+                        # executor's / phone's own venue confirmation (named per account in executor.venue_confirmed_by).
+                        "venue_unconfirmed": sorted(a["account_id"] for a in out["accounts"]
+                                                    if (a.get("executor") or {}).get("result") == X_APPLIED
+                                                    and not _venue_verified(a.get("executor") or {}))},
     }
     if persist:
         _save_state(st)
