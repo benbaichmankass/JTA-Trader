@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-032
 title: 'Config-exact symbol twin of htf_pullback_trend_2h: AVAXUSDT (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -132,4 +132,16 @@ generated:
     timeframe: 2h
     twin: AVAXUSDT
     twin_key: symbol:AVAXUSDT
-last_dispatched_at: null
+last_dispatched_at: '2026-11-26T06:50:39+00:00'
+grading:
+  auto: true
+  decision_rule_id: RULE-TPL-LEG-TWIN-SYMBOL-STAGE0
+  evidence:
+  - research/results/RQ-20261126-032/45771053301.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'deterministic harness: FAIL closes this cell with no same-window replay; it does not retire the
+    family (family-retirement protocol, #18557)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
