@@ -95,6 +95,11 @@ from src.research.trail_levers import (  # noqa: E402  (the ONE trail-lever rule
 # policy. (Operator directive 2026-08-04: there is no reason to run a faithful backtest
 # fee-only; pullback-first, the other harnesses roll onto this next.)
 FEE_BPS_ROUNDTRIP = execution_costs.DEFAULT_FEE_BPS_ROUNDTRIP
+# PULLBACK-ENTRY-MODE-LIMIT (mirrors backtest_ict_scalp.py): a limit entry pays maker on entry and taker on the
+# exit/stop, and half the round-trip slippage (taker exit only). Module-global so the CLI can override.
+LIMIT_MAKER_FEE_BPS = 2.0
+LIMIT_TAKER_FEE_BPS = 5.5
+_LIMIT_FEE_BPS = (LIMIT_MAKER_FEE_BPS, LIMIT_TAKER_FEE_BPS)
 SLIPPAGE_BPS_ROUNDTRIP = 0.0
 FUNDING_BPS_PER_WINDOW = 0.0
 FUNDING_WINDOW_HOURS = execution_costs.FUNDING_WINDOW_HOURS
@@ -115,6 +120,8 @@ class Trade:
     r_multiple: float
     mfe_r: float
     confidence: float = 0.0
+    # PULLBACK-ENTRY-MODE-LIMIT: True on a limit-entry fill (maker entry + taker exit costs).
+    limit_fill: bool = False
     # MOMENTUM-TRAIL-LEVER attribution; None unless a momentum lever is armed.
     mom: Optional[Dict[str, Any]] = None
     # P1-Q10 level-triggered trail attribution; None unless --trail-level is armed.
@@ -275,6 +282,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                  pullback_frac: float, atr_period: int, atr_stop_mult: float,
                  trail_mult: float, timeout_bars: int, cooldown_bars: int,
                  timeframe: str, symbol: str,
+                 entry_mode: str = "market",
+                 limit_expire_bars: int = 3,
                  emit_path: Optional[str] = None,
                  strategy_name: str = "htf_pullback_trend_2h",
                  min_confidence: float = 0.0,
@@ -366,6 +375,16 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
     # `entry_override`. The unit already applied every entry gate, so the
     # harness's own copies are switched off; exits and costs are unchanged.
     decision_bar = str(decision_bar or "closed").lower()
+    entry_mode = str(entry_mode or "market").lower()
+    if entry_mode not in ("market", "limit"):
+        raise ValueError(f"unknown entry_mode {entry_mode!r} (expected market|limit)")
+    if entry_mode == "limit":
+        if int(limit_expire_bars) < 1:
+            raise ValueError("limit_expire_bars must be >= 1")
+        if decision_bar == "forming":
+            # Same refusal as backtest_ict_scalp.py: the forming-bar path has no resting-order fill model, so a
+            # limit run on it would silently be a market run with limit fees.
+            raise ValueError("entry_mode='limit' is closed-bar only: decision_bar='forming' has no limit fill model")
     if decision_bar == "forming":
         if decision_1m is None or decision_cfg is None:
             raise ValueError("decision_bar='forming' needs decision_1m and decision_cfg")
@@ -380,6 +399,8 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         side_filter = "both"
     elif decision_bar != "closed":
         raise ValueError(f"unknown decision_bar {decision_bar!r} (expected closed|forming)")
+    _n_limit_signals = 0
+    _n_limit_missed = 0
     # M21 E-2 time-of-day entry lever (empty = off, byte-identical): skip any
     # NEW entry whose TRIGGER bar's UTC hour is in the CSV set. Exits are
     # never touched — an open trade rides through skipped hours unchanged.
@@ -758,6 +779,31 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         if risk <= 0 or (_fill_px is not None and ((direction == "long" and entry <= sl) or (direction == "short" and entry >= sl))):
             i += 1
             continue
+        # PULLBACK-ENTRY-MODE-LIMIT (default "market" = byte-identical). A post-only limit at the signal price
+        # (the signal close) rests `limit_expire_bars` bars and fills ONLY if a bar's low is strictly below it
+        # (long) / high strictly above it (short): price trading THROUGH, not touching. A signal that never
+        # trades through is a MISSED trade, counted, never dropped silently. `_i0` is the bar the position
+        # becomes live on (the signal bar for market, the fill bar for limit); the fill bar is stop-only.
+        _i0 = i
+        _limit_fill = False
+        if entry_mode == "limit":
+            _n_limit_signals += 1
+            _fill_i = None
+            for _jj in range(i + 1, min(i + 1 + int(limit_expire_bars), n)):
+                if direction == "long":
+                    _thru = float(df["low"].iloc[_jj]) < entry
+                else:
+                    _thru = float(df["high"].iloc[_jj]) > entry
+                if _thru:
+                    _fill_i = _jj
+                    break
+            if _fill_i is None:
+                _n_limit_missed += 1
+                next_idx = i + 1 + int(limit_expire_bars)
+                i = next_idx
+                continue
+            _i0 = _fill_i
+            _limit_fill = True
         # LIVE-PARITY TAKE-PROFIT. Tracking id on its own line, never wrapped:
         # BL-20260810-BACKTEST-DOES-NOT-MODEL-THE-LIVE-CAPPED-TP
         # htf_pullback_trend_2h.py places tp = min(entry*(1+0.099), entry +
@@ -791,12 +837,12 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         # STRUCTURE-EXIT-ITERATE (--structure-sl-only, default off = byte-identical): keep the structure STOP and the
         # declared (capped) TP -- the live `pivot=5;sl_only` semantic; the structure TP is neither placed nor extended.
         ext = entry
-        ext_j = i
+        ext_j = _i0
         trail = sl
         rr_min: Optional[float] = None
         exit_price: Optional[float] = None
         exit_reason = "timeout"
-        exit_idx = min(i + timeout_bars, n - 1)
+        exit_idx = min(_i0 + timeout_bars, n - 1)
         mfe = 0.0
         flip_streak = 0
         banked = False
@@ -984,7 +1030,12 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
         # CELL TIGHTEN (RQ-20261101-78fc-09; 0 = off, byte-identical): one-shot late-cell stop move, per trade.
         _ct = _cell_tighten().for_trade(cell_tighten_min_r, cell_tighten_room_atr, cell_tighten_mode,
                                         cell_tighten_random_p, cell_tighten_seed, i)
-        for j in range(i + 1, min(i + timeout_bars + 1, n)) if _rest_hit is None else ():
+        if _limit_fill and _rest_hit is None:
+            # Fill bar: the order filled inside it, so only the STOP is tested (SL-first, conservative); no TP.
+            _fb_hi, _fb_lo = float(df["high"].iloc[_i0]), float(df["low"].iloc[_i0])
+            if (direction == "long" and _fb_lo <= trail) or (direction == "short" and _fb_hi >= trail):
+                _rest_hit = (trail, "stop")
+        for j in range(_i0 + 1, min(_i0 + timeout_bars + 1, n)) if _rest_hit is None else ():
             if _prec is not None:
                 # Closes bar j-1's row with the state as it stands now (its end
                 # state) and opens bar j with the stop/target it is tested against.
@@ -1090,7 +1141,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
                 tp_price = _tpt.target
         if _rest_hit is not None:
             exit_price, exit_reason = _rest_hit
-            exit_idx = i
+            exit_idx = _i0
         if rr_min is not None:
             _rr_min_per_trade.append(rr_min)
         if exit_price is None:
@@ -1123,7 +1174,7 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
             entry=entry, sl=sl, risk=risk, exit_index=exit_idx,
             exit_time=df["timestamp"].iloc[exit_idx], exit_price=exit_price,
             outcome=exit_reason, r_multiple=round(r, 4), mfe_r=round(mfe, 3),
-            confidence=confidence, adx_at_entry=adx_at_entry,
+            confidence=confidence, adx_at_entry=adx_at_entry, limit_fill=_limit_fill,
             regime_weight=round(regime_weight, 4),
             mom=_mom_attribution(adx_series, i, exit_idx, mom_fired_bars,
                                  mom_tightened) if mom_any else None,
@@ -1272,6 +1323,12 @@ def run_backtest(df: pd.DataFrame, *, trend_lookback: int, pullback_lookback: in
     if direction_filter != "off":
         params["direction_filter"] = direction_filter
     params.update(tp_geom.params())
+    if entry_mode == "limit":
+        params.update(entry_mode="limit", limit_expire_bars=int(limit_expire_bars),
+                      maker_fee_bps=_LIMIT_FEE_BPS[0], taker_fee_bps=_LIMIT_FEE_BPS[1],
+                      limit_signals=_n_limit_signals, limit_missed=_n_limit_missed,
+                      limit_fill_rate=(round(1.0 - _n_limit_missed / _n_limit_signals, 4)
+                                       if _n_limit_signals else None))
     summary = _summarize(trades, df, timeframe=timeframe, symbol=symbol, params=params,
                       tp_r_effective=_tp_r_effective,
                       rr_min_per_trade=_rr_min_per_trade,
@@ -1325,11 +1382,16 @@ def _cost_breakdown(t: Trade) -> Dict[str, float]:
     if not t.exit_price or t.risk <= 0:
         return {"fee_r": 0.0, "slippage_r": 0.0, "funding_r": 0.0,
                 "total_cost_r": 0.0, "funding_windows": 0.0}
+    _fee_bps, _slip_bps = FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP
+    if t.limit_fill:
+        # Maker entry + taker exit; slippage on the taker exit only (half the round trip). Ignores
+        # --fee-bps-roundtrip, as backtest_ict_scalp.py does for its limit mode.
+        _fee_bps, _slip_bps = _LIMIT_FEE_BPS[0] + _LIMIT_FEE_BPS[1], SLIPPAGE_BPS_ROUNDTRIP / 2.0
     return execution_costs.roundtrip_cost_r(
         entry=t.entry, exit_price=t.exit_price, risk=t.risk,
         entry_time=t.entry_time, exit_time=t.exit_time,
-        fee_bps_roundtrip=FEE_BPS_ROUNDTRIP,
-        slippage_bps_roundtrip=SLIPPAGE_BPS_ROUNDTRIP,
+        fee_bps_roundtrip=_fee_bps,
+        slippage_bps_roundtrip=_slip_bps,
         funding_bps_per_window=FUNDING_BPS_PER_WINDOW,
         funding_window_hours=FUNDING_WINDOW_HOURS,
     )
@@ -1492,9 +1554,9 @@ _spec.loader.exec_module(_backtest_data_source)  # noqa: E402
 from src.backtest.module_globals import restores_globals  # noqa: E402  (restores the cost knobs main() applies)
 
 
-@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP')
+@restores_globals('FEE_BPS_ROUNDTRIP', 'FUNDING_BPS_PER_WINDOW', 'FUNDING_WINDOW_HOURS', 'SLIPPAGE_BPS_ROUNDTRIP', '_LIMIT_FEE_BPS')
 def main(argv: List[str]) -> int:
-    global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS
+    global FEE_BPS_ROUNDTRIP, SLIPPAGE_BPS_ROUNDTRIP, FUNDING_BPS_PER_WINDOW, FUNDING_WINDOW_HOURS, _LIMIT_FEE_BPS
     p = argparse.ArgumentParser(description="HTF pullback trend-continuation backtest (net-of-cost: fee+slippage+funding).")
     p.add_argument("--data", default=None)
     p.add_argument("--timeframe", default="2h")
@@ -1747,6 +1809,16 @@ def main(argv: List[str]) -> int:
                         "completed UTC daily close is below its N-day SMA of daily closes, built from the loaded bars "
                         "BEFORE the --start/--end trim (scripts/research/htf_daily_gate.py). Shorts are never gated.")
     p.add_argument("--json", dest="json_out", default=None)
+    p.add_argument("--entry-mode", choices=("market", "limit"), default="market",
+                   help="market (default, byte-identical) or limit (PULLBACK-ENTRY-MODE-LIMIT): a post-only limit at the "
+                        "signal close that fills only when price trades THROUGH it within --limit-expire-bars; "
+                        "maker entry + taker exit fees, half the round-trip slippage; closed-bar path only.")
+    p.add_argument("--limit-expire-bars", type=int, default=3, metavar="N",
+                   help="Bars a limit order rests before it is cancelled unfilled (default 3).")
+    p.add_argument("--maker-fee-bps", type=float, default=LIMIT_MAKER_FEE_BPS,
+                   help="Limit-entry maker fee per side, bps (default 2.0; 0 for Alpaca equities).")
+    p.add_argument("--taker-fee-bps", type=float, default=LIMIT_TAKER_FEE_BPS,
+                   help="Limit-entry taker fee per side, bps, paid on the exit/stop (default 5.5; 0 for Alpaca equities).")
     p.add_argument("--decision-bar", choices=["closed", "forming"], default="closed",
                    help="closed (default, Stage 0) or forming: replay the LIVE unit's "
                         "decision on the still-forming bar at the 2-min tick cadence "
@@ -1862,6 +1934,7 @@ def main(argv: List[str]) -> int:
         print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
         return 2
     FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)
+    _LIMIT_FEE_BPS = (float(args.maker_fee_bps), float(args.taker_fee_bps))
     # Mandatory venue-aware cost policy (operator directive 2026-08-04): a faithful
     # backtest is net-of-real-cost by default. Unset flags resolve to the venue-aware
     # defaults (funding is perp-only → 0 for MES/GLD/EURUSD, never a fabricated cost);
@@ -1947,6 +2020,7 @@ def main(argv: List[str]) -> int:
                        be_floor_tp_within_r=args.be_floor_tp_within_r,
                        timeout_bars=args.timeout_bars,
                        cooldown_bars=args.cooldown_bars,
+                       entry_mode=args.entry_mode, limit_expire_bars=args.limit_expire_bars,
                        timeframe=args.resample or args.timeframe,
                        symbol=args.symbol,
                        emit_path=args.emit_trades, strategy_name=args.strategy_name,
