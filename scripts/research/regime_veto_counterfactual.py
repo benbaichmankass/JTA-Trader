@@ -32,6 +32,7 @@ import zipfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 REPO = Path(__file__).resolve().parents[2]
@@ -132,7 +133,14 @@ def _zip_rows(url: str) -> list[dict] | None:
     try:
         with urlopen(Request(url, headers={"User-Agent": "research-script"}), timeout=60) as resp:
             data = resp.read()
-    except Exception:  # noqa: BLE001 -- a missing day/month is "could not look", counted by the caller
+    except HTTPError as ex:
+        # A month/day file that is not published (404) is "could not look": the caller counts it in could_not_replay and the record goes
+        # read_state unreadable when nothing at all replays. Anything else is logged with its status so a broken fetch is visible.
+        if ex.code != 404:
+            print(f"regime_veto_counterfactual: HTTP {ex.code} fetching {url}", file=sys.stderr)
+        return None
+    except (URLError, TimeoutError) as ex:
+        print(f"regime_veto_counterfactual: fetch failed for {url}: {ex!r}", file=sys.stderr)
         return None
     bars = []
     with zipfile.ZipFile(io.BytesIO(data)) as z:
