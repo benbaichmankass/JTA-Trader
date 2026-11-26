@@ -1,0 +1,476 @@
+{
+  "leg": "htf_pullback_trend_2h",
+  "label": "reachable_lever_beats_removed",
+  "grade": {
+    "verdict": "pass",
+    "label": "reachable_lever_beats_removed",
+    "best": "side_short",
+    "baseline": "A",
+    "candidates": {
+      "side_long": {
+        "delta_net_r": -7.739,
+        "delta_max_drawdown_r": -7.0845,
+        "fold_wins": 2,
+        "passes": false
+      },
+      "side_short": {
+        "delta_net_r": 5.5003,
+        "delta_max_drawdown_r": -9.8795,
+        "fold_wins": 3,
+        "passes": true
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "side_short beats the removed-lever baseline by 5.5003 R with no worse drawdown and >= 3/4 fold wins: a Tier-3 proposal to declare it (not done here)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0027,
+      "n": 369,
+      "net_r": -3.0772,
+      "net_r_fee_only": 12.2806,
+      "max_drawdown_r": 24.4519,
+      "by_outcome": {
+        "trail_stop": 223,
+        "take_profit": 51,
+        "timeout": 6,
+        "stop": 89
+      },
+      "mean_bars_held": 42.702,
+      "net_r_per_capital_day": -0.0023,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-13 22:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 22:00:00+00:00",
+          "end": "2023-02-14 10:00:00+00:00",
+          "trades": 90,
+          "net_r": -0.7501
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 10:00:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 90,
+          "net_r": -8.7148
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-08-17 10:00:00+00:00",
+          "trades": 84,
+          "net_r": 15.712
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:00:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 105,
+          "net_r": -9.3242
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "side_long": {
+      "reach_ge_6r": 0.004,
+      "n": 248,
+      "net_r": -10.8162,
+      "net_r_fee_only": -0.1589,
+      "max_drawdown_r": 17.3674,
+      "by_outcome": {
+        "trail_stop": 156,
+        "stop": 69,
+        "take_profit": 22,
+        "timeout": 1
+      },
+      "mean_bars_held": 38.887,
+      "net_r_per_capital_day": -0.0135,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-13 22:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 22:00:00+00:00",
+          "end": "2023-02-14 10:00:00+00:00",
+          "trades": 55,
+          "net_r": -8.8949
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 10:00:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 68,
+          "net_r": -2.2059
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-08-17 10:00:00+00:00",
+          "trades": 63,
+          "net_r": 8.7326
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:00:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 62,
+          "net_r": -8.448
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_long__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_long__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--side-filter",
+        "long"
+      ]
+    },
+    "side_short": {
+      "reach_ge_6r": 0.0,
+      "n": 237,
+      "net_r": 2.4231,
+      "net_r_fee_only": 12.3992,
+      "max_drawdown_r": 14.5724,
+      "by_outcome": {
+        "trail_stop": 143,
+        "take_profit": 33,
+        "timeout": 5,
+        "stop": 56
+      },
+      "mean_bars_held": 41.616,
+      "net_r_per_capital_day": 0.0029,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 3.0,
+        "trail_mult": 4.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-13 22:00:00+00:00",
+      "data_end": "2026-11-17 22:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 22:00:00+00:00",
+          "end": "2023-02-14 10:00:00+00:00",
+          "trades": 56,
+          "net_r": 2.7899
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 10:00:00+00:00",
+          "end": "2024-05-16 22:00:00+00:00",
+          "trades": 56,
+          "net_r": -2.1694
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 22:00:00+00:00",
+          "end": "2025-08-17 10:00:00+00:00",
+          "trades": 55,
+          "net_r": -0.5479
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 10:00:00+00:00",
+          "end": "2026-11-17 22:00:00+00:00",
+          "trades": 70,
+          "net_r": 2.3507
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_short__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_short__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--side-filter",
+        "short"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "120",
+      "resample": "2h"
+    },
+    "fold_edges": [
+      "2021-11-13 22:00:00+00:00",
+      "2023-02-14 10:00:00+00:00",
+      "2024-05-16 22:00:00+00:00",
+      "2025-08-17 10:00:00+00:00",
+      "2026-11-17 22:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/A__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar"
+      ],
+      "routed_cfg_keys": []
+    },
+    "side_long": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_long__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_long__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--side-filter",
+        "long"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--side-filter",
+        "long"
+      ],
+      "omitted_levers_per_builder": [
+        "decision_bar"
+      ],
+      "routed_cfg_keys": []
+    },
+    "side_short": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "2h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "3",
+        "--trail-mult",
+        "4.0",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_short__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-159/45839877885/arms/side_short__bt.json",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0",
+        "--side-filter",
+        "short"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [
+        "--side-filter",
+        "short"
+      ],
+      "omitted_levers_per_builder": [
+        "decision_bar"
+      ],
+      "routed_cfg_keys": []
+    }
+  }
+}
