@@ -2,7 +2,7 @@
 id: RQ-20261125-11d7-03
 title: 'HOLDOUT RE-RUN of trend_donchian_eth_prop: does the declared leg hold net-positive on the latest ~25% of ETHUSDT history (grown to 25 trades, capped 40%) after passing discovery
   on the earliest ~75%, full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -118,3 +118,14 @@ related:
 - research/levers/trend_donchian_eth_prop.yaml
 - comms/prop_survival/trend_donchian_eth_prop.json
 last_dispatched_at: '2026-11-25T22:33:47+00:00'
+grading:
+  attested: RULERQ20261125-11d7-03
+  auto: true
+  decision_rule_id: RULERQ20261125-11d7-03
+  evidence:
+  - research/results/RQ-20261125-11d7-03/45711856966.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
