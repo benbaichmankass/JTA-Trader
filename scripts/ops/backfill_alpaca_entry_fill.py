@@ -149,12 +149,10 @@ def apply_rows(conn: sqlite3.Connection, plan: dict[str, Any], now_iso: str) -> 
 
 
 def _alpaca_accounts() -> dict[str, dict[str, Any]]:
-    import yaml
-    root = Path(__file__).resolve().parents[2]
-    doc = yaml.safe_load((root / "config" / "accounts.yaml").read_text()) or {}
-    accts = doc.get("accounts", doc)
+    from src.config.accounts_loader import load_accounts_dict
+    accts = load_accounts_dict()
     out = {}
-    for aid, cfg in (accts.items() if isinstance(accts, dict) else []):
+    for aid, cfg in accts.items():
         if isinstance(cfg, dict) and str(cfg.get("exchange") or "").lower() == "alpaca" \
                 and "options" not in str(aid):        # options rows journal the underlying, not the contract fill
             out[str(aid)] = {**cfg, "account_id": str(aid)}
