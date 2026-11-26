@@ -20,7 +20,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from scripts.research import exit_holdbias as eh
+from scripts.research import exit_holdbias as eh  # noqa: E402
 
 NAMES = ["close", "tighten_sl_0p25r", "tighten_sl_0p5r", "widen_sl_0p5r"]
 
