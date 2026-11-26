@@ -6,7 +6,6 @@ generic refusals in a row stop it too (it must not hammer an endpoint that keeps
 """
 from __future__ import annotations
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -46,7 +45,7 @@ def _run(tmp_path, *, mode: str, dry: str, ids: str):
     calls = tmp_path / "deletes"
     calls.write_text("")
     script = STUB + "\n" + _step()
-    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60,
+    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60, check=False,
                        env={"PATH": "/usr/bin:/bin", "REPO": "o/r", "MIN_AGE_HOURS": "24", "THROTTLE": "0", "DRY_RUN": dry,
                             "STUB_IDS": ids, "STUB_MODE": mode, "DELETE_CALLS": str(calls)})
     return p, [x for x in calls.read_text().splitlines() if x]
@@ -84,7 +83,7 @@ def test_a_run_that_started_a_job_is_kept_never_deleted(tmp_path):
     script = STUB.replace('echo 0 ;;   # the jobs lookup: no job started', 'echo 1 ;;') + "\n" + _step()
     calls = tmp_path / "deletes"
     calls.write_text("")
-    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60,
+    p = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60, check=False,
                        env={"PATH": "/usr/bin:/bin", "REPO": "o/r", "MIN_AGE_HOURS": "24", "THROTTLE": "0", "DRY_RUN": "false",
                             "STUB_IDS": "5 6", "STUB_MODE": "ok", "DELETE_CALLS": str(calls)})
     assert calls.read_text() == ""
