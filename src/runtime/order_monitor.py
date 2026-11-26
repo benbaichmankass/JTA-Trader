@@ -1681,6 +1681,10 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         # at this point, so neither order risks a journal that claims a
         # still-open position is closed.
         closed_at_iso = datetime.now(timezone.utc).isoformat()
+        if ex_result.get("entry_unfilled"):
+            # ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125: the close cancelled the row's still-working entry and nothing
+            # had filled -- there was never a position, so no exit price (ENTRY-UNFILLED-LABEL, neutral in soak_state).
+            reason, actual_exit_price = ENTRY_UNFILLED_EXIT_REASON, None
         close_updates: Dict[str, Any] = {
             "status": "closed",
             "exit_reason": reason,
@@ -2441,10 +2445,14 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
         # both option legs open (alpaca_options_paper slv_trend_1h row 8569, sl_cross 17:11Z, legs open ~1 h until
         # the reverse reconciler bare-adopted them). Liquidate the structure's legs FIRST, and let the caller close
         # the journal row only on ok=True (the existing exchange-first flow), so a row is never closed over open legs.
+        _entry = _cancel_working_entry(matched_trade, cfg, client)
+        if _entry is not None and _entry.get("state") == "failed":
+            # The entry may still be resting: closing the row now is exactly the orphan this guards against. Keep the
+            # row open; the monitor re-attempts next tick (a failure, not a gate: nothing is skipped for good).
+            return {"ok": False, "exchange_response": None, "exchange_order_id": None, "entry_cancel": _entry,
+                    "error": f"entry order {_entry.get('order_id')} still working; cancel not confirmed"}
         _opt = _options_structure_close(matched_trade, cfg)
-        if _opt is not None:
-            return _opt
-        return close_open_position(
+        out = _opt if _opt is not None else close_open_position(
             client, cfg,
             symbol=matched_trade.get("symbol"),
             side=matched_trade.get("direction"),
@@ -2453,9 +2461,52 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
             tp_order_id=matched_trade.get("tp_order_id"),
             trade_id=matched_trade.get("id"),
         )
+        if _entry is not None and isinstance(out, dict):
+            out = {**out, "entry_cancel": _entry}
+            if _entry.get("state") == "canceled" and not (_entry.get("filled_qty") or 0) and out.get("ok"):
+                out["entry_unfilled"] = True   # nothing ever filled: journal entry_unfilled, no exit price
+        return out
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: exchange close failed: %s", exc)
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _cancel_working_entry(matched_trade: Dict[str, Any], cfg: Any, client: Any) -> Optional[Dict[str, Any]]:
+    """ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125: cancel this row's OWN entry order when it is still working at close.
+
+    MEASURED 2026-11-25 (alpaca_options_paper slv_trend_1h row 8569): a DAY mleg LIMIT entry was still working when the
+    package closed on sl_cross; the close found no position (idempotent) and closed the row, nothing cancelled the entry,
+    it FILLED an hour later and the reconciler adopted and flattened the legs as orphans. Any Alpaca leg with a working
+    LIMIT entry closed before fill does the same on a real-money book.
+
+    Returns ``None`` when there is nothing to do (not Alpaca, no real entry order id, or the order is not working / could
+    not be read -- the unchanged close path; an unreadable read never blocks a close). Otherwise the confirmed outcome of
+    ``AlpacaClient.cancel_order_confirmed`` on the row's own ``broker_order_id`` (never any other order): ``canceled``
+    (with ``filled_qty``: 0 = nothing filled, > 0 = a partial the close then liquidates), ``filled`` (it filled first:
+    the close liquidates it) or ``failed`` (may still rest: the caller keeps the row open). Never raises."""
+    try:
+        if str((cfg or {}).get("exchange") or "").lower() != "alpaca":
+            return None
+        oid = str(matched_trade.get("broker_order_id") or "").strip()
+        if not oid or not _is_real_order_id(oid):
+            return None
+        if _entry_order_hold(cfg, oid) != "pending":
+            return None
+        cancel = getattr(client, "cancel_order_confirmed", None)
+        if cancel is None:
+            logger.warning("order_monitor: entry %s still working but client %s cannot cancel; row %s close proceeds",
+                           oid, type(client).__name__, matched_trade.get("id"))
+            return None
+        res = cancel(oid) or {}
+        out = {"order_id": oid, "state": res.get("state") or "failed", "status": res.get("status"),
+               "filled_qty": res.get("filled_qty")}
+        logger.info("order_monitor: close of row %s (account=%s symbol=%s) found its entry order %s still working -> %s",
+                    matched_trade.get("id"), matched_trade.get("account_id"), matched_trade.get("symbol"), oid, out)
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: _cancel_working_entry(row %s) raised %s; close proceeds unchanged",
+                       matched_trade.get("id"), exc)
+        return None
 
 
 def _options_structure_close(matched_trade: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
