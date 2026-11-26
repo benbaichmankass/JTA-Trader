@@ -6,7 +6,7 @@ id: RQ-20261126-7c11-02
 title: 'ml_entry_eq_struct SECURITY-KEYED retrain: with every pool ticker whose 1h history is not ONE continuous security dropped (FB = Meta then
   an ETF, INFO = IHS Markit then an ETF, SIX delisted, ...), does the 5-seed structure ensemble still clear the registered 98e3-06 bar on the
   confirming window, at the deflated ledger bar for this window?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -131,3 +131,14 @@ related:
 - RQ-20261107-98e3-06
 - ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
 last_dispatched_at: '2026-11-26T07:19:20+00:00'
+grading:
+  attested: RULE-RQ20261126-7c11-02-SECKEY
+  auto: true
+  decision_rule_id: RULE-RQ20261126-7c11-02-SECKEY
+  evidence:
+  - research/results/RQ-20261126-7c11-02/45774481659.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

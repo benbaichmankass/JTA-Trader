@@ -5,7 +5,7 @@ id: RQ-20261126-e9a4-01
 title: 'REGIME-PROGRAM equities/futures entry filter: on the ROSTERED non-crypto legs (ETFs, micro futures), does skipping each trade whose walk-forward
   LightGBM prediction (the f1a0-26 frozen recipe; own-symbol + SPY daily state) falls below the training 1/3 quantile beat taking every trade by +0.01 R
   per available trade, and beat random skips of the same count within leg-month, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -149,3 +149,16 @@ related:
 - REGIME-PROGRAM
 - .claude/skills/regime-selectivity/SKILL.md
 last_dispatched_at: '2026-11-26T03:05:42+00:00'
+grading:
+  attested: RULE-REGIME-ENTRY-FILTER-EQ-20261126
+  auto: true
+  decision_rule_id: RULE-REGIME-ENTRY-FILTER-EQ-20261126
+  evidence:
+  - research/results/RQ-20261126-e9a4-01/45745918400.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

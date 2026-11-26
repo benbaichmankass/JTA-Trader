@@ -5,7 +5,7 @@ id: RQ-20261126-4d1c-01
 title: 'Walk-forward-before-Tier-3: does REMOVING htf_pullback_trend_2h''s 1-D ADX cells (trending L/S, chop L/S, transitional S; config/regime_policy.yaml)
   add >= +0.01 R per available trade over the cells as configured, on the leg''s OWN harness replay 2022-2026, beyond random add-backs of the same count,
   net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -144,3 +144,16 @@ related:
 - .claude/skills/regime-selectivity/SKILL.md
 - docs/research/regime-debt-matrix-corrected-cost-2026-07-30.md
 last_dispatched_at: '2026-11-26T06:24:06+00:00'
+grading:
+  attested: RULE-HTF-ADX-CELL-REMOVAL-20261126
+  auto: true
+  decision_rule_id: RULE-HTF-ADX-CELL-REMOVAL-20261126
+  evidence:
+  - research/results/RQ-20261126-4d1c-01/45763510846.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
