@@ -2,8 +2,8 @@
   "id": "EXIT-VOLTRAIL-TRAINSET-DRIVER",
   "title": "[BUILD] driver for RQ-20261105-17bf-01: vol_trail (vt_hot90_t2.5) trade paths as exit-model training data",
   "state": "queued",
-  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
-  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-ML (session_01AFoLuJkXEM1EigH9)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,11 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-02",
   "_seq": 945,
   "note": "OPERATOR 2026-11-05 (note on PI-20261029-KXR1VUPP-0001), verbatim: \"we should add this back into the research pipeline and see if we can use it as part of training for exit models\". BUILD scripts/research/exit_head_voltrail_trainset.py: extend the exit-head row builder (build_exit_panel.py / scripts/ml/train_exit_head.py rows.jsonl) with (a) lever-state features (ATR percentile vs vol_pctl_window 200, whether the vt_hot90 tightening is active at bar t) and (b) the lever arm counterfactual future_r_delta as an extra label, for ada_pullback_2h trades, then score through exit_head_walkforward_multifold.py. Unblocks research/queue/blocked/RQ-20261105-17bf-01.yaml (git mv to research/queue/ and set queued when the driver is on main). Offline, Tier-1.",
   "phase": "W45",
-  "updated_at": "2026-11-05T11:04:32Z",
-  "updated_by": "session_01AFoLuKMSCYK8SPEYVeekJn",
+  "updated_at": "2026-11-26T06:11:23Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

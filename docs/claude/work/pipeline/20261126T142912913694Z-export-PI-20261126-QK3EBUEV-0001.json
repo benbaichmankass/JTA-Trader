@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "collect_runner_results.recollect_orphans no longer refuses runs 38747768830, 41567569662 and 42134900236: each lands an E5 record (producer rows fixed or a collector transform), or is disposed with a stated reason; or the manager kills it with a reason",
+    "due_date": "2026-12-03",
+    "kind": "date"
+  },
+  "id": "PI-20261126-QK3EBUEV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY 2026-11-26, Manager Session 2026-11-26a 06:54Z (file as one pipeline item, do not take now)",
+    "rerun": "GITHUB_REPOSITORY=benbaichmankass/JTA-Trader python3 -c \"import sys;sys.path.insert(0,'scripts/research');import collect_runner_results as C;from pathlib import Path;C.recollect_orphans(Path('.'),repo_slug='benbaichmankass/JTA-Trader')\" 2>&1 | grep '::error'"
+  },
+  "owner": "ML-PRIMARY",
+  "roadmap": [
+    "L-OPS"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "Three OLDER landed-artifact orphans are refused by research_result.py --emit on every recollect_orphans pass (MEASURED 2026-11-26 ~06:52Z, local run on main ee1aa6c0b): 38747768830 (verdict word outside the allowed set: '...action_warranted, indeterminate, not_applicable, wiring_only'), 41567569662 ('inadmissible result record(s)'), 42134900236 (empty population description: 'a number without its basis is not a finding'). Per the manager's read of the 45768368317 collect log they are NOT today's dispatcher-red cause (that was 7c11-01 run 45763324547, fixed in PR #29078), but each cycle re-tries and refuses them, so their results never land. Next: read each run's record-inputs.json / records.jsonl, fix the producer, or add a narrow collector transform (the _void_nonmeasured_verdict / _null_unmeasured_row_n pattern), or dispose with a reason."
+}

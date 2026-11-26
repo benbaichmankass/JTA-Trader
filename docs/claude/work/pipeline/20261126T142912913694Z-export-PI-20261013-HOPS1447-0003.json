@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "75b2-20 and 75b2-21 land a measured verdict or are retired with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261013-HOPS1447-0003",
+  "next_action": "dispatch_lane",
+  "observation": {
+    "due_by": "2026-12-09",
+    "how_to_check": "ls research/results/RQ-20261012-75b2-20 research/results/RQ-20261012-75b2-21  # a row with read_state measured",
+    "what": "75b2-20 and 75b2-21 land a measured verdict or are retired with a stated reason"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "RESEARCH-OPS-20261013-1447 research-ops lane",
+    "rerun": "grep -n 'timed_out' comms/research/RQ-20261012-75b2-2[01]/*/run-manifest.json"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent RESEARCH-ROUTER state landed_unproven: O)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row RESEARCH-ROUTER is landed_unproven (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "RESEARCH-ROUTER",
+  "state": "routed",
+  "what": "ml_bakeoff units on research-script-run-trainer.yml time out at their 45 min budget: 75b2-19, 75b2-20 and 75b2-21 (manifests: exit=None timed_out=true seconds=2700). 75b2-20 and 75b2-21 were NOT re-armed this pass: re-firing the same command on the same route with the same timeout reproduces the failure. They need the cmd-0.log cause read (checklist row RESEARCH-ROUTER) and then a higher timeout_minutes or a runner route, hand-edited by a human lane."
+}

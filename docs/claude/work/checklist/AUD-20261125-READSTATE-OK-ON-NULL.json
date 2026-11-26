@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261125-READSTATE-OK-ON-NULL",
+  "title": "/api/diag/exchange_positions returns read_state 'ok' with positions null (could-not-read) for ib_live and oanda_practice; the 11-18 health review H3 graded 'exchange_positions read_state ok for all' from that field, so a blind account reads as healthy",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "WEEKLY-AUDIT-2026-11-25 C8 + deep pass 0 (reducer hunt). Evidence: exchange_positions 18:28Z (14 accounts, all read_state ok; 2 with positions null). system_invariants already treats null as blind (INV-BLIND-COUNT-NULL), so the C1 grade is right; the route's own read_state is the reducer. Fix: emit read_state 'not_read'/'blind' when positions is null (route, Tier 2 read path -> Tier 1 per tier table: observability/read path), and point health H3 at it. CHECK {command: diag exchange_positions, rule: no account has read_state ok with positions null, resolves_when: 0 such accounts}.",
+  "phase": null,
+  "updated_at": "2026-11-25T18:44:00Z",
+  "updated_by": "session_01AFoLuKGvpUCcY4M5i6uUuF"
+}

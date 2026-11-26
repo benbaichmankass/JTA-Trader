@@ -1,0 +1,23 @@
+{
+  "id": "WAKE-TOGGLE-ACTOR-ATTRIBUTION",
+  "title": "POST /api/bot/wake-toggles via the JTA_Trader MCP logs changed_by 'console (operator Google sign-in)' for a manager-session write (ltr_paper flip 2026-11-25 18:34:22Z by Manager Session 2026-11-25a); audit trail misattributes session writes to the operator",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 3,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-09",
+  "note": "2026-11-26 06:15Z fix on PR #29066 (Tier 1 self-land): connector set_wake_toggle takes optional actor; unnamed caller logged 'caller not identified', never 'operator'. NOT yet merged/deployed/observed. Closing observation: after the connector host deploys, a set_wake_toggle call with actor shows by='console connector, actor: ...' in GET /api/bot/wake-toggles recent_flips. 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'other'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-09 with NO substantive progress read this pass -- dispatch or kill at that date. 2026-11-26 ~06:30Z CORRECTION: PR #29066 is Tier 2 by name (src/console_connector/server.py), landing HELD for the manager's merge, not a Tier-1 self-land; pr-landing-guard refused my first declaration (R5). Re-declared tier 2 / hold, head 839592fa0. Merged != deployed != observed: needs the connector-host deploy, then a set_wake_toggle call with actor showing by='console connector, actor: ...' in recent_flips. 2026-11-26 07:01Z PR #29066 MERGED (by the manager, held Tier-2). Merged, NOT deployed, NOT observed: the connector host (ict-trainer-vm side per console connector docs) still runs the old code until deployed. Closing observation: after the deploy, a set_wake_toggle call with actor shows by='console connector, actor: ...' in GET /api/bot/wake-toggles recent_flips. RESUME 2026-11-26 07:25Z (housekeeping lane stopping on the operator's one-lane throttle): #29066 merged c4c156803f. Deploy dispatched: trainer-console-connector-install run 45774793586 (workflow_dispatch on main, queued behind runner capacity at 07:22Z; it reinstalls the unit and restarts jta-console-connector once; ict-trainer-git-sync pulls code every ~15 min, so the trainer had the merge by ~07:16Z). NEXT for whoever resumes: (1) confirm run 45774793586 concluded success (job log: healthz ok, 'env names' line); (2) with the JTA console MCP (wake_toggles + set_wake_toggle) read wake_toggles, call set_wake_toggle with actor='<session id>' setting one switch to its CURRENT value (no state change), read recent_flips; closing observation = by='console connector, actor: <session id>'; (3) work.py --via direct close --state done with the run id + the recent_flips line. If the old text 'operator Google sign-in' still appears, the trainer had not pulled: re-run the install. Row stays landed_unproven.",
+  "phase": null,
+  "updated_at": "2026-11-26T07:22:47Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "LTR-WAKE-ACTIONS-ERRPATH-IMPORT",
+  "title": "Actions live-review-wake fallback crashes on any HTTP error: error handler imports src.runtime (ModuleNotFoundError: src)",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "live-review pipeline incident 2026-11-25; map at planning",
+  "priority_rank": 8,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "[2026-11-25 22:46Z housekeeping lane] #28927 MERGED: http_json error path puts the repo root on sys.path and falls back to a local _error doc; 2 subprocess tests (fail on old code). 404 = expected 'absent' answer from _branch_blob (contents GET at live_review_wake.py:272); the log does not print the URL. Merged, not yet observed on a live run. MEASURED: run 45709763387 (22:02Z) step Wake failed: http_json got HTTP 404 (scripts/ops/live_review_wake.py:259), then the error path ran 'from src.runtime.live_review_wake_post import _error_doc' and died ModuleNotFoundError: No module named 'src' (repo root not on sys.path in Actions). Next run 45711888292 succeeded. Fix: make the error path import-safe on the runner (sys.path insert of repo root, or a local copy), plus find which URL 404'd. Owner: housekeeping lane (Manager 2026-11-25b).",
+  "observation": {
+    "due_by": "2026-11-27",
+    "how_to_check": "next live-review-wake.yml run that hits a 404 on the contents GET: job log has no Traceback from http_json; python3 -m pytest tests/test_live_review_wake.py -k http_error_path",
+    "what": "the Actions live-review-wake fallback survives an HTTP 404 on the rows-branch evidence read (no ModuleNotFoundError)"
+  },
+  "phase": null,
+  "updated_at": "2026-11-25T22:46:30Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: tooling fix"
+  }
+}

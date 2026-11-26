@@ -1,0 +1,25 @@
+{
+  "id": "ALPACA-TP-PARTIAL-CANCELS-STOP-1125",
+  "title": "Alpaca cancels a bracket's stop when its take-profit partially fills; the remainder is naked until the next naked sweep re-arms it",
+  "state": "in_flight",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "Alpaca order-path integrity",
+  "priority_rank": 4,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    29094
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "2026-11-25 MEASURED (alpaca_order_history alpaca_paper USO; trader journal 14:20-14:40Z). Trade 8521 USO long 1147, bracket a4905e39 (gtc). 14:34:40Z the TP limit leg a4817632 at 137.71 PARTIALLY filled 779/1147. In the same second the VENUE cancelled stop leg fdd7732d (canceled_at 14:34:40.94Z; no USO cancel by the trader in the complete-grep log window). 368 shares had no stop for 19 s. At 14:34:58Z the naked sweep re-armed: it cancelled the TP remainder and placed OCO f3f37d0e (368, TP 137.71 / SL 134.74). That OCO's TP filled 14:38:31Z, and the journal closed 8521 (pnl 5807.80). The mechanics recovered. Two defects: (a) the 19 s gap is set by the sweep cadence, while a trade-update stream or partial-fill hook could re-arm in about 1 s; (b) the alert/log says 'alpaca_rearm_refused kind=venue_holding_protected' and 'REFUSED' for what is a PROCEEDING re-arm (order_monitor.py ~11548). Before the 1116 lane read it, that wording read as a contradiction with the stop_qty 0 coverage alert. (c) Side note: journal entry_price 132.715 vs venue fill 133.165649 (\u03940.45 \u00d7 1147 \u2248 17 P&L overstatement) \u2014 check whether entry_price is the signal price rather than the fill. Closing observation: the next TP partial fill on an Alpaca bracket is re-armed within the sweep, and its alert reads as a re-arm rather than a refusal. Found by lane ALPACA-PAPER-BRACKETS-GONE-1116. 2026-11-26 07:40Z ML-PRIMARY (one lane): part (b) wording fix in held Tier-1 draft PR #29094 (venue_holding_protected re-arm logs/pages as PROCEEDING; 1 new test, 57 re-arm/sweep tests pass). Still open: (a) a faster re-arm than the sweep cadence (trade-update stream / partial-fill hook; order path, Tier 2) and (c) the entry_price 132.715 vs venue fill 133.166 check. Row stays in_flight until (a) and (c) are done or disposed. 2026-11-26 ~12:50Z ML-PRIMARY, part (c) ANSWERED, measured. Trade 8521's journal entry_price 132.715 is the package signal price. The venue market buy a4905e39 filled at 133.165649 (filled_at 16:02:00Z, 6.4 s after submit, past the 3 s ALPACA_PLACE_CONFIRM_S poll in alpaca_client.place()). P&L overstated by 516.89 USD (the earlier note's '~17' was a typo for ~517). It is a class, not a one-off: 15 of 65 Alpaca stock entries, filed as row ALPACA-ENTRY-FILL-PRICE-UNSYNCED (Tier 2, fix proposed, not shipped). Part (a), the faster re-arm, stays open (order path, Tier 2).",
+  "phase": null,
+  "updated_at": "2026-11-26T12:40:39Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

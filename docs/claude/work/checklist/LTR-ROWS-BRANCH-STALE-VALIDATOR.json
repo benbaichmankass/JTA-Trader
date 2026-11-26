@@ -1,9 +1,9 @@
 {
   "id": "LTR-ROWS-BRANCH-STALE-VALIDATOR",
   "title": "Rows branch carries stale validator+schema (level: number|null); reviewers' gate fails on rows 19-22",
-  "state": "in_flight",
+  "state": "queued",
   "owner": "manager",
-  "lane": "LTR-VALIDATOR-STALE",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,11 +13,17 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-16",
+  "due_by": "2026-11-30",
   "_seq": 753,
-  "note": "2026-11-18 manager (MEASURED, reviewer session_01AFoLuKYAMxaQYKfm8EqkbR, row LR-20261118T2253Z-pkg-897d89b7edf34aa3): check_live_review_records.py --only-new reads only comms/live_review/reviews.jsonl. The REVIEWER-BRIEF has reviewers write per-row files at comms/live_review/rows/<id>.json, so the CLI never validates the new row. It also fails on legacy reviews.jsonl rows (handoff.verdict keep/carry/none). The reviewer validated by calling row_problems()/packet_problems() directly. Fix: the CLI also validates rows/*.json added vs REF, and --only-new skips legacy rows. Tier 1.",
+  "lane_history": [
+    {
+      "archived_at": "2026-11-25T18:30:00Z",
+      "lane": "LTR-VALIDATOR-STALE"
+    }
+  ],
+  "note": "[2026-11-25 BACKLOG-TRIAGE-W48 re-owned: was in_flight, owner/lane lane label only not running (list_sessions/get_session 2026-11-25); returned to queued under the manager, due 2026-11-30] 2026-11-18 manager (MEASURED, reviewer session_01AFoLuKYAMxaQYKfm8EqkbR, row LR-20261118T2253Z-pkg-897d89b7edf34aa3): check_live_review_records.py --only-new reads only comms/live_review/reviews.jsonl. The REVIEWER-BRIEF has reviewers write per-row files at comms/live_review/rows/<id>.json, so the CLI never validates the new row. It also fails on legacy reviews.jsonl rows (handoff.verdict keep/carry/none). The reviewer validated by calling row_problems()/packet_problems() directly. Fix: the CLI also validates rows/*.json added vs REF, and --only-new skips legacy rows. Tier 1.",
   "phase": "research",
   "queue_pos": 500355.0,
-  "updated_at": "2026-11-18T22:58:25Z",
-  "updated_by": "operator-spa"
+  "updated_at": "2026-11-25T18:42:12Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
 }

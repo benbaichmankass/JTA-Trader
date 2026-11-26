@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 2,
+    "clears_when": "the next weekly run of RQ-20261105-028/-030/-032/-033/-034/-035 (and -029/-031 once they have emits) has a candidate arm whose arms/<arm>__trades.jsonl differs from arms/A__trades.jsonl, or an arm that is still identical is root-caused",
+    "kind": "observation",
+    "last_checked": "2026-11-26"
+  },
+  "id": "PI-20261125-EFILLW49-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "iteration_orphans / lever sweeps ict_scalp: arms byte-identical to A",
+    "rerun": "python3 - <<'E'\nimport glob,hashlib\nfor u in ('RQ-20261105-028','RQ-20261105-030','RQ-20261105-032','RQ-20261105-033','RQ-20261105-034','RQ-20261105-035'):\n  for a in ('A','displacement_atr_mult_lo','displacement_atr_mult_hi'):\n    r=sorted(glob.glob(f'comms/research/{u}/*/arms/{a}__trades.jsonl')); print(u,a,hashlib.md5(open(r[-1],'rb').read()).hexdigest()[:8] if r else None)\nE"
+  },
+  "routed_to": "RESEARCH-ITERATE",
+  "state": "routed",
+  "what": "Verify the next weekly ict_scalp sweeps really differ from the baseline arm. MEASURED 2026-11-25 by QUEUE-FILL-STANDING-W49 from the kept emits: for the six ict_scalp legs with emits (ict_scalp_5m RQ-20261105-028, eth_15m -030, sol_15m -032, xrp_15m -034, xrp_5m -035, sol_5m -033) all four candidate arms (displacement_atr_mult lo/hi, min_displacement_body_to_range lo/hi) are byte-identical to arm A (same md5, same n). The cfg-set routing fix in exit_lever_ablation.py (docstring: 8 weekly units, measured 2026-11-25) post-dates those runs. The nine no-op sweeps graded FAIL and must NOT count as evidence against these levers or these legs. This item closes when the next weekly run of each unit shows at least one candidate arm differing from A, or when a still-identical arm is root-caused."
+}

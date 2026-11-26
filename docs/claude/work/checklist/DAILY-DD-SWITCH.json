@@ -17,7 +17,7 @@
     17282
   ],
   "blocked_on": [],
-  "due_by": "2026-11-15",
+  "due_by": "2026-11-30",
   "_seq": 370,
   "note": "MEASURED 08:15Z /api/bot/config accounts[].daily_dd_switch: armed + read_state ok + non-null day_start_equity on bybit_1, bybit_2 (192.09), bybit_portfolio, alpaca_paper, alpaca_portfolio, alpaca_live ([balance removed]), alpaca_options_paper, ib_paper, breakout_2, tradeify_1, velotrade_1; ib_live + oanda_practice dry_run_not_read (dry accounts). First half of the closing observation MET (real equity read); still open: a trip+reset pair or 14 days of ok readings. Audit's upgrade candidate 'never observed reading equity' is refuted -> not upgraded. [BACKLOG-DRAIN-2 2026-11-01] PENDING: NOT MET. Population: log_file daily_dd_switch_state 2026-11-01 + /api/bot/config. 8 armed accounts; 7 carry read_state ok with non-null day_start_equity (bybit_2, bybit_portfolio, alpaca_portfolio, alpaca_live, breakout_2, velotrade_1 on 11-01; tradeify_1 on 10-31, one day stale). ib_live is armed but read_state=dry_run_not_read (account is dry, no equity read). No trip+reset pair observed (all tripped=false) and 14 days of ok readings not yet established.",
   "observation": {
@@ -32,6 +32,6 @@
     "what": "a real equity read folded into runtime_logs/daily_dd_switch_state.json for every armed account (read_state ok, non-null day_start_equity), then a trip+reset pair or 14 days of ok readings"
   },
   "phase": "landed",
-  "updated_at": "2026-11-14T21:26:04Z",
-  "updated_by": "session_01AFoLuJUGfpon2bNgwFbFmx"
+  "updated_at": "2026-11-25T18:43:49Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
 }

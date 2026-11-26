@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "live_review_packet.py on a bybit package with partial SL/TP pairs reports mechanics match, pinned by a test reproducing the 8058 shape",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261120-DMANAGER-0002",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-11-20 03Z: LIVE-REVIEW lane session_01AFoLuMHBWpX7CuUrvgqvbA rows on live-review/rows 55c7e936 (trade 8058)",
+    "rerun": "git show origin/live-review/rows:comms/live_review/packets/LR-20261120T0323Z-pkg-56e68721271242f3.json | python3 -m json.tool | grep -A8 -E 'mechanics|packet_defects'"
+  },
+  "owner": "manager",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row WEEKLY-PLANNING is queued (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (manager; W48 planning disposition) -- ranked in docs/plans/planning-2026-W48-open-items.md § Backlog triage output [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin Manager Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV), 2026-1; routing-alarm rule]",
+  "state": "routed",
+  "what": "live_review_packet.py MECHANICS FALSE POSITIVE on Bybit shared partial SL/TP pairs: the generator reports a mechanics mismatch for a bybit_1 package whose venue carries partial (split) SL/TP orders shared across a position, which hand verification shows MATCH (trade 8058 ict_scalp_xrp_5m, packet LR-20261120T0323Z-pkg-56e68721271242f3, mechanics.evidence + packet_defects). A false mismatch trains reviewers to ignore the field. Related but distinct: PI-20261031-TD4QC5GP-0004 (a real venue-vs-package level gap). Fix the comparison to aggregate partial pairs before matching; add a planted test."
+}

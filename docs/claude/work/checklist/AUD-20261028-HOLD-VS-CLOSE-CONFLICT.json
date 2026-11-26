@@ -13,7 +13,7 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-04",
   "_seq": 762,
   "lane_history": [
     {
@@ -21,9 +21,9 @@
       "lane": "session_01AFoLuMroLtrU2biw4ZDoBk"
     }
   ],
-  "note": "WEEKLY-AUDIT-2026-10-28 deep pass 0. MEASURED (live_review_grade.py --live after the join fix): hold vs close-at-review n=27, mean dR -0.80, hit 0.037 (ESTIMATED, close side charged no cost). DESK-LIFECYCLE-S0 (hold PR #20967, n=938 trades): holds worth +0.142 R vs closing. Hypotheses: H0 noise/selection -- the window is SL-dominated (31 of 40 closes sl), and on a trade that later hits SL any earlier mark beats SL, so the live comparison is biased toward closing; H1 the live reviewer's holds are genuinely worse than S0's. Discriminating test: price the same 27 reviews against a random-time close baseline from the same trades (the S0 design) instead of 'close at review'. Owner: perf-followup Track 2. check: the baseline-adjusted mean dR with its CI; rule registered here: H1 only if the baseline-adjusted mean < 0 with CI excluding 0 at n>=20. [DEEP-AUDIT-20261104 L0] unresolved, not re-run (perf-followup owns).",
+  "note": "WEEKLY-AUDIT-2026-10-28 deep pass 0. MEASURED (live_review_grade.py --live after the join fix): hold vs close-at-review n=27, mean dR -0.80, hit 0.037 (ESTIMATED, close side charged no cost). DESK-LIFECYCLE-S0 (hold PR #20967, n=938 trades): holds worth +0.142 R vs closing. Hypotheses: H0 noise/selection -- the window is SL-dominated (31 of 40 closes sl), and on a trade that later hits SL any earlier mark beats SL, so the live comparison is biased toward closing; H1 the live reviewer's holds are genuinely worse than S0's. Discriminating test: price the same 27 reviews against a random-time close baseline from the same trades (the S0 design) instead of 'close at review'. Owner: perf-followup Track 2. check: the baseline-adjusted mean dR with its CI; rule registered here: H1 only if the baseline-adjusted mean < 0 with CI excluding 0 at n>=20. [DEEP-AUDIT-20261104 L0] unresolved, not re-run (perf-followup owns). WEEKLY-AUDIT-2026-11-25: stalled (no state change since 11-18; handed to AM-OPS-7, archived 11-19). Thursday 11-26 planning gives it a live lane + due_by or kills it with a reason (AUD-20261125-HANDOFF-TO-DYING-LANE). 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'grading'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-04 with NO substantive progress read this pass -- dispatch or kill at that date.",
   "phase": null,
-  "updated_at": "2026-11-18T18:19:31Z",
-  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
+  "updated_at": "2026-11-26T06:12:53Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

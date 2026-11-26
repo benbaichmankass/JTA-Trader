@@ -1,0 +1,32 @@
+{
+  "id": "LANE-STOP-HOOK-MANAGER-MISID",
+  "title": "lane_report_stop_hook.py treats the rotated manager (Manager Session 2026-11-25a, parent = archived old manager) as a lane and tells it to wake the archived predecessor; it should recognise the manager tag / current-manager title",
+  "state": "landed_unproven",
+  "owner": "manager",
+  "lane": null,
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 4,
+  "ceiling_usd": 5,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "[2026-11-25 20:40Z housekeeping lane] #28891 MERGED (MANAGER_SELF optional new/next/incoming/current; 3 self-tests). Merged, not yet observed on a live rotation. [2026-11-25 housekeeping lane] fix in PR #28891: MANAGER_SELF accepts an optional new/next/incoming/current before 'manager' (and before the product name); 3 self-test cases added, --self-test 24/24, tests/test_lane_report_stop_hook.py 3 passed; old regex verified NOT to match 'You are the NEW JTA Trader MANAGER'. Closes (landed_unproven) when #28891 merges; observation: the next rotated manager's stop is not blocked. [2026-11-25 18:47Z Manager 2026-11-25a] Cause: MANAGER_SELF regex in scripts/ops/lane_report_stop_hook.py matches 'You are the (JTA Trader )?manager' but the rotation brief read 'You are the NEW JTA Trader MANAGER' (the word NEW breaks it), and the session was pre-titled so _titled_manager saw no set_session_title call. Workaround: the manager called set_session_title itself. Fix: allow an optional adjective (NEW/next/incoming) in MANAGER_SELF, plus a self-test case.",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "python3 scripts/ops/lane_report_stop_hook.py --self-test (24/24) and no lane-wording block on the next rotation",
+    "what": "the next rotated manager's stop is not blocked by lane_report_stop_hook.py (brief 'You are the NEW/next/incoming JTA Trader manager')"
+  },
+  "phase": null,
+  "updated_at": "2026-11-25T20:39:55Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: tooling only"
+  }
+}

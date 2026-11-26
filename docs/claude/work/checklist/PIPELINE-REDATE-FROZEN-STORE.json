@@ -2,7 +2,7 @@
   "id": "PIPELINE-REDATE-FROZEN-STORE",
   "title": "pipeline.py --redate fails on the frozen work store (STALE SNAPSHOT: redate() reads export files, append() expects work_store:vN)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
   "lane": null,
   "model": null,
   "tier": 1,
@@ -13,9 +13,9 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-19",
+  "due_by": "2026-12-09",
   "note": "Found by lane TRADING-T1-BATCH 2026-11-12. Repro: python3 scripts/ops/pipeline.py --redate PI-20261106-Y7JEXUWW-0006 --next-due 2026-11-14 --observation '<text>'. Cause: scripts/ops/pipeline.py redate() takes based_on from read_log(store).sources (export filename) while append() on a frozen canonical store compares against work_store:v<N>. Fix: use version_of()/get_observation in redate(). Workaround: work.py observe. Also: the how_to_check path journal?account_id=... in that item returns HTTP 422; use journal?table=trades.",
   "phase": null,
-  "updated_at": "2026-11-12T09:49:39Z",
-  "updated_by": "lane TRADING-T1-BATCH"
+  "updated_at": "2026-11-26T06:11:41Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6"
 }

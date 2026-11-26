@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v5",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a fix for AUD-20260927-CA-B01-multiclass-served-score-is-max-proba is merged with a test that fails on the old code (detector: Unit test: ShadowPredictor(multiclass).predict(row) == predict_proba(row)[positive_class] for a declared positive_class.), or the item is killed with a stated reason by CA-LEAD re-verification",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20260927-3WM5HADW-0004",
+  "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-19",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "code audit 2026-09-27 lane CA-B01 (session_01M6NBQHKgKXsvrB3Wm5HAdW), finding AUD-20260927-CA-B01-multiclass-served-score-is-max-proba in docs/audits/code-audit-2026-09-27/CA-B01.findings.jsonl",
+    "rerun": "Read finding AUD-20260927-CA-B01-multiclass-served-score-is-max-proba (evidence field) in docs/audits/code-audit-2026-09-27/CA-B01.findings.jsonl, re-read ml/predictors/multiclass.py:38-43; ml/predictors/shadow.py:103; consumers src/runtime/shadow_adapter.py:176, src/runtime/conviction_inputs.py:128-147, ml/calibration/regime_alignment.py:94-107, ml/promotion/attribution.py on main, and re-run the stated command / repro in docs/audits/code-audit-2026-09-27/CA-B01-repros/; the finding holds while the quoted code is unchanged."
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ML-HYGIENE closed in weekly planning 202)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, ML-HYGIENE, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (live checklist row, manager; W48 planning disposition) -- BACKLOG-TRIAGE-W48 2026-11-25 re-route: previous owner row ML-HYGIENE is done in the work store (manager request, ML-FRONTIER-PREP-20261125 P-7); item left open, not closed. | was: ML-HYGIENE [route; size S, value M, tier 2] BACKLOG-ROUTE 2026-10-04: ml/predictors/multiclass.py predict() returns float(max(proba.values())) (lines ~38-43) and ml/predictors/shadow.py:103 serves wra",
+  "state": "routed",
+  "terminal_reason": null,
+  "what": "HIGH (code audit AUD-20260927-CA-B01-multiclass-served-score-is-max-proba): MulticlassPredictor.predict (the score ShadowPredictor logs and attribution/c_reg consume) returns max(predict_proba), which is symmetric in the class: a regime head logs ~0.9 for both 'confidently range' and 'confidently volatile', and a 'won'-target head logs 0.958 for a near-certain loss and 0.961 for a near-certain win — and conviction-meta-v1, a multiclass 'won' head, is at SHADOW in the live registry, so its attribution AUC/brier demote triggers are computed on a direction-less score. LOCATION: ml/predictors/multiclass.py:38-43; ml/predictors/shadow.py:103; consumers src/runtime/shadow_adapter.py:176, src/runtime/conviction_inputs.py:128-147, ml/calibration/regime_alignment.py:94-107, ml/promotion/attribution.py. PROPOSED FIX: Declare positive_class in model_state/manifest; make predict return P(positive_class) (or log the full proba dict in the shadow record); recompute attribution for affected heads and refit any regime_alignment calibrator."
+}
