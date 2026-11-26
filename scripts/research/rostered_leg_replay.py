@@ -83,6 +83,15 @@ RULE_FILTER = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-20261125")
 # Dukascopy lane (research-script-run installs dukascopy-python, not yfinance; some symbols resolve to a PROXY instrument, recorded per leg), and the
 # market anchor block (the btc_* columns) built from SPY daily closes instead of BTC. Nothing re-tuned.
 RULE_FILTER_EQ = dict(RULE_MS, id="RULE-REGIME-ENTRY-FILTER-EQ-20261126")
+# RATES / RISK-OFF HAND RULE (--mode ratesrule, unit RQ-20261126-b71e-01; REGIME-PROGRAM's registered next form after the learned filters failed on
+# crypto (f1a0-35) and non-crypto (e9a4-01)): ONE fixed hand rule on the rostered BOND and GOLD legs. Skip a LONG entry when the US 10-year REAL
+# yield (FRED DFII10, the last observation dated strictly before the entry day) rose by more than RATES_SHOCK_BP over the prior RATES_LOOKBACK
+# observations: a real-rate shock is the textbook headwind for duration and for gold. Shorts and every other leg are untouched.
+RATES_SERIES = "DFII10"
+RATES_LOOKBACK = 20
+RATES_SHOCK_BP = 20.0
+RATES_LEGS = ("tlt_pullback_1d", "tlt_pullback_1h", "ief_pullback_1d", "gld_pullback_1d", "iaum_pullback_1d", "mgc_pullback_1d", "mgc_trend_1h")
+RULE_RATES = dict(RULE_MS, id="RULE-REGIME-RATES-SHOCK-20261126")
 RULE_MS_EQ = dict(RULE_MS, id="RULE-REGIME-METASTATE-EQ-20261126")
 EQ_ANCHOR = {"symbols": ["SPY"], "timeframe": "1d"}
 NON_CRYPTO_SOURCE = "auto"
@@ -180,6 +189,60 @@ def grade_eventday(tr: pd.DataFrame, rel: pd.DataFrame, rule: Dict[str, Any] = R
         verdict, why = "indeterminate", f"diff {a['diff_r']:+.4f} R, CI {a['ci95']}, placebo share {a['placebo_share']}: not separable, not ruled out"
     out.update({"verdict": verdict, "why": why})
     return out
+
+
+def fetch_fred(series: str, cache: Optional[Path] = None) -> pd.Series:
+    """A FRED series via the keyless fredgraph CSV (the same route index_signal_etf_harness uses on the runner): values indexed by observation date;
+    '.' (missing) rows dropped. Raises on any fetch / parse failure (the caller records it; never a silent empty series)."""
+    import io
+    import requests
+    if cache is not None and cache.exists():
+        text = cache.read_text()
+    else:
+        r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}", timeout=60)
+        r.raise_for_status()
+        text = r.text
+        if cache is not None:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(text)
+    d = pd.read_csv(io.StringIO(text))
+    d.columns = ["date", "value"]
+    d["value"] = pd.to_numeric(d["value"], errors="coerce")
+    d = d.dropna()
+    return pd.Series(d["value"].to_numpy(dtype=float), index=pd.to_datetime(d["date"], utc=True)).sort_index()
+
+
+def rates_shock(series: pd.Series, when: pd.Series, lookback: int = RATES_LOOKBACK, shock_bp: float = RATES_SHOCK_BP) -> np.ndarray:
+    """True where the series' change over the prior ``lookback`` observations, as of the last observation dated strictly BEFORE the entry day, exceeds
+    ``shock_bp`` basis points (the series is in percent). False where there is not enough history (the rule never skips on missing data)."""
+    chg = (series - series.shift(lookback)) * 100.0
+    idx = pd.DatetimeIndex(series.index).as_unit("ns").asi8
+    day = pd.DatetimeIndex(pd.to_datetime(when, utc=True).dt.floor("D")).as_unit("ns").asi8
+    i = np.searchsorted(idx, day, side="left") - 1      # strictly before the entry day: no same-day print
+    vals = chg.to_numpy()
+    out = np.zeros(len(day), dtype=bool)
+    ok = i >= 0
+    out[ok] = np.nan_to_num(vals[i[ok]], nan=0.0) > shock_bp
+    return out
+
+
+def grade_ratesrule(tr: pd.DataFrame, series: Optional[pd.Series], seed: int = RR.SEED) -> Dict[str, Any]:
+    """The hand rule over the test years: keep = not (long AND real-rate shock); graded like the entry filter (skipped = 0 R, matched random skips)."""
+    if series is None or not len(series):
+        return {"verdict": "indeterminate", "why": f"FRED {RATES_SERIES} could not be read", "read_state": "could_not_look"}
+    tr = tr.copy().reset_index(drop=True)
+    long_ = ~tr.direction.astype(str).str.lower().str.startswith(("short", "sell")).to_numpy()
+    skip = long_ & rates_shock(series, tr.ts)
+    keep = (tr.ts >= pd.Timestamp(RR.TEST_START, tz="UTC")).to_numpy()
+    t = tr[keep].reset_index(drop=True)
+    sk = skip[keep]
+    g = grade_raw(t, np.where(sk, 0.0, 1.0), RULE_RATES, seed, normalise=False)
+    g["skipped"] = {"n": int(sk.sum()), "share": round(float(sk.mean()), 4), "mean_net_r": round(float(t.net_r[sk].mean()), 5) if sk.any() else None,
+                    "kept_mean_net_r": round(float(t.net_r[~sk].mean()), 5) if (~sk).any() else None}
+    g["by_leg_reported"] = {leg: {"n": int(m.sum()), "skipped": int((m & sk).sum()), "delta": round(float(-(t.net_r.to_numpy(float)[m & sk]).sum() / max(m.sum(), 1)), 5)}
+                            for leg in sorted(t.family.unique()) for m in [(t.family == leg).to_numpy()]}
+    g["rule"] = {"series": RATES_SERIES, "lookback_obs": RATES_LOOKBACK, "shock_bp": RATES_SHOCK_BP, "applies_to": "long entries"}
+    return {"arms": {"rates_shock_skip": g}, "verdict": g["verdict"], "n_legs": int(t.family.nunique())}
 
 
 def rostered_legs(root: Path = REPO, universe: str = "crypto") -> Dict[str, Dict[str, Any]]:
@@ -556,7 +619,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--work", default="")
     ap.add_argument("--legs", default="")
     ap.add_argument("--unit", default="")
-    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter", "eventday"], default="book")
+    ap.add_argument("--mode", choices=["book", "tradestate", "metastate", "intraday", "filter", "eventday", "ratesrule"], default="book")
     ap.add_argument("--population", choices=["rostered", "fresh", "fresh2"], default="rostered",
                     help="fresh / fresh2: the rostered configs on FRESH_SYMBOLS / FRESH_SYMBOLS_2 (metastate only; RULE_MS_FRESH / RULE_MS_FRESH2)")
     ap.add_argument("--universe", choices=["crypto", "equities", "all"], default="crypto",
@@ -578,7 +641,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.universe == "all":
         NON_CRYPTO_SOURCE = "dukascopy"
     if eq:
-        if a.mode not in ("metastate", "filter") or a.population != "rostered":
+        if a.mode not in ("metastate", "filter", "ratesrule") or a.population != "rostered":
             ap.error("--universe equities is defined for --mode metastate / filter on --population rostered only")
         NON_CRYPTO_SOURCE = "dukascopy"
     cfgs = ({**rostered_legs(universe="crypto"), **rostered_legs(universe="equities")} if a.universe == "all"
@@ -614,6 +677,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         tr = tr.assign(harness=tr.family.map({k: v["harness"] for k, v in cfgs.items()}))
         m = grade_intraday(tr, bars, tfs) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_ID
+    elif a.mode == "ratesrule":
+        try:
+            series = fetch_fred(RATES_SERIES, work / f"fred_{RATES_SERIES}.csv")
+        except Exception as exc:  # allow-silent: an unreadable FRED series grades INDETERMINATE with read_state could_not_look, recorded
+            print(json.dumps({"fred_fetch": "failed", "series": RATES_SERIES, "why": f"{type(exc).__name__}: {exc}"[:200]}), flush=True)
+            series = None
+        m = grade_ratesrule(tr, series) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
+        rule_used = RULE_RATES
     elif a.mode == "eventday":
         m = grade_eventday(tr, load_releases()) if len(tr) else {"verdict": "indeterminate", "why": "no measured trades"}
         rule_used = RULE_EV
