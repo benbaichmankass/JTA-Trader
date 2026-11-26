@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED",
+  "title": "Scoreboard net_usd sums every priced row, so a book's SIGN can rest on ESTIMATED pnl: paper inception headline +$28.4k (+2.51%) vs MEASURED-only -$67.8k (n=908); one estimated ib_paper MGC row (id 4773, priced 262 pts past its TP during the 08-23 protection failure) carries +$249k. Weekly-audit/perf briefs quoted the paper % as performance",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "PLANNING-OUTCOME-W48 (2026-11-26): Q3+Q6 scripts side MERGED in #28952 (not deployed/observed). scoreboard.py now publishes headline_usd (venue-measured) + headline_beside + promotion_exclusions; live_bar.py excludes comms/promotion_exclusions.yaml trades and lists them. OBSERVE to close: curl /api/bot/work/scoreboard | jq '.books.paper.inception | {headline_usd, headline_beside, promotion_exclusions}' after git-sync (~5 min; web-api may need a restart if it imports scoreboard.py at startup); expect headline_usd = net_usd_measured and promotion_exclusions.rows[0].trade_id == 4773. Served /api/bot/performance and R4 payload still include id 4773: row PLAN-W48-PROMOTION-EXCLUSION-WEB-ROUTE (Tier 2).",
+  "phase": null,
+  "updated_at": "2026-11-26T00:29:30Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
+}

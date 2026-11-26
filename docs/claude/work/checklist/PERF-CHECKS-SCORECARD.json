@@ -2,6 +2,7 @@
   "id": "PERF-CHECKS-SCORECARD",
   "title": "Build the missing /performance-review CHECK instrument: per-leg four-window scorecard (lifetime/90d/30d/7d) + live percentile in own-backtest band + per-leg CUSUM decay on standardised per-trade R vs Stage-0 mean + comparison count (checks C1+C3)",
   "state": "queued",
+  "owner": "manager",
   "lane": null,
   "model": null,
   "tier": 1,
@@ -12,10 +13,10 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-04",
   "_seq": 748,
-  "note": "Filed by lane ANALYTIC-SKILL-DESIGN 2026-10-28. MEASURED gap: grep -rli cusum scripts src -> 0 files; reviews 2026-09-24..10-10 read only the since-last-review window (4/4). Practice basis: CUSUM on performance vs expectation (Philips, Yashchin & Stein 2003), live percentile in own-backtest bootstrap (Liu 2026), MinTRL/PSR (Bailey & Lopez de Prado 2012), multiple comparisons (Harvey & Liu 2015) -- docs/research/analytic-skill-design-2026-10-28.md. Reuse live_vs_backtest.py bootstrap + giveback_census.py R join; one script, read-only, prints with populations and could_not_look; CUSUM threshold pre-registered in the script before first run (target false-alarm rate stated). Done when .claude/skills/performance-review/SKILL.md C1/C3 name it and C3 drops 'interim'. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known.",
-  "owner": null,
+  "note": "Filed by lane ANALYTIC-SKILL-DESIGN 2026-10-28. MEASURED gap: grep -rli cusum scripts src -> 0 files; reviews 2026-09-24..10-10 read only the since-last-review window (4/4). Practice basis: CUSUM on performance vs expectation (Philips, Yashchin & Stein 2003), live percentile in own-backtest bootstrap (Liu 2026), MinTRL/PSR (Bailey & Lopez de Prado 2012), multiple comparisons (Harvey & Liu 2015) -- docs/research/analytic-skill-design-2026-10-28.md. Reuse live_vs_backtest.py bootstrap + giveback_census.py R join; one script, read-only, prints with populations and could_not_look; CUSUM threshold pre-registered in the script before first run (target false-alarm rate stated). Done when .claude/skills/performance-review/SKILL.md C1/C3 name it and C3 drops 'interim'. [2026-10-29 BACKLOG-RESET-20261029] dropped: bulk reset 2026-10-29: value unknown (operator). Re-open by setting state=queued if the value is later known. 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-25), ranked 'grading'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-04 with NO substantive progress read this pass -- dispatch or kill at that date.",
   "phase": null,
-  "updated_at": "2026-11-19T00:57:02Z",
-  "updated_by": "session_01AFoLuMqma5FZ2WpXNqAxxz"
+  "updated_at": "2026-11-26T06:13:04Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6"
 }

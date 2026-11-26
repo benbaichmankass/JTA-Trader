@@ -1,0 +1,29 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the prop-ticket-reissue system action (#17156) re-issues one suppressed ticket end to end",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261011-CJWUMAVA-0004",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "system-action prop-ticket-reissue run + /api/bot/prop/tickets shows the re-issued ticket placed",
+    "what": "the prop-ticket-reissue system action (#17156) re-issues one suppressed ticket end to end"
+  },
+  "origin": {
+    "kind": "session",
+    "ref": "checklist PROP-REISSUE closed 2026-10-11 by manager session_01Uq7MrjPQDRWqbhCjwuMava",
+    "rerun": "system-action prop-ticket-reissue run + /api/bot/prop/tickets shows the re-issued ticket placed"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk): routed to its owning row ROUTE-PROP-TRACKIN)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row ROUTE-PROP-TRACKING is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist row ROUTE-PROP-TRACKING | [BACKLOG-DRAIN-20261015 (session_019p3X1tJAdUdV2dKaw9no8r) 2026-10-15 re-route]",
+  "state": "routed",
+  "what": "PROP-REISSUE residual: merged, not yet observed live — the prop-ticket-reissue system action (#17156) re-issues one suppressed ticket end to end."
+}

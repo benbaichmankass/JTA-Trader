@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125 (rank 3, due 11-28; handed by Manager Session 2026-11-26a). Order path: _send_close_to_exchange now cancels the row's OWN still-working Alpaca entry order (broker_order_id, via the existing _entry_order_hold + AlpacaClient.cancel_order_confirmed) before closing. A confirmed cancel with nothing filled journals the row entry_unfilled with no exit price; a partial or a fill-first race is closed by the unchanged close; an unconfirmed cancel keeps the row open for the next tick. Non-Alpaca accounts, dry_run, and entries that are not working or unreadable take the unchanged path. MEASURED trigger: alpaca_options_paper row 8569, 2026-11-25. Tier 2: needs the operator's OK via the manager. Revert: git revert."
+}

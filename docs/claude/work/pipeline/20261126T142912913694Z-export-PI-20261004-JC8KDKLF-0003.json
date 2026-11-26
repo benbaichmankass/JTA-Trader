@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the newest R5/R3 record shows population.malformed_closed_at == [] and the writer that produced the bad closed_at is named and fixed",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261004-JC8KDKLF-0003",
+  "jitter_2026_10_05": "[BACKLOG-BURNDOWN-3 2026-10-05] cadence jittered to spread the lapse wave (<= 24 due per day); NO re-read this pass -- observation unchanged (last read 2026-10-04); new next-due 2026-10-16",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04, run 37174464732",
+    "rerun": "python3 scripts/ops/soak_book_grade.py --window-hours 168 --out /tmp/g.json  # then inspect r3 population.malformed_closed_at via scripts/research/r3_cost_fidelity.py output"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent SOAK-GATE1-REGRADE state done: OPS backl)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, SOAK-GATE1-REGRADE, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "SOAK-GATE1-REGRADE (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target SOAK-WATCH is done; item still open) | was: SOAK-WATCH — R5 malformed closed_at (BACKLOG-BURNDOWN-2 2026-10-04)",
+  "state": "routed",
+  "what": "SOAK-WATCH: at least one live trade row (alpaca account, R3's sl-family population) carries a closed_at that datetime.fromisoformat rejects ('month must be in 1..12') -- MEASURED in soak-book-grade run 37174464732, 2026-10-04 03:38Z, where it crashed the weekly R5 grade. r3_cost_fidelity now excludes and LISTS such rows under population.malformed_closed_at instead of raising, so the next R5 record names the trade id(s). Root-cause the writer that produced the malformed timestamp and repair the row(s)."
+}

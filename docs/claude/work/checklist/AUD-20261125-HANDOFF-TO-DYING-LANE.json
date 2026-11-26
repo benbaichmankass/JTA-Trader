@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261125-HANDOFF-TO-DYING-LANE",
+  "title": "The 15 audit rows released to the manager on 11-18 were folded on 11-19 06:20Z into AM-OPS-7's backlog drain; AM-OPS-7 was archived 13:17Z the same day and nothing released them, so 0 of 15 changed state in 7 days -- including AUD-20261118-LANES-ON-DEAD-SESSIONS, the detector for exactly this class",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-09",
+  "note": "[2026-11-25 housekeeping lane] owner-or-kill list for the 13 rows is in the planning doc section 8 (PR #28888); the dispositions are for Thursday planning to decide. WEEKLY-AUDIT-2026-11-25 Layer 0 follow-through finding (stalled >= 2 audits). Evidence: work.py get on 32 AUD ids (updated_at 2026-11-18 for all 15); WEEKLY-PLANNING note seq 17080 (11-19 06:18Z); get_session AM-OPS-7 archived 2026-11-19T13:17Z. Owner 'manager' is not a lane. DECISION at Thursday planning 11-26: give each of the 15 an owning lane with due_by, or kill it with a reason; and build LANES-ON-DEAD-SESSIONS' report-only dead-lane list first. CHECK {command: work.py get each id, rule: every one has a live lane or a terminal state, resolves_when: 0 of 15 untouched at the 12-02 audit}. 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'other'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-09 with NO substantive progress read this pass -- dispatch or kill at that date.",
+  "phase": null,
+  "updated_at": "2026-11-26T06:12:46Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6"
+}

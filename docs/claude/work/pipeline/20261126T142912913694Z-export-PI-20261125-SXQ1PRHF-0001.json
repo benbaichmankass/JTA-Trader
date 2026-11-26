@@ -1,0 +1,18 @@
+{
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "comms/strategy_evidence/trend_donchian_eth_prop.json carries a valid `holdout_confirmation` block (verdict 'confirmed' or a decisive fail) for the record's own config_fingerprint",
+    "kind": "observation",
+    "last_checked": "2026-11-26"
+  },
+  "id": "PI-20261125-SXQ1PRHF-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "session_01AFoLuKKEyjyRMDSxQ1prHf",
+    "rerun": "python3 scripts/ops/mandate_resolver.py --leg trend_donchian_eth_prop --from S1 --to S2 --account bybit_2 --json"
+  },
+  "routed_to": "ETH-PROP-S1S2-HOLDOUT",
+  "state": "routed",
+  "what": "MD-PROMOTE-S1-S2: trend_donchian_eth_prop (S1 -> S2, bybit_2) is NEEDS-DATA at R-HOLDOUT -- trend_donchian_eth_prop needs a holdout confirmation before S1 -> S2 can be decided (the Stage-0 record carries no `holdout_confirmation` -- no configuration has been tested once on a held-back span): select the configuration on the earliest ~75% of history, then evaluate the selected configuration ONCE on the pre-registered latest ~25% (grown to 25 trades, capped at 40%), same rule, full cost stack -- author and run a holdout re-run unit for trend_donchian_eth_prop in research/queue/ (holdout_rerun.leg: trend_donchian_eth_prop; scripts/research/exit_lever_ablation.py --grade holdout); then write the result into comms/strategy_evidence/trend_donchian_eth_prop.json as `holdout_confirmation`."
+}

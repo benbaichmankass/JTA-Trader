@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "/api/bot/performance and live_vs_backtest no longer sum repeated-entry fragments as separate R (or print a contaminated-R count beside the total)",
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125, manager session_01AFoLuKKEyjyRMDSxQ1prHf); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/performance?window=7d'"
+  },
+  "owner": "manager (assign with PI-20261125-PREP1125-0001)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "state": "queued",
+  "tier": 1,
+  "what": "[performance][measurement] The 7d mirror book reads +33.09 R on /api/bot/performance while its $ is -6,250 (cov 0.80). The R is slv_trend_1h +40.89 R over 9 rows with rProvenance contaminated 7/9: the 2026-11-18 SLV short fragmented into 7 packages (794/53/19/5/2/2/2 shares) by the repeated-entry defect (PI-20261118-JFWRQYOV-0004), each scored ~+6.2 R. Without slv_trend_1h the mirror's 7d R is -7.80. C2 prints slv_trend_1h mirror ABOVE_BACKTEST n10 +43.29 R pct 100 from the same rows. Decision-level (4 SLV decisions since the 11-12 cut, stored-stop R, ESTIMATED): +1.02, +1.82, -1.34, -1.02. Ask: the performance route and live_vs_backtest flag or collapse fragment rows (same strategy+symbol+side, entries < 1 h apart) instead of summing them."
+}

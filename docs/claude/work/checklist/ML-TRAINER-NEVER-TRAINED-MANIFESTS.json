@@ -1,0 +1,21 @@
+{
+  "id": "ML-TRAINER-NEVER-TRAINED-MANIFESTS",
+  "title": "Two trainer manifests have NEVER trained in ~122 days because their dataset builds produce 0 rows every cycle: exit-policy-v1 (exit_candidates ETHUSDT 5m v001) and setup-candidates-metalabel-paper-v1 (setup_candidates all/all v030); fix each build or retire the manifest with a named reason",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Split from HEALTH-20261125-TRAINER-NO-TRAINS (closed superseded, manager-approved 02:19Z). MEASURED via trainer-vm-diag runs 45741771586 / 45741838807 + the 02:xxZ cycle log: in cycle 2026-11-26 01:55-02:06Z both manifests log manifest_dataset_empty ('dataset built 0 rows, nothing to train (build/coverage gap, not a dead-feature/label defect)') then manifest_skipped reason dataset_absent (paths datasets-out/exit_candidates/ETHUSDT/5m/v001/data.jsonl and datasets-out/setup_candidates/all/all/v030/data.jsonl); manifest_untrained_stale says 0 registered runs across 100 registry files, manifests 122.7d / 121.8d old, skipped every cycle since they landed. The third staleness entry, mes-execution-quality-baseline-v0, is awaiting_source BY DESIGN (an awaiting_source_trades waiver; entry_slippage_bps needs live MES fills): no action. The summary 'stale 2, never_trained 2' counts the SAME two manifests, not four. NEXT: (1) exit_candidates: the manifest header says the build needs live_trades_db pointed at the real journal; check the trainer's build args / the journal mirror path, which is probably the 0-row cause. (2) setup_candidates v030 paper cohort: check the build's live_paper rows source. Each one is either a fixed build (observe a non-zero build + a registered run) or retired with a named reason. REGISTRY: rows are keyed by model_id (ml/registry/model_registry.py: one <model_id>.json per model; register() APPENDS a RunRecord for an existing model_id; the mirror reads registry.jsonl with a 10,000-row tail, models == rows == 100), so 100 = 100 distinct model_ids and NOT a cap; a retrain does not add a row. 2026-11-26 03:5xZ disposition per manifest (manager-approved 'fix or retire with a named reason'): BOTH RETIRED, held Tier-2 PR #29031 (moved to ml/configs/retired/ + ml/lifecycle/plans/retired/, README rows with evidence; test + signal catalog repointed). Cause (code read): scripts/ops/build_trainer_datasets.sh never builds exit_candidates and builds setup_candidates only v001 (behind ICT_BUILD_XSYM=1), never v030, so both datasets are absent every cycle. exit-policy-v1 superseded by the D8 exit-head bake-offs; setup-candidates-metalabel-paper-v1 superseded by setup-candidates-metalabel-p2pool-v2 (D4). Note: the exit-policy cause was already inferred 2026-10-28 (PI-20261028-QFMQD2BK-0001) and that item was killed in the 10-29 bulk reset, so the finding fell through. Closes when #29031 merges and the next trainer cycle's training_staleness shows stale 0 / never_trained 0 (observation).",
+  "phase": "W48",
+  "updated_at": "2026-11-26T03:54:54Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

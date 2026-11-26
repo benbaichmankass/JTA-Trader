@@ -1,0 +1,26 @@
+{
+  "based_on": "work_store:v7",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "two consecutive 4h bar-close ticks with 0 x 'retCode 10006' and 0 'no candle data' strategy raises on ict-trader-live; or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261106-5A1BGFHC-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "lane PROD-LEGS-DSR-DECISION pipeline-alive check 2026-11-06 05:12Z (manager 2026-11-05b ask)",
+    "rerun": "DIAG_FETCH_MAX_TIME=60 scripts/ops/diag_fetch.sh 'journalctl?unit=ict-trader-live.service&since=<bar close -1m>&until=<bar close +5m>&grep=retCode 10006|no candle data&lines=500'"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): routed to its owning row VENUE-KLINE-RATE-LIMIT)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, VENUE-KLINE-RATE-LIMIT, is done in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "VENUE-KLINE-RATE-LIMIT",
+  "state": "routed",
+  "terminal_reason": null,
+  "updated_by": "session_01AFoLuHsrjCGGba7eop8Qev",
+  "what": "Bybit retCode 10006 ('Too many visits') on the BAR-CLOSE tick knocks out every crypto strategy for that tick. MEASURED 2026-11-06 ict-trader-live journalctl: 04:00:07Z (thread=MainThread, LINK/USDT 1h) and 04:01:03Z (BTCUSDT 1m); the #23580 cooldown then returns None from get_ohlcv, so 45 strategy builders raised 'no candle data' in 04:00-04:29Z (ml_entry x6, ml_entry_v2 x8, e4_oi_shock_1h x10, xrp_pullback_2h/ada_pullback_2h/trend_donchian_xrp_4h x2 each, ict_scalp_* , turtle_soup, fade/squeeze_breakout_4h...), smaller rounds at 02:00, 03:00, 05:01Z. Closed-bar legs recovered ~2 min late (04:02:12Z decided the 04:00 bar, no decision lost), but 5m/15m scalps and ml_entry lose the bar-close tick outright, which is the tick that matters. Cause: the all-symbol bar-close kline burst on one key; the cooldown is correct (no in-line sleep), the burst is the defect. Fix candidates (Tier 2): stagger/serialize the bar-close fetch, share one kline cache per (symbol,tf,bar) across strategies, or prefetch just after close with a budget.\n\n[2026-11-12 BACKLOG-DRAIN-20261112] ROUTE: The bar-close kline burst on one key loses the bar-close tick for 5m/15m scalps and ml_entry; the fix (stagger/share/prefetch) is unowned Tier-2 work. EVIDENCE: Item MEASURED 2026-11-06: 45 strategy builders raised no candle data 04:00-04:29Z after retCode 10006. No open row title mentions 10006 or rate limit (open_rows.json scan). | owner row opened by this drain"
+}

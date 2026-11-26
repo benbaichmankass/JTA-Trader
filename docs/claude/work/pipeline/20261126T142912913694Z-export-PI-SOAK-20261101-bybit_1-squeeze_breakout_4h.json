@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json)",
+    "kind": "observation",
+    "soak": {
+      "declared_at": "2026-10-27",
+      "state_source": "docs/claude/work/soak-state.json",
+      "subject": "bybit_1/squeeze_breakout_4h"
+    }
+  },
+  "id": "PI-SOAK-20261101-bybit_1-squeeze_breakout_4h",
+  "next_action": "check_observation",
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-WATCH 2026-10-04 (scripts/ops/soak_report.py)",
+    "rerun": "python3 scripts/ops/soak_report.py --print-state"
+  },
+  "state": "killed",
+  "terminal_reason": "BACKLOG-TRIAGE-W48 rule (a): soak-tracking item retired (operator popup 2026-11-25 ~18:00Z 'Approve all'). The soak step was retired 2026-11-12 (config/mandates.yaml MD-PROMOTE-S1-S2 soak_step: retired; operator 'Absolutely no steps'), so no promotion waits on this item. DATA: soak_report.py build 2026-11-25 grades bybit_1/squeeze_breakout_4h as 'accruing' (waiting for 1-2 clean trades (no deadline); computed live by soak_state.py); soak start <=2026-11-25. Per-trade mechanics keep being recorded by mechanics_fault_intake.py (CSINTAKE items), so no monitoring is lost; edge for promotion is read from the Stage-0 record, not from a soak.",
+  "what": "SOAK (stage1): bybit_1/squeeze_breakout_4h — Stage-1 soak leg. Exit: mechanical: 1-2 clean trades (OPERATING-PLAN § 2 'The soak is MECHANICAL'; contract in docs/claude/work/SOAKS.json). Graded weekly into ready/dead/could-not-look/accruing; due only when not accruing."
+}

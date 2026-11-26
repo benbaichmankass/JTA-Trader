@@ -2,8 +2,8 @@
   "id": "M20-SWEEP-UPSTREAM-FAILURES",
   "title": "m20-exit-lever-sweep fails upstream of the result job: HoldoutLeak on thin legs + unclassified legs in plan",
   "state": "queued",
-  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
-  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-ML (session_01AFoLuJkXEM1EigH9)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -14,11 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-09",
   "_seq": 940,
   "note": "Exact errors. (1) m20_holdout.HoldoutLeak: 'discovery window ends at 2025-07-01, past the last discovery day 2023-01-31 (holdout starts 2023-02-01)' -- run 41763381661 mes_trend_long_1d; same for 41068790597 iaum_pullback_1d (cap 2024-04-24) and 40095366642 trend_donchian_xrp_adx25 (cap 2024-07-02). Cause: m20_fleet_exit_sweep.py logs 'split: FELL BACK to 2025-07-01 (leg_too_thin)' then run_cell(end=leg_split) hits the holdout window guard at m20_holdout.py:108 -- the fallback split ignores the holdout cap. (2) plan step: '::error::legs with no family/harness: [turtle_soup]' (41195608647), [fade_breakout_4h] (40994427469); 41187215930 and 40978648245 also fail at plan, cause NOT read. Result job then fails 'no verdicts.json under sweep_out' by design. No artifact holds a result, so nothing to re-land; fix = re-dispatch after the code fix.",
   "phase": "now",
-  "updated_at": "2026-11-05T07:19:00Z",
-  "updated_by": "lane",
+  "updated_at": "2026-11-26T06:11:26Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

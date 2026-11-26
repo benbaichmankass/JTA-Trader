@@ -1,0 +1,23 @@
+{
+  "id": "INDEX-CAPIT-TELEMETRY-HOOK",
+  "title": "index_capitulation_1x: add record_position_telemetry to monitor() (real-money leg invisible to peak-R telemetry)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up of INDEX-CAPIT-1X-LEG (map with it at the next weekly pass)",
+  "priority_rank": 10,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "Found by lane INDEX-CAPIT-1X-LEG 2026-11-25 (PR #28869 CI): src/units/strategies/index_capitulation_1x.py monitor() runs only the 10-session hold cap and never calls src.runtime.position_telemetry.record_position_telemetry, so tests/test_banking_mechanism_audit.py lists the leg as structurally invisible to peak-R telemetry (n_invisible 5 -> 6, pinned as the measured state, not as acceptable). It trades REAL MONEY on alpaca_live, so its MFE / giveback path is unrecorded; exit-lever research and live-review pricing need that path. Fix (Tier 2, monitor only, no exit change): call record_position_telemetry exactly as e4_oi_shock_1h._telemetry does (swallows everything, observe-only), keep the hold-cap verdict unchanged, and re-run scripts/research/index_capit_live_parity.py, because the parity record pins the module sha1. Done = the leg leaves legs_structurally_invisible (n_invisible back to 5) and /api/diag/position_telemetry shows rows for its first live position.",
+  "phase": "W48",
+  "updated_at": "2026-11-25T21:34:03Z",
+  "updated_by": "session_01AFoLuNL8QDrcjZJ6fvxPzc"
+}
