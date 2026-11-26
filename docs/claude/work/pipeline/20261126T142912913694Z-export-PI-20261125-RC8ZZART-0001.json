@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "due_date": "2026-12-03",
+    "kind": "date"
+  },
+  "id": "PI-20261125-RC8ZZART-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "lane RND-TOOLBOX-AUDIT-20261125 (session_01AFoLuK2nGoSCVERC8zzaRt), R&D toolbox audit 2026-11-25; R1",
+    "rerun": "python3 - <<'PY'\nimport json\nr=json.loads(open('research/results/RQ-20261124-c7e3-01/45525550688.jsonl').read().splitlines()[-1])['measurement']\nprint(r['dev']['baseline_book']['net_r'], r['dev']['baseline_book']['n'], r['top_strategy_cuts']['ada_pullback_2h'])\nPY"
+  },
+  "routed_to": "AM-V2-CF-DIRECTED",
+  "state": "routed",
+  "what": "[RND-AUDIT R1] PROPOSAL FOR THURSDAY (no gate): grade active-management arms on the ROSTERED-LEG book, per family, with the whole CF corpus as context only. Measured: corpus HOLD -10,282 R over 275,378 dev trades (-0.037 R/trade), breakout -0.061 R/trade (n 107,332), while ada_pullback_2h HOLD is +245.8 R over 771 trades and the banking policy costs it 0.18 R/trade (research/results/RQ-20261124-c7e3-01). First step: one unit re-reducing the c7e3-01..09 shards by leg list (no new replay; AM-HEADS holdout re-read, deflated bar applies). Full text: docs/plans/rnd-toolbox-audit-2026-11-25.md section 4."
+}

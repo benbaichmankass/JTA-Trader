@@ -2,8 +2,8 @@
   "id": "BYBIT1-SIZING-COLLATERAL-BASIS",
   "title": "bybit_1: RiskManager sizes on ~122k equity while the UTA margin balance is ~38k (non-USDT collateral not counted); tight-stop legs take ~2x-equity notional and re-starve margin",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk))",
+  "lane": null,
   "model": null,
   "tier": 3,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 741,
-  "note": "MEASURED 2026-10-27 22:25Z and 23:49Z (/api/diag/bybit_raw_positions?account_id=bybit_1 wallet block): total_equity ~122k, total_margin_balance ~38.5k. 1 BTC (~80.8k), 50k USDC and 1 ETH are not counted toward margin. After the leverage fix (BYBIT1-MARGIN-STARVED, done), one ict_scalp_5m BTCUSDT long (trade 6757, stop 0.29% from entry) took IM 23.4k at 10x (~234k notional) and left available at +6.3k (n=1 entry). QUESTIONS: (a) should RiskManager.position_size use the margin balance (or USDT wallet) instead of total equity as the risk basis on UTA accounts; (b) should demo-floor legs carry a notional or leverage cap so one tight-stop leg cannot take most of the margin; (c) or enable the BTC/USDC/ETH collateral on the demo account (a venue setting). Tier 3 (sizing). Decide with the operator; evidence: these two diag reads plus the daily risk_refused count for bybit_1.",
+  "note": "MEASURED 2026-10-27 22:25Z and 23:49Z (/api/diag/bybit_raw_positions?account_id=bybit_1 wallet block): total_equity ~122k, total_margin_balance ~38.5k. 1 BTC (~80.8k), 50k USDC and 1 ETH are not counted toward margin. After the leverage fix (BYBIT1-MARGIN-STARVED, done), one ict_scalp_5m BTCUSDT long (trade 6757, stop 0.29% from entry) took IM 23.4k at 10x (~234k notional) and left available at +6.3k (n=1 entry). QUESTIONS: (a) should RiskManager.position_size use the margin balance (or USDT wallet) instead of total equity as the risk basis on UTA accounts; (b) should demo-floor legs carry a notional or leverage cap so one tight-stop leg cannot take most of the margin; (c) or enable the BTC/USDC/ETH collateral on the demo account (a venue setting). Tier 3 (sizing). Decide with the operator; evidence: these two diag reads plus the daily risk_refused count for bybit_1. 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-18), ranked 'live-money/order-path'; owner now manager (dead-session owner re-owned); re-dated to 2026-11-30 with NO substantive progress read this pass -- dispatch or kill at that date.",
   "phase": "build",
-  "updated_at": "2026-10-27T23:50:28Z",
-  "updated_by": "session_01AFoLuJi1vLTnYv9LbP6539",
+  "updated_at": "2026-11-26T06:12:30Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

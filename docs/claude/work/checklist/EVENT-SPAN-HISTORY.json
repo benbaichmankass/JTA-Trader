@@ -1,8 +1,8 @@
 {
   "id": "EVENT-SPAN-HISTORY",
   "title": "Lever (Tier-1 research data): a committed point-in-time US release history 2021-01..now (fomc_decision, fomc_minutes, cpi, nfp; UTC time stamps, source per row) that corpus harnesses can join; unblocks RQ-20261118-a5b3-01/-02",
-  "state": "in_flight",
-  "owner": "PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb)",
+  "state": "done",
+  "owner": "manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: PROGRAMME-REPLAN-20261119 (session_01AFoLuJ2Mx5E1JEVEWziCcb))",
   "lane": null,
   "model": null,
   "tier": 1,
@@ -14,8 +14,13 @@
   "prs": [],
   "blocked_on": [],
   "due_by": "2026-11-25",
-  "note": "Filed 2026-11-18 by PRACTICE-REFRESH-20261118 (docs/research/practice-review-2026-11-18.md \u00a7 T-G1). MEASURED: comms/macro/econ_calendar_snapshots.jsonl holds 9 fomc event ids, all 2026-06-17 onward; econ_calendar_snapshots_backfill.jsonl holds 0 fomc rows, so no corpus trade before 2026-06 can be tagged as spanning a release. Build: reconstruct from the Fed's published meeting/minutes calendar and BLS release schedules (public), one row per release with kind, scheduled_at UTC, source URL; decision and minutes are separate kinds. Re-entry test: RQ-20261118-a5b3-01 moves from blocked/ to queued with run.workflow set. Check scripts/macro/econ_calendar_snapshot_backfill.py first (it may extend).",
+  "note": "[CLOSED DONE 2026-11-25 BACKLOG-TRIAGE-W48: BACKLOG-TRIAGE-W48 (manager request via PRACTICE-REFRESH-20261125): verified the row's own re-entry test is graded. DATA: RQ-20261118-a5b3-01 status done; comms/research/RQ-20261118-a5b3-01/44551250786/verdict.json schema event_flatten_s0/v1, 3665 of 4076 trades priced over 8 Stage-0 corpora, covered window 2021-01-01..2026-11-10, uncovered span 2018-02-26..2021-01-01 declared could_not_look (read-state kept explicit) -- the row's re-entry test ran and graded.] [2026-11-25 BACKLOG-TRIAGE-W48 re-owned: was in_flight, owner/lane VEWziCcb=ARCHIVED not running (list_sessions/get_session 2026-11-25); returned to queued under the manager, due None] Filed 2026-11-18 by PRACTICE-REFRESH-20261118 (docs/research/practice-review-2026-11-18.md \u00a7 T-G1). MEASURED: comms/macro/econ_calendar_snapshots.jsonl holds 9 fomc event ids, all 2026-06-17 onward; econ_calendar_snapshots_backfill.jsonl holds 0 fomc rows, so no corpus trade before 2026-06 can be tagged as spanning a release. Build: reconstruct from the Fed's published meeting/minutes calendar and BLS release schedules (public), one row per release with kind, scheduled_at UTC, source URL; decision and minutes are separate kinds. Re-entry test: RQ-20261118-a5b3-01 moves from blocked/ to queued with run.workflow set. Check scripts/macro/econ_calendar_snapshot_backfill.py first (it may extend).",
   "phase": "build",
-  "updated_at": "2026-11-19T06:51:54Z",
-  "updated_by": "session_01AFoLuJ2Mx5E1JEVEWziCcb"
+  "terminal_reason": "BACKLOG-TRIAGE-W48 (manager request via PRACTICE-REFRESH-20261125): verified the row's own re-entry test is graded. DATA: RQ-20261118-a5b3-01 status done; comms/research/RQ-20261118-a5b3-01/44551250786/verdict.json schema event_flatten_s0/v1, 3665 of 4076 trades priced over 8 Stage-0 corpora, covered window 2021-01-01..2026-11-10, uncovered span 2018-02-26..2021-01-01 declared could_not_look (read-state kept explicit) -- the row's re-entry test ran and graded.",
+  "updated_at": "2026-11-25T18:56:20Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: research harness/data row, no milestone line changed"
+  }
 }

@@ -1,0 +1,179 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "mgc_trend_1h: 72 trades in the baseline arm 'A' on GC=F 4h candles 2024-07-11 04:00:00+00:00 .. 2026-11-18 20:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 72,
+  "measurement": {
+    "leg": "mgc_trend_1h",
+    "label": "stage0_no_edge",
+    "grade": {
+      "verdict": "fail",
+      "label": "stage0_no_edge",
+      "baseline": "A",
+      "net_r": 6.7897,
+      "n": 72,
+      "max_drawdown_r": 10.3007,
+      "folds_positive": 1,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=6.7897 with 1/4 positive folds (needs > 0 and >= 3)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0139,
+        "n": 72,
+        "net_r": 6.7897,
+        "net_r_fee_only": 8.8607,
+        "max_drawdown_r": 10.3007,
+        "by_outcome": {
+          "trail_stop": 46,
+          "stop": 21,
+          "take_profit": 4,
+          "timeout": 1
+        },
+        "mean_bars_held": 32.653,
+        "net_r_per_capital_day": 0.0173,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 5.0,
+          "funding_bps_per_window": 0.0
+        },
+        "params": {
+          "donchian": 20,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 4.0,
+          "min_confidence": 0.0,
+          "confirm_bars": 1
+        },
+        "data_start": "2024-07-11 04:00:00+00:00",
+        "data_end": "2026-11-18 20:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2024-07-11 04:00:00+00:00",
+            "end": "2025-02-11 08:00:00+00:00",
+            "trades": 20,
+            "net_r": -4.9264
+          },
+          {
+            "fold": 2,
+            "start": "2025-02-11 08:00:00+00:00",
+            "end": "2025-09-14 12:00:00+00:00",
+            "trades": 19,
+            "net_r": -2.2494
+          },
+          {
+            "fold": 3,
+            "start": "2025-09-14 12:00:00+00:00",
+            "end": "2026-04-17 16:00:00+00:00",
+            "trades": 13,
+            "net_r": 16.7766
+          },
+          {
+            "fold": 4,
+            "start": "2026-04-17 16:00:00+00:00",
+            "end": "2026-11-18 20:00:00+00:00",
+            "trades": 20,
+            "net_r": -2.811
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261126-112/45822462611/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-112/45822462611/arms/A__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "yahoo",
+        "ticker": "GC=F",
+        "interval": "60m",
+        "resample": "4h"
+      },
+      "fold_edges": [
+        "2024-07-11 04:00:00+00:00",
+        "2025-02-11 08:00:00+00:00",
+        "2025-09-14 12:00:00+00:00",
+        "2026-04-17 16:00:00+00:00",
+        "2026-11-18 20:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_trend.py",
+          "--donchian",
+          "20",
+          "--data",
+          "<data>",
+          "--symbol",
+          "MGC",
+          "--resample",
+          "4h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "4.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "7.5",
+          "--emit-trades",
+          "comms/research/RQ-20261126-112/45822462611/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-112/45822462611/arms/A__bt.json",
+          "--confirm-bars",
+          "1",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "FAIL / stage0_no_edge: net_r=6.7897 with 1/4 positive folds (needs > 0 and >= 3)"
+}

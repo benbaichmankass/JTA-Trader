@@ -1,0 +1,23 @@
+{
+  "id": "PROMOTION-RULE-PARAM-DISJOINT",
+  "title": "Disjoint re-measure for the 8 rostered legs whose Stage-0 record reads param_selection_provenance not_established (grade-window rule, 2026-11-23)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "roadmap_unmapped_reason": "not set at filing -- manager to map to a milestone at the next weekly pass",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-04",
+  "note": "Filed by lane PROMOTION-RULE-GRADE-WINDOW (docs/research/promotion-rule-grade-window-2026-11-25.md Part 1 row 3). Under the operator's 2026-11-23 rule (OPERATING-PLAN s2 'A number measured only over the grading window never promotes') a Stage-0 record must show its window is disjoint from where params were chosen. 54 of 58 records in comms/strategy_evidence read not_established; 8 legs on real-money/prop rosters (re-parsed 2026-11-25): ada_pullback_2h, slv_trend_1h, tlt_pullback_1h, tqqq_trend_long_1d, trend_donchian_eth_4h, trend_donchian_sol_4h, trend_donchian_sol_prop, trend_donchian_xrp_4h. Work: per leg, find the commit that last changed its params (git log -p config/strategies.yaml), re-run its harness on data AFTER that date only (out-of-time by construction), record param_selection_provenance and the disjoint result. Any leg that fails -> demotion PROPOSAL to the operator (no auto-demote). Separate proposal for the operator: a C6 clause in scripts/ci/check_roster_promotion_evidence.py requiring a stated disjoint basis on NEW promotions only (adds enforcement -> operator's call, No new gates). 2026-11-26 BACKLOG-DRAIN-20261126: overdue (was 2026-11-26), ranked 'grading'; owner now manager (dead-session owner re-owned); re-dated to 2026-12-04 with NO substantive progress read this pass -- dispatch or kill at that date.",
+  "phase": null,
+  "updated_at": "2026-11-26T06:12:55Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6"
+}

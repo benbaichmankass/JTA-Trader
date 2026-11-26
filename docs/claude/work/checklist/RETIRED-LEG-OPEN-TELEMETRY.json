@@ -2,8 +2,8 @@
   "id": "RETIRED-LEG-OPEN-TELEMETRY",
   "title": "A retired leg with an open position keeps its telemetry writer until the position closes (due 2026-11-05)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 885,
   "note": "Manager decision (d) on GLD-ORPHAN-5209, 2026-11-01. DUE 2026-11-05. position_telemetry is written only from each strategy unit's own open-position management (record_position_telemetry calls in src/units/strategies/*), which does not run once a leg is enabled: false. So a retired leg's open position gets no telemetry, live_review_due reads it telemetry_absent, and it can never be reviewed (measured: gld_pullback_1h trade 5209, the only open trade of 12 on a disabled strategy, 2026-11-01). Not folded into PR #22215 because the fix lives in the strategy loop / monitor dispatch, not the reconciler. Build: the monitor keeps running the telemetry write (read-only path) for every open package whose strategy is disabled, until the package closes, with a test; off the trade path is not off the data path. Re-entry test: live_review_due shows such a package with telemetry_state present.",
   "phase": "build",
-  "updated_at": "2026-11-01T16:41:38Z",
-  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "updated_at": "2026-11-26T06:11:30Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

@@ -2,8 +2,8 @@
   "id": "REDUCE-READERS-INCLUDE",
   "title": "Include settled reduce legs in attribution.py and account_broker_reconcile.py (backfill applied 2026-10-11)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 426,
   "note": "[2026-10-12 ROUTE-20261012] Owns PI-20261011-YJAYF7GD-0003. The backfill-intent-reduce-pnl apply is DONE (PERF-FU-REDUCE-PNL, issue #17647); the remaining clause is the two readers: src/web/api/routers/attribution.py:125 (exclude_reduce_leg_predicate) and scripts/ops/account_broker_reconcile.py (_is_reduce_row) still drop reduce legs wholesale (re-grepped 2026-10-12). Include rows with notes.reduce_settlement='settled', attributed to the PARENT strategy via notes.reduce_settlement_parents; keep unsettled/superseded excluded. Read paths only.",
   "phase": null,
-  "updated_at": "2026-10-12T06:03:28Z",
-  "updated_by": "session_01J5MrX74iaf4XaTW17dJLhP",
+  "updated_at": "2026-11-26T06:11:26Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

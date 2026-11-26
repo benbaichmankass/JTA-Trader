@@ -1,0 +1,22 @@
+{
+  "id": "QUEUE-FILL-STANDING-W49",
+  "title": "Standing research queue-fill lane (W49): spec-only units from the plans, all week",
+  "state": "in_flight",
+  "owner": "QUEUE-FILL-STANDING-W49 (cloud session)",
+  "lane": "QUEUE-FILL-STANDING-W49",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-01",
+  "note": "week_lane=standing; started 2026-11-25 [2026-11-25 23:35Z HANDOFF, lane is a standing W49 lane, not complete] MERGED (sha-verified on origin/main): #28879 (units 11d7-01 tlt cost levers, -02 slv fold robustness, -03 eth_prop holdout), #28918 (pooled re-reads -04..-07, ETF 1d pullback_frac + donchian), #28932 (-08..-11, crypto donchian + 2h pullback_frac), #28942 (-12 ml-exit-head attempt 3, Binance-Vision). NOT observed: none of the 12 units has run yet; each is would_dispatch on github_runner. FILED rows: XSEC-CRYPTO-ATTEMPT4-GRID, MOVEMENT-CAPTURE-VOL-FORECASTER-MAKER, COST-LEVERS-SIGNAL-LEVEL-DATA, CLAUDE-DESK-FIRST-MEASUREMENT-DESIGN, LTR-CLASSES-DESK-REPLAY-EVIDENCE, EXIT-HOLDBIAS-ATTEMPT3-LEVERS; pipeline PI-20261125-EFILLW49-0001 (ict_scalp arms vs A). WAITING (author when unblocked): MG1 t+1-open audit on row HARNESS-ENTRY-NEXT-OPEN; tlt limit-entry unit on row PULLBACK-ENTRY-MODE-LIMIT; ml-btc-router-cells is ML-PRIMARY's, mine if not authored by 2026-11-26 12Z; re-read the programme plans after PROGRAMME-REVIEW-20261125 merges. NEXT FIRST: read the 12 units' results as they land and grade 11d7-04..11 against their registered bars; then the ml-btc-router-cells fallback at 11-26 12Z. THROTTLED 2026-11-26 ~07:20Z (operator via Manager 26a: one lane, ML-PRIMARY, for the rest of the week). RESUME at the 12-02 reset. State at stop: every PR of mine merged except #29083 (D6 ceiling units RQ-20261126-11d7-17/-18, from programme node P2-PR1125-D6-ceiling-two-legs; manager merges once green). Units queued, NOT yet run or graded: 13 MG1 next-open audit (11d7-03..15), tlt limit entry (11d7-16), holdbias attempt 3 (11d7-01/-02), avax twin + direction (RQ-20261126-008/-014), 153 generated twin/roster-walkforward units (#29051), D6 x2 (#29083). Dispatcher is concurrency-bound (deferred=153, dispatched=5 on the first run after #29051), so runner supply is ample; do NOT author more runner units. On resume: (1) read what ran from research/results and grade; (2) python3 scripts/research/queue_replenish.py --authoring-queue for plan nodes opening on trainer / GPU / github_runner_data (none named a backend on 2026-11-26) and for regime / new_strategy_prop (none ready then); (3) author plan-derived units only, never to a count; ML-PRIMARY owns ml-btc-router-cells and the refit-dependent P2-PR1125 nodes. OPEN OPERATOR QUESTION: a standing non-zero generator target reverses the 2026-11-01 STOP-GENERATED-AUTHORING popup answer; needs the operator's verbatim permission. LESSON: run every test file that imports a harness you edit (the red main from #28989 was a structural test I did not run; fixed in #29020). CORRECTION 2026-11-26 (close-out check 5): the note above says the units were 'queued, NOT yet run'. WRONG for most of them: results are on main (checked with git ls-tree, 03:05Z..03:49Z dispatches). Harness verdicts as reported (population = each unit's own; interpretation belongs to each unit's registered rule, not to this note): holdbias attempt 3 11d7-01 fail, 11d7-02 pass (2554 held-out trades); MG1 audit 11d7-03..15: 12 fail, 1 indeterminate (11d7-10 mes_trend_long_1d, 23 trades); NOTE the MG1 rule reads by LABEL, so a harness 'fail' (incumbent_beats_candidate) is the expected same-bar-overstates read, not a leg failure; tlt limit entry 11d7-16 fail; avax_pullback_2h twin 008 pass, direction 014 fail; ada_pullback_2h twin 020 pass. Still NOT run on 2026-11-26 07:50Z: the rest of the 153 generated units except those dispatched, D6 x2 in #29083 (queued). On resume: read results/<unit>/ and grade by label under each registered rule before anything else.",
+  "phase": null,
+  "updated_at": "2026-11-26T08:00:42Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

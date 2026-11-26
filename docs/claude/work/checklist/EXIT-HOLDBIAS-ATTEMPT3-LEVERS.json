@@ -1,0 +1,25 @@
+{
+  "id": "EXIT-HOLDBIAS-ATTEMPT3-LEVERS",
+  "title": "ml-holdbias-exit attempt 3: add action-subset and head-calibration flags to exit_holdbias.py, then author its pre-registered unit",
+  "state": "done",
+  "owner": "manager",
+  "lane": "QUEUE-FILL-STANDING-W49",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "M25"
+  ],
+  "priority_rank": 12,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28981,
+    28997
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "Filed by QUEUE-FILL-STANDING-W49 2026-11-25 (manager OK). READ FROM THE RESULTS (MEASURED, population 2,554 held-out corpus-B trades, 6 folds): iteration 1 RQ-20261101-78fc-05 FAIL (tau 0.15: advice rate 0.717, LB95 -0.0554). Iteration 2 RQ-20261119-2780-05 FAIL (tau chosen per fold in training): advice rate 0.0706 (clause b now PASSES, cap 0.15), acted trades 411, mean dR -0.0275, LB95 -0.0542, UB95 -0.0013 (the whole interval is below zero), worst leg trend_donchian_sol_prop -0.1108 (floor -0.05); matched random mean -0.0044 over 200 draws and p_random_ge_model 0.99, i.e. the model's chosen actions realize WORSE than random actions. So selectivity was not the problem: the heads rank actions badly where they act (a max over 13 per-action value heads is biased upward: winner's curse). Action mix of the 411: tp_extend_2r 85, close 85, widen_sl_0p5r 68, widen_sl_0p25r 58, tp_pull_in 65, others small. Untested levers per the manifest: recipe (shrink/calibrate each head before the argmax; restrict the action set to classes with enough priced labels), features (the run used 6 features: now_r, stop_r, tp_r, mfe_r, mae_r, bars_held; the docstring lists more: distance to SL/TP in ATR, ATR ratio, 3-bar momentum, trigger tags), labels. BUILD: exit_holdbias.py exposes only --labels --out --seed --n-boot --draws --tau-grid, so an action-subset flag (--actions) and a calibration/shrinkage flag need adding (Tier 1 research code, tests) before a unit can run them. Then author ONE unit per lever, rule registered first (the unchanged 78fc-05 clauses a-c). Orphan in iteration_orphans.py 2026-11-25; lever map says 'not built', which is stale. CLOSED 2026-11-26: --actions and --shrink levers merged in exit_holdbias.py (#28981, defaults byte-identical, 9 tests); attempt-3 units RQ-20261126-11d7-01 (--actions close,tighten_sl,tp_pull_in) and -02 (--shrink) merged in #28997 under the unchanged 78fc-05 clauses, queued not yet run.",
+  "phase": null,
+  "updated_at": "2026-11-26T02:56:56Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

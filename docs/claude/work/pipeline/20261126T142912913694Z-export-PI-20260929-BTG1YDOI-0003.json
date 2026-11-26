@@ -1,0 +1,25 @@
+{
+  "based_on": "work_store:v2",
+  "disposed_by": "BACKLOG-BURNDOWN-4 2026-10-05 (session_01FF7rXg93DhjUErmWop8C4X)",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "owner row SA-INFRA reaches done, or this item is verified fixed at HEAD. Routed 2026-10-05: verified at HEAD: no OnFailure in deploy/trainer/*",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20260929-BTG1YDOI-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "https://github.com/benbaichmankass/Metis-Insights/pull/14174",
+    "rerun": "trainer-vm-diag: grep -l OnFailure /etc/systemd/system/ict-* ; systemctl --failed"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent SA-INFRA state landed_unproven: OPS back)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row SA-INFRA is landed_unproven (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "SA-INFRA (landed_unproven)",
+  "state": "routed",
+  "what": "SA-INFRA: OnFailure= in #14174 covers the LIVE VM only. The trainer's timer-driven oneshots (ict-trainer, -catchup, -publish, -forecast, promotion-readiness, drift-retrain, offload-drain, trainer-git-sync) still fail silently behind an active timer, because the trainer has no telegram drain to receive a send_ping. Needs a route, e.g. the notify unit writes runtime_logs/unit_failures.jsonl, publish_trainer_mirror.sh adds it to trainer_status.json, and a live-side check (like trainer_disk_alarm.py) pings. MEASURED 2026-09-29: `grep -l OnFailure /etc/systemd/system/ict-*` on the trainer returned nothing (trainer-diag #14150)."
+}

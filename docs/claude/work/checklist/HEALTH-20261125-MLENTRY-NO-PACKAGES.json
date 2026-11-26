@@ -1,0 +1,21 @@
+{
+  "id": "HEALTH-20261125-MLENTRY-NO-PACKAGES",
+  "title": "ml_entry (real money bybit_2) has emitted 0 crypto packages since ~11-24 12Z: NOT an outage. At the 4h decision bar it scores and returns no_signal on all 5 symbols (16:02Z 11-25: BTC/ETH/SOL/XRP/ADA bars=399 no_signal). The 'no candle data ... skipping this tick' errors are skips at bar open before the reference set fills (pending 8+52 owed). Open question: why no signals for ~8 bars running",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "HEALTH-REVIEW-20261125, from the manager's PERF-REVIEW-PREP input (PI-20261125-PREP1125-0004). Evidence: trader journalctl grep ml_entry 16:00-16:20Z and 06:00-19:10Z 11-25 (ETH/BTC no_signal at 08/12/16Z bars, pending then no_signal). Candidate cause for /ml-review: the reference set is permanently 52/60, because ml_entry_refs gave up on 8 delisted refs (BAL, BLZ, DEFI, FLM, FTM, ICX, MKR, OMG USDT). If the features use a cross-sectional rank over 60 refs, a 52-ref set may shift scores under the threshold (p~0.3); genuine quiet regime (p~0.6); a defect elsewhere (p~0.1). Check: the score distribution of the last 10 decision bars against the threshold, and against the scores before 11-24. Closes when the cause is named, or a package is emitted.",
+  "phase": null,
+  "updated_at": "2026-11-25T19:25:13Z",
+  "updated_by": "session_01AFoLuMH8nrsuFCQzohVsUA"
+}

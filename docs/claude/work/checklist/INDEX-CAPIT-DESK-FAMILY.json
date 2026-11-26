@@ -1,0 +1,23 @@
+{
+  "id": "INDEX-CAPIT-DESK-FAMILY",
+  "title": "desk_near_signals: add a family for index_capitulation_1x (desk reads the real-money leg as 'unlooked')",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "follow-up of INDEX-CAPIT-1X-LEG (map with it at the next weekly pass)",
+  "priority_rank": 10,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "Found by lane INDEX-CAPIT-1X-LEG 2026-11-25 (PR #28869 CI): desk_near_signals.UNIT_ORDER has no name-family rule for index_capitulation_1x, so the trading desk reads it 'unlooked' (loud, never quiet; tests/test_desk_near_signals.py pins it with e4/ml_entry*). Unlike e4 or the ML legs, this trigger IS visible to a single-symbol daily candle probe: flush = close <= mean(close,5) - 1.5 x ATR14 AND low < min(prior 20 lows); signal = the first up-close within 5 sessions. A near-signal probe can report 'flush open, waiting for an up-close' per ticker. Fix (Tier 1, read path): add the family + probe reusing src.units.strategies.index_capitulation_1x.capitulation_signals on the daily frame, then drop the leg from the test's unresolved list. Done = the leg resolves to a unit and the desk shows per-ticker flush state for the 18 ETFs.",
+  "phase": "W48",
+  "updated_at": "2026-11-25T21:34:03Z",
+  "updated_by": "session_01AFoLuNL8QDrcjZJ6fvxPzc"
+}

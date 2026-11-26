@@ -1,0 +1,21 @@
+{
+  "due_when": {
+    "clears_when": "live_bar.py reports n_decisions with fragments collapsed and accounts pooled per decision, has a test, and latest.json is regenerated",
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125, manager session_01AFoLuKKEyjyRMDSxQ1prHf); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_bar.py --json"
+  },
+  "owner": "manager (assign a tooling lane)",
+  "roadmap": [
+    "L-LADDER"
+  ],
+  "state": "queued",
+  "tier": 1,
+  "what": "[performance][tooling][promotion] scripts/research/live_bar.py counts one market decision once per ACCOUNT row (demo floor + mirror + real money pooled) and once per repeated-entry FRAGMENT (each re-emitted package is a separate trade). Measured 2026-11-25 on the diag journal (8613 trades, 7369 packages): with one R per decision (symbol, side, 3h entry bucket, R averaged across accounts) 3 of the 7 legs the feed marks PASS read FAIL: slv_trend_1h raw n37 sumR +37.49 lcb +0.60 -> n25 +5.30 lcb -0.17 (the 2026-11-18 SLV short alone contributes 7 fragments at ~+6.2 R each); ada_pullback_2h n82 +12.55 lcb +0.015 -> n51 +8.36 lcb -0.001; ict_scalp_sol_15m n55 +11.04 lcb +0.015 -> n51 +8.29 lcb -0.033. comms/live_bar/latest.json (read by the resolver and reviews) carries the inflated figures. Fix: count decisions (dedupe fragments + pool accounts per decision), print n_rows beside n_decisions, plus a test. Feeds the operator's 2026-11-25 promotion-rule fix. Gates this adds or changes: none (it corrects a count)."
+}

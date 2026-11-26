@@ -71,9 +71,10 @@ class TestParity:
         candles = _candles(40)
         kwargs = dict(context_len=8, stride=4, min_context=8)
 
-        # OFFLINE path: the pure fn over the market_raw rows, last row.
+        # OFFLINE path: the pure fn over the market_raw rows, last row -- with the SAME phase the offline producer
+        # (build_forecasts.py) now passes (DEFAULT_PHASE = epoch, FC-STRIDE-PHASE).
         inline = compute_forecast_feature_rows(
-            _market_raw_rows(candles), forecast_fn=_stub_forecast(), **kwargs
+            _market_raw_rows(candles), forecast_fn=_stub_forecast(), phase="epoch", **kwargs
         )
         assert inline, "offline compute should emit rows"
         inline_fc = {c: inline[-1][c] for c in FORECAST_FEATURE_COLUMNS}
@@ -84,19 +85,42 @@ class TestParity:
         )
         assert artifact is not None
 
-        # The parity guarantee — bit-for-bit equal fc_* block + same anchor bar.
+        # The parity guarantee — bit-for-bit equal fc_* block, carried from the same epoch-aligned bar; as_of_ts is the last
+        # CLOSED bar (what forecast_live's one-bar staleness check compares against), fc_phase_ts the bar forecast.
         assert artifact["fc_row"] == inline_fc
-        assert artifact["as_of_ts"] == inline[-1]["ts"]
+        assert artifact["fc_phase_ts"] == inline[-1]["ts"]
+        assert artifact["as_of_ts"] == candles[-1]["timestamp"]
+        assert artifact["fc_phase"] == {"anchor": "epoch", "stride": 4}
 
-    def test_latest_forecast_row_is_the_most_recent_bar(self):
-        candles = _candles(40)
+    def test_latest_forecast_row_is_the_most_recent_epoch_aligned_bar(self):
+        candles = _candles(40)   # 15m bars from 00:00; the last is 09:45, the latest epoch-aligned (hour % 1h) is 09:00
         row = producer.latest_forecast_row(
             candles, forecast_fn=_stub_forecast(),
             context_len=8, stride=4, min_context=8,
         )
         assert row is not None
-        # _strided_indices always includes the last bar → newest ts.
-        assert row["ts"] == str(candles[-1]["timestamp"])
+        assert row["ts"] == "2026-01-01T09:00:00Z"
+        legacy = producer.latest_forecast_row(
+            candles, forecast_fn=_stub_forecast(), context_len=8, stride=4, min_context=8, phase="row",
+        )
+        assert legacy["ts"] == str(candles[-1]["timestamp"])   # the old rule: the last bar, fresh every bar
+
+    def test_live_equals_offline_asof_at_every_bar_in_any_window(self):
+        """THE FC-STRIDE-PHASE property (RQ-20261126-7f3d-01 measured 27% agreement before it): at every closing bar, the
+        live artifact built from a SHORT trailing window serves exactly the forecast the offline build over the FULL
+        history carries onto that bar (the market_features as-of join), so live == offline whatever window either sees."""
+        full = _candles(120)
+        kwargs = dict(context_len=8, stride=4, min_context=8)
+        offline = compute_forecast_feature_rows(_market_raw_rows(full), forecast_fn=_stub_forecast(), phase="epoch", **kwargs)
+        by_ts = {r["ts"]: r for r in offline}
+        for end in range(40, 121):
+            window = full[max(0, end - 30):end]            # the live producer only fetches a recent window
+            art = producer.build_forecast_artifact("BTCUSDT", "15m", window, forecast_fn=_stub_forecast(), **kwargs)
+            bar = window[-1]["timestamp"]
+            carried = max(t for t in by_ts if t <= bar)    # the as-of row offline gives this bar
+            assert art["fc_phase_ts"] == carried, (bar, art["fc_phase_ts"], carried)
+            assert art["fc_row"] == {c: by_ts[carried][c] for c in FORECAST_FEATURE_COLUMNS}
+            assert art["as_of_ts"] == bar
 
     def test_insufficient_history_returns_none(self):
         # Fewer bars than min_context → no row emitted.
@@ -206,8 +230,10 @@ def test_artifact_stamps_the_window_the_forecast_saw():
         "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(), context_len=64,
     )
     closed = candles[:-1]  # the forming bar is dropped
-    win = closed[-64:]
-    assert art["window_end_ts"] == art["as_of_ts"] == closed[-1]["timestamp"]
+    assert art["as_of_ts"] == closed[-1]["timestamp"]
+    saw = [c for c in closed if c["timestamp"] <= art["fc_phase_ts"]]   # FC-STRIDE-PHASE: the window the forecast SAW
+    win = saw[-64:]
+    assert art["window_end_ts"] == art["fc_phase_ts"]
     assert art["window_start_ts"] == win[0]["timestamp"]
     assert art["window_n"] == 64
     assert art["window_gaps"] == 0
@@ -230,7 +256,8 @@ def test_window_last_close_is_the_forecast_anchor():
         "BTCUSDT", "15m", candles, forecast_fn=_stub_forecast(), context_len=64,
     )
     assert math.isclose(art["fc_row"]["fc_ret_med"], math.log(1.002), rel_tol=1e-9)
-    assert art["window_closes"][-1] == float(candles[-2]["close"])
+    anchor = [c for c in candles if c["timestamp"] == art["fc_phase_ts"]][0]
+    assert art["window_closes"][-1] == float(anchor["close"])
 
 
 def test_window_counts_a_gap_and_hash_changes():

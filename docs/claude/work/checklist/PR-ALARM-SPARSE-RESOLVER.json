@@ -2,7 +2,7 @@
   "id": "PR-ALARM-SPARSE-RESOLVER",
   "title": "pr-landing-hold-merge-alarm cannot resolve citations outside its sparse checkout, so recorded approvals still page the operator (#25799)",
   "state": "queued",
-  "owner": "AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL)",
+  "owner": "manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-OPS-7 (session_01AFoLuHfPPZwEceiXaCGZfL))",
   "lane": null,
   "model": null,
   "tier": 1,
@@ -16,7 +16,7 @@
   "prs": null,
   "blocked_on": null,
   "next_action": null,
-  "due_by": "2026-11-20",
+  "due_by": "2026-12-14",
   "decision_requests": [
     {
       "allowsFreeText": true,
@@ -51,6 +51,6 @@
     }
   ],
   "note": "FOUND 2026-11-13 by AM-ML (run 43476136968). .github/workflows/pr-landing-hold-merge-alarm.yml checks out sparse (only the alarm script, .github/pr-landing/, docs/claude/work/checklist/, docs/claude/work/pipeline/). make_resolver() tests repo paths with os.path.isfile on the working tree, so any recorded_decision path under research/ or comms/ can never resolve in CI, and every true standing-authorization citation pages the operator (#25780 had none; #25799 had one and still paged). Both fixes were refused by lane sessions' safety classifier as editing an oversight detector, so this goes to the operator. Interim: refs cite a pipeline id or checklist row, and evidence lives under docs/claude/work/{checklist,pipeline}/. 2026-11-19 07:04Z: #27185 MERGED (manager). It adds resolver tests for both cases on top of fix_a (_in_head_tree, already on main): a cited file outside the sparse checkout resolves, and an uncited or fake path still fails. CI was green on head 405be6d9. Merged != observed: it is closed when the next hold-merge alarm run on a PR citing a research/ or comms/ file reads 'found' and does not page.",
-  "updated_at": "2026-11-19T07:04:46Z",
-  "updated_by": "session_01AFoLuHfPPZwEceiXaCGZfL"
+  "updated_at": "2026-11-25T18:35:31Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
 }

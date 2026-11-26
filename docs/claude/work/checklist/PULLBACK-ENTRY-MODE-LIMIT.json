@@ -1,0 +1,25 @@
+{
+  "id": "PULLBACK-ENTRY-MODE-LIMIT",
+  "title": "BUILD (real-money leg tlt_pullback_1h on alpaca_live, kept by the operator on condition it is iterated; main lever = cost): add an entry-mode lever to scripts/backtest_pullback.py -- market (default, byte-identical) vs limit-at-pullback resting N bars with a fill model (fill only if a bar trades through the limit; fill bar: stop checked, TP not; maker vs taker fee from execution_costs), mirroring backtest_ict_scalp's entry_mode/limit_expire_bars (lines ~804-1301). Must work on the forming-bar replay path the tlt record uses (forming_evidence_regen us_equity_intraday, Alpaca 1Hour+1Min) and be forwarded by regime_debt_matrix / exit_lever_ablation raw flag. Self-test: market arm byte-identical; a planted never-touched limit yields no fill. Then tell QUEUE-FILL-STANDING-W49 (session_01AFoLuKjdgFK9yimnCkttqV) to author the unit. Filed (not built) by RESEARCH-UNBLOCK-BUILDS-W48: lane ceiling reached.",
+  "state": "done",
+  "owner": "manager",
+  "lane": "QUEUE-FILL-STANDING-W49",
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ATM"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28989,
+    29004
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-02T00:00:00Z",
+  "note": "PR #28989 (closed-bar, head 0742722d9c) opened 2026-11-26; forming path filed as PULLBACK-ENTRY-MODE-LIMIT-FORMING. tlt limit-entry unit authored after #28989 merges. CLOSED 2026-11-26 (reduced scope, manager-approved): closed-bar --entry-mode limit merged (#28989, market default byte-identical, forming path raises); tlt limit-entry unit RQ-20261126-11d7-16 merged (#29004), queued not yet run. Forming-path version filed as PULLBACK-ENTRY-MODE-LIMIT-FORMING.",
+  "phase": null,
+  "updated_at": "2026-11-26T02:56:54Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

@@ -77,6 +77,14 @@ def test_dry_and_rejected_rows_are_labelled_with_their_reason(journal):
     assert b["entry_price_source"] == "plan" and b["entry_price_source_reason"] == "status_exchange_rejected"
 
 
+def test_a_live_alpaca_entry_without_a_poll_fill_is_marked_pending_writeback(journal):
+    """ALPACA-ENTRY-FILL-PRICE-UNSYNCED: a fill after the 3 s confirm poll used to stay "plan / no_venue_fill_read"."""
+    assert _log_trade_to_journal(_pkg(symbol="USO", entry=132.715, sl=130.0, tp=137.7), _cfg("alpaca_paper", "alpaca"),
+                                 {"qty": 1147.0}, trade_id="a4905e39-a15d-4ec3-bd7b-5ee4fe021700", status="open")
+    n = _notes(_rows(journal)[0])
+    assert n["entry_price_source"] == "plan" and n["entry_price_source_reason"] == om.ENTRY_FILL_PENDING
+
+
 def test_an_alpaca_venue_fill_keeps_its_own_label(journal):
     order = {"qty": 1.0, "venue_fill": {"avg_price": 49_990.0, "source": "alpaca_order_status"}}
     assert _log_trade_to_journal(_pkg(), _cfg("alpaca_live", "alpaca"), order, trade_id="A1", status="open")
@@ -172,9 +180,67 @@ def test_sweep_waits_on_a_read_failure_and_retries_next_tick(journal, monkeypatc
     assert all(_notes(r).get("entry_price_source_reason") == om.ENTRY_FILL_PENDING for r in _rows(journal)[:2])
 
 
+@pytest.mark.parametrize("order,action,reason", [
+    ({"status": "new"}, "wait", "entry_order_new"),
+    ({"status": "accepted"}, "wait", "entry_order_accepted"),
+    ({"status": "partially_filled", "avg_price": 133.0, "filled_qty": 500.0}, "wait", "entry_order_partially_filled"),
+    ({"status": "filled", "avg_price": 133.165649, "filled_qty": 1147.0}, "write", om.ENTRY_FILL_SOURCE_ALPACA),
+    ({"status": "canceled", "avg_price": 0.0, "filled_qty": 0.0}, "plan", "no_avg_price_status_canceled"),
+])
+def test_entry_fill_decision_alpaca_statuses(order, action, reason):
+    d = om.entry_fill_decision({"position_size": 1147.0}, order, om.ENTRY_FILL_SOURCE_ALPACA)
+    assert (d["action"], d["reason"]) == (action, reason)
+
+
+def test_sweep_writes_a_late_alpaca_fill_8521_shape(journal, monkeypatch):
+    """The measured case: USO 8521, package 132.715, venue market fill 133.165649 x 1147, 6.4 s after submit."""
+    oid = "a4905e39-a15d-4ec3-bd7b-5ee4fe021700"
+    assert _log_trade_to_journal(_pkg(symbol="USO", direction="long", entry=132.715, sl=130.0, tp=137.7),
+                                 _cfg("alpaca_paper", "alpaca"), {"qty": 1147.0}, trade_id=oid, status="open")
+    monkeypatch.setattr(om, "_load_account_cfgs_for_reconcile", lambda: {"alpaca_paper": _cfg("alpaca_paper", "alpaca")})
+    asked = []
+
+    def _alp(cfg, o):
+        asked.append((cfg["exchange"], o))
+        return {"status": "filled", "avg_price": 133.165649, "filled_qty": 1147.0}
+
+    def _bybit(cfg, o):
+        raise AssertionError("an Alpaca row must not be read through the Bybit primitive")
+
+    s = om._sweep_entry_fill_writeback(Database(str(journal)), order_status=_bybit, alpaca_order_status=_alp)
+    r = _rows(journal)[0]
+    n = _notes(r)
+    assert s["written"] == 1 and asked == [("alpaca", oid)]
+    assert r["entry_price"] == pytest.approx(133.165649)
+    assert n["entry_price_source"] == om.ENTRY_FILL_SOURCE_ALPACA and n["package_entry"] == pytest.approx(132.715)
+    assert n["entry_price_source"] in om.VENUE_ENTRY_SOURCES and "entry_price_source_reason" not in n
+
+
+def test_alpaca_entry_order_status_shapes_the_read(monkeypatch):
+    import src.units.accounts.clients as cl
+    oid = "a4905e39-a15d-4ec3-bd7b-5ee4fe021700"
+    answers = {
+        "read": {"by_id": {oid: {"read_state": "order_read",
+                                 "order": {"status": "filled", "filled_avg_price": 133.165649, "filled_qty": 1147.0}}}},
+        "missing": {"by_id": {oid: {"read_state": "not_found", "order": None}}},
+        "blind": {"by_id": {oid: {"read_state": "could_not_look", "order": None}}},
+        "none": None,
+    }
+    for key, want in (("read", {"status": "filled", "avg_price": 133.165649, "filled_qty": 1147.0}),
+                      ("missing", {"status": "not_found", "avg_price": 0.0, "filled_qty": 0.0}),
+                      ("blind", None), ("none", None)):
+        monkeypatch.setattr(cl, "account_alpaca_order_history", lambda cfg, order_ids, _k=key: answers[_k])
+        assert om.alpaca_entry_order_status({"exchange": "alpaca"}, oid) == want, key
+    # the executor's uuid fallback is not an Alpaca id: the reader refuses it -> not_found (keep the plan, labelled)
+    monkeypatch.setattr(cl, "account_alpaca_order_history",
+                        lambda cfg, order_ids: (_ for _ in ()).throw(ValueError("not an Alpaca order id")))
+    assert om.alpaca_entry_order_status({"exchange": "alpaca"}, "deadbeef")["status"] == "not_found"
+
+
 def test_the_sweep_source_never_calls_an_order_or_bracket_function():
     import inspect
-    src = inspect.getsource(om._sweep_entry_fill_writeback) + inspect.getsource(om.entry_fill_decision)
+    src = (inspect.getsource(om._sweep_entry_fill_writeback) + inspect.getsource(om.entry_fill_decision)
+           + inspect.getsource(om.alpaca_entry_order_status))
     for forbidden in ("place_order", "amend_order", "cancel_order", "modify_open_order", "set_trading_stop",
                       "_submit_order", "update_trade_sl", "apply_intent_reduce", "_resize_slice"):
         assert forbidden not in src, forbidden

@@ -1,0 +1,28 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "clears_when": "A committed note shows entry-by-entry agreement or names the harness/live gap; verdict flip/kill follows",
+    "due_date": "2026-12-02",
+    "kind": "date"
+  },
+  "id": "PI-20261005-OAKGATE1-0001",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "python3 scripts/ops/build_strategy_evidence.py --leg slv_trend_1h; compare with trade_journal slv_trend_1h closes",
+    "what": "A committed note shows entry-by-entry agreement or names the harness/live gap; verdict flip/kill follows"
+  },
+  "origin": {
+    "kind": "review",
+    "ref": "SOAK-GATE1 2026-10-05 (lane of manager session_01MM8o5js6TcDFeNAPBY4Ntv)",
+    "rerun": "python3 scripts/ops/build_strategy_evidence.py --leg slv_trend_1h; compare with trade_journal slv_trend_1h closes"
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-OPS (session_01AFoLuJUGfpon2bNgwFbFmx): parent ROUTE-RESEARCH-HARNESS-FIXES state dropp)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: first row named, ROUTE-RESEARCH-HARNESS-FIXES, is dropped in the work store, so this item's owner may be gone; item NOT closed (not covered by the approved bulk-close rules), flagged for the W48 planning list; due moved to the next planning window",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "ROUTE-RESEARCH-HARNESS-FIXES (re-routed 2026-10-24 REGISTER-SWEEP-W43: prior target RESEARCH-FOLLOWUPS is done; item still open) | was: RESEARCH-FOLLOWUPS",
+  "state": "routed",
+  "what": "slv_trend_1h: reconcile offline Stage-0 (+53.14R n=68) vs live Stage-1 record (0/13 wins, -$5,375 before 2026-08-24 demote). Replay the harness over the live window and compare entries, fills, confidence gating, bracket geometry (atr_stop_mult 1.5 vs 2.5 at live time)."
+}

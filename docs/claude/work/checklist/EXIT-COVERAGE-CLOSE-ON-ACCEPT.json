@@ -1,0 +1,22 @@
+{
+  "id": "EXIT-COVERAGE-CLOSE-ON-ACCEPT",
+  "title": "Exit-coverage resolver journals an orphan 'closed' when its flatten order is ACCEPTED, not FILLED (alpaca_paper SH 8488/8489/8490 re-adopt loop, 2026-11-24)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "journal-correctness bug found by a Tier-2 cleanup lane; no milestone owns order_monitor's orphan resolver",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "MEASURED 2026-11-25 (lane LATCH-RECONCILE-1125): alpaca_paper broker history (diag alpaca_order_history symbols=SH 11-24 12:00-15:00Z) = BUY 0.5 SH filled 13:02:09Z (pre-market; no journal row, origin unidentified, client_order_id a bare uuid), SELL 0.5 submitted 13:02:14Z -> CANCELED, SELL 0.5 submitted 14:23Z filled 14:30:00Z (the open). Journal = three orphan_adopt rows 8488 (13:02), 8489 (13:35), 8490 (14:07), each closed ~3 min later exit_reason=exit_coverage_no_strategy with exit_price_source=exchange_fill. Cause: src/runtime/order_monitor.py _close_unattributable_orphan writes status=closed when _send_close_to_exchange returns ok (order accepted), never confirming the fill; a pre-market fractional market sell Alpaca cancels leaves the broker long, the reverse reconciler re-adopts, loop. Fix candidates: close only on a confirmed fill / broker-flat re-read (keep the pending entry otherwise), and for Alpaca fractional/off-hours route a day/limit order or defer to the open. Also: identify what placed the 0.5 SH buy with no journal row (SH is in the ml_entry_eq pool). Rerun: diag alpaca_order_history?account_id=alpaca_paper&symbols=SH + journal trades where strategy_name='orphan_adopt'. Same pattern seen 11-25 18:11Z on alpaca_options_paper (8612/8613) and 11-18 ib_paper MGC (7735): check whether those closes were fills.",
+  "phase": "build",
+  "updated_at": "2026-11-25T18:32:04Z",
+  "updated_by": "lane LATCH-RECONCILE-1125"
+}

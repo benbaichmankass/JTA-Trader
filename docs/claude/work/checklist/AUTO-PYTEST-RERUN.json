@@ -1,38 +1,39 @@
 {
   "id": "AUTO-PYTEST-RERUN",
   "title": "workflow_run on pytest-run cancelled or zero-tests-collected: rerun once (run_attempt==1)",
-  "phase": "automation",
   "state": "landed_unproven",
   "owner": "AUTO-WAVE1 lane",
   "lane": null,
   "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
   "ceiling_usd": null,
   "spend_usd": null,
-  "tier": 1,
   "prs": [
     17844
   ],
   "blocked_on": [],
+  "due_by": "2026-12-09",
+  "_seq": 449,
   "note": "[2026-10-13 AUTO-WAVE1] .github/workflows/pytest-rerun.yml (workflow_run on pytest-run) + scripts/ci/pytest_rerun.py. Reruns ONCE per head sha only when the Run tests step was cancelled at the job timeout (timeout read from pytest-run.yml minus 3 min) or the job died before tests started; never a failed test step, a superseded head, or attempt >1. Built, not yet observed live.",
-  "updated_at": "2026-10-30T06:13:02Z",
-  "updated_by": "session_01AFoLuL99YDu1fHUkJvG55s",
-  "roadmap": [
-    "L-OPS"
-  ],
   "observation": {
-    "what": "AUTO-PYTEST-RERUN built and measured against its estimate",
-    "how_to_check": "cancel a run on a scratch PR: exactly one rerun, then its own result stands",
     "due_by": "2026-11-06T00:00Z",
+    "how_to_check": "cancel a run on a scratch PR: exactly one rerun, then its own result stands",
     "redated": {
-      "on": "2026-10-30",
-      "from": "2026-10-27",
       "by": "DAILY-REVIEW-TRIAGE-20261030",
+      "from": "2026-10-27",
+      "on": "2026-10-30",
       "reason": "PR #17844 merged. Needs a cancelled pytest-run on a scratch PR; not exercised this run."
-    }
+    },
+    "what": "AUTO-PYTEST-RERUN built and measured against its estimate"
   },
+  "phase": "automation",
+  "updated_at": "2026-11-25T18:45:31Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
   "writeback": {
-    "roadmap": "none: CI reliability tooling",
-    "arch": "none: no contract change"
-  },
-  "_seq": 449
+    "arch": "none: no contract change",
+    "roadmap": "none: CI reliability tooling"
+  }
 }

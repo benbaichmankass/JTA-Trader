@@ -1,0 +1,30 @@
+{
+  "based_on": "work_store:v4",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "a pooled 1d-ETF pullback DIRECTION unit is authored and queued (research/queue, naming ief_pullback_1d among its cells) or the DIRECTION question for ief_pullback_1d is retired by record; abab-38 then re-armed or closed. A dated re-check on 2026-11-22 re-dates this if neither has happened.",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261118-EFILLW47-0004",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-11-18, RQ-20261118-abab-38 run 44387493913 INDETERMINATE underpowered n=33<39; manager accepted the no-unit diagnosis 23:35Z",
+    "rerun": "python3 - <<PY\nimport json\nr=json.loads(open(sorted(__import__(\"glob\").glob(\"research/results/RQ-20261118-abab-38/*.jsonl\"))[-1]).read().strip().splitlines()[-1])\nprint(r[\"verdict\"], r[\"population\"][\"n\"])\nPY\n# re-arm RQ-20261118-abab-38 (last_dispatched_at: null) and read n once the leg has >=39 trades"
+  },
+  "owner": "research-ops",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row QUEUE-FILL-STANDING-W48 is in_flight (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "roadmap": [
+    "M40"
+  ],
+  "routed_to": "QUEUE-FILL-STANDING-W48 (checklist row; research-queue fill lane, now re-owned by the manager) [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane QUEUE-FILL-STANDING-W47 (session_01AFoLuJj5Ag5k7sP5ZpHrqD), 2026-; routing-alarm rule]",
+  "severity": null,
+  "state": "routed",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "abab-38 (ief_pullback_1d DIRECTION lever) INDETERMINATE: incumbent n=33 < n_floor 39 on the corpus window 2021-07-01..2026-10-15 (run 44387493913). No single-leg follow-up (window shared by the sibling 1d legs; the full 2330 d adds ~+6-7 trades, borderline). The standing doctrine on the older STRUCTURE-EXITS-DEFAULT gap item is a POOLED 1d-ETF population, never a wait for accrual: author one pooled 1d-ETF pullback DIRECTION unit (harness_stage0.py --family pullback --non-crypto-source dukascopy over the 1d ETF legs, bar registered before the run, measured sd), then re-arm or retire abab-38."
+}

@@ -758,6 +758,27 @@ levers:
       best_delta_r_per_trade: 0.352
       fold_stability: 0.5
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-04
+        window: 2020-11-19..2026-11-25
+        n: 40
+        net_r: 25.6371
+        baseline_n: 42
+        baseline_net_r: 25.8916
+        delta_net_r: -0.2545
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 5.1536
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0061
+      fold_stability: 0.75
+      reading: no response at the tested values
     direction_filter:
       tests:
       - value: di

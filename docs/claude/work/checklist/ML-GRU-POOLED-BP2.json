@@ -1,0 +1,27 @@
+{
+  "id": "ML-GRU-POOLED-BP2",
+  "title": "GPU: pooled 60-perp twin of the D2 GRU-vs-LightGBM bake-off (RQ-20261125-9e71-01) on the widened published data, so the sequence family gets a resolvable read on the Kaggle GPU",
+  "state": "done",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "roadmap_unmapped_reason": null,
+  "priority_rank": null,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    28992
+  ],
+  "blocked_on": null,
+  "next_action": null,
+  "due_by": "2026-12-03",
+  "note": "2026-11-26 01:57Z lane session_01AFoLuKDXSVLvLJ6dweh6To: blocked -> queued. Blocker (1), the 9e71-01 grade, is cleared: it FAILED (run 45724458202, read by 9e72-01). Blocker (2), the widened data, is built in PR #28992 (dataset metis-market-bp2). Unit RQ-20261126-2819-01 = the pooled 60-perp twin of 9e72-01 (the calibrated recipe, not 9e71-01's mis-trained one); rule registered before the run (PASS iff POOLED boot_ci_low > 0 vs LightGBM; FAIL iff boot_mean <= 0); MDE ~0.005 nats/row (basis measured on a 3-symbol smoke); not_before 2026-11-26T04:00Z; routes kaggle/gpu. Closes when its result row lands and the rule is applied. 2026-11-26 05:55Z RESULT: RQ-20261126-2819-01 FAIL (measured, Kaggle T4, run 45756683501). POOLED GRU minus LightGBM log-loss: -0.0065 nats/row, day-block (1440-row) bootstrap 95% CI [-0.0090, -0.0043], sd 0.00119 (MDE declared 0.005; resolvable). GRU worse on all 5 folds (gru 0.569/0.476/0.525/0.499/0.469 vs lgbm 0.558/0.471/0.520/0.494/0.463); GRU beats the class prior by +0.187. Every fold early-stopped at epoch 4 with best epoch 0 (temperature 0.95-1.35; 800k train / 200k val windows): no learning past the first epoch. RQ-20261126-9e72-01 (3-symbol) ALSO FAILED (boot mean BTC -0.0119, ETH -0.0005, SOL -0.0024). Registered fail_action: the GRU is CLOSED on these 10 engineered features at both scales; the deep_sequence family re-opens only on a new representation. ML-PRIMARY's raw-window GRU (RQ-20261126-9e73-02, held PR #29015) is exactly that re-entry. Lever-map writeback is research-ops' job.",
+  "summary": "unit RQ-20261126-2819-01 authored (PR #28992); runs on Kaggle GPU once metis-market-bp2 is published",
+  "terminal_reason": "unit RQ-20261126-2819-01 graded FAIL by its registered rule (measured, Kaggle); GRU closed on engineered features at 3- and 60-symbol scale",
+  "updated_at": "2026-11-26T05:53:31Z",
+  "updated_by": "session_01AFoLuKDXSVLvLJ6dweh6To"
+}

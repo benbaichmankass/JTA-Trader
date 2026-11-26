@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "TIER 2 (trainer-side producers of a live feature): epoch-anchored stride phase for the fc_* forecast features in BOTH the offline side-stream (scripts/ml/build_forecasts.py) and the live producer (scripts/ml/publish_live_forecasts.py), which now carries the latest epoch-aligned forecast forward (as the offline as-of join does) with as_of_ts = the last closed bar (forecast_live's staleness check unchanged) and new fc_phase_ts / fc_phase observability. Fixes RQ-20261126-7f3d-01 (BTC fc_* agreement 27%). No src/runtime change; the pure fn's own default stays phase=row (byte-identical for every other caller). Manager-approved design 2026-11-26 04:37Z; awaiting the operator OK."
+}
