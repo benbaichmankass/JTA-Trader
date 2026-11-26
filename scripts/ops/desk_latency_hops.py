@@ -8,6 +8,8 @@ order on a broker, and that it goes correctly and smoothly and with as little la
 
   judged      the row's ``judged_at`` (intake.jsonl)
   picked_up   intake's ``seen_at``: the VM rows watcher read the row (intake.jsonl)
+  touched     a LIMIT proposal only (DESK-MACRO v2 b1, the leg holds the limit): the tick its price reached the limit
+              (``signal_logic.touched_at``); absent for a market entry, which has no such hop
   minted      the claude_desk order package's ``entry_time`` (journal order_packages.signal_logic)
   submitted   the venue's own order ``created_time`` (Bybit raw order history; other venues: could_not_look for now)
   filled      the venue order's ``updated_time`` when its status is Filled (Bybit), else could_not_look
@@ -33,7 +35,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 ROOT = Path(__file__).resolve().parents[2]
-HOPS = ("judged", "picked_up", "minted", "submitted", "filled", "journaled")   # measured: the journal row lands ~0.2 s AFTER the venue fill
+HOPS = ("judged", "picked_up", "touched", "minted", "submitted", "filled", "journaled")   # measured: the journal row lands ~0.2 s AFTER the venue fill
 Fetch = Callable[[str], Optional[Any]]
 
 
@@ -121,14 +123,19 @@ def hops(decisions: List[Dict[str, Any]], packages: List[Dict[str, Any]], trades
             out.append(dict(base, account=None, why="no claude_desk package with this decision in the order_packages rows read (older than the read, or never minted)"))
             continue
         sl = _signal_logic(pkg)
-        base.update(order_package_id=pkg.get("order_package_id"), symbol=pkg.get("symbol"), minted=_ts(sl.get("entry_time")))
+        base.update(order_package_id=pkg.get("order_package_id"), symbol=pkg.get("symbol"), minted=_ts(sl.get("entry_time")),
+                    entry_type=sl.get("entry_type") or "market", limit_level=sl.get("limit_level"),
+                    touch_price=sl.get("touch_price"), direction=pkg.get("direction"))
+        if sl.get("entry_type") == "limit":
+            base["touched"] = _ts(sl.get("touched_at"))
         rows = [t for t in trades if t.get("order_package_id") == pkg.get("order_package_id")]
         if not rows:
             out.append(dict(base, account=None, why="no trades row for the package (no account placed it)"))
             continue
         for t in rows:
             rec = dict(base, account=t.get("account_id"), journaled=_ts(t.get("timestamp")),
-                       broker_order_id=t.get("broker_order_id"))
+                       broker_order_id=t.get("broker_order_id"), fill_price=t.get("entry_price"))
+            rec["slippage_vs_limit"] = slippage(rec)
             if str(t.get("account_id") or "").startswith("bybit") and t.get("broker_order_id") and rec["journaled"]:
                 v = _venue_order(fetch, str(t["account_id"]), str(t.get("symbol")), str(t["broker_order_id"]), rec["journaled"])
                 rec.update(submitted=v.get("submitted"), filled=v.get("filled"), why=v.get("why"))
@@ -136,6 +143,21 @@ def hops(decisions: List[Dict[str, Any]], packages: List[Dict[str, Any]], trades
                 rec["why"] = "venue order times are read for Bybit accounts only so far"
             out.append(rec)
     return out
+
+
+def slippage(rec: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """For a leg-held LIMIT entry (b1): how far the actual fill was from the limit level, signed so that positive = WORSE
+    than the limit (paid more on a long, received less on a short), in price and in bps of the limit. None for a market
+    entry or when a price is missing (never 0). This is the number DESK-VENUE-RESTING-LIMIT's re-entry test reads."""
+    if rec.get("entry_type") != "limit":
+        return None
+    try:
+        lvl, fill = float(rec["limit_level"]), float(rec["fill_price"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    sign = 1.0 if rec.get("direction") == "long" else -1.0
+    worse = sign * (fill - lvl)
+    return {"limit_level": lvl, "fill_price": fill, "worse_by": round(worse, 8), "worse_bps": round(worse / lvl * 1e4, 2)}
 
 
 def with_deltas(rec: Dict[str, Any]) -> Dict[str, Any]:
@@ -151,7 +173,7 @@ def with_deltas(rec: Dict[str, Any]) -> Dict[str, Any]:
     j, last = rec.get("judged"), next((rec.get(h) for h in reversed(HOPS) if isinstance(rec.get(h), datetime)), None)
     r["hop_seconds"] = deltas
     r["total_seconds"] = round((last - j).total_seconds(), 3) if isinstance(j, datetime) and last and last is not j else None
-    r["missing_hops"] = [h for h in HOPS if not isinstance(rec.get(h), datetime)]
+    r["missing_hops"] = [h for h in HOPS if not isinstance(rec.get(h), datetime) and not (h == "touched" and rec.get("entry_type") != "limit")]
     return r
 
 
@@ -202,6 +224,13 @@ def _self_test() -> int:
             return venue
         return None
 
+    pkgs.append({"order_package_id": "P3", "strategy_name": "claude_desk", "symbol": "SLV", "direction": "long",
+                 "signal_logic": json.dumps({"decision_id": "D3", "entry_time": "2026-11-27T15:00:05+00:00", "entry_type": "limit",
+                                             "limit_level": 36.8, "touch_price": 36.79, "touched_at": "2026-11-27T15:00:00+00:00"})})
+    trades.append({"order_package_id": "P3", "account_id": "alpaca_paper", "symbol": "SLV", "entry_price": 36.83,
+                   "timestamp": "2026-11-27T15:00:09+00:00"})
+    intake["lines"].append(json.dumps({"decision_id": "D3", "verdict": "accepted", "judged_at": "2026-11-27T13:10:00Z",
+                                       "seen_at": "2026-11-27T13:15:00+00:00"}))
     out = run(fetch, last=5)
     r1 = next(r for r in out["rows"] if r["decision_id"] == "D1")
     r2 = next(r for r in out["rows"] if r["decision_id"] == "D2")
@@ -211,6 +240,11 @@ def _self_test() -> int:
     check("total = judged -> journaled (the last hop)", r1["total_seconds"] == round((_ts("2026-11-19T12:37:14+00:00") - _ts("2026-11-19T12:34:32Z")).total_seconds(), 3))
     check("a decision without a package read is named, not zero", r2["why"].startswith("no claude_desk package") and r2["total_seconds"] is not None)
     check("unreadable intake -> could_not_look", run(lambda p: None)["read_state"] == "could_not_look")
+    r3 = next(r for r in out["rows"] if r["decision_id"] == "D3")
+    check("a leg-held limit shows the touched hop and its slippage (worse = positive)",
+          "picked_up->touched" in r3["hop_seconds"] and r3["slippage_vs_limit"]["worse_by"] == 0.03
+          and r3["slippage_vs_limit"]["worse_bps"] == 8.15)
+    check("a market entry has no touched hop and no slippage", "touched" not in r1["missing_hops"] and r1["slippage_vs_limit"] is None)
     print("self-test", "OK" if ok else "FAILED")
     return 0 if ok else 1
 
@@ -234,6 +268,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         total = "—" if r["total_seconds"] is None else f"{r['total_seconds']:.1f}s"
         miss = f" | missing {','.join(r['missing_hops'])}" if r["missing_hops"] else ""
         why = f" | {r['why']}" if r.get("why") else ""
+        sv = r.get("slippage_vs_limit")
+        why += f" | vs limit {sv['limit_level']}: {sv['worse_bps']:+.1f} bps worse" if sv else ""
         print(f"{r['decision_id']} {r.get('symbol') or '-'} {r.get('account') or '-'}: total {total} | {hs}{miss}{why}")
     return 0
 
