@@ -1,0 +1,171 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261126T1606Z-pkg-6f152b3e407e4b64",
+ "reviewed_at": "2026-11-26T16:20:00Z",
+ "order_package_id": "pkg-6f152b3e407e4b64",
+ "trade_id": null,
+ "leg": "ml_entry",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "giveback",
+  "level": 1.0,
+  "l0_snapshot_at": "2026-11-26T16:05:06.658304+00:00"
+ },
+ "info_cutoff_at": "2026-11-26T16:06:24Z",
+ "state": {
+  "atr_now_over_entry": null,
+  "bars_held": 2,
+  "giveback_r": 1.2828,
+  "open_r": 0.0158,
+  "peak_provenance": "estimated",
+  "peak_r": 1.2986,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 0.9620285714285715,
+  "tp": 0.9249571428571428
+ },
+ "features_at_review": {
+  "atr_now_over_entry": null,
+  "bars_since_peak": 1,
+  "giveback_r": 1.2828,
+  "open_r": 0.0158,
+  "peak_r": 1.2986,
+  "r_to_stop": 1.0158,
+  "r_to_target": 1.9197
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 0.9620285714285715 / tp 0.9249571428571428 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 49,
+   "mean_r": -0.6408,
+   "sd_r": 0.7205,
+   "worst_r": -1.1844,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 49,
+   "mean_r": -0.4457,
+   "sd_r": 0.4228,
+   "worst_r": -1.6581,
+   "net": true
+  },
+  {
+   "action": "tighten_sl",
+   "level": null,
+   "n": 49,
+   "mean_r": -0.4452,
+   "sd_r": 0.4232,
+   "worst_r": -1.6581,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 49,
+   "mean_r": -0.0859,
+   "sd_r": 0.0358,
+   "worst_r": -0.1662,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261126T1606Z-pkg-6f152b3e407e4b64.json",
+ "recommendation": {
+  "action": "close",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": 0.5549,
+  "worst_case_delta_r": 1.0182,
+  "basis": "ev_positive",
+  "confidence": "suggestive",
+  "evidence_source": "table",
+  "judgement_confidence": 0.7,
+  "reason": "Gave back 1.2828R of 1.2986R peak in one 1h bar and sits at entry (open 0.0158R); table n=49>=20: close mean -0.0859R worst -0.1662 vs hold mean -0.6408R worst -1.1844, delta +0.5549R (~6 SE); hold bounded by real SL at -1.0158R but still negative EV, and 95% of this population gives back >half. Tighten to breakeven not placeable (price at entry; SL already <1 ATR). TP 1.9R away with a rejected spike behind it. First review, no previous forecast."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "trigger_fold: judgement_cadence 2026-11-26T16:00:00+00:00 (slot) folded into giveback @1.0 per manager; packet LR-20261126T1606Z sha 6e53da23720f used",
+  "table: hold n=49 mean -0.6408 worst -1.1844 (leg peak-then-pullback pop, extend-only exit, no structure SL; not this trade's state)",
+  "table: close n=49 mean -0.0859 worst -0.1662; tighten r:0 mean -0.4457 worst -1.6581 (worse tail than close); tighten atr:1.0/1.5/2.0 invalid_level",
+  "book: ADAUSDT short + XRPUSDT short ml_entry + SPY/QQQ pullback shorts are one risk-off bet (correlated_open_packages); BTC longs partly offset",
+  "live_vs_backtest: ml_entry live -9.84R over 59 closed (8th percentile of backtest band, CONSISTENT)",
+  "missing_inputs: atr_now_over_entry, regime cell, funding, chart.since_entry null (could-not-look)"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.962 / TP 0.925, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "would_apply",
+   "evidence": "bybit_orders: SL 0.962 / TP 0.925, position True, matched by order_id; apply paths close, move_tp, reduce, tighten, widen_sl; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)"
+  }
+ ],
+ "disposition": {
+  "route": "recommended",
+  "mandate": "MD-TRADE-DESK",
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuLHyceqfHxWRcTbP74",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "6e53da23720fc4af6d995419f5e01d8a4b893c36bdde9d549def442a5da97c96",
+ "forecast": {
+  "thesis": "XRP spiked 1.30R to 0.933 and was bought straight back to the 0.9472 entry inside the same 1h bar; 4h is transitional and 1h ADX 25.6 gives no continuation edge, so price more likely retests the 0.9562 swing high (1.2 ATR) than makes a new low below the 0.933 wick",
+  "direction": "against_trade",
+  "target_px": 0.9562,
+  "p_target": 0.55,
+  "invalidation_px": 0.933,
+  "horizon_bars": 6,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.bars: last bar low 0.933 close 0.9472 (full wick rejection)",
+   "chart.swings: highs 0.9562 (1.21 ATR) 0.9598",
+   "chart.htf: 4h transitional",
+   "priced_options.close vs hold n=49"
+  ]
+ }
+}
