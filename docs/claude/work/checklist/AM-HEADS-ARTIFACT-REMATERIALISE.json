@@ -1,0 +1,21 @@
+{
+  "id": "AM-HEADS-ARTIFACT-REMATERIALISE",
+  "title": "Re-materialise the AM heads (am-heads-45384292963, kept only to 2026-12-24) before it expires, so RQ-20261126-c7e5-01 (AM Q10 one-leg OOT grade, not_before 2027-06-15) and any later am-action-value run can dispatch; then point the workflow default heads_run_id at the new run",
+  "state": "queued",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-ML-MECE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-20",
+  "note": "Filed 2026-11-26 by ML-PRIMARY. am-action-value.yml downloads am-heads-<heads_run_id> (default 45384292963, 'kept to 2026-12-24' per the workflow header); with av_run_id empty it relabels + refits the value models from those heads. After expiry every am-action-value run fails at the heads download. Fix: re-run am-policy-arm (or am-action-value with labels_run_id) to produce a fresh heads artifact with long retention, or persist the heads to the repo / data lake, and update the default heads_run_id. Verify with a dry dispatch that downloads the heads. 2026-11-26 design note: re-materialising alone does NOT fix this. Every heads artifact is retention-days 30 (am-policy-arm.yml:130, am-action-value.yml:149), and the labels artifacts a refit needs expire too, so the c7e5-01 dispatch on 2027-06-15 cannot rely on ANY artifact. Durable fix (pick one): (A) commit the heads once to the repo (the fitted LightGBM text files + manifest.json, small; e.g. comms/research/am_heads/<run>/) and add a heads_path input to am-action-value.yml that reads from the checkout instead of download-artifact; or (B) make the unit self-contained by chaining cf-bar-labels -> heads fit in-run (labels_run_id path, ~1-2 h more compute per run). (A) is cheaper and reproducible (pinned bytes). Owner ML-PRIMARY, due 12-20; build after the open W48 PRs land. 2026-11-26 05:30Z design read (ML-PRIMARY). MEASURED: am-heads-45384292963 = 18.4 MB zipped, expires 2026-12-24 (the amb bank shards expire 12-08); c7e5-01 grades 2027-06-15, so no artifact can be kept that long. am-action-value.yml already rebuilds heads IN-RUN when labels_run_id is set (job 'heads': am_heads_fit.py dump, deterministic seeds + deterministic LightGBM), but it needs a cf-bar-labels run whose label artifacts also expire. DECISION (recommended): option B. Make the grading run self-sufficient by chaining labels -> heads -> value in one dispatch (add a labels job to am-action-value.yml, or have c7e5-01's run dispatch cf-bar-labels then am-action-value with labels_run_id), so expiry stops mattering. Option A (commit an 18 MB binary to git) rejected on size. Verification: the rebuilt heads must hash-match a re-fit from the same labels (determinism check) before c7e5-01 grades. Next step: implement the chain before 12-20 (Tier 1 workflow edit) and dry-run it once on the current labels run. 2026-11-26 05:40Z refinement: NO workflow edit needed. The chain already exists as two dispatches: (1) cf-bar-labels with the same corpus_sha (its label artifacts keep 14 days, so run it within 14 days of grading); (2) am-action-value with labels_run_id=<that run>, labels_prefix=<its run_id>, head_feats=base, whose 'heads' job refits the heads in-run. NEXT STEP, before 12-24 while am-heads-45384292963 still exists: identify the labels run + corpus_sha that produced those heads (from am-policy-arm run 45384292963's inputs), re-run the chain on them, and hash-compare the rebuilt heads against the artifact (determinism proof). If they match, c7e5-01's 2027-06-15 grading uses the 2-dispatch chain (write it into the unit's run note). If not, record the delta and fall back to committing the heads (18.4 MB).",
+  "phase": "W48",
+  "updated_at": "2026-11-26T05:35:47Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

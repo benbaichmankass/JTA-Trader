@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261124-LDATAEND-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY session_01AFoLuLpCY5gABbqk3EBUeV, RQ-20261124-f1a0-01 runs 45484674095 vs 45488221836",
+    "rerun": "compare summary.json pooled.base n/mean of research-script-run artifacts 45484674095 and 45488221836 (RQ-20261124-f1a0-01): python3 scripts/research/ml_entry_fix_arms.py --arm long_mute --fetch --run-date 2026-11-22"
+  },
+  "state": "queued",
+  "what": "REPRODUCIBILITY: ml_entry dev-fold harness (ml_decision_entry.build_table via ml_entry_retrain.fetch_through) gave a different base table on two runs with the same --run-date 2026-11-22: n 72,996 vs 73,236 decisions, pooled mean +0.0051 vs +0.0059 (RQ-20261124-f1a0-01, runs 45484674095 / 45488221836). The verdict did not change, but registered reads are not bit-reproducible. Likely a partial-month kline refresh or a cache difference between runners. Fix: pin the data end (drop bars after the run-date's previous UTC day) in fetch_through/build_table, or record a data fingerprint of the klines cache in verdict.json data_inputs."
+}

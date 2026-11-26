@@ -1,0 +1,138 @@
+# Authored 2026-11-26 by lane ML-PRIMARY: the SOL twin of RQ-20261126-7f3d-01, run FIRST as cheap confirmation before the stride-phase Tier-2 fix
+# (manager 2026-11-26 04:37Z: "run (a), the SOL featdiff, first"). Rule registered BEFORE any run (same machine rule as 7f3d-01).
+# Gates this adds or changes: none (a research diagnostic; no served model, config or order path).
+id: RQ-20261126-7f3e-01
+title: 'Stride-phase confirmation on SOL: per-COLUMN diff of the LIVE per-bar feature rows of sol-regime-15m-lgbm-fc-pcv-v2 (shadow_predictions
+  snapshot, 217 rows 11-24..11-26) vs the offline market_features SOLUSDT/15m/v002 rows of the same bars'
+status: done
+cadence: once
+theme: regime
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On the bars both carry, does every feature column the live head was scored on equal the offline dataset value (within 1e-6 relative) on >= 99% of joined
+  bars; and if not, which columns diverge (with the stale-forecast bars flagged)?
+why_this_matters: '7f3d-01 FAILED on BTC: the fc_* forecast columns agree on only 27% of 188 joined bars (raw vol columns 96-97%), and the code
+  read gives the cause. ml/datasets/forecast_features._strided_indices emits offline forecasts every 4th bar from the dataset''s first row and carries them
+  forward, while scripts/ml/publish_live_forecasts.py always forecasts the last bar, so live serves a fresh forecast every bar. The SOL head reads the
+  same fc_* path. A SOL FAIL with fc_* near 25% agreement and raw columns high confirms the defect is the shared producer, not BTC-specific, before
+  the Tier-2 stride-phase fix (epoch-anchored phase in both paths) goes to the operator.'
+iteration:
+  subject: ml-vol-label-parity
+  subject_kind: ml_model
+  from_result: RQ-20261126-7f3d-01
+  verdict_read: fail
+  diagnosis: '7f3d-01 (BTC) FAIL: fc_* agree 27% (26% on fresh-forecast bars), raw vol columns 96-97%; cause in code = stride phase (offline every 4th bar
+    carried forward vs live fresh every bar). This unit checks the same divergence on the SOL head.'
+  search: one deterministic diff, no grid.
+  levers:
+  - features
+  attempt: 3
+  due_by: '2026-11-30'
+levers:
+- name: label_fidelity
+  values:
+  - alignment asof
+  - alignment prev_bar
+  hypothesised_effect: one alignment reproduces the live label at kappa >= 0.6 for BTC and SOL; MES is too thin to read
+evidence_class:
+  holdout: none
+  claim: mechanics
+power:
+  expected_n: 190
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.1
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~190 joined 15m bars (217 live records over 2.2 days, the BTC twin joined 188 of 199). The statistic is a per-column agreement SHARE, counted, not estimated; a share near 0.99
+    has a binomial sd ~0.1 per bar, so 190 bars resolve a 5-point drop below the 99% bar. A smaller join than 50 bars is INDETERMINATE by rule.'
+  feasibility:
+    source: none
+    accrual_basis: committed live snapshot + trainer-resident dataset; nothing accrues.
+baseline:
+  definition: 'Chance agreement: Cohen''s kappa corrects observed agreement for the agreement expected from the two marginal volatile shares (an always-calm replay
+    scores kappa 0 however high its raw agreement).'
+  net_of_cost: false
+decision_rule:
+  id: RULE-RQ-20261126-7f3e-01-FEATDIFF-SOL
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: the offline market_features row of the same bar (the row the replay scores)
+  statistic: 'scripts/research/ml_vol_label_replay.py featdiff: live bar open = floor(predicted_at, 15m) - 15m (checked against hour_of_day); per shared column, share
+    of joined bars with live == offline within 1e-6 relative (numeric) or exact (categorical); also on fresh-forecast bars only; stale fc_* bars (identical consecutive
+    live fc blocks) counted.'
+  rule: 'PASS iff >= 50 joined bars AND every shared column agrees on >= 99% of joined bars (then the label disagreement is NOT the feature row: head identity / threshold
+    / alignment). FAIL iff >= 50 joined bars AND any column agrees on < 99% (the named columns are the serve-path divergence). INDETERMINATE iff < 50 joined bars.
+    Fixed now; machine form in featdiff_verdict.'
+  pass_action: The stride-phase defect does NOT reach the SOL head (or SOL's live rows happen to be phase-aligned); the Tier-2 fix PR states the SOL scope
+    from this record before the operator decision.
+  fail_action: With fc_* the divergent columns, the Tier-2 stride-phase fix covers both BTC and SOL fc heads (both retrained on the rebuilt side-stream); the
+    fix PR carries this record and re-verifies both heads by featdiff (>= 99%).
+  what_it_does_not_do: Reads committed live rows and the trainer dataset only; changes no served model, config or order path; adds no gate.
+  min_n: 50
+  proposal_mapping: pass -> head-identity diff; fail -> column fix + re-verify; indeterminate -> a longer live snapshot.
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify an offline feature/label path against the served one
+  before grading anything on it; chance-corrected agreement for an imbalanced label'
+compute: needs_vm_data
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 15
+  basis: 'run_featdiff streams the dataset row by row (iter_projected_rows, projected to the live columns) and keeps only the ~200 rows whose bar is in the live
+    snapshot, so memory is the projected row buffer, not the 15m frame; fits the trainer''s ~1 GB p95 spare (manager 2026-11-26). Single-threaded.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/ml_vol_label_replay.py
+  - featdiff
+  - --live
+  - comms/live_parity/vol_featdiff_sol_20261126/SOLUSDT_shadow.jsonl
+  - --dataset
+  - datasets-out/market_features/SOLUSDT/15m/v002/data.jsonl
+  - --model-id
+  - sol-regime-15m-lgbm-fc-pcv-v2
+  - --out-dir
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261126-7f3e-01
+  note: Dataset path = the head manifest dataset block under the trainer checkout datasets-out/, as aadc-01 / b819-01 read it. Streams the 15m frame projected to
+    the live columns only (memory-bounded).
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: whether replayed vol labels may grade the trend_vol OFF-cells that drop BTC bybit_1 intents (and future SOL/MES cells); no change from this unit
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+related:
+- RQ-20261117-aadc-01
+- ML-VOL-LABEL-LIVE-VERIFY
+- DRIFT-REMEDIATE-btc-regime-15m-lgbm-fc-pcv-v2
+- REGIME-LIVE-VETO-COUNTERFACTUAL
+- comms/live_parity/vol_featdiff_20261126/
+last_dispatched_at: '2026-11-26T08:37:37+00:00'
+grading:
+  attested: RULE-RQ-20261126-7f3e-01-FEATDIFF-SOL
+  auto: true
+  decision_rule_id: RULE-RQ-20261126-7f3e-01-FEATDIFF-SOL
+  evidence:
+  - research/results/RQ-20261126-7f3e-01/45783911125.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

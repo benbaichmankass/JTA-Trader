@@ -229,8 +229,21 @@ def grade(sweep: Dict[str, Any]) -> Dict[str, Any]:
         share = clamped_share(arm)
         if v.get("clears_gate") and share <= MAX_CLAMPED_SHARE:
             passing.append((v["d_net_r_vs_control"], arm, share))
-    records = [{"leg": r["leg"], "state": r.get("state"), "control_trades": r.get("control_trades"),
-                "arms": r.get("arms"), "tp_revision_counts": r.get("tp_revision_counts")} for r in legs]
+    graded_legs = {r["leg"] for r in graded}
+
+    def records_for(verdict: str) -> List[Dict[str, Any]]:
+        """One emit-valid E5 row per leg (research_result.py refuses a row without verdict / population / population.n:
+        RQ-20261007-080 run 38747768830 could not land). A graded leg is measured with n = its control trades; a leg below
+        MIN_TRADES is no_data with n null and verdict not_applicable. The leg's detail rides in measurement."""
+        out = []
+        for r in legs:
+            g = r["leg"] in graded_legs
+            out.append({"verdict": verdict if g else "not_applicable", "read_state": "measured" if g else "no_data",
+                        "population": f"{r['leg']}: {pop}" + ("" if g else f" -- below MIN_TRADES ({r.get('control_trades')})"),
+                        "n": int(r.get("control_trades") or 0) if g else None,
+                        "measurement": {"leg": r["leg"], "state": r.get("state"), "control_trades": r.get("control_trades"),
+                                        "arms": r.get("arms"), "tp_revision_counts": r.get("tp_revision_counts")}})
+        return out
     if passing:
         d, arm, share = max(passing)
         return {"verdict": "pass", "read_state": "measured", "population": pop, "n": n,
@@ -238,14 +251,14 @@ def grade(sweep: Dict[str, Any]) -> Dict[str, Any]:
                                 "clamped_share": round(share, 4)},
                 "note": f"width_mult={arm} clears the pooled gate (net up, majority of exercised "
                         f"folds won at k=3,4,5) with {share:.0%} of revisions cap-bound",
-                "records": records}
+                "records": records_for("pass")}
     return {"verdict": "fail", "read_state": "measured", "population": pop, "n": n,
             "measurement": {a: {"d_net_r_vs_control": v.get("d_net_r_vs_control"),
                                 "clears_gate": v.get("clears_gate"),
                                 "clamped_share": round(clamped_share(a), 4)}
                             for a, v in (pooled.get("by_arm") or {}).items()},
             "note": "no width_mult arm clears the pooled gate with <= 50% cap-bound revisions",
-            "records": records}
+            "records": records_for("fail")}
 
 
 if __name__ == "__main__":

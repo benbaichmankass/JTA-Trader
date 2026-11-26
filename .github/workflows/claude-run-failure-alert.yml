@@ -46,6 +46,7 @@ on:
       - ml-entry-retrain
       # ML-DATA-OFF-TRAINER (2026-10-13): the daily market-data export; its death would leave ML units on a stale dataset.
       - ml-data-export-kaggle
+      - ml-data-export-bp2-kaggle
       # ETF-HISTORY-PIPELINE (2026-11-01): daily ETF bars + option-chain snapshots; a dead run leaves the research stores stale.
       - etf-history-pipeline
       - options-snapshot-capture
@@ -192,6 +193,8 @@ on:
       - doc-audit-weekly
       - econ-calendar-produce
       - econ-event-study
+      # Added 2026-11-25 with the workflow itself (DESK-MACRO-DAILY): no self-notify path.
+      - earnings-calendar-snapshot
       # Added 2026-10-16 with the workflow itself (NEWS-ALPHA-CORPUS-SLICE1): no self-notify path.
       - news-gdelt-panel
       - macro-producer-liveness

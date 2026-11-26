@@ -1,0 +1,83 @@
+{
+  "unit": "RQ-20261125-bf90-01",
+  "run_id": "45690665032",
+  "commit_sha": "595ffd65f549803a4ee77e0d076289f9940a6107",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45690665032",
+  "timeout_minutes": 40,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261122.9.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/alpaca_sip_entitlement_probe.py",
+        "--out",
+        "comms/research/RQ-20261125-bf90-01/45690665032"
+      ],
+      "log": "comms/research/RQ-20261125-bf90-01/45690665032/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 4.1
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/index_capit_live_parity.py",
+        "--feed-compare",
+        "--live-source",
+        "sip",
+        "--out",
+        "comms/research/RQ-20261125-bf90-01/45690665032"
+      ],
+      "log": "comms/research/RQ-20261125-bf90-01/45690665032/logs/cmd-1.log",
+      "exit_code": 0,
+      "seconds": 31.1
+    },
+    {
+      "index": 2,
+      "argv": [
+        "python3",
+        "scripts/research/index_capit_sip_grade.py",
+        "--out",
+        "comms/research/RQ-20261125-bf90-01/45690665032"
+      ],
+      "log": "comms/research/RQ-20261125-bf90-01/45690665032/logs/cmd-2.log",
+      "exit_code": 0,
+      "seconds": 0.0
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

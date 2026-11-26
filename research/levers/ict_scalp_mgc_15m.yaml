@@ -15,7 +15,7 @@ attribution:
   read_state: no_trades
 manifest:
   entry: untested
-  exit: untested
+  exit: tested
   filter: tested
   regime_gating: untested
   timeframe: untested
@@ -88,6 +88,63 @@ levers:
       best_delta_r_per_trade: 0.2041
       fold_stability: 1.0
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BE1
+        unit: RQ-20261118-abab-07
+        window: 2019-01-01..2026-10-31
+        n: 527
+        net_r: -176.4807
+        baseline_n: 526
+        baseline_net_r: -176.1031
+        delta_net_r: -0.3776
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 176.4807
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0007
+      fold_stability: 0.5
+      reading: no response at the tested values
+    stale_exit_bars:
+      tests:
+      - value: '12'
+        baseline_value: 'off'
+        arm: SE12
+        unit: RQ-20261118-abab-07
+        window: 2019-01-01..2026-10-31
+        n: 530
+        net_r: -182.3088
+        baseline_n: 526
+        baseline_net_r: -176.1031
+        delta_net_r: -6.2057
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 182.933
+        verdict: fail
+        joint_change: false
+      - value: '8'
+        baseline_value: 'off'
+        arm: SE8
+        unit: RQ-20261118-abab-07
+        window: 2019-01-01..2026-10-31
+        n: 533
+        net_r: -186.3081
+        baseline_n: 526
+        baseline_net_r: -176.1031
+        delta_net_r: -10.205
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 186.3081
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: -0.0118
+      fold_stability: 0.333
+      reading: no response at the tested values
   filter:
     adx_max:
       tests:

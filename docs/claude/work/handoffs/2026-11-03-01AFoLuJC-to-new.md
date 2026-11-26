@@ -1,6 +1,6 @@
 # Manager handoff 2026-11-03 (2): session_01AFoLuJCo138TgfjBcbwcLh (Manager Session 2026-11-03a) -> new
 
-> **Doc status:** `unknown` · category `handoff` · last verified `2026-11-03` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
+> **Doc status:** `historical` · category `handoff` · last verified `2026-11-03` · registered in [`docs/DOCUMENT-INDEX.md`](../../../DOCUMENT-INDEX.md)
 
 ## Operator directives in force (verbatim where quoted)
 

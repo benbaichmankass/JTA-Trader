@@ -1,0 +1,21 @@
+{
+  "id": "RESEARCH-LEVER-ARM-NOOP",
+  "title": "Lever-sweep arms that never reach the harness are graded FAIL: the weekly roster-walkforward entry sweeps of the 8 ict_scalp legs ran 23 results with every arm's argv identical to control A (same n, same net R), because build_harness_cmd omits the stepped config keys; refuse/void such arms and regrade",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "Filed by PROGRAMME-REVIEW-20261125. Evidence: research/results/RQ-20261105-028..035/*.jsonl (units RQ-20261105-028..035, ict_scalp_5m/_avax_5m/_eth_15m/_mgc_15m/_sol_15m/_sol_5m/_xrp_15m/_xrp_5m): measurement.arms A and all 4 variants (displacement_atr_mult lo/hi, min_displacement_body_to_range lo/hi) carry identical argv except output paths and identical n/net_r (e.g. 028: n 455, net -146.97 R for all 5 arms); grade delta_net_r 0.0, verdict fail. Population: 79 roster-walkforward units, 157 armed result rows; 23 no-op (all ict_scalp entry), 3 more with differing argv but identical results (exit). Cause: scripts/research/exit_lever_ablation.py build_arm_argv takes the argv from regime_debt_matrix.build_harness_cmd, which returns the levers it cannot express as `omitted`; lever_design.config_levers still offers those keys as arms. Fix (Tier 1, research tooling): (1) lever_design/exit_lever_ablation refuse an arm whose only change is an omitted key (producer_failed with reason, never a graded FAIL); (2) re-grade the 23 rows void via the regrade path; (3) the lever map already leaves entry untested for these legs (correctly), so the next family then rotates. Done when: a re-run of RQ-20261105-028 either varies argv or lands producer_failed naming the omitted key. 2026-11-25 RESEARCH-UNBLOCK-BUILDS-W48: the forward fix is built (branch lane/rub-arm-key-reach): exit_lever_ablation.route_unforwarded_keys tests each arm key against the argv; on ict_scalp the key now REACHES the backtest via new backtest_ict_scalp --cfg-set (positive control on real SOL 5m: n 14 -> 9), on any other harness the run is refused with failure.json. Remaining for this row: void the 23 FAIL rows of RQ-20261105-028..035 (results/queue edit, not built here). 2026-11-25 19:08Z RESEARCH-UNBLOCK-BUILDS-W48 (session_01AFoLuKBiJeC9uLaBdnfyRj) reports a forward fix on branch lane/rub-arm-key-reach (PR pending): ict_scalp omitted keys now REACH the backtest via backtest_ict_scalp --cfg-set; other harnesses refuse an omitted-key arm. REMAINING on this row: void/regrade the 23 no-op FAIL rows of RQ-20261105-028..035 (research-ops results edit); done when the fix PR merges AND the next 028 emit varies argv. Related: E4 control drifts on fresh data (row E4-CONTROL-DRIFT-FRESH-FETCH).",
+  "phase": "research",
+  "updated_at": "2026-11-25T19:08:26Z",
+  "updated_by": "session_01AFoLuNNDuAoybFeX6bDEM8"
+}

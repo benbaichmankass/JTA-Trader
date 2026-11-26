@@ -99,6 +99,11 @@ run:
   (`why_runner: ...`). `check_research_queue_health.py` prints the idle backends every dispatch cycle.
 - **The trainer is its own windowed queue.** `backends.trainer.queue.windows_utc` (derived from the measured hour-of-day occupancy, `comms/cloud/trainer_workload_profile.json`)
   releases `needs_vm_data` units only into idle windows (03-05Z, 07-24Z) and only when `est_minutes x 1.5` fits before the window closes; otherwise `deferred` with the next opening.
+- **Idle backends take overflow (COMPUTE-FILL-W48, 2026-11-25; `research_compute.yaml` `kaggle_overflow.short_units_tail`, `trainer_overflow`).** A CPU unit keeps its class's
+  first choice; when that is full, a short `cpu_light` unit that is not runner-only overflows to `kaggle_cpu` and then the Kaggle GPU kernel (12 GPU h kept back), and
+  any `cpu_light`/`cpu_long` unit that **declares `routing.peak_memory_gb` <= 1.0** (the trainer's measured spare) and needs no secret takes the trainer's idle window last,
+  runner-only units included (the trainer has outbound internet). So **declare an honest, small `peak_memory_gb`** where it is true: an undeclared or inflated figure
+  keeps the unit off the trainer.
 - **RunPod is a ledger-capped fallback for `compute: gpu`**, after Kaggle, and only for a unit that declares `routing.runpod: {manifest, est_cost_usd}` (the pod trains a registered
   ML manifest, not a script). It opens the labelled `gpu-burst-train` issue; the $10/month ledger gate and `GPU_BURST_ARMED` still decide whether a pod launches.
 - **Utilization is measured every fired cycle** (`scripts/research/research_utilization.py`, one file per run under

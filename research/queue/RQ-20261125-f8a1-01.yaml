@@ -1,0 +1,136 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (manager 22:48Z/23:01Z: regime-as-feature on F8, ML-MECE D2/D3). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261125-f8a1-01
+title: 'Cross-asset / macro state as an ML ENTRY feature (family F8: daily SPY/QQQ/TLT/GLD/UUP 1/5/20-day returns + 20-day realised vol, as of the last COMPLETED
+  US close): does adding F8 to the 20-feature ENTRY baseline raise pooled net R per decision on the 8 DEV folds, past the seed-noise floor?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+kind: experiment
+question: Does adding the F8 cross-asset / macro-state family (21 columns, as of the last completed US close) to the 20-feature ENTRY baseline raise the pooled leave-one-fold-out
+  net R per decision by >= +0.010 vs the baseline, positive in >= 6 of 8 dev folds, beyond the measured seed-noise floor, with F8 present on >= 40% of dev decision
+  rows, net of the recipe's full cost stack?
+why_this_matters: Regime is the operator's standing lever and every sizing/filter form on the crypto legs is closed; this is the regime-as-input form on the model
+  that trades money (ml_entry, live on ml_decision_entry_v1, iteration only). An ADMIT goes to a fresh-window confirmation before any recipe change.
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE, not measured: the pooled ENTRY dev window (60 perps, 2020-07..2025-09, 1h) carries tens of thousands of decision rows per arm (a508-01 measured
+    ~5,500 on the traded-5 alone). The admission rule is a per-decision delta of +0.010 R over the A2 seed-noise floor across 8 folds, the same materiality bar the
+    F1..F5 ablation (fs01-01) registered. Said before any run; the harness reports the realised n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history through 2025-09-30 (dev folds only); nothing accrues, no sealed window is read.
+evidence_class:
+  holdout: none
+  claim: ml_dev_fold_feature_value
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ablation_macro
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261125-f8a1-01
+decision_rule:
+  id: RULE-RQ-20261125-f8a1-01-MACRO-F8
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: 'ml_entry_v2.combine over arms A (20-feature baseline), A2 (arm A, second LightGBM seed = the harness noise floor) and M (A + the F8 cross-asset / macro-state
+    family). Per arm: leave-one-fold-out tau, pooled mean net R per decision across the 8 dev folds, the per-fold means, and the F8 dev coverage. net R is the recipe''s
+    own cost stack (fee + slippage + funding). DEV FOLDS ONLY; no sealed or held-out window is read.'
+  rule: 'The ablation admission rule, registered before any run (ml_entry_v2.combine, unchanged from fs01-01): ADMIT F8 iff its pooled LOFO delta vs arm A is >= +0.010
+    R per decision AND the delta is positive in >= 6 of 8 folds AND it is >= the measured seed-noise floor |A - A2| AND F8 is present on >= 40 percent of dev decision
+    rows. Unit verdict: pass if F8 is ADMITTED; fail if REJECTED; indeterminate if F8 coverage < 40 percent. The thresholds, the arms and the dev window are fixed
+    now and not changed after any result.'
+  proposal_mapping: pass -> a fresh-window confirmation unit (HOLDOUT-LOCK, deflated bar) before any live ENTRY recipe change (Tier 3, operator). fail -> F8 recorded
+    as not an ML entry input on this recipe; regime moves to the equities/futures legs. indeterminate -> F8 too sparse on the dev population; no change.
+  what_it_does_not_do: Reads no sealed or held-out window (dev folds only), serves nothing, promotes nothing, changes no config, places no order, sizes nothing, changes
+    no live feature set. One definition of macro state (F8, 21 columns); a null does not refute cross-asset inputs under another definition.
+  min_n: 1000 dev decisions per arm
+  pass_action: Fresh-window confirmation of F8 (decisions after the last ENTRY holdout read; holdout ledger claim, deflated bar) as its own unit, then a Tier-3 recipe
+    proposal input for ml_entry (operator decides).
+  fail_action: Record F8 (cross-asset as an ENTRY input) closed on this recipe; the regime lever then moves to the equities/futures legs (REGIME-PROGRAM) and ml_entry
+    to its next registered lever (decision bar timeframe, b620/b626), authored from this result.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 400
+  confidence: 0.2
+  basis: 'stand-in: the operator priority-1 goal (ML decision makers live; ML-MECE #1 this week) and the standing regime lever; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 60
+  why_runner: Keyless public Binance Vision archives + yfinance daily closes (installed by research-script-run.yml); GBDT on CPU.
+  basis: 'INFERRED from 487c-01 / a508-01 / fs01-01: one 8-fold arm of the recipe is ~480 s on 4 threads; this unit runs three arms (A, A2, M) in parallel plus the
+    combine and one yfinance fetch of 5 daily series.'
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether the next pooled ENTRY recipe iteration should carry the F8 cross-asset / macro-state family; a pass gates only a fresh-window confirmation, never
+    a live change directly.
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-35/45709641524
+  verdict_read: fail
+  diagnosis: 'REGIME as a SIZING tilt or ENTRY FILTER on the rostered crypto legs is closed (f1a0-19..35; f1a0-35 FAIL: the learned ranking beats chance but every
+    tercile is net positive). Regime stays a standing lever; the remaining registered form is regime as a MODEL INPUT. ml_entry''s 20 features are all crypto-native,
+    so it is blind to the cross-asset state (equity trend/vol, rates, dollar, gold) that moves crypto risk appetite. F8 (built by RESEARCH-UNBLOCK-BUILDS-W48, #28875,
+    point-in-time: a US session dated D is usable only from D 22:00Z, leakage self-test) adds that state. Also the registered fail_action of f1a0-31/33 (cross-asset
+    inputs) and programme-review node P2-PR1125-D2-survivors-as-d3-features.'
+  hypothesis: The cross-asset state (equity, rates, dollar and gold daily returns and realised vol, as of the last completed US close) adds >= +0.010 R per decision
+    over the 20-feature baseline on the dev folds, net of cost.
+  attempt: 21
+  due_by: '2026-12-02'
+  map_entries:
+  - research/levers/ml-entry.yaml
+  search: one fixed family (21 columns), the existing ablation admission rule, no grid.
+  levers:
+  - regime
+  - entry
+related:
+- RQ-20261113-63af-01
+- RQ-20261101-fs01-01
+- research/levers/ml-entry.yaml
+- RQ-20261113-487c-01
+- RQ-20261125-f1a0-35
+- scripts/research/ml_entry_families.py
+- '#28875'
+practice_precedent: M4 (rule registered before the run), M6 (net of the full cost stack), T1 (purged + embargoed walk-forward on dev folds only, no sealed window
+  read) in docs/reference/trading-and-model-practice-principles.md; the same ablation admission rule fs01-01 registered for the F1..F5 families.
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
+not_before: '2026-11-25T23:30:00+00:00'
+last_dispatched_at: '2026-11-25T23:57:42+00:00'
+grading:
+  attested: RULE-RQ-20261125-f8a1-01-MACRO-F8
+  auto: true
+  decision_rule_id: RULE-RQ-20261125-f8a1-01-MACRO-F8
+  evidence:
+  - research/results/RQ-20261125-f8a1-01/45725266118.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 3 row(s), all measured, all fail
+  rows: 3
+  verdict: fail

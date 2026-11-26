@@ -1059,6 +1059,115 @@ def _update_source(verdict: Any, strategy: Any) -> str:
         return "source unknown"
 
 
+# ---------------------------------------------------------------------------
+# Sibling-leg re-sync (PI-20261124-RORTRAIL-0001, Tier 2)
+# ---------------------------------------------------------------------------
+# MEASURED 2026-11-24 (pkg-b7456c45491e44c2, ml_entry ADAUSDT long): the trail amended bybit_2's leg at
+# 00:03:58.118 and wrote the PACKAGE stop; the bybit_portfolio mirror leg's trade row was inserted at
+# 00:03:58.646, 0.5 s AFTER the leg read, so the fan-out in ``_apply_update`` never saw it. Every later
+# pass read the package stop as already moved (``no_meaningful_change``), so the mirror kept its
+# entry-time stop at the venue for 13 h (SL 0.14299 vs 0.14421), and the live-review close two hours
+# later skipped it on a mechanics mismatch. A modify "is not terminal", so a leg missed on the pass the
+# level moved was missed for good. This closes it: EVERY pass, any open leg whose stored stop is LOOSER
+# than the package stop is amended to the package stop (and a leg whose TP differs from a package TP the
+# monitor moved gets that TP). Idempotent; a failure retries after a back-off, never halts the loop.
+_RESYNC_RETRY_S = 300.0
+_RESYNC_NEXT_TRY: Dict[Tuple[str, str, str], float] = {}
+
+
+def _resync_package_legs(db, open_pkg: dict, *, now: Optional[float] = None) -> List[Dict[str, Any]]:
+    """Re-sync lagging sibling legs of ONE open package to the package's stop / monitor-moved TP.
+
+    Returns one record per amend attempted (``outcome`` applied / failed / unsupported). Never raises.
+    A leg is LAGGING when its ``trades.stop_loss`` is looser than ``order_packages.sl``; it is skipped
+    when a reviewed ``widen_sl`` put it there on purpose (``notes.sl_floor.action == "widen_sl"``).
+    """
+    from src.runtime.live_review_intent import floor_blocks, is_looser, sl_floor_from
+
+    out: List[Dict[str, Any]] = []
+    pkg_id = open_pkg.get("order_package_id")
+    try:
+        pkg_sl = float(open_pkg["sl"]) if open_pkg.get("sl") is not None else None
+        pkg_tp = float(open_pkg["tp"]) if open_pkg.get("tp") is not None else None
+    except (TypeError, ValueError):
+        return out
+    meta = open_pkg.get("meta")
+    if isinstance(meta, str):
+        meta = _decode_notes(meta)
+    tp_moved = isinstance(meta, dict) and isinstance(meta.get("last_tp_move"), dict)
+    if pkg_sl is None and not (tp_moved and pkg_tp is not None):
+        return out
+    legs, state = _package_open_legs(db, open_pkg)
+    if state != "resolved" or not legs:
+        return out
+    t_now = time.monotonic() if now is None else now
+    for leg in legs:
+        try:
+            direction = str(leg.get("direction") or "").lower()
+            if direction not in ("long", "short"):
+                continue
+            notes = _decode_notes(leg.get("notes"))
+            fl = notes.get("sl_floor")
+            widened = isinstance(fl, dict) and fl.get("action") == "widen_sl"
+            leg_sl = _to_float(leg.get("stop_loss"))
+            want_sl = None
+            if (pkg_sl is not None and leg_sl is not None and not widened
+                    and is_looser(direction, leg_sl, pkg_sl, tol=max(abs(pkg_sl) * 1e-9, 1e-12))
+                    and not floor_blocks(direction, pkg_sl, sl_floor_from(notes))):
+                want_sl = pkg_sl
+            leg_tp = _to_float(leg.get("take_profit_1"))
+            want_tp = None
+            if (tp_moved and pkg_tp is not None and leg_tp is not None
+                    and abs(leg_tp - pkg_tp) > max(abs(pkg_tp) * 1e-9, 1e-12)
+                    and not notes.get("live_review_actions")):
+                want_tp = pkg_tp
+            if want_sl is None and want_tp is None:
+                continue
+            key = (str(pkg_id), str(leg.get("id")), f"{want_sl}|{want_tp}")
+            if _RESYNC_NEXT_TRY.get(key, 0.0) > t_now:
+                continue
+            res = _send_modify_to_exchange(
+                leg, sl=want_sl, tp=want_tp, side=leg.get("direction"),
+                qty=_to_float(leg.get("position_size")),
+                cur_sl=leg_sl if leg_sl is not None else pkg_sl, cur_tp=pkg_tp)
+            rec = {"trade_id": leg.get("id"), "account_id": leg.get("account_id"),
+                   "from_sl": leg_sl, "to_sl": want_sl, "from_tp": leg_tp, "to_tp": want_tp}
+            if res.get("ok"):
+                sync: Dict[str, Any] = {}
+                if want_sl is not None:
+                    sync["stop_loss"] = want_sl
+                if want_tp is not None:
+                    sync["take_profit_1"] = want_tp
+                db.update_trade(int(leg["id"]), sync)
+                _RESYNC_NEXT_TRY.pop(key, None)
+                rec["outcome"] = "applied"
+                logger.warning(
+                    "order_monitor: SIBLING RE-SYNC pkg=%s trade=%s account=%s sl %s -> %s tp %s -> %s "
+                    "(leg missed the package move)", pkg_id, leg.get("id"), leg.get("account_id"),
+                    leg_sl, want_sl, leg_tp, want_tp)
+            else:
+                err = str(res.get("error") or "unknown")
+                rec["outcome"] = "unsupported" if _is_unsupported_op_error(err) else "failed"
+                rec["error"] = err
+                _RESYNC_NEXT_TRY[key] = t_now + _RESYNC_RETRY_S
+                if rec["outcome"] == "failed":
+                    logger.error("order_monitor: sibling re-sync FAILED pkg=%s trade=%s account=%s: %s "
+                                 "(retry in %.0fs)", pkg_id, leg.get("id"), leg.get("account_id"), err,
+                                 _RESYNC_RETRY_S)
+            out.append(rec)
+        except Exception as exc:  # noqa: BLE001 -- one leg never stops the pass
+            logger.warning("order_monitor: sibling re-sync error pkg=%s trade=%s: %s",
+                           pkg_id, leg.get("id"), exc)
+    return out
+
+
+def _to_float(v: Any) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                   summary: _StrategyTickSummary) -> None:
     """Translate a non-None monitor verdict into DB writes.
@@ -1572,6 +1681,10 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
         # at this point, so neither order risks a journal that claims a
         # still-open position is closed.
         closed_at_iso = datetime.now(timezone.utc).isoformat()
+        if ex_result.get("entry_unfilled"):
+            # ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125: the close cancelled the row's still-working entry and nothing
+            # had filled -- there was never a position, so no exit price (ENTRY-UNFILLED-LABEL, neutral in soak_state).
+            reason, actual_exit_price = ENTRY_UNFILLED_EXIT_REASON, None
         close_updates: Dict[str, Any] = {
             "status": "closed",
             "exit_reason": reason,
@@ -1938,6 +2051,14 @@ def _apply_update(db, open_pkg: dict, verdict: Dict[str, Any],
                     open_pkg.get("meta"), open_pkg.get("sl"), updates["sl"], _m["source"], _m["detail"])
             except Exception:  # noqa: BLE001 — attribution never blocks the confirmed stop write
                 logger.warning("order_monitor: sl mover stamp failed for pkg=%s", pkg_id, exc_info=True)
+        if "tp" in updates:
+            # SIBLING RE-SYNC: name the monitor's own TP move so a leg that missed it can be told apart from a
+            # leg a reviewed per-account move_tp put elsewhere on purpose.
+            _m2 = open_pkg.get("meta")
+            _m2 = dict(_m2) if isinstance(_m2, dict) else (_decode_notes(_m2) if isinstance(_m2, str) else {})
+            pkg_write["meta"] = {**(pkg_write.get("meta") or _m2),
+                                 "last_tp_move": {"ts": datetime.now(timezone.utc).isoformat(),
+                                                  "from": open_pkg.get("tp"), "to": updates["tp"]}}
         db.update_order_package(pkg_id, pkg_write)
         summary.updated_count += 1
     except Exception as exc:  # noqa: BLE001
@@ -2318,7 +2439,20 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
                 "exchange_order_id": None,
                 "error": None,
             }
-        return close_open_position(
+        # AUD-20261125-OPTIONS-CLOSE-LEAVES-LEGS (operator 2026-11-25, W48 decision doc Q11, verbatim:
+        # "Approve both (Recommended)"). An options-expression account holds a defined-risk VERTICAL, not an equity
+        # position on the underlying: the equity close below would ask the broker to close the UNDERLYING and leave
+        # both option legs open (alpaca_options_paper slv_trend_1h row 8569, sl_cross 17:11Z, legs open ~1 h until
+        # the reverse reconciler bare-adopted them). Liquidate the structure's legs FIRST, and let the caller close
+        # the journal row only on ok=True (the existing exchange-first flow), so a row is never closed over open legs.
+        _entry = _cancel_working_entry(matched_trade, cfg, client)
+        if _entry is not None and _entry.get("state") == "failed":
+            # The entry may still be resting: closing the row now is exactly the orphan this guards against. Keep the
+            # row open; the monitor re-attempts next tick (a failure, not a gate: nothing is skipped for good).
+            return {"ok": False, "exchange_response": None, "exchange_order_id": None, "entry_cancel": _entry,
+                    "error": f"entry order {_entry.get('order_id')} still working; cancel not confirmed"}
+        _opt = _options_structure_close(matched_trade, cfg)
+        out = _opt if _opt is not None else close_open_position(
             client, cfg,
             symbol=matched_trade.get("symbol"),
             side=matched_trade.get("direction"),
@@ -2327,8 +2461,94 @@ def _send_close_to_exchange(matched_trade: Dict[str, Any]) -> Dict[str, Any]:
             tp_order_id=matched_trade.get("tp_order_id"),
             trade_id=matched_trade.get("id"),
         )
+        if _entry is not None and isinstance(out, dict):
+            out = {**out, "entry_cancel": _entry}
+            if _entry.get("state") == "canceled" and not (_entry.get("filled_qty") or 0) and out.get("ok"):
+                out["entry_unfilled"] = True   # nothing ever filled: journal entry_unfilled, no exit price
+        return out
     except Exception as exc:  # noqa: BLE001
         logger.warning("order_monitor: exchange close failed: %s", exc)
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _cancel_working_entry(matched_trade: Dict[str, Any], cfg: Any, client: Any) -> Optional[Dict[str, Any]]:
+    """ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125: cancel this row's OWN entry order when it is still working at close.
+
+    MEASURED 2026-11-25 (alpaca_options_paper slv_trend_1h row 8569): a DAY mleg LIMIT entry was still working when the
+    package closed on sl_cross; the close found no position (idempotent) and closed the row, nothing cancelled the entry,
+    it FILLED an hour later and the reconciler adopted and flattened the legs as orphans. Any Alpaca leg with a working
+    LIMIT entry closed before fill does the same on a real-money book.
+
+    Returns ``None`` when there is nothing to do (not Alpaca, no real entry order id, or the order is not working / could
+    not be read -- the unchanged close path; an unreadable read never blocks a close). Otherwise the confirmed outcome of
+    ``AlpacaClient.cancel_order_confirmed`` on the row's own ``broker_order_id`` (never any other order): ``canceled``
+    (with ``filled_qty``: 0 = nothing filled, > 0 = a partial the close then liquidates), ``filled`` (it filled first:
+    the close liquidates it) or ``failed`` (may still rest: the caller keeps the row open). Never raises."""
+    try:
+        if str((cfg or {}).get("exchange") or "").lower() != "alpaca":
+            return None
+        oid = str(matched_trade.get("broker_order_id") or "").strip()
+        if not oid or not _is_real_order_id(oid):
+            return None
+        if _entry_order_hold(cfg, oid) != "pending":
+            return None
+        cancel = getattr(client, "cancel_order_confirmed", None)
+        if cancel is None:
+            logger.warning("order_monitor: entry %s still working but client %s cannot cancel; row %s close proceeds",
+                           oid, type(client).__name__, matched_trade.get("id"))
+            return None
+        res = cancel(oid) or {}
+        out = {"order_id": oid, "state": res.get("state") or "failed", "status": res.get("status"),
+               "filled_qty": res.get("filled_qty")}
+        logger.info("order_monitor: close of row %s (account=%s symbol=%s) found its entry order %s still working -> %s",
+                    matched_trade.get("id"), matched_trade.get("account_id"), matched_trade.get("symbol"), oid, out)
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: _cancel_working_entry(row %s) raised %s; close proceeds unchanged",
+                       matched_trade.get("id"), exc)
+        return None
+
+
+def _options_structure_close(matched_trade: Dict[str, Any], cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Close an options-expression row by liquidating each OCC leg; ``None`` = not an options structure (caller uses
+    the equity path unchanged).
+
+    Applies only when the account expresses options AND the row recorded its legs (``notes.options.legs[].symbol``,
+    written by ``options_overlay.options_structure_dict``). A legacy options row with no recorded legs returns
+    ``None`` (the old behaviour, logged) rather than guessing symbols. Never raises. The result mirrors
+    ``close_open_position``: ``ok`` is True only when EVERY leg was closed (``close_position`` treats an
+    already-flat leg as success), so the monitor closes the row only over flat legs; a failed leg or a missing
+    executor is ``ok=False`` and the row stays open for the next tick (premortem: never a row open on a flat venue
+    is acceptable, legs open under a closed row is not).
+    """
+    try:
+        from src.units.accounts.options_overlay import account_expresses_options
+        if not account_expresses_options(cfg or {}):
+            return None
+        opts = _decode_notes(matched_trade.get("notes")).get("options")
+        legs = (opts or {}).get("legs") if isinstance(opts, dict) else None
+        occ = [str(leg.get("symbol")).upper() for leg in (legs or [])
+               if isinstance(leg, dict) and leg.get("symbol")]
+        if not occ:
+            logger.warning(
+                "order_monitor: options account %s trade %s has no recorded legs (notes.options.legs); "
+                "falling back to the equity close, which does NOT close option legs",
+                (cfg or {}).get("account_id"), matched_trade.get("id"))
+            return None
+        executor = _options_executor_for(cfg)
+        if executor is None:
+            return {"ok": False, "error": "options_executor_unavailable"}
+        env = executor.close_structure(occ)
+        result = (env or {}).get("result") or {}
+        failed = result.get("failed") or []
+        if (env or {}).get("retCode") == 0 and not failed:
+            return {"ok": True, "skipped": None, "exchange_response": env,
+                    "exchange_order_id": None, "error": None,
+                    "options_legs_closed": result.get("closed") or occ}
+        return {"ok": False, "exchange_response": env, "exchange_order_id": None,
+                "error": f"options_leg_close_failed:{failed}"}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("order_monitor: options structure close failed: %s", exc)
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -8800,6 +9020,26 @@ def _close_trade_from_order_status(
             normalize_closed_at_value(closed_pnl_rec.get("closed_at"))
             or datetime.now(timezone.utc).isoformat()
         )
+        # SHARED-BRACKET-FIX (2026-11-25): a record built from the fills store
+        # (demo Bybit, `source == exchange_fill`) that is not matched to this
+        # row's own order is a symbol + qty match, and on a netted position it
+        # can be a SIBLING's fill. MEASURED: bybit_1 trade 8123 (ETH short, SL
+        # 1694.62) was finalised here at 1659.15, a sibling's fill, while its own
+        # SL filled at 1695.79. When the venue says one of THIS row's own legs
+        # filled, its order record prices the exit (identity beats a qty match).
+        _own_first: Optional[Dict[str, Any]] = None
+        if (_is_fills_record(closed_pnl_rec)
+                and closed_pnl_rec.get("match") != "own_bracket_order"):
+            _own_first = _own_bracket_fill_from_venue(
+                cfg, row, is_reduce_leg=is_reduce_leg)
+            if _own_first is not None:
+                avg_exit_price = float(_own_first["avg_price"])
+                closed_at = (
+                    normalize_closed_at_value(_own_first.get("exec_time"))
+                    or closed_at
+                )
+                # The record's fees were the sibling's fills, not this row's.
+                closed_pnl_rec = {**closed_pnl_rec, "fees": None}
         # Classify the broker close as sl/tp from exit price vs the bracket
         # levels (2026-06-23) — a stop/target fired at the broker before the
         # monitor; surface the TRUE reason instead of the generic reconciler tag.
@@ -8812,6 +9052,10 @@ def _close_trade_from_order_status(
             db, row, avg_exit_price, is_reduce_leg=is_reduce_leg,
         )
         reason_source = "price_vs_pkg_bracket" if resolved_reason else "unresolved"
+        if _own_first is not None:
+            # The leg that filled IS the reason; no price classification needed.
+            resolved_reason = _own_first["leg"]
+            reason_source = BRACKET_ORDER_LABEL_SOURCE
         if not resolved_reason:
             # RECONCILER-CLOSEDPNL-OWN-LEG (2026-11-05, bybit_2 trade 6881): the
             # price classifier could not place the venue exit against the
@@ -8842,6 +9086,8 @@ def _close_trade_from_order_status(
                 closed_pnl_rec.get("closed_pnl"),
             "finalised_by": "reconciler",
             "exit_reason_source": reason_source,
+            **({"exit_price_order_id": _own_first.get("order_id")}
+               if _own_first is not None else {}),
         })
         updates: Dict[str, Any] = {
             "status": "closed",
@@ -8935,6 +9181,7 @@ def _close_trade_from_order_status(
                 "reconciler — Bybit reports order filled and position flat",
             "exit_price_source": "exchange_fill",
             "exit_reason_source": BRACKET_ORDER_LABEL_SOURCE,
+            "exit_price_order_id": _own_leg.get("order_id"),
             "finalised_by": "reconciler",
         })
         updates = {
@@ -11431,7 +11678,9 @@ def _alpaca_rearm_preflight(client, account_id: str, symbol: str, row,
                 "venue_holding_protected", account_id, symbol, row["id"],
                 f"venue {venue_qty} vs journal {journal_qty} (mixed={mixed}) — "
                 f"one OCO for the {venue_qty} held, at row {pick['id']}'s stop "
-                f"{pick['stop_loss']} (tightest non-marketable)")
+                f"{pick['stop_loss']} (tightest non-marketable)", verb="proceeding")
+            # ALPACA-TP-PARTIAL-CANCELS-STOP-1125 (b): this branch POSTS the OCO, so it logs/pages as a PROCEEDING
+            # re-arm, not "REFUSED" (USO trade 8521, 2026-11-25: a re-arm that worked read as a refusal).
             return "protect_venue_holding", {"row": pick, "qty": venue_qty, "side": want}
     if row_qty > venue_qty + 1e-9:
         _page_rearm_refusal("row_shares_gone", account_id, symbol, row["id"],
@@ -13419,6 +13668,7 @@ def _snapshot_venue_read(row, account_id: str, venue: str, *,
             direction=row["direction"], venue=venue,
             stop_prices=(cov or {}).get("stop_prices"),
             target_prices=(cov or {}).get("target_prices"),
+            stop_legs=(cov or {}).get("stop_legs"),
             position_size=(cov or {}).get("size"), unreadable=unreadable)
     except Exception:  # noqa: BLE001 — observe-only, never raises into the sweep
         logger.debug("venue snapshot hook failed", exc_info=True)
@@ -13447,8 +13697,11 @@ def _bybit_snapshot_cov(state: Optional[dict], direction: Any) -> Optional[dict]
     split = (state.get("prices_by_book") or {}).get(book) if book else None
     if split is None:
         return state
-    return {**state, "stop_prices": list(split.get("stop") or []),
-            "target_prices": list(split.get("target") or [])}
+    out = {**state, "stop_prices": list(split.get("stop") or []),
+           "target_prices": list(split.get("target") or [])}
+    if state.get("stop_legs") is not None:
+        out["stop_legs"] = [leg for leg in state["stop_legs"] if leg.get("book") in (book, None)]
+    return out
 
 
 def _bybit_full_mode_target(pos: dict) -> List[float]:
@@ -13739,6 +13992,10 @@ def _bybit_position_protection(client, category: str, symbol: str,
     # A leg with no readable side is left out of both (never guessed).
     by_book: Dict[str, Dict[str, List[float]]] = {
         "long": {"stop": [], "target": []}, "short": {"stop": [], "target": []}}
+    # LTR-VENUE-SL-NETTED-SIBLING-FALSE-DIVERGE (2026-11-25): each resting stop leg with its order id and book, so the
+    # venue snapshot can grade a package's OWN stop (journal ``trades.sl_order_id``), not whichever sibling leg on the
+    # same netted book is nearest. OBSERVE-ONLY (the snapshot only); no re-arm decision reads it.
+    stop_legs: List[Dict[str, Any]] = []
     for o in legs:
         _kind = str(o.get("stopOrderType") or "").lower()
         _book = {"sell": "long", "buy": "short"}.get(str(o.get("side") or "").lower())
@@ -13766,8 +14023,11 @@ def _bybit_position_protection(client, category: str, symbol: str,
             leg_prices.append(_lpx)
             if _book:
                 by_book[_book]["stop"].append(_lpx)
+            if oid:
+                stop_legs.append({"id": str(oid), "price": _lpx, "book": _book})
     return {
         "size": size, "side": side, "covered_qty": covered,
+        "stop_legs": stop_legs,
         "source": "partial_sl_legs",
         "prices_by_book": {b: {k: sorted(v) for k, v in d.items()}
                            for b, d in by_book.items()},
@@ -14487,6 +14747,7 @@ def _netting_close_from_own_leg(db, *, row, own_leg) -> bool:
             "exit_price_source": "exchange_fill",
             "own_leg_fill": {"leg": own_leg["leg"],
                              "order_id": own_leg.get("order_id")},
+            "exit_price_order_id": own_leg.get("order_id"),
         })
         db.update_trade(int(row["id"]), {
             "status": "closed",
@@ -15660,6 +15921,27 @@ def _sweep_venue_entry(cfg: Optional[Dict[str, Any]],
     return value
 
 
+def _is_fills_record(rec: Optional[Dict[str, Any]]) -> bool:
+    """True when a closed-pnl-shaped record was built from the exchange-fills
+    store (demo Bybit, Alpaca), not from the venue's own closed-pnl record."""
+    return isinstance(rec, dict) and str(rec.get("source") or "") == "exchange_fill"
+
+
+def _exit_priced_by_own_order(notes_raw: Any, own_ids: Any) -> bool:
+    """True when the row's ``exit_price`` was taken from one of its OWN venue
+    orders (SHARED-BRACKET-FIX). Reads ``exit_price_order_id`` and, for rows
+    closed before that marker existed, ``own_leg_fill.order_id`` (the netting
+    own-leg close). ``own_ids`` are the row's ``sl_order_id``/``tp_order_id``."""
+    own = {str(o) for o in (own_ids or ()) if o}
+    if not own:
+        return False
+    notes = _decode_notes(notes_raw)
+    leg = notes.get("own_leg_fill")
+    marker = notes.get("exit_price_order_id") or (
+        leg.get("order_id") if isinstance(leg, dict) else None)
+    return bool(marker) and str(marker) in own
+
+
 def _own_leg_exit_for_demo_row(
     db, cfg: Optional[Dict[str, Any]], row: Dict[str, Any], opened_at_ms: Optional[int],
 ) -> Optional[Dict[str, Any]]:
@@ -15776,6 +16058,9 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
         # re-classified NOTHING reports 0 instead of omitting the key —
         # "we looked and none qualified" must not read as "we did not look".
         "reclassified": 0,
+        # SHARED-BRACKET-FIX: rows whose own-order exit was kept over a
+        # fills-store record that was not matched to the row's own order.
+        "own_order_exit_kept": 0,
     }
 
     # Scope: closed, non-backtest, pnl IS NULL, CLOSED within
@@ -15931,6 +16216,19 @@ def _sweep_pending_pnl_from_bybit(db) -> Dict[str, int]:
                 # tick. This is the steady-state path for trades that
                 # just closed seconds ago.
                 summary["still_pending"] += 1
+                continue
+
+            # SHARED-BRACKET-FIX (2026-11-25): the close path already priced this
+            # row from its OWN venue order (`exit_price_order_id`). A fills-store
+            # record not matched to that order is a symbol + qty match, which on
+            # a netted position can be a sibling's fill: MEASURED bybit_1 trade
+            # 7555 (SOL short) was closed at its own TP fill and then rewritten
+            # here to 71.47 vs its own 65.51. Keep the own-order price; a venue
+            # closed-pnl record (real money, carries pnl) is still written.
+            if (_is_fills_record(rec)
+                    and rec.get("match") != "own_bracket_order"
+                    and _exit_priced_by_own_order(row.get("notes"), own_ids)):
+                summary["own_order_exit_kept"] += 1
                 continue
 
             # Got Bybit truth — write it.
@@ -16110,7 +16408,11 @@ _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
 
 # ── ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a) ─────────────────────────────────────────────────
 # trades.entry_price was the PACKAGE's planned entry, not the fill (ENTRY-FILL-BIAS-30D measured the gap, PR #26166).
-# Alpaca already books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06). For Bybit this sweep reads
+# Alpaca books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06) ONLY when the fill lands inside the
+# poll (ALPACA_PLACE_CONFIRM_S, 3 s). ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26, MEASURED): 15 of 65 Alpaca stock
+# entries 11-09..11-25 filled 3.5-20 s after submit, kept the package price and were still labelled venue_fills_net
+# (net +1,471.86 USD journal-minus-venue). Those rows are now marked fill_pending_writeback too and read here through
+# the Alpaca order-by-id read (filled_avg_price). For Bybit this sweep reads
 # the ENTRY ORDER's own avgPrice by orderId (trades.broker_order_id) once the order is terminal and rewrites
 # entry_price, keeping the plan in notes.package_entry, exactly the Alpaca shape. Conditions (manager, each pinned by
 # tests/test_entry_fill_writeback.py):
@@ -16121,11 +16423,22 @@ _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
 #   4. no history backfill: only OPEN rows the insert marked fill_pending_writeback are read.
 ENTRY_FILL_PENDING = "fill_pending_writeback"
 ENTRY_FILL_SOURCE_BYBIT = "bybit_order_history"
+#: The same label the placement's confirm poll stamps (execute._submit_order venue_fill source), so a fill read late
+#: and a fill read inside the poll are indistinguishable downstream.
+ENTRY_FILL_SOURCE_ALPACA = "alpaca_order_status"
+#: entry_price_source values that ARE a venue measurement of the entry (venue_fills_net requires one of these).
+VENUE_ENTRY_SOURCES = frozenset({ENTRY_FILL_SOURCE_BYBIT, ENTRY_FILL_SOURCE_ALPACA, "venue_fill"})
 _ENTRY_FILL_QTY_TOL = 0.02
-_ENTRY_FILL_NONTERMINAL = frozenset({"New", "PartiallyFilled", "Untriggered", "Created", "Triggered"})
+_ENTRY_FILL_NONTERMINAL = frozenset({
+    "New", "PartiallyFilled", "Untriggered", "Created", "Triggered",                      # Bybit orderStatus
+    # Alpaca order status (lowercase): still working or not yet final, so ask again next tick
+    "new", "accepted", "pending_new", "accepted_for_bidding", "partially_filled", "held", "calculated",
+    "pending_replace", "pending_cancel", "done_for_day", "stopped", "suspended",
+})
 
 
-def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]],
+                        source: str = ENTRY_FILL_SOURCE_BYBIT) -> Dict[str, Any]:
     """Pure: what to do with one pending row, given ``clients.account_order_status``'s answer for its entry order.
 
     Returns ``{"action": "write" | "plan" | "wait", "entry": float|None, "reason": str}``. ``wait`` = ask again next
@@ -16145,14 +16458,42 @@ def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) ->
     if qty and qty > 0 and (filled is None or abs(filled - qty) / qty > _ENTRY_FILL_QTY_TOL):
         # The order's fills are not this row's size: the fill cannot be isolated to the row. Keep the plan.
         return {"action": "plan", "entry": None, "reason": "entry_order_qty_mismatch"}
-    return {"action": "write", "entry": avg, "reason": ENTRY_FILL_SOURCE_BYBIT}
+    return {"action": "write", "entry": avg, "reason": source}
 
 
-def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20) -> Dict[str, int]:
-    """Rewrite entry_price from the entry order's own fill for OPEN Bybit rows marked fill_pending_writeback.
+def alpaca_entry_order_status(cfg: Dict[str, Any], order_id: str) -> Optional[Dict[str, Any]]:
+    """The Alpaca entry order by id, in :func:`entry_fill_decision`'s shape, or ``None`` on a read failure (wait).
+
+    Read-only (``clients.account_alpaca_order_history``, GET /v2/orders/{id}). An id Alpaca never issued (the executor's
+    uuid fallback when the venue returned none) cannot be read, so it is ``not_found`` (keep the plan, labelled)."""
+    from src.units.accounts.clients import account_alpaca_order_history
+    try:
+        res = account_alpaca_order_history(cfg, order_ids=[str(order_id)])
+    except ValueError:
+        return {"status": "not_found", "avg_price": 0.0, "filled_qty": 0.0}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; None = wait and retry next tick
+        logger.warning("alpaca_entry_order_status: %s raised: %s", order_id, exc)
+        return None
+    if not isinstance(res, dict):
+        return None
+    hit = (res.get("by_id") or {}).get(str(order_id)) or {}
+    state = hit.get("read_state")
+    if state == "not_found":
+        return {"status": "not_found", "avg_price": 0.0, "filled_qty": 0.0}
+    if state != "order_read" or not isinstance(hit.get("order"), dict):
+        return None
+    o = hit["order"]
+    return {"status": str(o.get("status") or ""), "avg_price": _safe_float(o.get("filled_avg_price")) or 0.0,
+            "filled_qty": _safe_float(o.get("filled_qty")) or 0.0}
+
+
+def _sweep_entry_fill_writeback(db, *, order_status: Any = None, alpaca_order_status: Any = None,
+                                limit: int = 20) -> Dict[str, int]:
+    """Rewrite entry_price from the entry order's own fill for OPEN Bybit / Alpaca rows marked fill_pending_writeback.
 
     DB field update only (entry_price + notes): it never touches an order, a bracket or a slice. Best-effort, never
-    raises. ``order_status`` is injectable for tests (default ``clients.account_order_status``)."""
+    raises. ``order_status`` (Bybit, default ``clients.account_order_status``) and ``alpaca_order_status`` (default
+    :func:`alpaca_entry_order_status`) are injectable for tests."""
     summary: Dict[str, int] = {"scanned": 0, "written": 0, "kept_plan": 0, "waiting": 0, "errors": 0}
     try:
         conn = db.connect()
@@ -16182,6 +16523,10 @@ def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20
             logger.warning("_sweep_entry_fill_writeback: clients import failed: %s", exc)
             summary["errors"] = len(rows)
             return summary
+    if alpaca_order_status is None:
+        alpaca_order_status = alpaca_entry_order_status
+    readers = {"bybit": (order_status, ENTRY_FILL_SOURCE_BYBIT),
+               "alpaca": (alpaca_order_status, ENTRY_FILL_SOURCE_ALPACA)}
     try:
         cfgs = _load_account_cfgs_for_reconcile()
     except Exception as exc:  # noqa: BLE001
@@ -16196,16 +16541,18 @@ def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20
             if not isinstance(notes, dict) or notes.get("entry_price_source_reason") != ENTRY_FILL_PENDING:
                 continue  # the LIKE matched elsewhere in the blob; not ours
             cfg = (cfgs or {}).get(row.get("account_id"))
-            if cfg is None or str(cfg.get("exchange") or "bybit").lower() != "bybit":
+            reader = readers.get(str((cfg or {}).get("exchange") or "bybit").lower()) if cfg is not None else None
+            if reader is None:
                 summary["waiting"] += 1
                 continue
-            d = entry_fill_decision(row, order_status(cfg, str(row["broker_order_id"])))
+            read, source = reader
+            d = entry_fill_decision(row, read(cfg, str(row["broker_order_id"])), source)
             if d["action"] == "wait":
                 summary["waiting"] += 1
                 continue
             if d["action"] == "write":
                 notes["package_entry"] = _safe_float(row.get("entry_price"))
-                notes["entry_price_source"] = ENTRY_FILL_SOURCE_BYBIT
+                notes["entry_price_source"] = source
                 notes.pop("entry_price_source_reason", None)
                 new_entry = d["entry"]
             else:
@@ -17961,10 +18308,18 @@ def _sweep_venue_net_pnl(
                         updates["pnl_percent"] = pct
             elif exit_src == "ib_execution":
                 basis = vp.BASIS_VENUE_NET
-            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES and str(notes.get("entry_price_source") or "") in VENUE_ENTRY_SOURCES:
                 # Each of these is a venue fill (exchange_fill / exchange are MEASURED in
-                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240).
+                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240), AND the entry
+                # is a venue fill too. ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26): a venue-fill exit
+                # against the PACKAGE entry was labelled venue_fills_net, and pnl_computed used the same
+                # entry, so pnl_gap_usd read 0 and hid it (11 of 15 measured rows). Such a row is an
+                # estimate, with the reason kept.
                 basis = vp.BASIS_VENUE_FILLS_NET
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+                basis = vp.BASIS_COMPUTED_ESTIMATE
+                notes["pnl_basis_reason"] = "entry_not_venue_verified:" + str(
+                    notes.get("entry_price_source") or "unlabelled")
             else:
                 basis = vp.BASIS_COMPUTED_ESTIMATE
             updates["pnl_basis"] = basis
@@ -18829,6 +19184,10 @@ def run_exit_evaluation_tick(
                         "(monitor will short-circuit)",
                         strategy_name, pkg_id_log, symbol_log, tf_used,
                     )
+                try:  # every pass: a leg that missed the package move is brought to it (never blocks the loop)
+                    _resync_package_legs(db, normalised)
+                except Exception:  # noqa: BLE001
+                    logger.warning("order_monitor: sibling re-sync failed pkg=%s", pkg_id_log, exc_info=True)
                 verdict, monitor_status = _call_strategy_monitor(
                     strategy_name, cfg, candles, normalised,
                 )

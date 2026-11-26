@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/ml_entry_residual.py", line 869, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/tmp/repo/scripts/research/ml_entry_residual.py", line 865, in main
+    return run(a)
+  File "/tmp/repo/scripts/research/ml_entry_residual.py", line 660, in run
+    syms = E.universe()
+  File "/tmp/repo/scripts/research/ml_decision_entry.py", line 81, in universe
+    m = json.loads(MANIFEST.read_text())
+                   ~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 546, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 537, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/repo/comms/research/broad_paths/bp2-f4271084b120/manifest.json'

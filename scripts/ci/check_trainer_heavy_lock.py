@@ -78,6 +78,13 @@ HEAVY_ENTRYPOINTS = [
 # `.fit(`/`lgb.train(` it belongs above, and the reason recorded here is what
 # makes that reviewable.
 DECLARED_LIGHT = {
+    "scripts/research/am_policy_arm.py":
+        "AM-V2 stage B (RQ-20261124-b5a1-01..05): SCORES saved LightGBM boosters (am_heads_fit.py dump output) with booster.predict() and replays brackets in "
+        "pure Python over keyless Binance Vision bars; fits nothing. Runs sharded on GitHub runners (am-policy-arm.yml), never trainer-resident data, no GPU.",
+    "scripts/research/am_action_value.py":
+        "AM-V2 iteration 2 (RQ-20261124-c7e3-01..04): bounded CPU LightGBM regressors, <= 300k rows per fit, n_jobs 4, one runner per fold "
+        "(am-action-value.yml), on labels it replays itself from the committed backtest corpus + public Binance Vision klines; Actions artifacts only, "
+        "never trainer-resident data, no GPU, never routed to the trainer VM; no served model.",
     "scripts/research/am_heads_fit.py":
         "AM-V2 stage A (RQ-20261123-a9d1-01): bounded CPU LightGBM, <= 400k rows per fit, n_jobs 4, 8 heads x 9 folds (about an hour of wall "
         "time), on the cf_bar_labels corpus derived from the committed backtest trade corpus + public Binance Vision klines; the labels are "
@@ -130,6 +137,9 @@ DECLARED_LIGHT = {
         "ALPACA-LIVE-ACTIVITY-ML B1 scorer: loads the already-trained ml-decision-entry-v1 booster and calls "
         "`.predict()` on ~5k rows of public Yahoo + Binance Vision bars; no `.fit(`. Unit RQ-20261101-bdc2-01 "
         "declares compute cpu_light (github_runner), never needs_vm_data, so it is never routed to the trainer.",
+    "scripts/research/ml_entry_fix_arms.py":
+        "ML-PRIMARY ml_entry fix arms (units RQ-20261124-f1a0-01..08): same data and route as ml_decision_entry.py, LightGBM refits on "
+        "the public Binance Vision table on a GitHub runner (research-script-run.yml), never on the trainer VM",
     "scripts/research/ml_decision_entry.py":
         "ML-DECISION-MODELS ENTRY harness: fits LightGBM on public Binance Vision 1h klines in a lane container or a "
         "GitHub runner. Its queue units (RQ-20261101-c692-01/-04/-06) declare compute cpu_long (backend github_runner), "
@@ -171,6 +181,10 @@ DECLARED_LIGHT = {
         "lane container or a GitHub runner. Its queue units declare compute cpu_light / cpu_long (backend "
         "github_runner only, scripts/research/research_compute.yaml), never needs_vm_data, so it is never "
         "routed to the 6 GB trainer and never shares memory with a trainer job.",
+    "scripts/research/rostered_leg_replay.py":
+        "REGIME-PROGRAM rostered-leg replay (units RQ-20261125-f1a0-24..28): --mode metastate fits five small LightGBM regressors (200 trees, "
+        "15 leaves, one per calendar test year) on a few thousand replayed harness trades with public Binance Vision candles, on a GitHub "
+        "runner (research-script-run.yml, compute cpu_light); never on the trainer VM.",
     "scripts/research/tm_bench.py":
         "TM-BENCH trade-management bench: fits LightGBM / logit action-value heads on harness paths replayed from "
         "public Binance Vision candles in a lane container or a GitHub runner. Its queue units declare compute "

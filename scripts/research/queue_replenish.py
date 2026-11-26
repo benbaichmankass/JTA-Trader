@@ -112,6 +112,23 @@ def _stamp_iteration(unit: Dict[str, Any], tpl: Dict[str, Any], params: Dict[str
                                "is_control": str(params.get(axis)) == ctrl, "siblings": vals,
                                "attributable": bool(st.get("attributable", False)), "gap": str(st.get("gap") or "")}
         return
+    if st and st.get("mode") == "twin" and "design_json" in params:
+        # a config-exact TWIN unit (scripts/research/twin_design.py): one pre-registered twin graded ABSOLUTE, no paired control
+        t = json.loads(params["design_json"])
+        unit["design"] = "single_config"
+        unit["levers_declared"] = [str(t["lever"])]
+        unit["iteration"] = {
+            "subject": str(t["leg"]), "subject_kind": "strategy_leg", "from_result": str(t["from_result"]),
+            "verdict_read": str(t["verdict_read"]), "diagnosis": str(t["diagnosis"])[:1200],
+            "hypothesis": str(st.get("hypothesis") or "the leg's edge is a property of the setup, not of one symbol or bar size").strip(),
+            "attempt": 1, "due_by": (date.fromisoformat(day) + timedelta(days=14)).isoformat(),
+            "design": {"control": f"none: the twin has a different trade set than the leg ({t['leg_value']} -> {t['twin_value']})",
+                       "kind": f"config-exact {t['twin_kind']} twin, graded absolute (Stage-0 rule)",
+                       "levers": {str(t["leg"]): t["lever"]}},
+            "multiple_testing": {"arms_counted": 1, "variants_vs_control": 0, "correction": "none: one pre-registered twin per unit",
+                                 "note": "a twin result is a lever-map reading, never a promotion or a retirement; per-symbol results never gate"},
+        }
+        return
     if not st or "design_json" not in params:
         return
     d = json.loads(params["design_json"])
@@ -256,6 +273,12 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
             fam = classify(cfg)
             if fam:
                 out.append({"leg": leg, **info, "harness": fam})
+    elif name in ("live_roster_legs_symbol_twins", "live_roster_legs_timeframe_twins"):
+        # RESEARCH-LEVER-FAMILY-REACH (a): one point per (leg, config-exact twin) for the lever families an ARM cannot express (a
+        # different symbol or bar size is a different trade set, so it has no paired control). The twin choice is pure config +
+        # the leg's lever map (scripts/research/twin_design.py); each twin is its own absolutely-graded Stage-0 unit.
+        from scripts.research import twin_design as _td
+        out = _td.points("symbol" if "symbol" in name else "timeframe", legs, facts.get("configs") or {}, Path(facts["root"]))
     elif name == "live_decay_legs":
         # LIVE-DECAY-MONITOR: every Stage-2 roster leg that has a committed Stage-0 per-trade series AND a readable live
         # series (scripts/research/live_decay_cusum.coverage re-parses config each call). Legs that cannot be monitored
@@ -369,6 +392,8 @@ def _structure(tpl: Dict[str, Any], p: Dict[str, Any], facts: Dict[str, Any]) ->
     st = tpl["structured"]
     if st.get("mode") == "siblings":           # macro-valuation: arms are sibling UNITS (grid axis), nothing to compute per point
         return dict(p)
+    if st.get("mode") == "twin":               # leg-twin-*: the leg source (twin_design.points) already carries each point's design_json
+        return dict(p)
     root = Path(facts.get("root") or ".")
     cfgs, q = facts.get("configs", {}), dict(p)
     fams = ld.families_for(root, "strategy_leg")
@@ -430,6 +455,11 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
         unit["theme"] = str(tpl["theme"])
     if tpl.get("priority") is not None:
         unit["priority"] = int(tpl["priority"])
+    if tpl.get("compute") and not (tpl.get("run") or {}).get("workflow"):
+        # RESEARCH-ROUTER: a template that names no workflow is placed by the compute router from its class (the
+        # kaggle_first / kaggle_overflow / trainer_overflow lists); an explicit run.workflow pins the unit to one backend, so
+        # every template that still names one renders exactly as before (this branch is not taken).
+        unit["compute"] = str(tpl["compute"])
     roadmap = tpl.get("roadmap") or FAMILY_ROADMAP.get(str(tpl.get("family")))
     if roadmap:
         # roadmap-map-guard (CLAUDE.md "The roadmap loop"): every new queue unit carries a
@@ -469,7 +499,7 @@ def render(tpl: Dict[str, Any], tpl_path: str, tpl_sha: str, params: Dict[str, A
             cmd += flat if tok == "@ARMS@" else [tok]
         run["command"] = cmd
     inputs = dict(run.get("inputs") or {})
-    if run.get("workflow") == "research-script-run.yml":
+    if run.get("workflow") == "research-script-run.yml" or (unit.get("compute") and not run.get("workflow")):
         inputs["research_unit"] = unit_id
     run["inputs"] = inputs
     unit["run"] = run
@@ -512,6 +542,22 @@ def load_templates(root: Path) -> List[Tuple[str, str, Dict[str, Any]]]:
     return out
 
 
+def _fast_unit_load(yaml, text):
+    """`yaml.safe_load` through libyaml when the build has it (CI-BRIEF-RENDER-TIMEOUT, 2026-11-26).
+
+    MEASURED: the daily brief parsed the ~3,100-unit queue ~4x per build with the pure-Python loader -- 12,905
+    safe_load calls, 255 s of a 269 s build -- and pytest's 180 s render guard timed out on loaded CI runners. A document
+    the C loader rejects is re-parsed with the pure loader, so a caller's error text is unchanged (the
+    research_queue._fast_safe_load pattern, CI-SPEED-1026)."""
+    c_loader = getattr(yaml, "CSafeLoader", None)
+    if c_loader is not None:
+        try:
+            return yaml.load(text, c_loader)  # noqa: S506 -- CSafeLoader is the safe loader
+        except yaml.YAMLError:
+            pass
+    return yaml.safe_load(text)
+
+
 def existing_units(root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
     """{id: unit} over research/queue/**/*.yaml, plus the ids that could not be read."""
     yaml = _yaml()
@@ -519,7 +565,7 @@ def existing_units(root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
     bad: List[str] = []
     for path in sorted((root / QUEUE).rglob("*.yaml")):
         try:
-            raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            raw = _fast_unit_load(yaml, path.read_text(encoding="utf-8")) or {}
         except (OSError, UnicodeDecodeError, yaml.YAMLError):
             # The three things reading a unit can fail on; REPORTED in `bad`,
             # never skipped -- an unreadable unit is a finding, not silence.
@@ -1094,7 +1140,7 @@ def _self_test() -> int:
         assert d["decision_rule"]["registered_before_run"] is True
         assert grade_power(d).runnable, (u["id"], grade_power(d).reason)
         assert grade_route(d).runnable, (u["id"], grade_route(d).reason)
-        if d["run"]["workflow"] == "research-script-run.yml":
+        if d["run"].get("workflow") in (None, "research-script-run.yml"):    # a workflow-less (compute-routed) unit runs the same script_run plan
             from scripts.research import script_run
             with tempfile.TemporaryDirectory() as td:
                 q = Path(td)

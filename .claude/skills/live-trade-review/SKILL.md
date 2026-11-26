@@ -185,7 +185,7 @@ If any of these fails (`mechanics.verdict: mismatch`) on an account, **the exit 
 
 ### Step 2. Price the options from history: quote the tool, never a hand calculation
 
-Run `live_review_outcomes.py` for the leg at the live state, and copy its numbers into `options` as they are, with the tool's own `n`, `mean_r`, `sd_r` and `worst_r`.
+Run `live_review_outcomes.py` for the leg at the live state, and copy its numbers into `options` as they are, with the tool's own `n`, `mean_r`, `sd_r`, `worst_r` and `p05_r` (the left tail beside the mean, row VERDICT-LEFT-TAIL; copied from the tool, never computed by hand; reporting only, the decision rules below are unchanged).
 
 - **A table you priced yourself is committed with the row, or it is not evidence** (2026-11-14, `LR-20261114T1600Z-pkg-d8838f396234477c`: the packet could not price a prop-only package, the lane ran the tool itself, quoted n=54 in the row, wrote `evidence_source: table` with `outcome_table_source: null`, and the VM refused it `evidence_not_committed`, for good). When the packet has no `table_path` and you price the options yourself, run the tool with `--out comms/live_review/tables/<review_id>.json`, commit that file **in the same push as the row**, and set `outcome_table_source` to that path. The dispatcher reads the table at the row's commit. A reviewer that cannot write `tables/` (repo-less) cannot cite a table it did not commit: make the call `basis: judgement` / `evidence_source: judgement` (the packet is its evidence) and quote the numbers in `context_flags`.
 

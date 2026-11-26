@@ -13,7 +13,7 @@ Alpaca rejects a fractional bracket and a fractional OCO ("fractional orders mus
 ## 0. Is overnight really worse? (INFERENCE, to be confirmed by the probe)
 
 Per the orders page, only limit orders are accepted as extended-hours eligible, so a stop (GTC or day) does not trigger outside the regular session. A GTC stop and a day stop re-armed **before the open** therefore give the same gap protection: neither fires overnight, both are live for the opening print. The real difference is **operational**: GTC needs nothing each day; a day stop needs a re-arm that must succeed before the open, otherwise the position opens the day unprotected. So the design cost is reliability, not market exposure, provided that:
-1. Alpaca accepts a fractional DAY stop placed outside regular hours and queues it for the open (probe test (c); UNVERIFIED), and
+1. Alpaca accepts a fractional DAY stop placed outside regular hours and queues it for the open — **MEASURED 2026-11-24 13:02Z (run 45399132227): accepted, `status: new`, visible in the open-orders read-back; whether it then triggers correctly at the open is not measured**, and
 2. the re-arm lands before 09:30 ET with read-back verified.
 
 If (1) fails, the stop can only be placed at or after 09:30 ET, and the unprotected window is the open itself, which is the most gap-prone moment: then fractional needs a different answer (see § 6).

@@ -1,0 +1,23 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 14,
+    "clears_when": "trade 8484's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261124-CSINTAKE-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8484 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8484"
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row WEEKLY-PLANNING is queued (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (manager; W48 planning disposition) -- per-trade mechanics fault auto-filed by mechanics_fault_intake.py; ranked under \"Mechanics faults\" in docs/plans/planning-2026-W48-open-items.md [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin mechanics-fault:8484 (mechanics monitoring); routing-alarm rule]",
+  "state": "routed",
+  "what": "mechanics fault on trade 8484 (bybit_2/ml_entry SOLUSDT, exit_reason='reconciler_filled'): exit_journaled: exit_reason='reconciler_filled'"
+}

@@ -1,0 +1,83 @@
+{
+  "arms": {
+    "intraday": {
+      "n_trades": 6158,
+      "money_base": 0.08305,
+      "money_arm": 0.08764,
+      "delta": 0.00458,
+      "se_week_boot": 0.00952,
+      "t": 0.482,
+      "random": {
+        "draws": 200,
+        "kind": "raw tilts permuted within leg x month",
+        "mean": -9e-05,
+        "p95": 0.01275,
+        "share_ge_arm": 0.31
+      },
+      "yearly_delta": {
+        "2022": 0.0128,
+        "2023": -0.0114,
+        "2024": 0.0004,
+        "2025": 0.0048,
+        "2026": 0.019
+      },
+      "share_tilted": 0.6442,
+      "share_up_tilt": 0.3262,
+      "checks": {
+        "delta_ge_min": false,
+        "t_ge_min": false,
+        "beats_random": false,
+        "years_positive": true
+      },
+      "verdict": "indeterminate",
+      "walk_forward": {
+        "2022": {
+          "n_train": 1792,
+          "n_test": 1290,
+          "q1": -0.41601,
+          "q2": -0.10225,
+          "corr_pred_r_test": 0.0256
+        },
+        "2023": {
+          "n_train": 3090,
+          "n_test": 1284,
+          "q1": -0.43596,
+          "q2": -0.19429,
+          "corr_pred_r_test": 0.0242
+        },
+        "2024": {
+          "n_train": 4372,
+          "n_test": 1283,
+          "q1": -0.45743,
+          "q2": -0.24164,
+          "corr_pred_r_test": 0.0342
+        },
+        "2025": {
+          "n_train": 5659,
+          "n_test": 1262,
+          "q1": -0.45429,
+          "q2": -0.26362,
+          "corr_pred_r_test": 0.0135
+        },
+        "2026": {
+          "n_train": 6917,
+          "n_test": 1039,
+          "q1": -0.45584,
+          "q2": -0.28067,
+          "corr_pred_r_test": 0.0391
+        }
+      },
+      "feature_coverage": {
+        "id_rangepos48": 1.0,
+        "id_volburst": 1.0,
+        "id_ret12": 1.0,
+        "id_hi96": 1.0,
+        "dir": 1.0,
+        "leg": 1.0,
+        "fam": 1.0
+      }
+    }
+  },
+  "verdict": "indeterminate",
+  "n_legs": 21
+}

@@ -79,7 +79,15 @@ Preflight passed; nothing placed or filled; probe-symbol positions after cleanup
 
 ## 4b. Probe status (operator approval 2026-11-23 ~18:55Z)
 
-`.github/workflows/broker-fractional-probe.yml` + `scripts/ops/broker_fractional_probe.py` + `scripts/ops/ib_fractional_probe.py` are written (PAPER ONLY, tiny size, always flattened, log is the only record) and held in the PR. A `workflow_dispatch` workflow cannot be dispatched until it is on `main`. After merge: dispatch `target=alpaca phase=assets` (reads `fractionable` for the 14 candidates), `phase=open` during US market hours, `phase=premarket` while closed, and `target=ib`. **None has run.** The design that depends on the results: `docs/research/fractional-day-bracket-rearm-design-2026-11-23.md`.
+The probe (`.github/workflows/broker-fractional-probe.yml`, `scripts/ops/broker_fractional_probe.py`, `scripts/ops/ib_fractional_probe.py`) is on `main`, PAPER ONLY. Runs: Alpaca `assets` (45250700088), Alpaca `open` (45251691248), IB (45258885219), Alpaca `premarket` (45399132227). Results are in §§ 1, 1b, 2c and 4c.
+
+## 4c. MEASURED pre-market test (c) (Alpaca PAPER, run 45399132227, 2026-11-24 13:02Z, market closed, SH 0.5)
+
+- Preflight passed (no SH position, no open SH orders).
+- Entry: fractional DAY limit BUY with `extended_hours: true` — HTTP 200, `pending_new`, then FILLED pre-market.
+- **Fractional DAY stop sell 0.5 @ 33.24 placed while the market was closed: HTTP 200, `status: new`, and `GET /v2/orders?status=open&symbols=SH` lists it.** A fractional day stop can be queued before the open and read back.
+- Cleanup: the probe's own stop cancelled (HTTP 204); `DELETE /v2/positions/SH?qty=0.5` returned HTTP 200, exit order `accepted` as a market DAY order queued for the open, so the 0.5 SH paper position stays until ~14:30Z.
+- **Not measured:** whether a stop queued pre-market triggers correctly at the open; whether a stop can be swapped for a take-profit intraday without a naked gap.
 
 ## 5. Not done
 No test order was placed; no venue was queried; IBKR facts unread; Alpaca settlement not read; the merged-OCO design itself does not exist yet.

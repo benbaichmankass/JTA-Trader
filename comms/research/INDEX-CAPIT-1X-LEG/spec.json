@@ -1,0 +1,66 @@
+{
+ "leg": "index_capitulation_1x",
+ "row": "INDEX-CAPIT-1X-LEG",
+ "evidence": {
+  "RQ-20261124-1e06-06": "comms/research/RQ-20261124-1e06-06/45506679715/verdict.json",
+  "RQ-20261124-1e06-08": "comms/research/RQ-20261124-1e06-08/45509974875/verdict.json"
+ },
+ "population": [
+  "EFA",
+  "EWA",
+  "EWC",
+  "EWH",
+  "EWJ",
+  "EWL",
+  "EWP",
+  "EWQ",
+  "EWS",
+  "EWT",
+  "EWW",
+  "EWY",
+  "ITB",
+  "IWN",
+  "IYT",
+  "XLB",
+  "XLP",
+  "XME"
+ ],
+ "execution": "long only, 1x: the index ETF itself (signal and execution on the same ticker)",
+ "bars": "daily, yfinance auto_adjust=False (split-adjusted price return) in the evidence; see total_return.json",
+ "signal": {
+  "flush": "close <= mean(close, 5) - 1.5 x ATR14 AND low < min(low of the prior 20 bars)",
+  "trigger": "the first up-close (close > previous close) within 5 sessions after the flush bar",
+  "decision": "at the signal bar's close; order for the NEXT session's open"
+ },
+ "entry": "next session open (signal bar i -> entry bar i+1); a signal while in a position on the ticker is ignored",
+ "stop": "lowest low from the flush bar through the signal bar (index level = ETF level at 1x); skip if the stop is not below the entry open or risk < 0.25% of entry",
+ "take_profit": "entry + K* x risk, K* per ticker below (TP doctrine: calibrated on the first 60% of that ticker's no-TP trades, never 50)",
+ "fills": "stop / TP tested on the ETF's own daily high/low; a gap through a level fills at the open; stop and TP in one bar -> stop first",
+ "hold_cap_sessions": 10,
+ "cost_model": "5.0 bps slippage per side, no commission, ETF price series (expense embedded)",
+ "k_star": {
+  "EFA": 2.5,
+  "EWA": 3.5,
+  "EWC": 2.5,
+  "EWH": 1.5,
+  "EWJ": 3.5,
+  "EWL": 3.5,
+  "EWP": 3.0,
+  "EWQ": 3.5,
+  "EWS": 4.0,
+  "EWT": 2.0,
+  "EWW": 2.0,
+  "EWY": 5.0,
+  "ITB": 3.0,
+  "IWN": 1.0,
+  "IYT": 6.0,
+  "XLB": 4.0,
+  "XLP": 8.0,
+  "XME": 2.5
+ },
+ "caveats": [
+  "price return in the evidence (distributions not added back): total_return.json reads the effect",
+  "fresh POPULATION confirmation, shared time window 2010-06-01..2026-10-22",
+  "per-ticker out-of-sample is mixed; the evidence is the POOLED rule, per-ticker results never gate"
+ ]
+}

@@ -1,0 +1,157 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (REGIME-PROGRAM; the registered fail_action of f1a0-32: the ENTRY-FILTER form). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no config, filter, sizing or order path).
+id: RQ-20261125-f1a0-35
+title: 'REGIME-PROGRAM entry filter: does SKIPPING each rostered-leg trade whose walk-forward LightGBM prediction (f1a0-26 frozen recipe: own-symbol + BTC daily state)
+  falls below the training 1/3 quantile beat taking every trade by +0.01 R per available trade, and beat random skips of the same count within leg-month, net of the
+  full cost stack?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: regime-program
+  subject_kind: ml_model
+  from_result: RQ-20261125-f1a0-32/45550595880
+  verdict_read: indeterminate
+  diagnosis: 'Per-trade SIZING tilts on the rostered crypto legs are exhausted: book (f1a0-19..24), cell (f1a0-25), daily learned (f1a0-26/28/30) and intraday (f1a0-32,
+    +0.0046 t 0.48 share 0.31). The daily learned model ranked trades better than chance on 2 of 3 populations (perm share 0.005 / 0.000) but a symmetric 2.0/0.5
+    tilt with renormalisation pays for its up-weights with its down-weights, so only the spread between terciles counts. An entry filter keeps the downside half of
+    that ranking only: if the bottom tercile is net negative after costs, skipping it adds R (and saves its cost) without having to be right about the top. The registered
+    fail_action of f1a0-32 names this form.'
+  search: 'one fixed definition: the f1a0-26 frozen recipe (MS_FEATS, MS_LGB, huber, clip 3R, yearly walk-forward from RR.TEST_START), skip iff the prediction is
+    below the 1/3 quantile of that year''s TRAINING predictions, every other trade at size 1; no renormalisation, no grid, no threshold search.'
+  levers:
+  - regime
+  - entry
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 13
+  due_by: '2026-12-01'
+question: Does skipping each rostered crypto-leg trade whose walk-forward LightGBM prediction (f1a0-26 frozen recipe) is below that year's training 1/3 quantile,
+  taking every other trade at equal risk, add >= +0.01 R per available trade over taking all of them (t >= 2, >= 4 of 5 test years positive) and beat 200 random skips
+  of the same count within each leg x month (share <= 0.05), net of the full cost stack?
+why_this_matters: It is the last registered regime form on the rostered crypto legs before the lever closes for these families. A pass is an input to a Tier-3 per-family
+  entry-filter proposal (strategy logic; operator decides), after a fresh-population confirmation on the two disjoint symbol sets.
+power:
+  expected_n: 251
+  min_detectable_effect: 0.01
+  effect_units: r_per_trade
+  sd: 0.05
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'MEASURED from f1a0-24 / f1a0-25: 7,963 replayed trades (6,158 test) over 21 legs, ~5,500 in the test window; the cluster is the entry week (~250). INDETERMINATE
+    is a live outcome.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed in-repo corpus with a pinned entry window; nothing accrues.
+evidence_class:
+  holdout: none
+  claim: edge
+ml_consumer:
+  consumer: REGIME-PROGRAM
+  decision: per-trade risk sizing within each rostered leg by its own symbol state
+  legs:
+  - trend_donchian_eth_4h
+  - trend_donchian_sol_4h
+  - trend_donchian_xrp_4h
+  - htf_pullback_trend_2h
+  - fade_breakout_4h
+  - squeeze_breakout_4h
+  book: money
+baseline:
+  definition: Equal risk per trade on the same replayed trades (weight 1); and 200 permutations of the raw trade tilts within each leg x month.
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - filter
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261125-f1a0-35
+decision_rule:
+  id: RULE-REGIME-ENTRY-FILTER-20261125
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: take every replayed trade at equal risk (the same trades); 200 random skips of the same count within each leg x month
+  statistic: 'scripts/research/rostered_leg_replay.py --mode filter (metastate_frame, metastate_raw kind=filter, grade_raw normalise=False, grade_filter): delta =
+    -(sum of skipped net R) / all test trades (a skipped trade contributes 0 R); se from 1,000 entry-week bootstrap draws; permutation share = share of 200 within
+    leg x month permutations of the 0/1 keep flags (same skip count per leg-month) with delta >= the arm; yearly delta; skipped share and mean net R of skipped vs
+    kept; per-family delta and skip share reported.'
+  rule: PASS iff delta >= +0.01 R per available trade AND t >= 2 AND permutation share <= 0.05 AND >= 4 of 5 test years > 0; FAIL iff delta <= 0 or share >= 0.5;
+    else INDETERMINATE. Fixed now (RULE_MS thresholds).
+  pass_action: 'Fresh-POPULATION confirmation first (the frozen recipe on --population fresh and fresh2, the disjoint symbol sets), and the regime-selectivity walk-forward-before-Tier-3
+    rule; then a Tier-3 per-family entry-filter PROPOSAL to the manager with this evidence record. A filter is strategy logic: the operator decides; no lane applies
+    it.'
+  fail_action: Record the regime lever CLOSED for the rostered crypto families (sizing and entry-filter forms, with the f1a0-19..35 trail); REGIME-PROGRAM moves to
+    equities/futures legs or to regime as a model INPUT (ml_entry F8 cross-asset family), authored from this result.
+  proposal_mapping: pass -> fresh-population confirmation -> Tier-3 entry-filter proposal; fail or indeterminate -> the next regime form from this diagnosis.
+  what_it_does_not_do: Changes no config, sizing, filter or order path; adds no gate. Re-runs the evidence builder's harness path read-only (writes only under --out).
+  min_n: 100
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: the four families carry most rostered crypto legs; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: the 0/1 keep flags permuted within each leg x calendar month (200 draws, same skip count per leg-month, no renormalisation); the arm must beat >=
+      95% of draws
+    draws: 200
+  hold_to_bracket: true
+  hold_to_bracket_note: 'no in-trade action: a kept trade keeps its harness bracket at size 1; a skipped trade is not entered (0 R, no cost)'
+  best_static:
+    grid:
+    - take every trade at size 1 (the registered comparator)
+    excludes_test_folds: true
+    note: one fixed rule and one fixed model recipe, not chosen on any fold; no grid was searched
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, matched random control and week-clustered se (principles R5, M6, M13).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  why_runner: Keyless Binance Vision candles for ~20 legs plus the repo harnesses; LightGBM (installed by research-script-run) for 5 small yearly fits.
+  basis: 'MEASURED: f1a0-16 (same loader, 8 books) completed on a runner; several hundred books make the 200 random routings slower, est. under 30 min.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- scripts/research/regime_r2_family_router.py
+- REGIME-ROSTERED-CONFIG-REPLAY
+- research/queue/RQ-20261125-f1a0-24.yaml
+- research/queue/RQ-20261125-f1a0-25.yaml
+- research/queue/RQ-20261125-f1a0-30.yaml
+- REGIME-PROGRAM
+- RQ-20261125-f1a0-32
+- RQ-20261125-f1a0-26
+- .claude/skills/regime-selectivity/SKILL.md
+not_before: '2026-11-25T20:30:00+00:00'
+last_dispatched_at: '2026-11-25T22:33:43+00:00'
+grading:
+  attested: RULE-REGIME-ENTRY-FILTER-20261125
+  auto: true
+  decision_rule_id: RULE-REGIME-ENTRY-FILTER-20261125
+  evidence:
+  - research/results/RQ-20261125-f1a0-35/45709641524.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

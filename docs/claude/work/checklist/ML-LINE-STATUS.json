@@ -2,8 +2,8 @@
   "id": "ML-LINE-STATUS",
   "title": "[MODEL] ML line status: scripts/ops/ml_line_status.py prints leg x station (S1-S6) with each station's own quality metric and read-state, wired into /ml-review CHECKS",
   "state": "queued",
-  "owner": "AM-ML (session_01AFoLuJkXEM1EigH9mSfz1F)",
-  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-ML (session_01AFoLuJkXEM1EigH9)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -14,10 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-02",
   "_seq": 787,
   "note": "Origin: ML-PIPELINE-DESIGN (docs/plans/ml-pipeline-design-2026-10-29.md section 2 'line', practice R2 [S18]): nothing reports leg x station state, so a broken station hides behind a green model metric. Shares output with ML-LEARNING-LEDGER (queued; scripts/ops/ml_learning_ledger.py absent). Read-states per canonical 'Collapsed states' (a null station reads 'not measured', never 0). CLOSES WHEN: the script prints all 7 money legs x 6 stations with a metric or an explicit read-state each, and /ml-review's CHECKS call it.",
   "phase": null,
-  "updated_at": "2026-10-29T07:08:48Z",
-  "updated_by": "session_01AFoLuJ3Z8WoJgLG7jVvqha",
+  "updated_at": "2026-11-26T06:11:23Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

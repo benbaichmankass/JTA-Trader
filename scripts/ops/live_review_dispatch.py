@@ -378,7 +378,14 @@ def evidence_path(row: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def mechanics_scope(row: Dict[str, Any]) -> Tuple[Optional[List[str]], Dict[str, str], Optional[str]]:
+#: Actions that do not depend on the venue's bracket LEVELS: an account whose only mechanics mismatch is a
+#: bracket level (``per_account[a].level_only``) still carries them (PI-20261124-RORTRAIL-0001: the ADA mirror
+#: kept its entry-time stop, read "mismatch", and was skipped by a package CLOSE that its sibling took).
+LEVEL_INDEPENDENT_ACTIONS = ("close", "partial_close")
+
+
+def mechanics_scope(row: Dict[str, Any], action: Optional[str] = None
+                    ) -> Tuple[Optional[List[str]], Dict[str, str], Optional[str]]:
     """``(accounts, skipped, refusal)`` -- LTR-MECHANICS-ROW-BLOCKS-DECISION (operator 2026-11-16: "even [if] there
     is a legitimate reason to not apply on one account, it shouldn't prevent the decision from being applied on
     other accounts holding the same trade").
@@ -394,7 +401,9 @@ def mechanics_scope(row: Dict[str, Any]) -> Tuple[Optional[List[str]], Dict[str,
         return None, {}, None
     per = mech.get("per_account")
     if isinstance(per, dict) and per:
-        ok = sorted(a for a, v in per.items() if isinstance(v, dict) and v.get("verdict") == "match")
+        lvl_ok = action in LEVEL_INDEPENDENT_ACTIONS
+        ok = sorted(a for a, v in per.items() if isinstance(v, dict) and (
+            v.get("verdict") == "match" or (lvl_ok and v.get("verdict") == "mismatch" and v.get("level_only") is True)))
         skipped = {a: f"mechanics_{(v or {}).get('verdict') or 'unstated'}: "
                       f"{str((v or {}).get('evidence') or 'no evidence stated')[:240]}"
                    for a, v in per.items() if a not in ok}
@@ -468,7 +477,7 @@ def check_trade_row(row: Dict[str, Any], evidence_text: Optional[str]) -> Tuple[
     pkg = row.get("order_package_id")
     if not pkg:
         return None, "order_package_id_missing"
-    scope, skipped, mech_refusal = mechanics_scope(row)
+    scope, skipped, mech_refusal = mechanics_scope(row, act)
     if mech_refusal:
         return None, mech_refusal
     route = (row.get("disposition") or {}).get("route")

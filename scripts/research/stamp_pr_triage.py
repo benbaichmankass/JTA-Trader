@@ -16,7 +16,22 @@ PER UNIT, a stamp S against main's `last_dispatched_at` M (read from the checked
                   for a re-run, so landing S would drop it out of the queue. NEVER landed. (The exception, in code, with a test.)
   needs_land      anything else: S is newer than M and matters (a recurring cadence, or an unstamped unit with no failed result).
 
-PER PR (only `automation/research-queue-stamp-*`, only `dirty` and older than --min-age-min -- never another branch):
+RECEIPT PRs (`automation/research-queue-receipt-<run>-<n>`, added 2026-11-26 after three watchdog incidents in one night). The liveness
+receipt is ONE whole file every dispatcher run rewrites, latest-wins. The dispatcher closes an older receipt PR only when a NEWER
+receipt PR opens, so after a quiet spell one sat dirty 50+ min and tripped conflicted_automation. Here a dirty receipt PR is
+judged on its `timestamp`: main's >= the PR's -> CLOSE (superseded); the PR's is newer -> LAND (merge main, keep the PR's file).
+
+GRADE PRs (`automation/research-queue-grade-<run>-<n>`, added 2026-11-26 after run 429 named #28990). The mechanical-grading PR is DERIVED
+data: `queue_grade.py run()` is a pure function of the committed tree (every research/queue unit plus its committed result rows) and the
+grading date, so the next research-queue-grade run re-derives every disposition from scratch, not as a delta on this PR. commit-to-main
+refreshes such a PR once (refresh-command: queue_grade.py --write) and main then moves again, so it sits dirty. A dirty grade PR older
+than GRADE_MIN_AGE_MIN (after that one refresh) whose diff is only research/queue/ is CLOSED with a regeneration comment. Cost: gradings
+land up to one cron period (6 h) later. Never landed here (a max-merge does not fit derived data).
+
+UNKNOWN STATE: GitHub often answers mergeable_state "unknown" on the first read after main moves; it is re-read ONCE after a short sleep
+so a conflicting PR is not skipped for a whole watchdog run.
+
+PER PR (only `automation/research-queue-stamp-*` / `-receipt-*` / `-grade-*`, only `dirty` and older than --min-age-min -- never another branch):
   every unit superseded / moot_once / keep_unstamped  -> CLOSE with a per-unit comment.
   any needs_land                                      -> with --land: merge main into the branch resolving each unit file to
                                                          main's text with the stamp set to max(S, M), push (token must be able to
@@ -32,12 +47,18 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _REPO = Path(__file__).resolve().parents[2]
 STAMP_PREFIX = "automation/research-queue-stamp-"
+RECEIPT_PREFIX = "automation/research-queue-receipt-"
+RECEIPT_PATH = "docs/claude/work/research-queue-dispatch-receipt.json"
+GRADE_PREFIX = "automation/research-queue-grade-"
+GRADE_MIN_AGE_MIN = 30.0     # commit-to-main's single refresh happens within minutes of a conflict; only then is the PR beyond saving
+UNKNOWN_RETRY_SLEEP_S = 4.0
 QUEUE_PREFIX = "research/queue/"
 STAMP_LINE = re.compile(r"^(last_dispatched_at:[ \t]*)([^\s#]+)([ \t]*(?:#.*)?)$", re.M)
 SUPERSEDED, MOOT_ONCE, KEEP_UNSTAMPED, NEEDS_LAND, COULD_NOT_LOOK = (
@@ -134,8 +155,8 @@ def decide_pr(files: List[dict], main_reader: Callable[[str], Optional[str]],
                           "kind": kind, "reason": why})
         else:
             other.append(name)
-    stray = [n for n in other if not (n.startswith(".github/merge-slots/") or n.startswith(".github/pr-landing/")
-                                      or n.startswith(".github/pr-automerge-requests/"))]
+    own = [n for n in other if n.startswith((".github/merge-slots/", ".github/pr-landing/", ".github/pr-automerge-requests/"))]
+    stray = [n for n in other if n not in own]
     kinds = {u["kind"] for u in units}
     if not units or stray:
         action, why = "leave", ("no queue-unit stamp in the diff" if not units else f"touches non-stamp paths {stray[:3]}")
@@ -145,10 +166,68 @@ def decide_pr(files: List[dict], main_reader: Callable[[str], Optional[str]],
         action, why = "land", "at least one stamp is newer than main and matters"
     else:
         action, why = "close", "every stamp is superseded, moot or deliberately unstamped"
-    return {"action": action, "why": why, "units": units}
+    return {"action": action, "why": why, "units": units, "own": own}
+
+
+def receipt_stamp(text: Optional[str]) -> Optional[str]:
+    """The `timestamp` of a receipt json's text, or None when it is unreadable."""
+    try:
+        v = json.loads(text or "").get("timestamp")
+    except (ValueError, AttributeError):
+        return None
+    return str(v) if v else None
+
+
+def patch_receipt_stamp(patch: str) -> Optional[str]:
+    """The timestamp a receipt PR file patch ADDS (`+  "timestamp": "..."`), or None."""
+    m = re.search(r'^\+\s*"timestamp":\s*"([^"]+)"', patch or "", re.M)
+    return m.group(1) if m else None
+
+
+def decide_receipt(files: List[dict], main_reader: Callable[[str], Optional[str]]) -> Dict[str, Any]:
+    """Latest-wins decision for one receipt PR: 'close' (main's receipt is as new or newer), 'land' (the PR's is newer), 'leave'."""
+    names = [f.get("filename") or "" for f in files]
+    stray = [n for n in names if n != RECEIPT_PATH and not (n.startswith(".github/merge-slots/") or n.startswith(".github/pr-landing/")
+                                                          or n.startswith(".github/pr-automerge-requests/"))]
+    if RECEIPT_PATH not in names or stray:
+        return {"action": "leave", "units": [], "receipt": True,
+                "why": "no receipt file in the diff" if RECEIPT_PATH not in names else f"touches non-receipt paths {stray[:3]}"}
+    patch = next((f.get("patch") or "" for f in files if f.get("filename") == RECEIPT_PATH), "")
+    pr_raw, main_raw = patch_receipt_stamp(patch), receipt_stamp(main_reader(RECEIPT_PATH))
+    pr_ts, main_ts = _ts(pr_raw), _ts(main_raw)
+    if pr_ts is None or main_ts is None:
+        return {"action": "leave", "receipt": True, "why": "a receipt timestamp could not be read",
+                "units": [{"unit": "receipt", "path": RECEIPT_PATH, "stamp": pr_raw, "main": main_raw, "kind": COULD_NOT_LOOK,
+                           "reason": f"unreadable timestamp (pr {pr_raw!r}, main {main_raw!r})"}]}
+    if main_ts >= pr_ts:
+        kind, action, why = SUPERSEDED, "close", "main's receipt is as new or newer: the receipt is one whole file, latest-wins"
+        reason = f"main {main_ts.isoformat()} >= receipt {pr_ts.isoformat()}"
+    else:
+        kind, action, why = NEEDS_LAND, "land", "this receipt is newer than main's"
+        reason = f"receipt {pr_ts.isoformat()} is newer than main {main_ts.isoformat()}: keep this file"
+    return {"action": action, "why": why, "receipt": True, "own": [n for n in names if n != RECEIPT_PATH],
+            "units": [{"unit": "receipt", "path": RECEIPT_PATH, "stamp": pr_raw, "main": main_raw, "kind": kind, "reason": reason}]}
+
+
+def decide_grade(files: List[dict]) -> Dict[str, Any]:
+    """Grade PRs are derived data: 'close' when the diff is only research/queue/ (+ its own landing files), else 'leave'."""
+    names = [f.get("filename") or "" for f in files]
+    own = (".github/merge-slots/", ".github/pr-landing/", ".github/pr-automerge-requests/")
+    stray = [n for n in names if not (n.startswith(QUEUE_PREFIX) or n.startswith(own))]
+    if not any(n.startswith(QUEUE_PREFIX) for n in names) or stray:
+        return {"action": "leave", "units": [], "grade": True,
+                "why": "no research/queue edit in the diff" if not stray else f"touches non-queue paths {stray[:3]}"}
+    return {"action": "close", "units": [], "grade": True,
+            "why": "derived grading data: the next research-queue-grade run re-derives every disposition from the committed tree"}
 
 
 def comment_body(decision: Dict[str, Any], did: str) -> str:
+    if decision.get("grade"):
+        return ("Stamp-PR triage (grade family): closing as superseded. This mechanical-grading PR was conflicting with main (its one "
+                "built-in refresh was overtaken by main moving) and could not merge.\n\nNothing is lost: `queue_grade.py run()` is a pure "
+                "function of the committed tree and the grading date, so the next `research-queue-grade` run (cron `50 */6 * * *`) "
+                "re-derives every disposition from scratch, not as a delta on this PR. Cost: gradings land up to one cron period later; "
+                "child unit ids embed the grading date, so a later regeneration mints new ids (this PR's never landed)." + FOOTER)
     lines = [f"Stamp-PR triage (PI-20261118-EFILLW47-0005): {did}. This PR was conflicting with main and could not merge.", ""]
     for u in decision["units"]:
         lines.append(f"- `{u['unit']}`: **{u['kind']}** (stamp {u['stamp']}, main {u['main']}): {u['reason']}")
@@ -184,42 +263,78 @@ def main_reader(repo_root: Path = _REPO) -> Callable[[str], Optional[str]]:
 
 
 def land_max(slug_repo: str, number: int, branch: str, decision: Dict[str, Any], token: str,
-             repo_root: Path = _REPO) -> Tuple[bool, str]:
-    """Merge main into `branch`, resolving every unit file to main's text with the stamp = max(stamp, main). Push with `token`."""
-    wt = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / f"stamp-triage-{number}"
-    run = lambda *a, **k: subprocess.run(a, capture_output=True, text=True, cwd=k.get("cwd", str(repo_root)), timeout=300, check=False)  # noqa: E731
-    url = f"https://x-access-token:{token}@github.com/{slug_repo}.git"
-    if run("git", "fetch", "-q", url, f"+refs/heads/{branch}:refs/remotes/stamp/{branch}", "+refs/heads/main:refs/remotes/stamp/main").returncode:
-        return False, "could not fetch the branch"
-    if run("git", "worktree", "add", "-q", "--detach", str(wt), f"refs/remotes/stamp/{branch}").returncode:
-        return False, "could not create the worktree"
+             repo_root: Path = _REPO, remote_url: Optional[str] = None) -> Tuple[bool, str]:
+    """Push a MERGE COMMIT onto `branch` whose parents are the PR head and main and whose tree is main's tree plus the PR's own landing
+    files plus every unit file resolved to main's text with the stamp = max(stamp, main) (a receipt PR keeps the PR's own receipt file).
+
+    SHALLOW-SAFE (2026-11-26, run 431): the watchdog runner's checkout is depth 1, and `git fetch <branch> main` into it pulled both
+    histories and hit the 300 s timeout, which killed the whole triage run (an uncaught TimeoutExpired). So: depth-1 fetches of the two
+    refs, then plumbing only (`read-tree` into a private index, `update-index`, `write-tree`, `commit-tree`); no merge, no merge-base,
+    no history. Any git failure or timeout returns (False, why) and never raises: one slow PR must not stop the others."""
+    url = remote_url or f"https://x-access-token:{token}@github.com/{slug_repo}.git"
+    idx = Path(os.environ.get("RUNNER_TEMP", "/tmp")) / f"stamp-triage-{number}.index"
+    ident = {"GIT_AUTHOR_NAME": "github-actions[bot]", "GIT_COMMITTER_NAME": "github-actions[bot]",
+             "GIT_AUTHOR_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com",
+             "GIT_COMMITTER_EMAIL": "41898282+github-actions[bot]@users.noreply.github.com"}
+
+    def git(*a: str, inp: Optional[str] = None, private_index: bool = False) -> "subprocess.CompletedProcess[str]":
+        env = {**os.environ, **ident, **({"GIT_INDEX_FILE": str(idx)} if private_index else {})}
+        return subprocess.run(["git", *a], capture_output=True, text=True, cwd=str(repo_root), timeout=120, check=False, input=inp, env=env)
+
     try:
-        run("git", "merge", "--no-commit", "--no-ff", "refs/remotes/stamp/main", cwd=str(wt))   # conflicts expected; resolved below
+        idx.unlink(missing_ok=True)
+        if git("fetch", "-q", "--depth=1", url, f"+refs/heads/{branch}:refs/remotes/stamp/{branch}").returncode:
+            return False, "could not fetch the branch"
+        if git("fetch", "-q", "--depth=1", url, "+refs/heads/main:refs/remotes/stamp/main").returncode:
+            return False, "could not fetch main"
+        head = git("rev-parse", f"refs/remotes/stamp/{branch}").stdout.strip()
+        main = git("rev-parse", "refs/remotes/stamp/main").stdout.strip()
+        if not head or not main or git("read-tree", main, private_index=True).returncode:
+            return False, "could not read the two refs"
+
+        def put(path: str, sha: str, mode: str = "100644") -> bool:
+            return git("update-index", "--add", "--cacheinfo", f"{mode},{sha},{path}", private_index=True).returncode == 0
+
+        def from_head(path: str) -> bool:                    # keep the PR's own copy of `path`
+            row = git("ls-tree", head, "--", path).stdout.split()
+            return len(row) >= 3 and put(path, row[2], row[0])
+
+        for path in decision.get("own") or []:               # the PR's landing / slot / automerge files (not on main)
+            if not from_head(path):
+                return False, f"cannot carry {path}"
         for u in decision["units"]:
-            m = _ts(u["main"])
-            s = _ts(u["stamp"])
-            best = max([d for d in (m, s) if d is not None]) if (m or s) else None
-            main_text = run("git", "show", f"refs/remotes/stamp/main:{u['path']}", cwd=str(wt)).stdout
+            if decision.get("receipt"):                      # whole-file latest-wins: keep the PR's receipt
+                if not from_head(u["path"]):
+                    return False, f"cannot read the branch's {u['path']}"
+                continue
+            m, st = _ts(u["main"]), _ts(u["stamp"])
+            best = max([d for d in (m, st) if d is not None]) if (m or st) else None
+            main_text = git("show", f"{main}:{u['path']}").stdout
             if best is None or not main_text:
                 return False, f"cannot resolve {u['path']}"
-            (wt / u["path"]).write_text(set_stamp(main_text, best.replace(microsecond=0).isoformat()), encoding="utf-8")
-            run("git", "add", "--", u["path"], cwd=str(wt))
-        left = run("git", "diff", "--name-only", "--diff-filter=U", cwd=str(wt)).stdout.split()
-        if left:
-            return False, f"unresolved conflicts remain: {left[:4]}"
-        c = run("git", "-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-                "commit", "-q", "-m", "stamp-pr-triage: merge main, resolve unit stamps to max(stamp, main)", cwd=str(wt))
-        if c.returncode and "nothing to commit" not in (c.stdout + c.stderr):
-            return False, "commit failed: " + (c.stderr or c.stdout)[:200]
-        if run("git", "push", "-q", url, f"HEAD:refs/heads/{branch}", cwd=str(wt)).returncode:
+            blob = git("hash-object", "-w", "--stdin", inp=set_stamp(main_text, best.replace(microsecond=0).isoformat())).stdout.strip()
+            if not blob or not put(u["path"], blob):
+                return False, f"cannot write {u['path']}"
+        tree = git("write-tree", private_index=True).stdout.strip()
+        commit = git("commit-tree", tree, "-p", head, "-p", main, "-m",
+                     "stamp-pr-triage: merge main, resolve stamps to max(stamp, main) / keep the newer receipt").stdout.strip()
+        if not tree or not commit:
+            return False, "could not build the merge commit"
+        if git("push", "-q", url, f"{commit}:refs/heads/{branch}").returncode:
             return False, "push refused"
-        return True, "merged main and pushed"
+        return True, f"pushed merge commit {commit[:9]}"
+    except (subprocess.TimeoutExpired, OSError) as e:        # contained: this PR is left for the next run, the others still run
+        return False, f"git {type(e).__name__}: {str(e)[:120]}"
     finally:
-        run("git", "worktree", "remove", "--force", str(wt))
+        try:
+            idx.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: Optional[datetime] = None,
-           token: str = "", out: Callable[[str], None] = print) -> List[Dict[str, Any]]:
+           token: str = "", out: Callable[[str], None] = print,
+           sleep: Callable[[float], None] = time.sleep) -> List[Dict[str, Any]]:
     now = now or datetime.now(timezone.utc)
     prs = _api(f"repos/{repo_slug}/pulls?state=open&per_page=100")
     if prs is None:
@@ -228,15 +343,20 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
     results = []
     for p in prs:
         ref = str(((p.get("head") or {}).get("ref")) or "")
-        if not ref.startswith(STAMP_PREFIX):
-            continue                                        # ONLY the bot's stamp branches
+        is_receipt = ref.startswith(RECEIPT_PREFIX)
+        is_grade = ref.startswith(GRADE_PREFIX)
+        if not (ref.startswith(STAMP_PREFIX) or is_receipt or is_grade):
+            continue                                        # ONLY the bot's stamp, receipt and grade branches
         n = int(p["number"])
         created = _ts(p.get("created_at"))
         age = (now - created).total_seconds() / 60 if created else 0
-        if age <= min_age_min:
+        if age <= (max(min_age_min, GRADE_MIN_AGE_MIN) if is_grade else min_age_min):
             continue
         detail = _api(f"repos/{repo_slug}/pulls/{n}")
         state = (detail or {}).get("mergeable_state")
+        if state == "unknown":                              # GitHub computes it lazily: ask once more before reading it as "not dirty"
+            sleep(UNKNOWN_RETRY_SLEEP_S)
+            state = (_api(f"repos/{repo_slug}/pulls/{n}") or {}).get("mergeable_state")
         if state != "dirty":
             out(f"#{n} {ref}: mergeable_state={state} (not dirty): left to auto-merge")
             continue
@@ -244,7 +364,10 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
         if files is None:
             out(f"#{n} {ref}: could not read the PR files (could_not_look): left alone")
             continue
-        d = decide_pr(files, main_reader(), latest_read_state)
+        if is_grade:
+            d = decide_grade(files)
+        else:
+            d = decide_receipt(files, main_reader()) if is_receipt else decide_pr(files, main_reader(), latest_read_state)
         row = {"pr": n, "ref": ref, "age_min": round(age), **d, "live": live, "done": None}
         out(f"#{n} {ref} age {round(age)} min: {d['action'].upper()} ({d['why']})")
         for u in d["units"]:
@@ -254,11 +377,15 @@ def triage(repo_slug: str, *, live: bool, land: bool, min_age_min: float, now: O
                     and _gh(["pr", "close", str(n), "--repo", repo_slug]) is not None:
                 row["done"] = "closed"
         elif live and d["action"] == "land" and land and token:
-            ok, why = land_max(repo_slug, n, ref, d, token)
+            try:
+                ok, why = land_max(repo_slug, n, ref, d, token)
+            except Exception as e:  # noqa: BLE001  # allow-silent: not silent, the failure is published as `land_failed: <why>` on this PR's row and in the run log, and one failing land must never stop the triage of the other PRs (no-halting rule)
+                ok, why = False, f"{type(e).__name__}: {str(e)[:120]}"
             row["done"] = "landed" if ok else f"land_failed: {why}"
             if ok:
                 _gh(["pr", "comment", str(n), "--repo", repo_slug, "--body-file", "-"],
-                    comment_body(d, "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run"))
+                    comment_body(d, ("merged main into the branch, this receipt kept (latest wins); auto-merge can now run" if is_receipt else
+                              "merged main into the branch, stamps resolved to max(stamp, main); auto-merge can now run")))
         out(f"    -> {row['done'] or ('dry run: nothing done' if not live else 'reported only')}")
         results.append(row)
     return results

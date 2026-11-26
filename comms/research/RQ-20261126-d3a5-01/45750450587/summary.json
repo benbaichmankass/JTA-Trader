@@ -1,0 +1,2818 @@
+{
+ "schema": "rostered_leg_replay/1",
+ "unit": "RQ-20261126-d3a5-01",
+ "mode": "eventday",
+ "population_kind": "rostered",
+ "universe": "all",
+ "verdict": "indeterminate",
+ "why": "diff -0.0172 R, CI [-0.149, 0.1161], placebo share 0.82: not separable, not ruled out",
+ "rule": {
+  "id": "RULE-DESK-3A-EVENTDAY-20261126",
+  "min_abs_diff_r": 0.1,
+  "equivalence_r": 0.1,
+  "max_placebo_share": 0.05,
+  "min_flagged": 200,
+  "n_boot": 1000,
+  "n_placebo": 200
+ },
+ "population": "40 of 43 ALL rostered legs (crypto via the evidence builder's feed + non-crypto via Dukascopy) (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (10313 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "window": [
+  "2020-09-01",
+  "2026-10-26"
+ ],
+ "legs": {
+  "ada_pullback_2h": {
+   "state": "measured",
+   "n": 436,
+   "net_r": 64.229,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ada_pullback_2h.csv",
+    "--symbol",
+    "ADAUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ada_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ada_pullback_2h__bt.json",
+    "--adx-min",
+    "28",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ADAUSDT"
+   },
+   "book": "money",
+   "harness": "pullback"
+  },
+  "avax_pullback_2h": {
+   "state": "measured",
+   "n": 466,
+   "net_r": 6.42,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/avax_pullback_2h.csv",
+    "--symbol",
+    "AVAXUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/avax_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/avax_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--trail-decay-arm-r",
+    "4.86",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "AVAXUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "eth_pullback_2h": {
+   "state": "measured",
+   "n": 426,
+   "net_r": 25.861,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_2h.csv",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "eth_pullback_prop_2h": {
+   "state": "measured",
+   "n": 408,
+   "net_r": 4.718,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_prop_2h.csv",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.5",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_prop_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/eth_pullback_prop_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "fade_breakout_4h": {
+   "state": "measured",
+   "n": 175,
+   "net_r": 4.694,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/fade_breakout_4h.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "4h",
+    "--donchian",
+    "20",
+    "--atr-period",
+    "14",
+    "--atr-stop-buffer",
+    "0.5",
+    "--pierce-min",
+    "0.0",
+    "--trail-mult",
+    "3.5",
+    "--exit-style",
+    "far",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/fade_breakout_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/fade_breakout_4h__bt.json",
+    "--adx-max",
+    "20.0",
+    "--adx-period",
+    "14",
+    "--timeout-bars",
+    "48",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "fade"
+  },
+  "htf_pullback_trend_2h": {
+   "state": "measured",
+   "n": 454,
+   "net_r": 3.596,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/htf_pullback_trend_2h.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "3",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/htf_pullback_trend_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/htf_pullback_trend_2h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "sol_pullback_2h": {
+   "state": "measured",
+   "n": 148,
+   "net_r": 8.908,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/sol_pullback_2h.csv",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/sol_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/sol_pullback_2h__bt.json",
+    "--adx-min",
+    "30",
+    "--side-filter",
+    "short",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "squeeze_breakout_4h": {
+   "state": "measured",
+   "n": 122,
+   "net_r": 19.902,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_squeeze.py",
+    "--bb-period",
+    "20",
+    "--bb-std",
+    "2.0",
+    "--kc-mult",
+    "1.0",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/squeeze_breakout_4h.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.5",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/squeeze_breakout_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/squeeze_breakout_4h__bt.json",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "squeeze"
+  },
+  "trend_donchian": {
+   "state": "measured",
+   "n": 446,
+   "net_r": 49.153,
+   "omitted_levers": [
+    "decision_bar",
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.7",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian__bt.json",
+    "--long-only",
+    "--trail-decay-arm-r",
+    "6.49",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_1h": {
+   "state": "measured",
+   "n": 970,
+   "net_r": 7.117,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_1h.csv",
+    "--symbol",
+    "BTCUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_1h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "BTCUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_ada_4h": {
+   "state": "measured",
+   "n": 253,
+   "net_r": 53.011,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_ada_4h.csv",
+    "--symbol",
+    "ADAUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_ada_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_ada_4h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ADAUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_avax_4h": {
+   "state": "measured",
+   "n": 264,
+   "net_r": 27.284,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_avax_4h.csv",
+    "--symbol",
+    "AVAXUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.7",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_avax_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_avax_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "AVAXUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_eth": {
+   "state": "measured",
+   "n": 725,
+   "net_r": 30.208,
+   "omitted_levers": [
+    "decision_bar",
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth.csv",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth__bt.json",
+    "--vol-skip-below-pctl",
+    "0.1",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_eth_4h": {
+   "state": "measured",
+   "n": 269,
+   "net_r": 73.173,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_4h.csv",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "6.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_4h__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4.0",
+    "--tp-revision",
+    "donchian_measured_move",
+    "--tp-revision-width-mult",
+    "0.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT"
+   },
+   "book": "money",
+   "harness": "trend"
+  },
+  "trend_donchian_eth_prop": {
+   "state": "measured",
+   "n": 847,
+   "net_r": 62.007,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_prop.csv",
+    "--symbol",
+    "ETHUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_eth_prop__bt.json",
+    "--trail-decay-arm-r",
+    "2.99",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "1.8",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "ETHUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_sol": {
+   "state": "measured",
+   "n": 381,
+   "net_r": 62.117,
+   "omitted_levers": [
+    "decision_bar",
+    "exit_head_action",
+    "exit_head_model",
+    "exit_head_threshold"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol.csv",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "trend_donchian_sol_4h": {
+   "state": "measured",
+   "n": 268,
+   "net_r": 65.273,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_4h.csv",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.6",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_4h__bt.json",
+    "--trail-decay-arm-r",
+    "5.57",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT"
+   },
+   "book": "money",
+   "harness": "trend"
+  },
+  "trend_donchian_sol_prop": {
+   "state": "measured",
+   "n": 389,
+   "net_r": 56.036,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_prop.csv",
+    "--symbol",
+    "SOLUSDT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "4.5",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_prop__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_sol_prop__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "SOLUSDT"
+   },
+   "book": "money",
+   "harness": "trend"
+  },
+  "trend_donchian_xrp_4h": {
+   "state": "measured",
+   "n": 67,
+   "net_r": 17.009,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_4h.csv",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_4h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_4h__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT"
+   },
+   "book": "money",
+   "harness": "trend"
+  },
+  "trend_donchian_xrp_adx25": {
+   "state": "measured",
+   "n": 67,
+   "net_r": 16.881,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_adx25.csv",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "4h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.8",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_adx25__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/trend_donchian_xrp_adx25__bt.json",
+    "--stale-exit-bars",
+    "8",
+    "--stale-exit-below-r",
+    "0.0",
+    "--side-filter",
+    "short",
+    "--trail-decay-arm-r",
+    "2.0",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--skip-hours",
+    "0",
+    "--vol-skip-above-pctl",
+    "0.9",
+    "--trail-adx-below",
+    "25",
+    "--trail-adx-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "xrp_pullback_2h": {
+   "state": "measured",
+   "n": 382,
+   "net_r": 23.465,
+   "omitted_levers": [],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/xrp_pullback_2h.csv",
+    "--symbol",
+    "XRPUSDT",
+    "--resample",
+    "2h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "6.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "11.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/xrp_pullback_2h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/xrp_pullback_2h__bt.json",
+    "--adx-min",
+    "25",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.0",
+    "--tp-target-r",
+    "3.0",
+    "--tp-extend-r",
+    "1.0",
+    "--tp-approach-frac",
+    "0.85",
+    "--tp-max-extends",
+    "3",
+    "--tp-thesis",
+    "native",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "binance",
+    "ticker": "XRPUSDT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "gdx_pullback_1d": {
+   "state": "measured",
+   "n": 55,
+   "net_r": 13.996,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gdx_pullback_1d.csv",
+    "--symbol",
+    "GDX",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gdx_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gdx_pullback_1d__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "GDX"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "gld_pullback_1d": {
+   "state": "measured",
+   "n": 47,
+   "net_r": 21.04,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gld_pullback_1d.csv",
+    "--symbol",
+    "GLD",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gld_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/gld_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--tp-target-r",
+    "3.5",
+    "--tp-extend-r",
+    "1.0",
+    "--tp-approach-frac",
+    "0.85",
+    "--tp-max-extends",
+    "3",
+    "--tp-thesis",
+    "native",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "GLD"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "iaum_pullback_1d": {
+   "state": "measured",
+   "n": 47,
+   "net_r": 21.04,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iaum_pullback_1d.csv",
+    "--symbol",
+    "IAUM",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iaum_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iaum_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--tp-target-r",
+    "3.5",
+    "--tp-extend-r",
+    "1.0",
+    "--tp-approach-frac",
+    "0.85",
+    "--tp-max-extends",
+    "3",
+    "--tp-thesis",
+    "native",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "IAUM"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "ief_pullback_1d": {
+   "state": "measured",
+   "n": 38,
+   "net_r": 6.965,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "30",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ief_pullback_1d.csv",
+    "--symbol",
+    "IEF",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ief_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/ief_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "IEF"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "iwm_trend_long_1d": {
+   "state": "measured",
+   "n": 28,
+   "net_r": 7.947,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iwm_trend_long_1d.csv",
+    "--symbol",
+    "IWM",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iwm_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/iwm_trend_long_1d__bt.json",
+    "--long-only",
+    "--trail-decay-stall-bars",
+    "10",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "IWM"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "mes_trend_long_1d": {
+   "state": "measured",
+   "n": 30,
+   "net_r": 8.104,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mes_trend_long_1d.csv",
+    "--symbol",
+    "MES",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "3.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "7.5",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mes_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mes_trend_long_1d__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "MES"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "mgc_pullback_1d": {
+   "state": "measured",
+   "n": 55,
+   "net_r": 29.733,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_pullback_1d.csv",
+    "--symbol",
+    "MGC",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "7.5",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_pullback_1d__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "MGC"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "mgc_trend_1h": {
+   "state": "measured",
+   "n": 653,
+   "net_r": -66.224,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "20",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_trend_1h.csv",
+    "--symbol",
+    "MGC",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "7.5",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_trend_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/mgc_trend_1h__bt.json",
+    "--confirm-bars",
+    "1",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "MGC"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "mhg_pullback_1d": {
+   "state": "fetch_failed",
+   "why": "CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3', '/home/runner/work/JTA-Trader/JTA-Trader/scripts/ops/fetch_backtest_candles.py', '--symbol', 'MHG', '--source', 'dukascopy', '--interval', 'D', '--days', '2350', '--output', 'comms/research/RQ-20261126-d3a5-01/45750",
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "qld_trend_long_1d": {
+   "state": "fetch_failed",
+   "why": "CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3', '/home/runner/work/JTA-Trader/JTA-Trader/scripts/ops/fetch_backtest_candles.py', '--symbol', 'QLD', '--source', 'dukascopy', '--interval', 'D', '--days', '2350', '--output', 'comms/research/RQ-20261126-d3a5-01/45750",
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "qqq_pullback_1h": {
+   "state": "measured",
+   "n": 209,
+   "net_r": 30.591,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "60",
+    "--pullback-lookback",
+    "12",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_pullback_1h.csv",
+    "--symbol",
+    "QQQ",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_pullback_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_pullback_1h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "QQQ"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "qqq_trend_long_1d": {
+   "state": "measured",
+   "n": 29,
+   "net_r": 16.019,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_trend_long_1d.csv",
+    "--symbol",
+    "QQQ",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/qqq_trend_long_1d__bt.json",
+    "--long-only",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "QQQ"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "scha_trend_long_1d": {
+   "state": "measured",
+   "n": 24,
+   "net_r": 8.281,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/scha_trend_long_1d.csv",
+    "--symbol",
+    "SCHA",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "3.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/scha_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/scha_trend_long_1d__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "1.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SCHA"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "slv_pullback_1d": {
+   "state": "measured",
+   "n": 57,
+   "net_r": 13.864,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "15",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_pullback_1d.csv",
+    "--symbol",
+    "SLV",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_pullback_1d__bt.json",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SLV"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "slv_trend_1h": {
+   "state": "measured",
+   "n": 316,
+   "net_r": 61.87,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "24",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_trend_1h.csv",
+    "--symbol",
+    "SLV",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.3",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_trend_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/slv_trend_1h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "6.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SLV"
+   },
+   "book": "money",
+   "harness": "trend"
+  },
+  "splg_trend_long_1d": {
+   "state": "measured",
+   "n": 29,
+   "net_r": 9.732,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/splg_trend_long_1d.csv",
+    "--symbol",
+    "SPYM",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/splg_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/splg_trend_long_1d__bt.json",
+    "--long-only",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "2.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SPYM"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "spy_pullback_1h": {
+   "state": "measured",
+   "n": 253,
+   "net_r": 45.325,
+   "omitted_levers": [
+    "decision_bar",
+    "skip_hours"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "60",
+    "--pullback-lookback",
+    "12",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_pullback_1h.csv",
+    "--symbol",
+    "SPY",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_pullback_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_pullback_1h__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "50.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SPY"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "spy_trend_long_1d": {
+   "state": "measured",
+   "n": 47,
+   "net_r": 14.523,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "30",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_trend_long_1d.csv",
+    "--symbol",
+    "SPY",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "1.5",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_trend_long_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/spy_trend_long_1d__bt.json",
+    "--long-only",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "2.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "SPY"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  },
+  "tlt_pullback_1d": {
+   "state": "measured",
+   "n": 34,
+   "net_r": 6.657,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "40",
+    "--pullback-lookback",
+    "10",
+    "--pullback-frac",
+    "0.618",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1d.csv",
+    "--symbol",
+    "TLT",
+    "--resample",
+    "1d",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.5",
+    "--trail-mult",
+    "5.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1d__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1d__bt.json",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "TLT"
+   },
+   "book": "demo_floor",
+   "harness": "pullback"
+  },
+  "tlt_pullback_1h": {
+   "state": "measured",
+   "n": 189,
+   "net_r": 26.57,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+    "--trend-lookback",
+    "60",
+    "--pullback-lookback",
+    "12",
+    "--pullback-frac",
+    "0.5",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1h.csv",
+    "--symbol",
+    "TLT",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "3.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/tlt_pullback_1h__bt.json",
+    "--side-filter",
+    "long",
+    "--trail-decay-stall-bars",
+    "6",
+    "--trail-decay-tight-mult",
+    "1.5",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "3.5",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "TLT"
+   },
+   "book": "money",
+   "harness": "pullback"
+  },
+  "tqqq_trend_long_1d": {
+   "state": "fetch_failed",
+   "why": "CalledProcessError: Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3', '/home/runner/work/JTA-Trader/JTA-Trader/scripts/ops/fetch_backtest_candles.py', '--symbol', 'TQQQ', '--source', 'dukascopy', '--interval', 'D', '--days', '2350', '--output', 'comms/research/RQ-20261126-d3a5-01/4575",
+   "book": "money",
+   "harness": "trend"
+  },
+  "uso_trend_1h": {
+   "state": "measured",
+   "n": 210,
+   "net_r": 44.396,
+   "omitted_levers": [
+    "decision_bar"
+   ],
+   "argv": [
+    "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+    "--donchian",
+    "24",
+    "--data",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/uso_trend_1h.csv",
+    "--symbol",
+    "USO",
+    "--resample",
+    "1h",
+    "--atr-period",
+    "14",
+    "--atr-stop-mult",
+    "2.0",
+    "--trail-mult",
+    "4.0",
+    "--min-confidence",
+    "0.0",
+    "--fee-bps-roundtrip",
+    "0.0",
+    "--emit-trades",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/uso_trend_1h__trades.jsonl",
+    "--json",
+    "comms/research/RQ-20261126-d3a5-01/45750450587/work/uso_trend_1h__bt.json",
+    "--long-only",
+    "--giveback-min-mfe-r",
+    "1.0",
+    "--giveback-r",
+    "1.0",
+    "--tp-cap-pct",
+    "0.099",
+    "--tp-r",
+    "4.0",
+    "--start",
+    "2020-09-01",
+    "--end",
+    "2026-10-26"
+   ],
+   "feed": {
+    "source": "dukascopy",
+    "ticker": "USO"
+   },
+   "book": "demo_floor",
+   "harness": "trend"
+  }
+ },
+ "measurement": {
+  "covered_window": [
+   "2021-01-08",
+   "2026-11-11"
+  ],
+  "n_trades": 9761,
+  "excluded_outside_history": 552,
+  "classes": {
+   "fomc_decision": {
+    "n_flagged": 461,
+    "n_other": 9300,
+    "mean_flagged": 0.0542,
+    "mean_other": 0.0936,
+    "diff_r": -0.0394,
+    "ci95": [
+     -0.2982,
+     0.2182
+    ],
+    "placebo_share": 0.78,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 18,
+      "n_other": 388,
+      "diff_r": 0.0999
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 17,
+      "n_other": 436,
+      "diff_r": 0.4698
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 11,
+      "n_other": 390,
+      "diff_r": -0.8749
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 11,
+      "n_other": 374,
+      "diff_r": -0.838
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 8,
+      "n_other": 158,
+      "diff_r": 0.8271
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 21,
+      "n_other": 416,
+      "diff_r": -0.0711
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 40,
+      "n_other": 578,
+      "diff_r": -0.1296
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 10,
+      "n_other": 193,
+      "diff_r": 0.1643
+     },
+     "slv_trend_1h": {
+      "n_flagged": 25,
+      "n_other": 275,
+      "diff_r": -0.8648
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 18,
+      "n_other": 224,
+      "diff_r": 1.145
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 10,
+      "n_other": 169,
+      "diff_r": -0.2619
+     },
+     "trend_donchian": {
+      "n_flagged": 17,
+      "n_other": 399,
+      "diff_r": -0.2555
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 40,
+      "n_other": 870,
+      "diff_r": -0.172
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 8,
+      "n_other": 228,
+      "diff_r": 1.2111
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 11,
+      "n_other": 242,
+      "diff_r": 0.7381
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 35,
+      "n_other": 649,
+      "diff_r": 0.0632
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 10,
+      "n_other": 243,
+      "diff_r": -0.2595
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 35,
+      "n_other": 763,
+      "diff_r": -0.1231
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 18,
+      "n_other": 347,
+      "diff_r": -0.3521
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 7,
+      "n_other": 242,
+      "diff_r": 1.729
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 18,
+      "n_other": 355,
+      "diff_r": -0.2571
+     },
+     "uso_trend_1h": {
+      "n_flagged": 11,
+      "n_other": 186,
+      "diff_r": -0.575
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 18,
+      "n_other": 340,
+      "diff_r": 0.1891
+     }
+    },
+    "read_state": "measured"
+   },
+   "cpi": {
+    "n_flagged": 735,
+    "n_other": 9026,
+    "mean_flagged": 0.0902,
+    "mean_other": 0.0919,
+    "diff_r": -0.0017,
+    "ci95": [
+     -0.1958,
+     0.203
+    ],
+    "placebo_share": 0.985,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 36,
+      "n_other": 370,
+      "diff_r": -0.1092
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 33,
+      "n_other": 420,
+      "diff_r": -0.1731
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 28,
+      "n_other": 373,
+      "diff_r": 0.0884
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 24,
+      "n_other": 361,
+      "diff_r": -0.0074
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 7,
+      "n_other": 159,
+      "diff_r": -0.3391
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 33,
+      "n_other": 404,
+      "diff_r": 0.2782
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 48,
+      "n_other": 570,
+      "diff_r": -0.4056
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 21,
+      "n_other": 182,
+      "diff_r": 0.0898
+     },
+     "qqq_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 22,
+      "diff_r": -0.1398
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 6,
+      "n_other": 50,
+      "diff_r": 0.3615
+     },
+     "slv_trend_1h": {
+      "n_flagged": 22,
+      "n_other": 278,
+      "diff_r": 0.6484
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 8,
+      "n_other": 129,
+      "diff_r": 0.063
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 25,
+      "n_other": 217,
+      "diff_r": -0.4737
+     },
+     "spy_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 40,
+      "diff_r": -0.9614
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 8,
+      "n_other": 107,
+      "diff_r": -0.2793
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 14,
+      "n_other": 165,
+      "diff_r": -0.3068
+     },
+     "trend_donchian": {
+      "n_flagged": 35,
+      "n_other": 381,
+      "diff_r": 0.1734
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 72,
+      "n_other": 838,
+      "diff_r": 0.2281
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 18,
+      "n_other": 218,
+      "diff_r": 0.1128
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 13,
+      "n_other": 240,
+      "diff_r": 0.1502
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 52,
+      "n_other": 632,
+      "diff_r": -0.2238
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 23,
+      "n_other": 230,
+      "diff_r": -0.3299
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 51,
+      "n_other": 747,
+      "diff_r": 0.1161
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 28,
+      "n_other": 337,
+      "diff_r": 0.0204
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 12,
+      "n_other": 237,
+      "diff_r": 0.5259
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 28,
+      "n_other": 345,
+      "diff_r": -0.0475
+     },
+     "uso_trend_1h": {
+      "n_flagged": 21,
+      "n_other": 176,
+      "diff_r": -0.104
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 23,
+      "n_other": 335,
+      "diff_r": -0.5813
+     }
+    },
+    "read_state": "measured"
+   },
+   "nfp": {
+    "n_flagged": 647,
+    "n_other": 9114,
+    "mean_flagged": 0.0678,
+    "mean_other": 0.0934,
+    "diff_r": -0.0257,
+    "ci95": [
+     -0.2259,
+     0.1557
+    ],
+    "placebo_share": 0.835,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 20,
+      "n_other": 386,
+      "diff_r": -0.2114
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 29,
+      "n_other": 424,
+      "diff_r": 0.2763
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 24,
+      "n_other": 377,
+      "diff_r": -0.2617
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 22,
+      "n_other": 363,
+      "diff_r": -0.3908
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 5,
+      "n_other": 161,
+      "diff_r": 0.3861
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 36,
+      "n_other": 401,
+      "diff_r": 0.0034
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 46,
+      "n_other": 572,
+      "diff_r": 0.3438
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 22,
+      "n_other": 181,
+      "diff_r": 0.1589
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 5,
+      "n_other": 51,
+      "diff_r": -0.4342
+     },
+     "slv_trend_1h": {
+      "n_flagged": 21,
+      "n_other": 279,
+      "diff_r": -0.3136
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 10,
+      "n_other": 127,
+      "diff_r": 0.5739
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 21,
+      "n_other": 221,
+      "diff_r": 0.8158
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 9,
+      "n_other": 106,
+      "diff_r": -0.1345
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 18,
+      "n_other": 161,
+      "diff_r": -0.27
+     },
+     "trend_donchian": {
+      "n_flagged": 29,
+      "n_other": 387,
+      "diff_r": -0.0374
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 54,
+      "n_other": 856,
+      "diff_r": 0.113
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 15,
+      "n_other": 221,
+      "diff_r": 0.1403
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 12,
+      "n_other": 241,
+      "diff_r": -0.2748
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 45,
+      "n_other": 639,
+      "diff_r": -0.0699
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 16,
+      "n_other": 237,
+      "diff_r": -0.6481
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 52,
+      "n_other": 746,
+      "diff_r": -0.1024
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 21,
+      "n_other": 344,
+      "diff_r": -0.2217
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 16,
+      "n_other": 233,
+      "diff_r": -0.4856
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 22,
+      "n_other": 351,
+      "diff_r": -0.1832
+     },
+     "uso_trend_1h": {
+      "n_flagged": 23,
+      "n_other": 174,
+      "diff_r": -0.3011
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 26,
+      "n_other": 332,
+      "diff_r": 0.0042
+     }
+    },
+    "read_state": "measured"
+   },
+   "any": {
+    "n_flagged": 1804,
+    "n_other": 7957,
+    "mean_flagged": 0.0777,
+    "mean_other": 0.0949,
+    "diff_r": -0.0172,
+    "ci95": [
+     -0.149,
+     0.1161
+    ],
+    "placebo_share": 0.82,
+    "placebo_draws": 200,
+    "by_leg_reported": {
+     "ada_pullback_2h": {
+      "n_flagged": 72,
+      "n_other": 334,
+      "diff_r": -0.0574
+     },
+     "avax_pullback_2h": {
+      "n_flagged": 74,
+      "n_other": 379,
+      "diff_r": 0.1802
+     },
+     "eth_pullback_2h": {
+      "n_flagged": 63,
+      "n_other": 338,
+      "diff_r": -0.2441
+     },
+     "eth_pullback_prop_2h": {
+      "n_flagged": 57,
+      "n_other": 328,
+      "diff_r": -0.3548
+     },
+     "fade_breakout_4h": {
+      "n_flagged": 20,
+      "n_other": 146,
+      "diff_r": 0.3352
+     },
+     "gdx_pullback_1d": {
+      "n_flagged": 9,
+      "n_other": 44,
+      "diff_r": 0.7196
+     },
+     "gld_pullback_1d": {
+      "n_flagged": 7,
+      "n_other": 38,
+      "diff_r": 0.7014
+     },
+     "htf_pullback_trend_2h": {
+      "n_flagged": 90,
+      "n_other": 347,
+      "diff_r": 0.1005
+     },
+     "iaum_pullback_1d": {
+      "n_flagged": 7,
+      "n_other": 38,
+      "diff_r": 0.7014
+     },
+     "ief_pullback_1d": {
+      "n_flagged": 5,
+      "n_other": 31,
+      "diff_r": 0.2662
+     },
+     "iwm_trend_long_1d": {
+      "n_flagged": 7,
+      "n_other": 19,
+      "diff_r": 0.392
+     },
+     "mes_trend_long_1d": {
+      "n_flagged": 5,
+      "n_other": 24,
+      "diff_r": 0.4941
+     },
+     "mgc_pullback_1d": {
+      "n_flagged": 8,
+      "n_other": 44,
+      "diff_r": -0.578
+     },
+     "mgc_trend_1h": {
+      "n_flagged": 132,
+      "n_other": 486,
+      "diff_r": -0.058
+     },
+     "qqq_pullback_1h": {
+      "n_flagged": 49,
+      "n_other": 154,
+      "diff_r": -0.0048
+     },
+     "qqq_trend_long_1d": {
+      "n_flagged": 12,
+      "n_other": 16,
+      "diff_r": -0.6246
+     },
+     "scha_trend_long_1d": {
+      "n_flagged": 6,
+      "n_other": 16,
+      "diff_r": 0.1619
+     },
+     "slv_pullback_1d": {
+      "n_flagged": 13,
+      "n_other": 43,
+      "diff_r": 0.0003
+     },
+     "slv_trend_1h": {
+      "n_flagged": 67,
+      "n_other": 233,
+      "diff_r": -0.2098
+     },
+     "sol_pullback_2h": {
+      "n_flagged": 19,
+      "n_other": 118,
+      "diff_r": 0.2895
+     },
+     "splg_trend_long_1d": {
+      "n_flagged": 7,
+      "n_other": 21,
+      "diff_r": -0.3535
+     },
+     "spy_pullback_1h": {
+      "n_flagged": 63,
+      "n_other": 179,
+      "diff_r": 0.3338
+     },
+     "spy_trend_long_1d": {
+      "n_flagged": 13,
+      "n_other": 33,
+      "diff_r": -0.5981
+     },
+     "squeeze_breakout_4h": {
+      "n_flagged": 21,
+      "n_other": 94,
+      "diff_r": -0.4731
+     },
+     "tlt_pullback_1h": {
+      "n_flagged": 39,
+      "n_other": 140,
+      "diff_r": -0.3823
+     },
+     "trend_donchian": {
+      "n_flagged": 80,
+      "n_other": 336,
+      "diff_r": 0.0242
+     },
+     "trend_donchian_1h": {
+      "n_flagged": 162,
+      "n_other": 748,
+      "diff_r": 0.1364
+     },
+     "trend_donchian_ada_4h": {
+      "n_flagged": 40,
+      "n_other": 196,
+      "diff_r": 0.3573
+     },
+     "trend_donchian_avax_4h": {
+      "n_flagged": 36,
+      "n_other": 217,
+      "diff_r": 0.2098
+     },
+     "trend_donchian_eth": {
+      "n_flagged": 130,
+      "n_other": 554,
+      "diff_r": -0.0893
+     },
+     "trend_donchian_eth_4h": {
+      "n_flagged": 49,
+      "n_other": 204,
+      "diff_r": -0.4835
+     },
+     "trend_donchian_eth_prop": {
+      "n_flagged": 136,
+      "n_other": 662,
+      "diff_r": -0.0191
+     },
+     "trend_donchian_sol": {
+      "n_flagged": 66,
+      "n_other": 299,
+      "diff_r": -0.1608
+     },
+     "trend_donchian_sol_4h": {
+      "n_flagged": 34,
+      "n_other": 215,
+      "diff_r": 0.4018
+     },
+     "trend_donchian_sol_prop": {
+      "n_flagged": 67,
+      "n_other": 306,
+      "diff_r": -0.1502
+     },
+     "trend_donchian_xrp_4h": {
+      "n_flagged": 8,
+      "n_other": 56,
+      "diff_r": 0.7316
+     },
+     "trend_donchian_xrp_adx25": {
+      "n_flagged": 8,
+      "n_other": 56,
+      "diff_r": 0.4626
+     },
+     "uso_trend_1h": {
+      "n_flagged": 55,
+      "n_other": 142,
+      "diff_r": -0.3541
+     },
+     "xrp_pullback_2h": {
+      "n_flagged": 64,
+      "n_other": 294,
+      "diff_r": -0.1099
+     }
+    },
+    "read_state": "measured"
+   }
+  },
+  "verdict": "indeterminate",
+  "why": "diff -0.0172 R, CI [-0.149, 0.1161], placebo share 0.82: not separable, not ruled out"
+ },
+ "git_sha": "014a16a62e1b38646f08642081ee7a2206ce835b",
+ "elapsed_s": 446,
+ "read_state": "measured"
+}

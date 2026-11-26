@@ -1,0 +1,135 @@
+{
+  "leg": "eth_pullback_prop_2h",
+  "grade": {
+    "verdict": "fail",
+    "label": "stage0_no_edge",
+    "baseline": "A",
+    "net_r": 0.6689,
+    "n": 174,
+    "max_drawdown_r": 18.9438,
+    "folds_positive": 2,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=0.6689 with 2/4 positive folds (needs > 0 and >= 3)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 174,
+      "net_r": 0.6689,
+      "net_r_fee_only": 5.8962,
+      "max_drawdown_r": 18.9438,
+      "by_outcome": {
+        "take_profit": 51,
+        "trail_stop": 75,
+        "stop": 47,
+        "timeout": 1
+      },
+      "mean_bars_held": 29.144,
+      "net_r_per_capital_day": 0.0008,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "trend_lookback": 40,
+        "pullback_lookback": 10,
+        "pullback_frac": 0.5,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 3.5,
+        "min_confidence": 0.0,
+        "adx_min": 25.0,
+        "adx_period": 14
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:30:00+00:00",
+          "trades": 55,
+          "net_r": 1.3266
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:30:00+00:00",
+          "end": "2024-05-24 23:00:00+00:00",
+          "trades": 36,
+          "net_r": -1.4475
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 23:00:00+00:00",
+          "end": "2025-08-25 10:30:00+00:00",
+          "trades": 35,
+          "net_r": -3.7205
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 10:30:00+00:00",
+          "end": "2026-11-25 22:00:00+00:00",
+          "trades": 48,
+          "net_r": 4.5108
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py",
+        "--trend-lookback",
+        "40",
+        "--pullback-lookback",
+        "10",
+        "--pullback-frac",
+        "0.5",
+        "--data",
+        "<data>",
+        "--symbol",
+        "ETHUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "3.5",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-108/45821329261/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-108/45821329261/arms/A__bt.json",
+        "--adx-min",
+        "25",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "ETHUSDT",
+      "interval": "120",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2021-11-22 00:00:00+00:00",
+      "2023-02-22 11:30:00+00:00",
+      "2024-05-24 23:00:00+00:00",
+      "2025-08-25 10:30:00+00:00",
+      "2026-11-25 22:00:00+00:00"
+    ]
+  }
+}

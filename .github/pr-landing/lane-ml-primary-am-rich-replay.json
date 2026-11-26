@@ -1,0 +1,6 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "a result-bearing research unit: the rule is committed here before the run is dispatched (not_before 09:00Z, staggered after RQ-20261124-c7e3-04); merge before then so the dispatcher picks it up, or the lane dispatches it from this branch at 09:00Z",
+  "why": "ML-PRIMARY AM v2 iteration 3: rich heads in the replay. am_heads_fit dump --feats rich (manifest feats = RICH_FEATS); am_policy_arm Heads accept base or rich manifests, attach_history adds CTX_LOOKBACK pre-fill bars so decision_rows build the ctx block exactly as the --context labels did (base features, row set and HOLD byte-identical, pinned by tests); am_action_value value features widen with the heads; am-action-value.yml gains an optional heads job (labels_run_id / labels_prefix / head_feats) and a failed heads/fit stage now lands producer_failed instead of skipping silently. Unit RQ-20261125-a9d2-02 (av_tighten on the rich heads, paired with c7e3-02) registered before any run. Research only. Gates this adds or changes: none."
+}

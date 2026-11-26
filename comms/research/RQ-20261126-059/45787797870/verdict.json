@@ -1,0 +1,194 @@
+{
+  "verdict": "pass",
+  "read_state": "measured",
+  "population": "sol_pullback_2h: 134 trades in the baseline arm 'A' on ADAUSDT 2h candles 2021-11-13 22:00:00+00:00 .. 2026-11-17 22:00:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A']",
+  "n": 134,
+  "measurement": {
+    "leg": "sol_pullback_2h",
+    "label": "stage0_edge",
+    "grade": {
+      "verdict": "pass",
+      "label": "stage0_edge",
+      "baseline": "A",
+      "net_r": 42.3713,
+      "n": 134,
+      "max_drawdown_r": 10.7568,
+      "folds_positive": 3,
+      "n_folds": 4,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "net_r=42.3713 > 0 with 3/4 positive folds at this arm's cost stack"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": 0.0,
+        "n": 134,
+        "net_r": 42.3713,
+        "net_r_fee_only": 46.2205,
+        "max_drawdown_r": 10.7568,
+        "by_outcome": {
+          "stop": 54,
+          "take_profit": 54,
+          "trail_stop": 22,
+          "timeout": 4
+        },
+        "mean_bars_held": 45.821,
+        "net_r_per_capital_day": 0.0828,
+        "cost_stack": {
+          "fee_bps_roundtrip": 11.0,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": {
+          "trend_lookback": 40,
+          "pullback_lookback": 10,
+          "pullback_frac": 0.5,
+          "atr_stop_mult": 2.5,
+          "trail_mult": 5.0,
+          "min_confidence": 0.0,
+          "adx_min": 30.0,
+          "adx_period": 14
+        },
+        "data_start": "2021-11-13 22:00:00+00:00",
+        "data_end": "2026-11-17 22:00:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-13 22:00:00+00:00",
+            "end": "2023-02-14 10:00:00+00:00",
+            "trades": 37,
+            "net_r": 16.0083
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-14 10:00:00+00:00",
+            "end": "2024-05-16 22:00:00+00:00",
+            "trades": 34,
+            "net_r": 15.7127
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-16 22:00:00+00:00",
+            "end": "2025-08-17 10:00:00+00:00",
+            "trades": 33,
+            "net_r": -6.9908
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-17 10:00:00+00:00",
+            "end": "2026-11-17 22:00:00+00:00",
+            "trades": 30,
+            "net_r": 17.6411
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ADAUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-059/45787797870/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-059/45787797870/arms/A__bt.json",
+          "--adx-min",
+          "30",
+          "--side-filter",
+          "short",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "binance",
+        "ticker": "ADAUSDT",
+        "interval": "120",
+        "resample": "2h"
+      },
+      "fold_edges": [
+        "2021-11-13 22:00:00+00:00",
+        "2023-02-14 10:00:00+00:00",
+        "2024-05-16 22:00:00+00:00",
+        "2025-08-17 10:00:00+00:00",
+        "2026-11-17 22:00:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_pullback.py",
+          "--trend-lookback",
+          "40",
+          "--pullback-lookback",
+          "10",
+          "--pullback-frac",
+          "0.5",
+          "--data",
+          "<data>",
+          "--symbol",
+          "ADAUSDT",
+          "--resample",
+          "2h",
+          "--atr-period",
+          "14",
+          "--atr-stop-mult",
+          "2.5",
+          "--trail-mult",
+          "5.0",
+          "--min-confidence",
+          "0.0",
+          "--fee-bps-roundtrip",
+          "11.0",
+          "--emit-trades",
+          "comms/research/RQ-20261126-059/45787797870/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-059/45787797870/arms/A__bt.json",
+          "--adx-min",
+          "30",
+          "--side-filter",
+          "short",
+          "--tp-cap-pct",
+          "0.099",
+          "--tp-r",
+          "50.0"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [
+          "decision_bar"
+        ],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "PASS / stage0_edge: net_r=42.3713 > 0 with 3/4 positive folds at this arm's cost stack"
+}

@@ -1,0 +1,174 @@
+{
+  "leg": "trend_donchian_sol_4h",
+  "label": "stage0_edge",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 8.3612,
+    "n": 46,
+    "max_drawdown_r": 5.1238,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=8.3612 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 46,
+      "net_r": 8.3612,
+      "net_r_fee_only": 9.2054,
+      "max_drawdown_r": 5.1238,
+      "by_outcome": {
+        "take_profit": 27,
+        "stop": 19
+      },
+      "mean_bars_held": 4.304,
+      "net_r_per_capital_day": 0.0422,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 1.5,
+        "trail_mult": 5.0,
+        "min_confidence": 0.6,
+        "trail_decay_arm_r": 5.57,
+        "trail_decay_stall_bars": 0,
+        "trail_decay_tight_mult": 2.5
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 00:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 12,
+          "net_r": -1.1463
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 14,
+          "net_r": 5.6169
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 9,
+          "net_r": 0.8419
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 11,
+          "net_r": 3.0485
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-136/45834797689/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-136/45834797689/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "5.57",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "240",
+      "resample": "1d"
+    },
+    "fold_edges": [
+      "2021-11-22 00:00:00+00:00",
+      "2023-02-22 11:00:00+00:00",
+      "2024-05-24 22:00:00+00:00",
+      "2025-08-25 09:00:00+00:00",
+      "2026-11-25 20:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "1d",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "1.5",
+        "--trail-mult",
+        "5.0",
+        "--min-confidence",
+        "0.6",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-136/45834797689/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-136/45834797689/arms/A__bt.json",
+        "--trail-decay-arm-r",
+        "5.57",
+        "--trail-decay-tight-mult",
+        "2.5",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [],
+      "routed_cfg_keys": []
+    }
+  }
+}

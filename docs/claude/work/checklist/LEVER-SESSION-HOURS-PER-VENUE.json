@@ -1,0 +1,22 @@
+{
+  "id": "LEVER-SESSION-HOURS-PER-VENUE",
+  "title": "Author the per-venue session-hours lists the iteration generator needs for the session lever family (skip_hours values per venue class)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-PROGRAMMES"
+  ],
+  "priority_rank": 15,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-09",
+  "note": "Filed by QUEUE-FILL-STANDING-W49 2026-11-26 (manager GO on RESEARCH-LEVER-FAMILY-REACH, session left unfilled on purpose). GAP: lever_design can express the session family as a declared: block (skip_hours token) but the VALUES are venue-specific and nobody has authored them, so the weekly generator cannot sweep session for the 16 legs that have it as a remaining family (RESEARCH-LEVER-FAMILY-REACH evidence, 2026-11-25). A generic list would generate meaningless units: crypto trades 24h (no cash session), ETFs/futures have a cash session whose open/close hours shift with DST, and spy_pullback_1h's own tested arms already use skip_hours 13,14 (open) and 19,20 (late pocket) in UTC. NEEDED: one list per venue class (crypto 24h; US equity ETF cash session; CME futures sessions) of UTC skip_hours candidate sets with the DST convention stated, each tied to a mechanism (open auction volatility, close, lunch), in research/levers/_session_values.yaml or equivalent, then wire it as declared defaults in lever_design. OWNER: manager to assign (a research lane with venue/microstructure knowledge; not a spec-only lane). Without it the session family stays unreachable by the generator; tracked here, not dropped. RESUME STATE 2026-11-26 (lane throttled until the 12-02 reset). Unchanged: the unfilled session lever family (skip-hours / session windows per venue) is filed, not built; the manager confirmed it stays a per-venue by-hand reprice (sizing_vs_cost is the same). Resume only if a plan node names it; the lever map for tlt_pullback_1h shows session untested and RQ-20261125-11d7-01 (SKO/SKC skip-hours arms) reads one setting of it, so read that result first.",
+  "phase": null,
+  "updated_at": "2026-11-26T07:22:32Z",
+  "updated_by": "QUEUE-FILL-STANDING-W49"
+}

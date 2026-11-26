@@ -1,0 +1,80 @@
+{
+  "unit": "RQ-20261124-bd30-01",
+  "run_id": "45431508125",
+  "commit_sha": "de9635ef043eacfc62bf87f8527f02e6fbccbb3f",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45431508125",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "b512092f188e",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "qqq_pullback_1h",
+        "--symbol",
+        "QQQM",
+        "--arm",
+        "A=",
+        "--days",
+        "800",
+        "--start",
+        "2025-06-02",
+        "--end",
+        "2026-11-11 23:59",
+        "--grade",
+        "stage0",
+        "--baseline",
+        "A",
+        "--delta-r",
+        "0",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--out",
+        "comms/research/RQ-20261124-bd30-01/45431508125"
+      ],
+      "log": "comms/research/RQ-20261124-bd30-01/45431508125/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 3.2
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

@@ -1,0 +1,11 @@
+Fetching QQQ 60 candles 2018-09-07 -> 2026-11-24 (source=dukascopy) …
+  dukascopy: QQQ -> INSTRUMENT_ETF_CFD_US_QQQ_US_USD (relation=same_ticker_cfd: same underlying, CFD)
+INFO:DUKASCRIPT:current timestamp :2026-11-24T14:00:00
+Wrote 14357 rows (2018-09-07 -> 2026-11-24) to /tmp/exit_lever_ablation_1u93_wkq/qqq_pullback_1h__data.csv
+[A] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261124-bd30-02/45431516161/arms/A__trades.jsonl --json comms/research/RQ-20261124-bd30-02/45431516161/arms/A__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --start 2019-01-01 --end 2026-10-15 23:59
+[SL] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_pullback.py --trend-lookback 60 --pullback-lookback 12 --pullback-frac 0.618 --data <data> --symbol QQQ --resample 1h --atr-period 14 --atr-stop-mult 2.5 --trail-mult 5.0 --min-confidence 0.0 --fee-bps-roundtrip 0.0 --emit-trades comms/research/RQ-20261124-bd30-02/45431516161/arms/SL__trades.jsonl --json comms/research/RQ-20261124-bd30-02/45431516161/arms/SL__bt.json --tp-cap-pct 0.099 --tp-r 50.0 --side-filter long --start 2019-01-01 --end 2026-10-15 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_replaces_incumbent",
+ "why": "SL beats the incumbent A (net R 65.2044 vs 54.0356) in >= 4/6 folds within the drawdown tolerance: a data-backed Tier-3 PROPOSAL (config is not edited here)"
+}

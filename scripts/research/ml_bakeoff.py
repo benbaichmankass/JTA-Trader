@@ -29,6 +29,9 @@ THE UNIT BLOCK (``ml_bakeoff:`` in the unit YAML — registered BEFORE the run, 
         target: regime_label
         features: [log_return, ...]
         group_col: symbol             # optional (single-frame multi-group)
+        # POOLED (ML-GRU-POOLED-BP2, 2026-11-26): ``paths: <glob>`` reads EVERY match (tail_rows applies per file) into ONE
+        # group "POOLED"; ``entity_col: symbol`` sorts rows by (ts, entity) so row folds are calendar folds across all
+        # entities, and torch_gru builds its windows INSIDE each entity (a window never spans two symbols). Absent = unchanged.
         holdout_after: '2025-09-01'   # optional extra window ("holdout") graded by the same rule
       cv: {folds: 5, embargo_rows: 96, min_train_frac: 0.4}    # purged expanding walk-forward
       # optional: cv.row_bootstrap: {block_rows: 96, n_boot: 1000, seed: 0} -- a paired moving-block bootstrap of the
@@ -165,7 +168,9 @@ def block_har_rv(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
 def _fmt(text: str, df) -> str:
     """Substitute ``{group}`` (the dataset group this frame belongs to) in a block's path/name strings, so ONE learner
     spec serves every symbol of a multi-group bake-off."""
-    return str(text).replace("{group}", str(getattr(df, "attrs", {}).get("group", "")))
+    g = str(getattr(df, "attrs", {}).get("group", ""))
+    # ``{group_sym}`` = the group name before its first '_' (BTCUSDT_1h -> BTCUSDT), for a side file keyed by symbol only.
+    return str(text).replace("{group_sym}", g.split("_")[0]).replace("{group}", g)
 
 
 def _read_jsonl_cols(path: str, cols: List[str], tail: int = 0):
@@ -204,6 +209,58 @@ def block_df_columns(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
     Chronos columns for the arm that tests them, against an arm that does not get them. A column missing from the
     shard is NaN (the loader's rule), so a dead side-stream shows up as a dead feature, never as a silent drop."""
     return {c: np.asarray(df[c], dtype=float) for c in spec["columns"]}
+
+
+def block_raw_bars(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    """RAW per-bar inputs from the group's ``market_raw`` OHLCV (RQ-20261126-9e73-01, the representation iteration of the
+    GRU after 9e72-01 tied LightGBM on the 10 engineered features). Joined on ts (left; a bar missing from market_raw is NaN,
+    never dropped). Columns, each a function of bar t and bar t-1 only (no lookahead):
+      ``<p>r1``   log(close_t / close_{t-1})                       ``<p>hl``  log(high_t / low_t)
+      ``<p>co``   log(close_t / open_t)                            ``<p>gap`` log(open_t / close_{t-1})
+      ``<p>lv``   log(volume_t) - its trailing ``vol_window``-bar median of log volume (past bars only; default 96)
+    The sequence model sees these over its own ``window_bars`` lookback, so the LENGTH of history it uses is the arm's lever.
+    spec: path (market_raw jsonl/csv/parquet; ``{group}`` ok, or ``{entity}`` with entity_col for a pooled frame), on (default ts),
+    prefix (default raw_), vol_window, tail_rows, entity_col."""
+    import pandas as pd
+    on, pre = spec.get("on", "ts"), spec.get("prefix", "raw_")
+    cols = [on, "open", "high", "low", "close", "volume"]
+    names = ("r1", "hl", "co", "gap", "lv")
+
+    def one(path_text: str):
+        path = _resolve_path(path_text)
+        sp = str(path)
+        if sp.endswith(".jsonl"):
+            side = _read_jsonl_cols(sp, cols, int(spec.get("tail_rows", 0)))
+        elif sp.endswith(".parquet"):
+            side = pd.read_parquet(path, columns=cols)
+        else:
+            side = pd.read_csv(path, usecols=lambda c: c in set(cols))
+        side[on] = pd.to_datetime(side[on], utc=True)
+        side = side.dropna(subset=[on]).drop_duplicates(on).sort_values(on).reset_index(drop=True)
+        o, h, lo, c = (pd.to_numeric(side[k], errors="coerce").to_numpy(dtype=float) for k in ("open", "high", "low", "close"))
+        v = pd.to_numeric(side["volume"], errors="coerce").to_numpy(dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            c_prev = np.r_[np.nan, c[:-1]]
+            lvol = np.log(np.where(v > 0, v, np.nan))
+            med = pd.Series(lvol).shift(1).rolling(int(spec.get("vol_window", 96)), min_periods=10).median().to_numpy()
+            f = {"r1": np.log(c / c_prev), "hl": np.log(h / lo), "co": np.log(c / o), "gap": np.log(o / c_prev), "lv": lvol - med}
+        return side[[on]].assign(**{pre + k: np.where(np.isfinite(x), x, np.nan) for k, x in f.items()})
+
+    ent = spec.get("entity_col")
+    if ent:   # pooled frame: one market_raw file per entity (path carries {entity}); joined on (entity, ts)
+        parts = []
+        for e in pd.unique(df[ent].astype(str)):
+            try:
+                parts.append(one(str(spec["path"]).replace("{entity}", e)).assign(**{ent: e}))
+            except FileNotFoundError as exc:   # allow-silent: an entity with no market_raw shard keeps NaN raw columns (a visible dead feature)
+                print(f"raw_bars: no market_raw for {e}: {exc}", file=sys.stderr)
+        side = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=[on, ent] + [pre + k for k in names])
+        left = pd.DataFrame({on: pd.to_datetime(df[on], utc=True), ent: df[ent].astype(str).to_numpy()})
+        merged = left.merge(side, on=[ent, on], how="left")
+    else:
+        side = one(_fmt(spec["path"], df))
+        merged = pd.DataFrame({on: pd.to_datetime(df[on], utc=True)}).merge(side, on=on, how="left")
+    return {pre + k: merged[pre + k].to_numpy(dtype=float) for k in names}
 
 
 def _ridge_solve(X: np.ndarray, Y: np.ndarray, lam: float) -> np.ndarray:
@@ -285,7 +342,7 @@ def block_var_price_vector(df, spec: Dict[str, Any]) -> Dict[str, np.ndarray]:
 
 FEATURE_BLOCKS: Dict[str, Callable[..., Dict[str, np.ndarray]]] = {
     "har_rv": block_har_rv, "join_columns": block_join_columns, "df_columns": block_df_columns,
-    "var_price_vector": block_var_price_vector}
+    "var_price_vector": block_var_price_vector, "raw_bars": block_raw_bars}
 
 
 # ── learners ─────────────────────────────────────────────────────────────────
@@ -498,7 +555,15 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
 
     DEVICE (row ML-BAKEOFF-TORCH-DEVICE, 2026-11-17): ``params.device`` = ``auto`` (default: cuda when
     ``torch.cuda.is_available()``, else cpu) | ``cpu`` | ``cuda`` (``Unavailable`` if no GPU). The device used is
-    logged to stderr and recorded in ``TORCH_DEVICES_USED`` so a GPU-routed unit can show it ran on the GPU."""
+    logged to stderr and recorded in ``TORCH_DEVICES_USED`` so a GPU-routed unit can show it ran on the GPU.
+
+    EARLY STOPPING + CALIBRATION (RQ-20261126-9e72-01, the re-open of 9e71-01 whose GRU was worse than the class prior =
+    overconfident): all OPT-IN, absent = byte-identical to before. ``val_frac`` (0 < f < 0.5) holds out the NEWEST f of
+    the (capped) train windows, chronologically, as a validation set; ``patience`` (>= 1, needs val_frac) stops when the
+    validation log-loss has not improved for that many epochs and restores the best epoch's weights (``epochs`` is then a
+    maximum); ``calibrate: temperature`` (needs val_frac) fits one scalar T > 0 on the validation logits by minimising NLL
+    and divides the test logits by it; ``weight_decay`` is passed to Adam. Nothing from the test block is used. The epochs
+    run, best epoch, best validation log-loss and T per fit are appended to ``TORCH_GRU_FIT_INFO``."""
     try:
         import torch
         from torch import nn
@@ -509,6 +574,15 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
     epochs, batch = int(params.get("epochs", 8)), int(params.get("batch_size", 256))
     lr, seed = float(params.get("lr", 3e-3)), int(params.get("seed", 0))
     cap = int(params.get("max_train_windows", 20000))
+    val_frac, patience = float(params.get("val_frac", 0.0)), int(params.get("patience", 0))
+    calibrate, wd = str(params.get("calibrate", "none")).lower(), float(params.get("weight_decay", 0.0))
+    if not 0.0 <= val_frac < 0.5:
+        raise Unavailable(f"torch_gru val_frac {val_frac} not in [0, 0.5)")
+    if (patience or calibrate != "none") and val_frac <= 0.0:
+        raise Unavailable("torch_gru patience / calibrate need val_frac > 0")
+    if calibrate not in ("none", "temperature"):
+        raise Unavailable(f"torch_gru calibrate {calibrate!r} not in none|temperature")
+    ent_tr, ent_te = params.pop("_entity_tr", None), params.pop("_entity_te", None)
     mu, sd = np.nanmean(Xtr, axis=0), np.nanstd(Xtr, axis=0) + 1e-9
     mu = np.nan_to_num(mu)
 
@@ -518,9 +592,18 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
         idx = np.arange(len(Z))[:, None] + np.arange(W)[None, :]
         return torch.from_numpy(Zp[idx])  # (n, W, F)
 
-    Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
-    if len(Xw) > cap:
-        Xw, yt = Xw[-cap:], yt[-cap:]
+    if ent_tr is None:
+        Xw, yt = windows(Xtr), torch.from_numpy(ytr.astype(np.int64))
+        if len(Xw) > cap:
+            Xw, yt = Xw[-cap:], yt[-cap:]
+    else:   # pooled: windows inside each entity; the newest `cap` rows are chosen BEFORE windows are materialised
+        keep = np.arange(max(0, len(Xtr) - cap), len(Xtr))
+        Xw = torch.from_numpy(entity_windows(np.nan_to_num((Xtr - mu) / sd).astype(np.float32), ent_tr, W, keep))
+        yt = torch.from_numpy(ytr[keep].astype(np.int64))
+    Xv = yv = None
+    if val_frac > 0.0:
+        nv = max(1, int(round(len(Xw) * val_frac)))
+        Xw, Xv, yt, yv = Xw[:-nv], Xw[-nv:], yt[:-nv], yt[-nv:]
     torch.manual_seed(seed)
     torch.set_num_threads(max(1, int(params.get("threads", 1))))
     dev = _torch_device(torch, params.get("device", "auto"))
@@ -538,26 +621,80 @@ def _fit_torch_gru(Xtr, ytr, Xte, k, params):
             return self.head(o[:, -1])
 
     net = Net().to(dev)
-    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=wd) if wd else torch.optim.Adam(net.parameters(), lr=lr)
     lossf = nn.CrossEntropyLoss()
     g = torch.Generator().manual_seed(seed)
-    net.train()
-    for _ in range(epochs):
+
+    def logits_of(X):
+        net.eval()
+        out = []
+        with torch.no_grad():
+            for a in range(0, len(X), 2048):
+                out.append(net(X[a:a + 2048].to(dev)).cpu())
+        return torch.cat(out) if out else torch.zeros((0, k))
+
+    best = {"loss": float("inf"), "epoch": -1, "state": None}
+    ran, bad = 0, 0
+    for ep in range(epochs):
+        net.train()
         perm = torch.randperm(len(Xw), generator=g)
         for a in range(0, len(perm), batch):
             b = perm[a:a + batch]
             opt.zero_grad()
             lossf(net(Xw[b].to(dev)), yt[b].to(dev)).backward()
             opt.step()
-    net.eval()
-    Tw, outs = windows(Xte), []
-    with torch.no_grad():
-        for a in range(0, len(Tw), 2048):
-            outs.append(torch.softmax(net(Tw[a:a + 2048].to(dev)), dim=1).cpu().numpy())
-    return np.vstack(outs) if outs else np.zeros((0, k))
+        ran = ep + 1
+        if Xv is not None:
+            vl = float(nn.functional.cross_entropy(logits_of(Xv), yv))
+            if vl < best["loss"] - 1e-6:
+                best = {"loss": vl, "epoch": ep, "state": {kk: vv.detach().clone() for kk, vv in net.state_dict().items()}}
+                bad = 0
+            else:
+                bad += 1
+                if patience and bad >= patience:
+                    break
+    if patience and best["state"] is not None:
+        net.load_state_dict(best["state"])
+    temp = 1.0
+    if calibrate == "temperature":
+        lv = logits_of(Xv)
+        grid = np.exp(np.linspace(np.log(0.05), np.log(20.0), 121))
+        nll = [float(nn.functional.cross_entropy(lv / float(t), yv)) for t in grid]
+        temp = float(grid[int(np.argmin(nll))])
+    TORCH_GRU_FIT_INFO.append({"epochs_run": ran, "best_epoch": best["epoch"] if Xv is not None else None,
+                               "best_val_logloss": round(best["loss"], 6) if Xv is not None else None,
+                               "temperature": round(temp, 4), "n_train": int(len(Xw)), "n_val": int(len(Xv)) if Xv is not None else 0})
+    if ent_te is None:
+        lt = logits_of(windows(Xte))
+    else:
+        Zte = np.nan_to_num((Xte - mu) / sd).astype(np.float32)
+        lt = logits_of(torch.from_numpy(entity_windows(Zte, ent_te, W, np.arange(len(Xte)))))
+    return torch.softmax(lt / temp, dim=1).numpy() if len(lt) else np.zeros((0, k))
+
+
+def entity_windows(Z: np.ndarray, ent: np.ndarray, W: int, keep: np.ndarray) -> np.ndarray:
+    """(len(keep), W, F) trailing windows for rows ``keep`` of a time-ordered pooled block, built INSIDE each row's entity:
+    row i sees only earlier rows of its own entity within this block, the first W-1 rows of an entity edge-padded with
+    that entity's first row (the single-entity case equals ``_fit_torch_gru.windows``). ML-GRU-POOLED-BP2."""
+    n = len(Z)
+    order = np.lexsort((np.arange(n), ent))                 # by entity, then time position
+    ent_sorted = ent[order]
+    first = np.searchsorted(ent_sorted, ent_sorted, side="left")   # start (in `order`) of each sorted row's entity
+    rank = np.empty(n, dtype=np.int64)
+    rank[order] = np.arange(n) - first
+    start = np.empty(n, dtype=np.int64)
+    start[order] = first
+    r, s0 = rank[keep][:, None], start[keep][:, None]
+    off = np.arange(W)[None, :] - (W - 1)                   # -(W-1) .. 0
+    idx = order[s0 + np.maximum(r + off, 0)]
+    return Z[idx]
+
+
+ENTITY_AWARE = {"torch_gru"}
 
 
 TORCH_DEVICES_USED: List[str] = []
+TORCH_GRU_FIT_INFO: List[Dict[str, Any]] = []
 
 
 def _torch_device(torch, want: Any = "auto"):
@@ -638,6 +775,25 @@ def _resolve_path(p: str) -> Path:
     raise FileNotFoundError(f"dataset path {p!r} not found (tried {[str(c) for c in cand]})")
 
 
+POOLED_FILES: List[str] = []
+
+
+def _resolve_all(p: str) -> List[str]:
+    """Every match of a pooled ``paths`` glob, from the first root that has any ($ML_DATA_ROOT, cwd, repo). Each file is
+    named on stderr and recorded (POOLED_FILES -> result.measurement.pooled_files) so the population is explicit."""
+    cand = [Path(p)]
+    root = os.environ.get("ML_DATA_ROOT")
+    if root:
+        cand.insert(0, Path(root) / p)
+    cand.append(_REPO / p)
+    for c in cand:
+        hits = sorted(glob.glob(str(c)))
+        if hits:
+            print(f"ml_bakeoff: pooled dataset {p!r} -> {len(hits)} file(s) under {c}", file=sys.stderr)
+            return hits
+    raise FileNotFoundError(f"pooled dataset paths {p!r} matched nothing (tried {[str(c) for c in cand]})")
+
+
 def synthetic_frame(n: int, seed: int, signal: float, n_classes: int = 3):
     import pandas as pd
     rng = np.random.default_rng(seed)
@@ -661,6 +817,7 @@ def load_groups(ds: Dict[str, Any]) -> Dict[str, Any]:
         return out
     want = [c for c in dict.fromkeys([ds.get("ts_col", "ts"), ds["target"], *list(ds["features"]),
                                       *([ds["group_col"]] if ds.get("group_col") else []),
+                                      *([ds["entity_col"]] if ds.get("entity_col") else []),
                                       *list(ds.get("extra_columns") or [])])]
 
     def read(path: str):
@@ -682,6 +839,12 @@ def load_groups(ds: Dict[str, Any]) -> Dict[str, Any]:
             tail = int(ds.get("tail_rows") or 0)
             return pd.DataFrame(rows[-tail:] if tail else rows)
         return pd.read_csv(p, usecols=lambda c: c in set(want))
+    if ds.get("paths"):
+        files = _resolve_all(str(ds["paths"]))
+        frames = [read(f) for f in files]
+        POOLED_FILES[:] = [str(f) for f in files]
+        out["POOLED"] = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=want)
+        return out
     if isinstance(ds.get("groups"), dict):
         for g, gs in ds["groups"].items():
             out[str(g)] = read(gs["path"])
@@ -713,7 +876,13 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
               status: Dict[str, Optional[str]]) -> Dict[str, Any]:
     ds, cv = spec["dataset"], spec.get("cv") or {}
     ts_col, target = ds.get("ts_col", "ts"), ds["target"]
-    df = df.dropna(subset=[target]).sort_values(ts_col).reset_index(drop=True)
+    ent_col = ds.get("entity_col")
+    if ent_col:   # pooled: calendar order across entities, ties broken by entity (stable, deterministic)
+        df = df.dropna(subset=[target]).sort_values([ts_col, ent_col], kind="mergesort").reset_index(drop=True)
+        ent_all = df[ent_col].astype("category").cat.codes.to_numpy()
+    else:
+        df = df.dropna(subset=[target]).sort_values(ts_col).reset_index(drop=True)
+        ent_all = None
     if spec.get("task", "classification") == "classification":
         classes = sorted(df[target].dropna().unique().tolist(), key=str)
         cmap = {c: i for i, c in enumerate(classes)}
@@ -756,7 +925,10 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         if why:
             res["arms"][name] = {"status": "unavailable", "reason": why}
             continue
-        cols = dict((c, df[c].to_numpy(dtype=float)) for c in base_cols)
+        # ``base_features`` (opt-in, RQ-20261126-9e73-01): a learner may REPLACE the shared base list (e.g. [] = only its own
+        # feature_blocks, so a raw-window GRU never sees the engineered columns the baseline uses). Absent = the shared list.
+        own_base = ls.get("base_features")
+        cols = dict((c, df[c].to_numpy(dtype=float)) for c in (base_cols if own_base is None else list(own_base)))
         for blk in ls.get("feature_blocks") or []:
             cols.update(FEATURE_BLOCKS[blk["kind"]](df, blk))
         names = list(cols)
@@ -768,7 +940,10 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
             for wname, wf in windows.items():
                 vals, ntest, oos = [], 0, []
                 for tr, te in wf:
-                    out = fit(X[tr], y_all[tr], X[te], k, dict(ls.get("params") or {}))
+                    prm = dict(ls.get("params") or {})
+                    if ent_all is not None and ls["kind"] in ENTITY_AWARE:
+                        prm["_entity_tr"], prm["_entity_te"] = ent_all[tr], ent_all[te]
+                    out = fit(X[tr], y_all[tr], X[te], k, prm)
                     vals.append(compute_metric(metric, y_all[te], out, classes))
                     ntest += len(te)
                     if keep:
@@ -782,6 +957,8 @@ def run_group(df, spec: Dict[str, Any], learner_specs: Dict[str, Dict[str, Any]]
         except Exception as e:  # allow-silent: one arm breaking is contained and recorded as status=error + reason in the result
             arm = {"status": "error", "reason": f"{type(e).__name__}: {e}"}
         res["arms"][name] = arm
+    if ent_col:
+        res["n_entities"] = int(df[ent_col].nunique())
     if cv.get("row_bootstrap"):
         res["_y"], res["_classes"] = y_all, classes
     return res
@@ -1036,11 +1213,14 @@ def run_spec(spec: Dict[str, Any], *, unit: str = "(inline)") -> Dict[str, Any]:
                    "metric_caveats": caveats,
                    "delta_sign": "positive = learner better than reference", "baseline": baseline,
                    "controls": controls, "candidates": candidates, "arm_status": arm_status,
-                   "torch_devices": sorted(set(TORCH_DEVICES_USED)),
+                   "torch_devices": sorted(set(TORCH_DEVICES_USED)), "torch_gru_fit": list(TORCH_GRU_FIT_INFO),
                    "groups": groups, "deltas": deltas, "rule_evaluation": graded,
                    "headline_checks": headline_checks(rule, deltas, baseline),
                    "licences": licences, "n_folds_cv_min_over_groups": folds_seen,
                    "seconds": round(time.time() - t0, 1)}
+    if POOLED_FILES:   # pooled population, named file by file (ML-GRU-POOLED-BP2)
+        measurement["pooled_files"] = {"n": len(POOLED_FILES), "files": [os.path.relpath(f, os.environ.get("ML_DATA_ROOT") or ".")
+                                                                        for f in POOLED_FILES]}
     if not base_ok:
         return {"verdict": "not_applicable", "read_state": "producer_failed", "n": None,
                 "population": f"{unit}: the BASELINE arm {baseline!r} could not run ({arm_status.get(baseline)}) — NEVER MEASURED",

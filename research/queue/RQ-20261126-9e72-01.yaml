@@ -1,0 +1,212 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (manager 00:28Z: author the GRU re-open now; GPU first-choice queue empty). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261126-9e72-01
+title: 'D2/F29 GRU RE-OPEN (GPU): the 9e71-01 GRU with EARLY STOPPING (chronological 20% validation, patience 3) + TEMPERATURE CALIBRATION on the validation logits
+  vs LightGBM on the same 10 features, 1h regime log-loss on BTC/ETH/SOL, paired block-bootstrap rule (same harness, symbols, folds as 9e71-01)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-sequence-gru
+  subject_kind: ml_model
+  from_result: RQ-20261125-9e71-01/45724458202
+  verdict_read: fail
+  diagnosis: '9e71-01 FAILED decisively (GRU log-loss worse than LightGBM by 0.24-0.36 nats/row) and the GRU was ALSO worse than the class prior by 0.11-0.26 nats
+    while LightGBM beat the prior by 0.10-0.13: the recipe (15 fixed epochs, no validation, no calibration) is overconfident/overfit, so 9e71-01 tested a mis-trained
+    GRU, not the sequence learner. The registered re-open condition is exactly an early-stopped + calibrated recipe.'
+  search: one fixed recipe (val_frac 0.2, patience 3, max 30 epochs, temperature calibration, weight_decay 1e-4); no grid.
+  levers:
+  - model_family
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 3
+  due_by: '2026-12-02'
+question: With early stopping on a chronological validation split and temperature calibration, does the GRU have a LOWER 1h regime log-loss than LightGBM on the same
+  10 features, with the paired moving-block (24-row) bootstrap 95% lower bound of the improvement above 0 on all of BTC/ETH/SOL?
+why_this_matters: It decides the deep_sequence family on a properly trained learner instead of a mis-trained one (9e71-01). PASS -> the entry-label GRU arm. FAIL
+  -> the GRU is closed on these features with a fair test, and the family re-opens only on a new representation. Also feeds the idle GPU queue.
+power:
+  expected_n: 100000
+  min_detectable_effect: 0.002
+  effect_units: logloss_nats_per_row
+  sd: 0.3
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~40k 1h rows per symbol x 3 with ~60% in test folds (~70k paired test rows); per-row log-loss difference sd ~0.3 nats gives a row-level se ~0.0012
+    before block dependence; the 24-row block bootstrap widens it, so a ~0.002-0.004 improvement is the smallest resolvable effect. INDETERMINATE is possible and
+    stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Published market shards (metis-market-data); nothing accrues.
+evidence_class:
+  holdout: none
+  claim: model_quality
+ml_consumer:
+  not_applicable: 'a model-family gate on a market regime target: no order, leg or book consumes this result; a PASS authors the entry-label GRU unit (ML-ENTRY-FINETUNE),
+    which carries its own consumer'
+baseline:
+  definition: LightGBM (n_estimators 200, lr 0.05, num_leaves 31, min_child_samples 50) on the SAME 10 columns, same folds and rows; the class prior is a reported
+    control.
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-kaggle.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261126-9e72-01
+decision_rule:
+  id: RULE-RQ-20261126-9e72-01
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: LightGBM on the same 10 columns, folds and rows
+  statistic: 'scripts/research/ml_bakeoff.py: per symbol, the paired moving-block (block_rows 24, n_boot 1000, seed 0) bootstrap of the POOLED out-of-fold log-loss
+    improvement (LightGBM minus GRU; positive = GRU better), stat boot_ci_low (95% lower bound) and boot_mean; the fold-level paired mean and the prior control are
+    reported. Reported: per-fit epochs run, best epoch, best validation log-loss and temperature (measurement.torch_gru_fit); GRU vs the class prior.'
+  rule: PASS iff the GRU boot_ci_low vs LightGBM is > 0 on ALL of BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h (>= 3 folds measured). FAIL iff the GRU boot_mean vs LightGBM
+    is <= 0 on EVERY symbol. INDETERMINATE otherwise. Fixed now; machine form in ml_bakeoff.rule.
+  pass_action: Author the entry-label GRU arm in scripts/research/ml_entry_fix_arms.py (net R per side, frozen v1 recipe as baseline, net of the full cost stack)
+    as its own pre-registered unit (MLP-F-SEQUENCE-GRU levers_ahead).
+  fail_action: Close the GRU on these engineered features for D2/D3 with a fair (calibrated) test; the deep_sequence family re-opens only on a new representation
+    (raw OHLCV windows or a pretrained TS encoder), authored from this diagnosis.
+  proposal_mapping: pass -> entry-label GRU unit; fail -> line closed; indeterminate -> one re-read at 15m (more rows) authored from the CI width.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'ESTIMATE: a model-family gate; value is the decision it unlocks for D2/D3, not a direct P&L.'
+practice_precedent: paired comparison on identical features with a row-level moving-block bootstrap CI on a proper scoring rule (principles M6, M13); ML-F29.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-data
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  basis: 'ESTIMATE: 3 symbols x 5 folds x one GRU fit (<= 40k windows of 48 x 10, 15 epochs) on a T4, plus LightGBM; ff8f-04 ran a smaller GRU on 1 CPU in ~240 min
+    estimated. Re-declare from the first run.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261018-ff8f-04
+- RQ-20261014-65cc-10
+- RQ-20261014-4591-02
+- scripts/research/ml_bakeoff.py
+- FRONTIER-Q-GRU-RESOLVABLE
+- MLP-F-SEQUENCE-GRU
+- RQ-20261125-9e71-01
+not_before: '2026-11-26T00:30:00+00:00'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 24
+      n_boot: 1000
+      seed: 0
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 48
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 40000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+last_dispatched_at: null
+grading:
+  attested: RULE-RQ-20261126-9e72-01
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261126-9e72-01
+  evidence:
+  - research/results/RQ-20261126-9e72-01/45735661023.jsonl
+  first_fail: 1 row(s), all measured, all fail
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

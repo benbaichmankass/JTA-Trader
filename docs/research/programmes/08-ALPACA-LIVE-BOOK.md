@@ -6,6 +6,14 @@ Machine tree: [`research/programmes/08-alpaca-live-book.yaml`](../../../research
 
 **Gates this adds or changes: none.** Nothing here changes what trades. Foxhound-4 stays live until a challenger clears § 5.
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — MODEL / TRADING (real money)
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P8 in the window:** 10 units (2 pass, 6 fail, 1 ind, 1 ungraded).
+
+**What was learned.** **Two of the three real-money alpaca_live legs fail at the measured Alpaca cost**: slv_trend_1h (f2a4-06) and tlt_pullback_1h (f2a4-07) FAIL their Stage-0 reprice; tqqq_trend_long_1d (f2a4-05) PASSES. No row or pipeline item cited either FAIL until this review filed **ALPACA-LIVE-COST-REPRICE-FAIL**. **Operator decision 2026-11-25:** neither leg is demoted. tlt_pullback_1h "doesn't get demoted until we've tried iterating" and slv_trend_1h stays "on real money". Both iterate instead: a cost-lever unit for TLT and a fold-robustness unit for SLV (owner QUEUE-FILL-STANDING-W49; plan in `08-alpaca-live-book.yaml` → `rollforward_2026_11_25`). Foxhound-4 lost on feature families (f7c1-03) and on the cost-neutral target (c21d-06); the slv head-to-head (f2a4-03) FAILED; dual-momentum rotation (f2a4-04) is INDETERMINATE.
+
+**Next 3–4 weeks:** (1) the TLT cost-lever and SLV fold-robustness iterations (QUEUE-FILL-STANDING-W49); (2) f7c1-04 Foxhound-4 horizon (queued) — decides whether a daily decision beats the 4h cadence; (3) dual-momentum rotation at power (f2a4-04 IND) — decides whether a new family enters the cash book.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — MODEL / TRADING (real money)
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

@@ -1,0 +1,79 @@
+{
+  "arms": {
+    "nostate_vs_equal": {
+      "n_weeks": 251,
+      "trades": 323016,
+      "money_arm": -0.02228,
+      "money_base": -0.04286,
+      "delta": 0.02059,
+      "se_week_boot": 0.00537,
+      "t": 3.837,
+      "random": {
+        "draws": 200,
+        "kind": "weights permuted across books within each week",
+        "mean": -0.04292,
+        "p95": -0.03831,
+        "share_ge_arm": 0.0
+      },
+      "yearly_delta": {
+        "2022": 0.0029,
+        "2023": 0.0106,
+        "2024": 0.0359,
+        "2025": 0.0288,
+        "2026": 0.0234
+      },
+      "share_book_weeks_up": 0.392,
+      "trade_share": 1.0,
+      "checks": {
+        "delta_ge_min": true,
+        "t_ge_min": true,
+        "beats_random": true,
+        "years_positive": true
+      },
+      "verdict": "pass"
+    },
+    "advol_vs_nostate": {
+      "n_weeks": 251,
+      "delta": -0.00716,
+      "se_week_boot": 0.00643,
+      "t": -1.114,
+      "yearly_delta": {
+        "2022": 0.0093,
+        "2023": 0.0127,
+        "2024": -0.0388,
+        "2025": -0.0111,
+        "2026": -0.0046
+      },
+      "verdict": "fail"
+    },
+    "hmm2_vs_nostate": {
+      "n_weeks": 251,
+      "delta": 0.00408,
+      "se_week_boot": 0.00375,
+      "t": 1.089,
+      "yearly_delta": {
+        "2022": 0.0163,
+        "2023": -0.0059,
+        "2024": 0.0007,
+        "2025": 0.0059,
+        "2026": 0.0035
+      },
+      "verdict": "indeterminate"
+    }
+  },
+  "verdict": "indeterminate",
+  "books": {
+    "n_books": 210,
+    "trades": 395186,
+    "sum_r": -15255.45
+  },
+  "n_test_weeks": 251,
+  "level": "symbol",
+  "mode": "decomp",
+  "rule": {
+    "id": "RULE-REGIME-R3-DECOMP-20261125",
+    "min_delta_r": 0.005,
+    "min_t": 2.0,
+    "min_years_positive": 3
+  }
+}

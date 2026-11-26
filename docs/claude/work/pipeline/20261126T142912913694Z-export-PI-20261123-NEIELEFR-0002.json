@@ -1,0 +1,21 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "due_date": "2026-12-09",
+    "kind": "date"
+  },
+  "id": "PI-20261123-NEIELEFR-0002",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "research",
+    "ref": "lane INDEX-LEVERAGED-ETF-ROSTER-20261123 (own mistake: probe run 45250700088 printed the paper account payload)",
+    "rerun": "Open https://github.com/benbaichmankass/JTA-Trader/actions/runs/45250700088 and check whether its log still exists / shows the account payload."
+  },
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row WEEKLY-PLANNING is queued (due_by now 2026-12-09); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "WEEKLY-PLANNING (manager; W48 planning disposition) -- ranked in docs/plans/planning-2026-W48-open-items.md § Backlog triage output [routed by BACKLOG-TRIAGE-W48 2026-11-25: item was queued+due and unrouted; origin lane INDEX-LEVERAGED-ETF-ROSTER-20261123 (own mistake: probe run 45250; routing-alarm rule]",
+  "state": "routed",
+  "what": "The first broker-fractional-probe run (45250700088, 2026-11-23 19:36Z) printed the full paper /v2/account JSON (paper account number and balances) into a public repo's job log. The script was fixed (#28459) but the log was not deleted: delete_workflow_run_logs was denied to the lane by the auto-mode classifier. Manager or operator must delete that run's logs (gh run delete 45250700088 or the Actions UI). Also delete the redundant remote branch lane/index-leveraged-etf-roster-20261123-lintfix (a git push --delete from the lane hung up)."
+}

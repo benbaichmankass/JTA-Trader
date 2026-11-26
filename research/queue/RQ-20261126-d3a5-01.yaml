@@ -1,0 +1,143 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row DESK-MACRO-DAILY, build step 3a: "do existing legs' outcomes differ around rate decisions or earnings?").
+# Rule registered BEFORE any run; only entry COUNTS were read (equities replay) to state power, never a net R. Gates this adds or changes: none.
+id: RQ-20261126-d3a5-01
+title: 'DESK-MACRO-DAILY 3a: do the rostered legs'' trades ENTERED within 24 h of a scheduled US release (FOMC decision / CPI / NFP) differ in net R from
+  their other trades, beyond a date-shifted placebo, net of the full cost stack, or is a material difference ruled out?'
+status: done
+cadence: once
+theme: macro
+priority: 2
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+origin: new_hypothesis
+question: Across every rostered leg (crypto + ETFs / micro futures; rostered_leg_replay --universe all), is the mean net R of trades entered within +-24 h of
+  a graded release different from that of the other trades by >= 0.10 R (95% week-cluster CI excluding 0, placebo share <= 0.05), or does the CI sit inside
+  +-0.10 R (no material effect)?
+why_this_matters: 'The operator asked the daily macro brief to inform other trades ("avoid / size down around an event"). That tag is only worth emitting
+  if entries near scheduled releases actually behave differently. a5b3-01 reported trades HELD THROUGH a release at +0.47 vs +0.04 R (CI +0.27..+0.61),
+  but holding through is confounded by hold length (a spanning trade is a longer hold, and long holds are the trend winners). Entry-conditioning removes
+  that confound. A PASS defines the informs tag and its sign (skip vs lean in) as the next unit; a FAIL retires the scheduled-event informs tag for the
+  rostered book with a measured null.'
+levers:
+- name: event_day_entry_conditioning
+  values: [entries within +-24 h of fomc_decision / cpi / nfp (pooled ANY decides; per class reported), all other entries, date-shifted placebo releases (200 draws)]
+  hypothesised_effect: event-window entries differ from other entries by >= 0.10 R net of cost
+evidence_class:
+  holdout: none
+  claim: edge
+power:
+  expected_n: 2100
+  min_detectable_effect: 0.10
+  effect_units: metric
+  sd: 1.2
+  design: two_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED counts only (no net R read). The equities half (local replay with the runner pin dukascopy-python 4.0.1): 2,238 trades inside the
+    release history''s covered window (2021-01-08..2026-11-10), 508 flagged (22.7%: fomc_decision 146, cpi 199, nfp 178; classes overlap). The crypto half:
+    ~7,963 replayed trades over 21 rostered legs (MEASURED, f1a0-24); assuming the same share gives ~1,600 flagged of ~7,100 covered. Total ~2,100 flagged
+    vs ~7,200 other. With sd 1.2 R (ESTIMATE), SE of the difference ~ 1.2 x sqrt(1/2100 + 1/7200) = 0.030 R (~0.039 with week clustering), MDE ~0.08-0.11 R,
+    close to the 0.10 bar. The equivalence FAIL needs CI half-width ~0.076 R, so it is reachable only if the true difference is under ~0.025 R.'
+  feasibility:
+    source: none
+    accrual_basis: The trades are replayed at run time from the evidence builder's harness path over a pinned window, and the release history is committed
+      (comms/research/event_span_history/us_releases.jsonl, 184 graded releases); nothing accrues. The counts above came from a local replay, not from a
+      committed verdict, so the source is none.
+ml_consumer:
+  not_applicable: 'a macro-desk conditioning study whose consumer is the DESK-MACRO-DAILY brief''s informs tag, not an ML model'
+baseline:
+  definition: The same legs' trades entered outside every +-24 h release window (difference in means), and 200 placebo release calendars (each release
+    shifted by a random +-5..15 days).
+  net_of_cost: true
+run:
+  command:
+  - python3
+  - scripts/research/rostered_leg_replay.py
+  - --mode
+  - eventday
+  - --universe
+  - all
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261126-d3a5-01
+decision_rule:
+  id: RULE-DESK-3A-EVENTDAY-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: other entries of the same legs; 200 date-shifted placebo calendars
+  statistic: 'scripts/research/rostered_leg_replay.py --mode eventday --universe all (load_releases, event_flags, grade_eventday): per class and pooled ANY,
+    diff = mean net R of entries within +-24 h of a release minus mean net R of the other entries, over trades entering inside the release history''s covered
+    window; 95% CI from 1,000 week-cluster bootstrap draws; placebo share = share of 200 placebo calendars (every release of the class shifted by a seeded
+    random +-5..15 days) whose |diff| >= the actual |diff|; per-leg diffs reported (n >= 5 each side).'
+  rule: 'Decided on pooled ANY. PASS iff |diff| >= 0.10 R AND the CI95 excludes 0 AND placebo share <= 0.05 (the sign picks the next unit: negative = a
+    skip / size-down informs tag; positive = lean in). FAIL iff the CI95 lies inside (-0.10, +0.10) R (a material effect ruled out). n_flagged < 200 =
+    INDETERMINATE. Else INDETERMINATE. Per-class rows are reported and never decide.'
+  pass_action: 'Author the informs-tag unit for the sign found: a per-leg skip (or size) rule on event-window entries, graded net of cost against random skips
+    of the same count, before the DESK-MACRO-DAILY brief emits the tag. Advice-only until that passes (active-management doctrine).'
+  fail_action: Record that scheduled-release proximity does not change the rostered legs' entry outcomes by a material amount (measured null). The brief emits
+    no scheduled-event informs tag for the rostered book; DESK-MACRO-DAILY moves to 3b (unscheduled events) and 3c (the macro trade arm).
+  proposal_mapping: pass -> informs-tag unit with its own net-of-cost test; fail -> no tag, move to 3b/3c; indeterminate -> state which side failed, widen
+    the population (e.g. add earnings dates for the equity legs) or iterate.
+  what_it_does_not_do: Changes no config, filter, sizing or order path; adds no gate; replays the evidence builder's harness path read-only, writes only under
+    --out.
+  min_n: 200
+compute: cpu_light
+value:
+  bucket: information
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'stand-in: ~23% of rostered entries fall in release windows; not a P&L measurement.'
+intervention_controls:
+  matched_random:
+    description: 200 placebo release calendars (each release shifted by a seeded random +-5..15 days); the actual |diff| must exceed >= 95% of placebo |diff|
+    draws: 200
+  hold_to_bracket: true
+  hold_to_bracket_note: no action is applied; every trade keeps its harness bracket, and only the entry-window label changes
+  best_static:
+    grid:
+    - no conditioning (all entries alike) - the registered comparator
+    excludes_test_folds: true
+    note: one fixed window (+-24 h) and three fixed classes; nothing searched
+  bootstrap_group: week
+practice_precedent: rule registered before the run, net of the full cost stack, placebo control, week-clustered CI, an equivalence bound so a null is a
+  measured outcome (principles R5, M6, M13); entry-conditioned to remove the a5b3-01 hold-length confound.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 90
+  why_runner: Keyless Binance Vision (crypto) + Dukascopy (non-crypto; research-script-run installs dukascopy-python 4.0.1) candles for 40 rostered legs plus
+    the repo harnesses; no model fit.
+  basis: 'ESTIMATE from MEASURED pieces: the 22-leg equities replay took ~15 min locally; the 21 crypto legs ran inside f1a0-24 on a runner; the grade is
+    1,000 bootstraps + 200 placebos x 4 classes.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/rostered_leg_replay.py
+- comms/research/event_span_history/us_releases.jsonl
+- RQ-20261118-a5b3-01
+- DESK-MACRO-DAILY
+- .claude/skills/macro-research/SKILL.md
+last_dispatched_at: '2026-11-26T04:52:25+00:00'
+grading:
+  attested: RULE-DESK-3A-EVENTDAY-20261126
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-DESK-3A-EVENTDAY-20261126
+  evidence:
+  - research/results/RQ-20261126-d3a5-01/45750450587.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

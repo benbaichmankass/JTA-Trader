@@ -29,6 +29,32 @@ twin), splg VH90 (RSP twin), mgc_trend_1h VL30 (SLV twin), qqq_trend_long DS (pr
 twins. Iterations: the trend-long family VH test (4 legs), mgc_pullback HTF gate, uso / tlt ADX ceiling, gdx vol skips on the
 long history, trend_donchian session. Each node names its decision, both branches and its pre-mortem in why_this_matters.
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P3 in the window:** 152 programmed units (61 pass, 80 fail, 5 ind, 6 ungraded) plus the unprogrammed live_strategy cluster (161: 31 pass / 78 fail / 17 ind / 35 ungraded or no-action), almost all the weekly generated roster-walkforward sweeps, assigned here.
+
+**What was learned**
+- **The iteration loop is turning but not learning on 39 of 57 testing legs** (iteration_orphans 11-25: 12 covered, 39 overdue, 6 orphan). Two mechanisms, both now rows:
+  1. **No-op arms graded FAIL** — the weekly entry sweeps of all 8 ict_scalp legs (RQ-20261105-028..035, 23 result rows) passed identical argv to every arm: the stepped keys are ones `build_harness_cmd` omits, so every variant equals control A (e.g. 028: n 455, −146.97 R on all 5 arms) and the grader says FAIL. The lever map correctly kept entry *untested*, so nothing false entered the map, but the verdicts are void. Row **RESEARCH-LEVER-ARM-NOOP**.
+  2. **The generator cannot reach 6 of 9 families** — `lever_design.next_lever` only offers families with a numeric config key or a `declared:` entry, so timeframe (34 legs), symbol_set (28), sizing_vs_cost (26), session (16), regime_gating (15) and direction (7) are never swept; 16 overdue legs have only those left and their weekly unit re-sweeps entry/exit. Row **RESEARCH-LEVER-FAMILY-REACH**.
+- **Single-symbol leads mostly do not travel.** trend_donchian_1h slope-direction gate: 1 of 4 symbol holdouts PASS (ETH only; BNB/SOL/XRP FAIL). Trend-long top-vol skip: PASS on iwm and qqq, FAIL on spy and qld, and FAIL on the pre-development 2006-2018 window (RQ-20261119-010). Belief: the vol skip is a post-2018 equity-index effect on two of four ETFs, not a family property.
+- **qqq_pullback_1h session skip confirmed on holdout** (RQ-20261118-001 PASS) — a Tier-3 declare candidate for the qqq packet.
+
+**Failed tests: diagnosis.** trend_donchian_1h DS: *regime / symbol* (ETH-specific) vs *noise* (1 of 4 is within chance for a best-of selection); no further symbol twin — the leg goes to its family-review record (lever map has no remaining family). Trend-long VH: *regime / window* (fails pre-2018); the variant is none on the family — keep the iwm/qqq PASSes as discoveries needing their own pre-development read.
+
+**Answered:** P3-ITER-qqq-pullback-1h-session-holdout (PASS); P3-RP1119-trend-donchian-1h-ds (1/4); P3-RP1119-trend-long-family-vh (2/4 + pre-dev FAIL). **Retired:** none (htf_pullback_trend_2h and trend_donchian_1h have every family read: family-review records due, retirement only through policy v3).
+
+**Next 3–4 weeks** (every subject has two weeks written in `research/programmes/03-strategy-improvement.yaml` → `rollforward_2026_11_25`, derived from unit states and blockers)
+| # | Test / row | Decision it changes | PASS → | FAIL → | Cost | Pre-mortem |
+|---|---|---|---|---|---|---|
+| 1 | RESEARCH-LEVER-ARM-NOOP (void + refuse omitted-key arms) | whether 8 ict_scalp legs' entry family is read at all | real entry sweeps | — | build (Tier 1) | other harnesses omit keys too (3 exit rows look identical) |
+| 2 | RESEARCH-LEVER-FAMILY-REACH | whether 16 legs can iterate at all | timeframe / symbol_set sweeps emit | — | build | per-arm timeframe needs per-arm data fetch |
+| 3 | qqq_pullback_1h session skip Tier-3 declare | qqq packet session filter | declare | — | proposal | the skip removes too few bars to matter live |
+| 4 | Family-review records: htf_pullback_trend_2h, trend_donchian_1h | retirement proposal or the family the record names | — | — | authoring | a family is "tested" on a no-op or underpowered read |
+| 5 | iwm/qqq top-vol skip pre-development reads | whether the VH skip is real on those two | proposal with two windows | discovery stays | runner | yfinance history too short for qqq pre-2006 |
+
+**Feeds:** P3 → P1: none new. P3 → P2: direction (shorts lose gross on qqq and spy pullbacks) → D3 side question.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

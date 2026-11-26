@@ -69,14 +69,14 @@ attribution:
       gross_r: -1.718
 manifest:
   entry: untested
-  exit: untested
-  filter: untested
+  exit: tested
+  filter: tested
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
   direction: tested
   session: tested
-  sizing_vs_cost: untested
+  sizing_vs_cost: tested
 levers:
   direction:
     side_filter:
@@ -95,6 +95,20 @@ levers:
         max_drawdown_r: 121.8615
         verdict: pass
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-24
+        window: 2021-11-19..2026-11-21
+        n: 244
+        net_r: -71.6487
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 75.3181
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 73.2837
+        verdict: pass
+        joint_change: false
       - value: short
         baseline_value: 'off'
         arm: SHORT
@@ -109,14 +123,170 @@ levers:
         max_drawdown_r: 106.9613
         verdict: pass
         joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-24
+        window: 2021-11-19..2026-11-21
+        n: 214
+        net_r: -74.6435
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 72.3233
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 77.0927
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.1804
       fold_stability: 1.0
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  exit:
+    be_floor_r:
+      tests:
+      - value: '1.0'
+        baseline_value: 'off'
+        arm: BE1
+        unit: RQ-20261118-abab-06
+        window: 2021-11-19..2026-11-22
+        n: 455
+        net_r: -149.907
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: -2.9402
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 151.7109
+        verdict: pass
+        joint_change: false
+      shape: flat
+      points: 1
+      best_delta_r_per_trade: -0.0065
+      fold_stability: 0.333
+      reading: no response at the tested values
+    stale_exit_bars:
+      tests:
+      - value: '12'
+        baseline_value: 'off'
+        arm: SE12
+        unit: RQ-20261118-abab-06
+        window: 2021-11-19..2026-11-22
+        n: 457
+        net_r: -141.7226
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 5.2442
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 145.0017
+        verdict: pass
+        joint_change: false
+      - value: '8'
+        baseline_value: 'off'
+        arm: SE8
+        unit: RQ-20261118-abab-06
+        window: 2021-11-19..2026-11-22
+        n: 457
+        net_r: -135.6871
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 11.2797
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 139.015
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0248
+      fold_stability: 0.833
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    atr_sl_buffer_mult:
+      tests:
+      - value: '0.6'
+        baseline_value: 'off'
+        arm: SLB
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 274
+        net_r: -71.023
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: 14.1651
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 73.2909
+        verdict: pass
+        joint_change: false
+      - value: '0.6'
+        baseline_value: 'off'
+        arm: SLB
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 274
+        net_r: -71.023
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: 14.1651
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 73.2909
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0517
+      fold_stability: 0.833
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  filter:
+    htf_rule:
+      tests:
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 358
+        net_r: -121.6848
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: -36.4967
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 121.8471
+        verdict: pass
+        joint_change: false
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 358
+        net_r: -121.6848
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: -36.4967
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 121.8471
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: -0.1332
+      fold_stability: 0.0
+      reading: every tested value is worse than the baseline
   session:
     skip_hours:
       tests:
+      - value: 0,1,2,3,4,5,6,7
+        baseline_value: 'off'
+        arm: S_ASIA
+        unit: RQ-20261118-abab-25
+        window: 2021-11-19..2026-11-21
+        n: 455
+        net_r: -146.9668
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 148.7707
+        verdict: pass
+        joint_change: false
       - value: 0,1,2,3,4,5,6,7
         baseline_value: 'off'
         arm: S_ASIA
@@ -129,6 +299,20 @@ levers:
         delta_net_r: 76.7894
         folds_ge_baseline: 4/4
         max_drawdown_r: 149.9147
+        verdict: pass
+        joint_change: false
+      - value: 20,21,22,23
+        baseline_value: 'off'
+        arm: S_LATE
+        unit: RQ-20261118-abab-25
+        window: 2021-11-19..2026-11-21
+        n: 358
+        net_r: -119.6222
+        baseline_n: 455
+        baseline_net_r: -146.9668
+        delta_net_r: 27.3446
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 121.673
         verdict: pass
         joint_change: false
       - value: 20,21,22,23
@@ -160,9 +344,47 @@ levers:
         verdict: pass
         joint_change: false
       shape: monotone
-      points: 3
+      points: 5
       best_delta_r_per_trade: 0.1146
       fold_stability: 1.0
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  sizing_vs_cost:
+    entry_mode:
+      tests:
+      - value: limit
+        baseline_value: 'off'
+        arm: LIM
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 269
+        net_r: -57.8995
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: 27.2886
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 60.7189
+        verdict: pass
+        joint_change: false
+      - value: limit
+        baseline_value: 'off'
+        arm: LIM
+        unit: RQ-20261101-78fc-44
+        window: 2024-10-05..2026-10-04
+        n: 269
+        net_r: -57.8995
+        baseline_n: 274
+        baseline_net_r: -85.1881
+        delta_net_r: 27.2886
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 60.7189
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 2
+      best_delta_r_per_trade: 0.0996
+      fold_stability: 1.0
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
 manifest_notes:
-  abab_24_loses_less_2026_11_23: 'RQ-20261118-abab-24 (side filter) graded PASS under the registered rule, but the best arm is net negative: A n=455 net -146.97 R; LONG n=244 net -71.65 R; SHORT n=214 net -74.64 R. Loses less, not a positive edge: no confirmation unit (manager ruling 2026-11-23).'
+  abab_24_loses_less_2026_11_23: 'RQ-20261118-abab-24 (side filter) graded PASS under the registered rule, but the best arm is net negative: A
+    n=455 net -146.97 R; LONG n=244 net -71.65 R; SHORT n=214 net -74.64 R. Loses less, not a positive edge: no confirmation unit (manager ruling
+    2026-11-23).'

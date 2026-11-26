@@ -10,31 +10,10 @@ baseline:
 attribution:
   read_state: no_arm_records_yet
 manifest:
-  trigger: tested
+  trigger: untested
   timing: tested
-  action_bounds: tested
+  action_bounds: untested
 levers:
-  trigger:
-    tighten_be_trigger:
-      tests:
-      - unit: RQ-20261122-c8e1-01
-        value: giveback
-        response: -0.1027 R/trade vs hold (CI -0.1765..-0.0316), n_fired 380; 0/6 folds, 0/200 controls
-        shape: single_point
-      - unit: RQ-20261122-c8e1-01
-        value: momentum_flip
-        response: -0.075 R/trade (CI -0.1805..+0.0113), n_fired 169; 0/6 folds, 0/200 controls
-        shape: single_point
-      - unit: RQ-20261122-c8e1-01
-        value: near_target
-        response: -0.0011 R/trade (CI -0.0485..+0.0485), n_fired 388; CVaR5 cut 3.4% (bar 15%); 0/6 folds, 0/200 controls
-        shape: single_point
-      - unit: RQ-20261122-c8e1-01
-        value: structure_break
-        response: -0.3129 R/trade (CI -0.6867..-0.0652), n_fired 20; 0/6 folds, 0/200 controls
-        shape: single_point
-      note: action fixed at BE+0.25R, >= 1 ATR room; trigger `stall` never fired on this corpus (0 of 3,921) so it is not a test; all four arms fail R2/R3, none beats its random control. The action level (action_bounds) is the family still untested (RQ-20261122-d4a9-01/02/03 queued).
-      shape: four_points_none_clear
   timing:
     open_r_at_tighten:
       tests:
@@ -43,26 +22,4 @@ levers:
         response: -0.041 R (CI -0.087..-0.005)
         shape: single_point
         note: late cell (open >= +1R, >= BE, >= 1 ATR room) never graded
-      - unit: RQ-20261117-43b6-05
-        value: late cell (BE+0.25R once open >= +1R, >= 1 ATR room)
-        response: -0.0777 R/trade vs hold (CI -0.1191..-0.0372); beat 0/200 random controls; 0/6 folds; maxDD +4.7% worse
-        shape: single_point
-        note: 3,921 trades, all 8 legs negative; the late cell fails like the early cell
-      shape: two_points_both_negative
-  action_bounds:
-    tighten_be_plus_r:
-      tests:
-      - unit: RQ-20261122-d4a9-01
-        value: -0.75
-        response: -0.0111 R/trade vs hold (CI -0.0246..+0.0008), n_fired 1,426; 0/6 folds, 0/200 controls; maxDD +3.6% worse
-        shape: single_point
-      - unit: RQ-20261122-d4a9-02
-        value: -0.5
-        response: -0.0131 R/trade (CI -0.0323..+0.0043), n_fired 1,426; 0/6 folds, 0/200 controls; maxDD +2.7% worse
-        shape: single_point
-      - unit: RQ-20261122-d4a9-03
-        value: 0.0
-        response: -0.0473 R/trade (CI -0.0814..-0.0159), n_fired 1,424; 0/6 folds, 0/200 controls; maxDD +1.1% worse
-        shape: single_point
-      note: trigger fixed at r_milestone, action tighten to BE + x R with >= 1 ATR room, x in {-0.75, -0.5, 0.0} (the c8e1-01 trigger family used +0.25 on a different trigger, so it is not a point on this curve). All three fail R2/R3 and none beats its random control (n_comparisons 3, bar 0.9833). The delta falls as x rises (-0.011, -0.013, -0.047 R/trade), a monotone loss with no interior optimum; no tested point clears the risk-adjusted rule.
-      shape: monotone
+      shape: single_point

@@ -61,9 +61,20 @@ from datetime import datetime, time as dt_time, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.runtime import ib_trading_hours, stray_oca_groups, stray_oca_soak
-from src.units.accounts.ib_instruments import ib_instrument_spec, is_ib_equity_symbol
+from src.units.accounts.ib_instruments import (
+    contract_month_of,
+    ib_instrument_spec,
+    in_roll_window,
+    is_ib_equity_symbol,
+    select_open_month,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_today():
+    """Today's UTC date (a seam so tests can pin the roll-window clock)."""
+    return datetime.now(timezone.utc).date()
 
 DEFAULT_IB_HOST = "127.0.0.1"
 
@@ -708,6 +719,11 @@ class IBClient:
         self._ib_factory = _ib_factory
         self._ib: Any = None
         self._contract: Any = None
+        # Physically delivered futures (IB-MGC-INACTIVE-1125): symbol ->
+        # (monotonic_ts, contract) for the opening-order contract, which
+        # depends on today's date, so it carries a TTL.
+        self._open_contracts: Dict[str, Tuple[float, Any]] = {}
+        self._front_contracts: Dict[str, Tuple[float, Any]] = {}
         # Venue-session cache: symbol -> (expiry_monotonic, hours_str, tz_id).
         # The raw STRINGS are cached, never the verdict — see _venue_session.
         self._session_hours: Dict[str, Tuple[float, Optional[str], Optional[str], Optional[str]]] = {}
@@ -1609,6 +1625,13 @@ class IBClient:
         # Futures path (unchanged; ``ib_exchange`` now sourced from the
         # resolver rather than a hardcoded dict literal).
         ib_exchange = spec.exchange
+        if spec.roll_days_before_month is not None:
+            front_cached = self._front_contracts.get(sym)
+            if front_cached is not None and time.monotonic() - front_cached[0] < 3600.0:
+                held = self._held_future_contract(ib, sym)
+                if held is not None:
+                    return held
+                return self._open_contract_for(ib, sym, spec, front_cached[1])
         cont = ContFuture(sym, ib_exchange, currency=spec.currency or "USD")
         ib.qualifyContracts(cont)
         con_id = getattr(cont, "conId", 0)
@@ -1621,7 +1644,141 @@ class IBClient:
             )
         contract = Future(conId=con_id, exchange=ib_exchange)
         ib.qualifyContracts(contract)
+        if spec.roll_days_before_month is not None:
+            # IB-MGC-INACTIVE-1125: a physically delivered future's management
+            # orders (protective re-arm, modify, close, session check) must
+            # target the contract the position is HELD in, which after a roll
+            # is not ContFuture's front month. Held contract first; with
+            # nothing held, the contract an opening order would use. Not
+            # cached: the held contract changes when a position opens/closes.
+            self._front_contracts[sym] = (time.monotonic(), contract)
+            held = self._held_future_contract(ib, sym)
+            if held is not None:
+                return held
+            return self._open_contract_for(ib, sym, spec, contract)
         self._contract = contract
+        return contract
+
+    def _build_open_contract(self, symbol: Optional[str] = None) -> Any:
+        """The contract an OPENING order for *symbol* uses (IB-MGC-INACTIVE-1125).
+
+        Identical to :meth:`_build_contract` except for a physically delivered
+        future (``roll_days_before_month`` set in ``config/instruments.yaml``)
+        whose resolved contract is inside its roll window: IBKR refuses
+        opening orders in the delivery window (Error 201 -- MEASURED
+        2026-11-25, every ``mgc_trend_1h`` sell on MGCZ6 rejected with parent
+        status Inactive), so the order goes to the next active month instead.
+        Closing / protective orders keep :meth:`_build_contract`, which
+        follows the held position.
+        """
+        contract = self._build_contract(symbol)
+        sym = str(symbol or self.symbol or "MES").upper()
+        try:
+            spec = ib_instrument_spec(sym)
+        except ValueError:
+            return contract
+        if spec.sec_type != "FUT" or spec.roll_days_before_month is None:
+            return contract
+        if not in_roll_window(contract_month_of(contract), spec, _utc_today()):
+            return contract
+        return self._open_contract_for(self.connect(), sym, spec, contract)
+
+    def _held_future_contract(self, ib: Any, sym: str) -> Any:
+        """The FUT contract this account holds a non-zero *sym* position in, else None.
+
+        Reads ib_insync's cached ``positions()`` list (no request). Any read
+        failure returns None -- the caller then uses the opening contract,
+        which is also what ContFuture would have given before a roll.
+        """
+        try:
+            items = ib.positions(self.account) if self.account else ib.positions()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("IBClient: held-contract read failed for %s: %s", sym, exc)
+            return None
+        held = []
+        for it in items or []:
+            c = getattr(it, "contract", None)
+            try:
+                size = float(getattr(it, "position", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if (c is not None and size != 0
+                    and str(getattr(c, "symbol", "") or "").upper() == sym
+                    and str(getattr(c, "secType", "FUT") or "FUT").upper() == "FUT"):
+                held.append((abs(size), c))
+        if not held:
+            return None
+        if len(held) > 1:
+            logger.warning(
+                "IBClient: %s held in %d contract months (%s) -- management "
+                "orders target the largest", sym, len(held),
+                ", ".join(str(getattr(c, "localSymbol", "") or contract_month_of(c)) for _, c in held),
+            )
+        held.sort(key=lambda t: t[0], reverse=True)
+        c = held[0][1]
+        if not getattr(c, "exchange", None):
+            try:
+                c.exchange = ib_instrument_spec(sym).exchange
+            except Exception:  # noqa: BLE001
+                pass
+        return c
+
+    def _open_contract_for(self, ib: Any, sym: str, spec: Any, front: Any) -> Any:
+        """Earliest active-month contract outside the roll window, else *front*.
+
+        Cached per symbol for an hour (the choice depends on the date). A
+        failed lookup returns *front* and says so -- the venue then answers,
+        and the coordinator's per-leg backoff contains a repeat refusal.
+        """
+        cached = self._open_contracts.get(sym)
+        if cached is not None and time.monotonic() - cached[0] < 3600.0:
+            return cached[1]
+        today = _utc_today()
+        if not in_roll_window(contract_month_of(front), spec, today):
+            self._open_contracts[sym] = (time.monotonic(), front)
+            return front
+        try:
+            try:
+                from ib_insync import Future  # type: ignore
+            except ImportError:
+                from ib_async import Future  # type: ignore
+            details = ib.reqContractDetails(
+                Future(symbol=sym, exchange=spec.exchange, currency=spec.currency or "USD")
+            ) or []
+            by_month: Dict[str, Any] = {}
+            for d in details:
+                c = getattr(d, "contract", None)
+                mon = str(getattr(d, "contractMonth", "") or "")[:6] or contract_month_of(c)
+                if c is not None and getattr(c, "conId", 0) and mon and mon not in by_month:
+                    by_month[mon] = c
+            chosen = select_open_month(by_month.keys(), spec, today)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "IBClient: %s front month %s is inside its delivery roll window "
+                "but the next contract could not be looked up (%s: %s) -- "
+                "using the front month; IB may refuse the order",
+                sym, contract_month_of(front), type(exc).__name__, exc,
+            )
+            return front
+        if chosen is None:
+            logger.error(
+                "IBClient: %s front month %s is inside its delivery roll window "
+                "and no listed active month qualifies (listed: %s) -- using the "
+                "front month; IB may refuse the order",
+                sym, contract_month_of(front), sorted(by_month),
+            )
+            return front
+        contract = by_month[chosen]
+        try:
+            ib.qualifyContracts(contract)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("IBClient: qualify %s %s failed: %s", sym, chosen, exc)
+        logger.warning(
+            "IBClient: %s opening orders roll %s -> %s (front month inside the "
+            "%d-day physical-delivery window)", sym, contract_month_of(front),
+            chosen, spec.roll_days_before_month,
+        )
+        self._open_contracts[sym] = (time.monotonic(), contract)
         return contract
 
     # ------------------------------------------------------------------
@@ -1652,7 +1809,7 @@ class IBClient:
                 "an order. Construct without readonly=True to place orders."
             )
         ib = self.connect()
-        contract = self._build_contract(order.get("symbol"))
+        contract = self._build_open_contract(order.get("symbol"))
 
         direction = str(order.get("direction") or "").lower()
         if direction not in ("long", "short"):

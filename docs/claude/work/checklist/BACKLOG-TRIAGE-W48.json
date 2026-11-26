@@ -1,0 +1,22 @@
+{
+  "id": "BACKLOG-TRIAGE-W48",
+  "title": "Backlog triage W48: make the register plannable (close obsolete, re-date stale, route unrouted, re-owner in_flight) before Thursday 11-26 planning",
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 2,
+  "ceiling_usd": 25,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-26",
+  "note": "OPERATOR POPUP 2026-11-25 ~18:00Z, 'Approve all': the lane MAY bulk-close, with a recorded terminal_reason on every item: (a) the PI-SOAK-* soak-tracking items (soak step retired 11-12, MD-PROMOTE-S1-S2 soak_step: retired; for the 'ready' legs, check each one's Stage-0 evidence record instead and file a promotion candidate list); (b) items owned by archived/finished sessions with no next action; (c) past-session handover rows (e.g. ML-PRIMARY-15-HANDOVER, ML-WEEK-PLAN-1119). And re-date or drop stale due dates (measured 11-25 17:50Z: 440 of 522 queued builds and 370 of 377 landed_unproven past due). Everything else gets ROUTED or RE-OWNED, not closed: the 142 unrouted pipeline items (routing alarm, oldest 21d) and the in_flight rows with dead owners. Precedent: BACKLOG-RESET-20261029. Output: a list of what was closed (for the operator to skim at planning), plus a ranked open list per roadmap milestone feeding docs/plans/planning-2026-W48-open-items.md (branch manager/handoff-2026-11-25). Use scripts/ops/checklist.py and pipeline.py only. Re-read counts; never quote these.",
+  "phase": null,
+  "updated_at": "2026-11-26T07:23:11Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
+}

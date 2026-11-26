@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261124-TRRUNNER-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, LTR wakes 2026-11-23T19:33Z and 2026-11-24T00:03Z",
+    "rerun": "list live-review-wake runs posted by github-actions[bot] and grep packet_state could_not_commit / evidence_http_code 403 (runs 45250027396, 45293870269)"
+  },
+  "state": "queued",
+  "what": "live-review-wake RUNNER path cannot commit packet evidence to live-review/rows (HTTP 403, git data API); VM path commits fine. MEASURED 2026-11-23..24: 2 runner-posted (github-actions[bot]) wake packets have packet_state could_not_commit, evidence_http_code 403 (pkg-d8b371266ad146a9 prop; pkg-0a6713ef01894322 bybit_portfolio); VM-posted packets in the same window committed (e.g. 8d324e2f2542). Likely the workflow token lacks contents:write on live-review/rows or a ruleset blocks it. Redundant path, so no review lost, but a dead fallback hides the day the VM path fails. Fix: check workflow permissions + the live-review/rows ruleset; verify with one runner-posted packet that commits."
+}

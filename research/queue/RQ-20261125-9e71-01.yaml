@@ -1,0 +1,210 @@
+# Authored 2026-11-25 by lane ML-PRIMARY (manager 22:53Z: author the GRU unit NOW so the GPU has work; ML-MECE D2/D3, ML-F29). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261125-9e71-01
+title: 'D2/F29 RESOLVABLE sequence test (GPU): does a 2-layer GRU over 48-bar windows of the engineered features beat LightGBM on the SAME features at 1h regime log-loss
+  on BTC/ETH/SOL, judged by a paired moving-block bootstrap 95% lower bound (not the fold mean that made RQ-20261018-ff8f-04 unresolvable)?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-sequence-gru
+  subject_kind: ml_model
+  from_result: RQ-20261018-ff8f-04
+  verdict_read: unresolvable
+  diagnosis: 'ff8f-04 (GRU vs LightGBM, 15m regime macro-F1) could not decide: fold-level macro-F1 delta sd ~0.03, so a +0.010 bar is unresolvable (ML-F29), and the
+    GRU saw 4 volatility columns the LightGBM baseline did not. ml_bakeoff now has a paired moving-block row bootstrap (cv.row_bootstrap, rule stat boot_ci_low; FRONTIER-Q-GRU-RESOLVABLE),
+    so the question is decidable at row level. This unit gives BOTH learners the identical 10 columns (the only difference is the sequence model), uses a proper scoring
+    rule (log-loss) on the 1h regime target where LightGBM is known to beat the prior (RQ-20261014-65cc-10 PASS), and runs on the GPU.'
+  search: one fixed GRU (window 48, hidden 64, layers 2, epochs 15, seeded); no grid.
+  levers:
+  - model_family
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 2
+  due_by: '2026-12-02'
+question: On published BTC/ETH/SOL 1h market_features v002 (purged expanding walk-forward, 5 folds, embargo 24 bars), does a GRU over 48-bar windows of 10 engineered
+  features have a LOWER regime log-loss than LightGBM on the same 10 features, with the paired moving-block (24-row) bootstrap 95% lower bound of the improvement
+  above 0 on all three symbols?
+why_this_matters: 'It is the gate for the deep_sequence family (ML-F22/F29): a PASS justifies building a GRU arm into the ml_entry decision harness (the entry label,
+  the slot that trades money); a FAIL closes the sequence learner on our engineered features for this data and frees D2/D3 from it. It also gives the idle Kaggle
+  GPU a decidable job (operator 2026-11-25: free compute must not sit idle).'
+power:
+  expected_n: 100000
+  min_detectable_effect: 0.002
+  effect_units: logloss_nats_per_row
+  sd: 0.3
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~40k 1h rows per symbol x 3 with ~60% in test folds (~70k paired test rows); per-row log-loss difference sd ~0.3 nats gives a row-level se ~0.0012
+    before block dependence; the 24-row block bootstrap widens it, so a ~0.002-0.004 improvement is the smallest resolvable effect. INDETERMINATE is possible and
+    stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Published market shards (metis-market-data); nothing accrues.
+evidence_class:
+  holdout: none
+  claim: model_quality
+ml_consumer:
+  not_applicable: 'a model-family gate on a market regime target: no order, leg or book consumes this result; a PASS authors the entry-label GRU unit (ML-ENTRY-FINETUNE),
+    which carries its own consumer'
+baseline:
+  definition: LightGBM (n_estimators 200, lr 0.05, num_leaves 31, min_child_samples 50) on the SAME 10 columns, same folds and rows; the class prior is a reported
+    control.
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-kaggle.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261125-9e71-01
+decision_rule:
+  id: RULE-RQ-20261125-9e71-01
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  baseline: LightGBM on the same 10 columns, folds and rows
+  statistic: 'scripts/research/ml_bakeoff.py: per symbol, the paired moving-block (block_rows 24, n_boot 1000, seed 0) bootstrap of the POOLED out-of-fold log-loss
+    improvement (LightGBM minus GRU; positive = GRU better), stat boot_ci_low (95% lower bound) and boot_mean; the fold-level paired mean and the prior control are
+    reported.'
+  rule: PASS iff the GRU boot_ci_low vs LightGBM is > 0 on ALL of BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h (>= 3 folds measured). FAIL iff the GRU boot_mean vs LightGBM
+    is <= 0 on EVERY symbol. INDETERMINATE otherwise. Fixed now; machine form in ml_bakeoff.rule.
+  pass_action: Author the entry-label GRU arm in scripts/research/ml_entry_fix_arms.py (net R per side, frozen v1 recipe as baseline, net of the full cost stack)
+    as its own pre-registered unit (MLP-F-SEQUENCE-GRU levers_ahead).
+  fail_action: Close the sequence learner (GRU) on these engineered features for D2/D3 (MLP-F-SEQUENCE-GRU exhaustion), recorded with this result; the deep_sequence
+    family re-opens only on a new representation (raw OHLCV windows or a pretrained TS encoder), authored from this diagnosis.
+  proposal_mapping: pass -> entry-label GRU unit; fail -> line closed; indeterminate -> one re-read at 15m (more rows) authored from the CI width.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'ESTIMATE: a model-family gate; value is the decision it unlocks for D2/D3, not a direct P&L.'
+practice_precedent: paired comparison on identical features with a row-level moving-block bootstrap CI on a proper scoring rule (principles M6, M13); ML-F29.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-data
+  peak_memory_gb: 6.0
+  est_minutes: 60
+  basis: 'ESTIMATE: 3 symbols x 5 folds x one GRU fit (<= 40k windows of 48 x 10, 15 epochs) on a T4, plus LightGBM; ff8f-04 ran a smaller GRU on 1 CPU in ~240 min
+    estimated. Re-declare from the first run.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261018-ff8f-04
+- RQ-20261014-65cc-10
+- RQ-20261014-4591-02
+- scripts/research/ml_bakeoff.py
+- FRONTIER-Q-GRU-RESOLVABLE
+- MLP-F-SEQUENCE-GRU
+not_before: '2026-11-25T23:00:00+00:00'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 24
+      n_boot: 1000
+      seed: 0
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 48
+        hidden: 64
+        layers: 2
+        epochs: 15
+        batch_size: 256
+        max_train_windows: 40000
+        seed: 0
+        device: auto
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+last_dispatched_at: null
+grading:
+  attested: RULE-RQ-20261125-9e71-01
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261125-9e71-01
+  evidence:
+  - research/results/RQ-20261125-9e71-01/45724458202.jsonl
+  first_fail: 2 row(s), all measured, all fail
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

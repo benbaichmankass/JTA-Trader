@@ -2,8 +2,8 @@
   "id": "STAGE0-ROUTE-E4-DESK",
   "title": "Give e4_oi_shock_1h and claude_desk a Stage-0 evidence route (gap: no harness route), due 2026-11-05",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": null,
   "tier": 1,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 884,
   "note": "Filed 2026-11-01 by LTR-PACKET-FIXES on the manager's disposition of ROSTER-EVIDENCE-GAPS-1101. DUE 2026-11-05. Gap: no harness route. scripts/ops/build_strategy_evidence.py --strategy e4_oi_shock_1h --dry-run reads harness=None / no_harness; claude_desk is a discretionary desk leg with no per-leg record and no harness family. Both are rostered testing legs (e4 on bybit_1; claude_desk on bybit_1, ib_paper, alpaca_paper) trading with no committed comms/strategy_evidence/<leg>.json. The live-review packet reports them as priced_options_state=evidence_missing. Done when each has a committed record from a named harness, net of the full cost stack, against a rule registered before the run (a fail is fine: a failing record makes the leg an iteration subject, never a retirement by count).",
   "phase": "build",
-  "updated_at": "2026-11-01T15:56:38Z",
-  "updated_by": "session_01AFoLuKrtjxkEjpGuVNPAMz",
+  "updated_at": "2026-11-26T06:11:27Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

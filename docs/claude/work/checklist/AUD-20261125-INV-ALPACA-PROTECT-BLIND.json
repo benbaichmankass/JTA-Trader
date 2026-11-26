@@ -1,0 +1,21 @@
+{
+  "id": "AUD-20261125-INV-ALPACA-PROTECT-BLIND",
+  "title": "system_invariants.py grades protection on IB (INV-PROTECT-*) and Bybit (LEG-MATCHES-ROW) only; no invariant reads /api/diag/alpaca_open_orders, so alpaca_live (real money) and the Alpaca mirror/paper books are never graded for naked/over-covered/target-less positions by the standing instrument",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-02",
+  "note": "WEEKLY-AUDIT-2026-11-25 deep pass 0 (independence). Manual recompute 18:28Z: alpaca_paper 4/4 positions carry stop+target = position qty (QQQ 519, SPY 1164, IEF 4982, TLT 864); alpaca_live/portfolio/options flat. Build: an alpaca_open_orders stem (orders under result.orders) feeding INV-PROTECT-STOP/OVERCOVER/TARGET, with a self-test fixture (naked + over-covered). CHECK {command: system_invariants.py --self-test and --payloads <dir with alpaca_open_orders.json>, rule: alpaca accounts appear in INV-PROTECT-* populations, resolves_when: n includes alpaca positions}.",
+  "phase": null,
+  "updated_at": "2026-11-25T18:43:57Z",
+  "updated_by": "session_01AFoLuKGvpUCcY4M5i6uUuF"
+}

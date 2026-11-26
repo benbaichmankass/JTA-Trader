@@ -2,8 +2,8 @@
   "id": "ML-DRIFT-COVERED-SPAN",
   "title": "drift_clean gate: publish the COVERED reference span beside the declared one on /api/bot/shadow/drift, then re-grade all 34 models (BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE)",
   "state": "queued",
-  "owner": "ML-PRIMARY",
-  "lane": "session_01AFoLuJkXEM1EigH9mSfz1F",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: ML-PRIMARY))",
+  "lane": null,
   "model": null,
   "tier": 2,
   "roadmap": [
@@ -13,10 +13,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-11-30",
   "_seq": 552,
   "note": "[2026-10-18 lane RESEARCH-AUTHOR-GRADE-1017] Owns BL-20260911-THE-DRIFT-GATE-READS-ONE-UNROTATED-FILE-.... FIELD STATE on main: HALF DONE. Done: ml/cli.py:249/434 and ml/shadow/drift_retrain.py:56 read iter_records_with_archives (rotated archives), and SA-DATA landed the archive read for replay/labels_accruing. OPEN (the item's clears_when says the second half is NOT optional): grep for a covered-span field (reference_window_covered / covered_start) across src, ml, scripts returns nothing, so the endpoint does not publish the span actually covered next to the declared 30-day window, and a future truncation would read as a healthy denominator again. Then RE-GRADE ALL 34 and record before/after verdict counts; until then no demotion may rest on a current drift_clean verdict, pass or fail, and a constant-output model passing perfectly must be treated as a gate defect. Tier-2 (web API + gate read path).",
   "phase": "ml",
-  "updated_at": "2026-11-14T22:18:39Z",
-  "updated_by": "session_01AFoLuKuu4bMh6SG5oyAC9h",
+  "updated_at": "2026-11-26T06:11:43Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

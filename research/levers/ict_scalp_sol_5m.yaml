@@ -186,6 +186,41 @@ levers:
       best_delta_r_per_trade: -0.019
       fold_stability: 0.333
       reading: no response at the tested values
+    adx_max:
+      tests:
+      - value: '40'
+        baseline_value: 'off'
+        arm: AX40
+        unit: RQ-20261117-9e1c-13
+        window: 2024-10-05..2026-10-04
+        n: 381
+        net_r: -55.2229
+        baseline_n: 384
+        baseline_net_r: -56.3847
+        delta_net_r: 1.1618
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 65.8561
+        verdict: fail
+        joint_change: false
+      - value: '50'
+        baseline_value: 'off'
+        arm: AX50
+        unit: RQ-20261117-9e1c-13
+        window: 2024-10-05..2026-10-04
+        n: 384
+        net_r: -56.3847
+        baseline_n: 384
+        baseline_net_r: -56.3847
+        delta_net_r: 0.0
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 67.018
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 2
+      best_delta_r_per_trade: 0.003
+      fold_stability: 0.917
+      reading: no response at the tested values
   session:
     skip_hours:
       tests:

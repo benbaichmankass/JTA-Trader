@@ -68,7 +68,7 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -1379,6 +1379,37 @@ def _book_blocks(rows: List[sqlite3.Row], n: int, block: int,
     return {name: _leg_blocks(legrows, n, block) for name, legrows in sorted(by.items())}
 
 
+def _promotion_split(rows: List[sqlite3.Row]) -> Tuple[List[sqlite3.Row], List[Dict[str, Any]], str]:
+    """``(kept rows, labelled excluded list, readState)`` for the operator's promotion/demotion exclusions.
+
+    Operator decision 2026-11-25 (W48 Q3), verbatim: "Exclude it from every promotion/demotion read, keep it visible and
+    labelled (Recommended)" (``comms/promotion_exclusions.yaml``, one owner: ``scripts/ops/promotion_exclusions.py``). Applied
+    ONLY to the routes that feed a promotion/demotion rule (``/performance/recent``, ``/performance/trade-series``); ``/performance``
+    keeps every total (the row stays in every inception total) and is byte-pinned by its golden. ``readState`` is ``ok`` or
+    ``unreadable``: an unparseable file is published, never folded into "nothing excluded" (rows are then returned unfiltered
+    AND labelled unreadable, so a gate can refuse to act on them).
+    """
+    try:
+        from scripts.ops import promotion_exclusions as _pex
+        entries = _pex.load()
+    except Exception:  # noqa: BLE001  # allow-silent: logged (logger.exception) + returned as readState "unreadable" on the envelope; the caller publishes it rather than treating it as "none excluded"
+        logger.exception("promotion exclusions unreadable")
+        return list(rows), [], "unreadable"
+    if not entries:
+        return list(rows), [], "ok"
+    kept: List[sqlite3.Row] = []
+    excluded: List[Dict[str, Any]] = []
+    for r in rows:
+        hit = _pex.is_excluded({"id": _rget(r, "trade_id"), "account_id": _rget(r, "account_id")}, entries)
+        if hit is None:
+            kept.append(r)
+        else:
+            excluded.append({"tradeId": _rget(r, "trade_id"), "accountId": _rget(r, "account_id"),
+                             "strategy": _rget(r, "strategy_name"), "provenance": hit.get("provenance"),
+                             "reason": hit.get("reason"), "decided": hit.get("decided")})
+    return kept, excluded, "ok"
+
+
 def _newest_close(rows: List[sqlite3.Row]) -> Optional[str]:
     return _rget(rows[-1], "closed_at") if rows else None
 
@@ -1485,9 +1516,12 @@ def get_performance_recent(
     try:
         rosters = _book_rosters()
         real_rows = _query(_DB_PATH, since, demo=False)
+        real_rows, real_pex, pex_state = _promotion_split(real_rows)
         env["realMoney"] = {
             "readState": "ok",
             "rosterReadState": rosters["readState"],
+            "promotionExclusionsReadState": pex_state,
+            "promotionExcluded": real_pex,
             "newestClosedAt": _newest_close(real_rows),
             "perStrategy": _book_blocks(real_rows, n, RECENT_BLOCK, rosters["realMoneyLegs"]),
         }
@@ -1504,11 +1538,14 @@ def get_performance_recent(
             excl = load_mirror_exclusions()
             excl_ids = {int(e["trade_id"]) for e in excl["exclusions"] if "trade_id" in e}
             pp_rows = [r for r in pp_rows if _rget(r, "trade_id") not in excl_ids]
+            pp_rows, pp_pex, pp_pex_state = _promotion_split(pp_rows)
             env["mirror"] = {
                 "readState": "ok",
                 "accountIds": portfolio_ids,
                 "excludedTradeIds": sorted(excl_ids),
                 "exclusionsReadState": excl["readState"],
+                "promotionExclusionsReadState": pp_pex_state,
+                "promotionExcluded": pp_pex,
                 "newestClosedAt": _newest_close(pp_rows),
                 "perStrategy": _book_blocks(pp_rows, n, RECENT_BLOCK, rosters["portfolioLegs"]),
             }
@@ -1550,6 +1587,7 @@ def get_performance_trade_series(
     try:
         rosters = _book_rosters()
         rows = _query(_DB_PATH, None, demo=False)
+        rows, pex_rows, pex_state = _promotion_split(rows)
         by: Dict[str, List[sqlite3.Row]] = {leg: [] for leg in rosters["realMoneyLegs"]}
         for r in rows:
             by.setdefault(r["strategy_name"] or "(unknown)", []).append(r)
@@ -1567,6 +1605,7 @@ def get_performance_trade_series(
                                           if tail else None),
                          "series": series}
         env["realMoney"] = {"readState": "ok", "rosterReadState": rosters["readState"],
+                            "promotionExclusionsReadState": pex_state, "promotionExcluded": pex_rows,
                             "newestClosedAt": _newest_close(rows), "perStrategy": per}
         return env
     except Exception:  # noqa: BLE001  # allow-silent: logged (logger.exception) + an explicit error envelope (error: true, readState "error") so "could not look" never reads as "no trades"

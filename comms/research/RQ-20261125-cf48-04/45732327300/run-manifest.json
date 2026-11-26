@@ -1,0 +1,89 @@
+{
+  "unit": "RQ-20261125-cf48-04",
+  "run_id": "45732327300",
+  "commit_sha": "f457aa07c30a8d2ed948341105da8ecf83efc077",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45732327300",
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_head_kaggle_bakeoff.py",
+        "--universe",
+        "bp2",
+        "--leg-template",
+        "trend_donchian_eth_4h",
+        "--timeframe",
+        "4h",
+        "--candle-source",
+        "candle_dataset",
+        "--start",
+        "2020-06-01",
+        "--pool-folds",
+        "--random-control",
+        "500",
+        "--judge",
+        "exit_now",
+        "--n-floor",
+        "3000",
+        "--pass-dr",
+        "0.05",
+        "--arms",
+        "holding_pays_neg25",
+        "--num-folds",
+        "5",
+        "--embargo-days",
+        "7",
+        "--fetch-workers",
+        "12",
+        "--rule-id",
+        "RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED",
+        "--registered-at",
+        "2026-11-25",
+        "--unit",
+        "RQ-20261125-cf48-04",
+        "--out",
+        "comms/research/RQ-20261125-cf48-04/45732327300"
+      ],
+      "log": "comms/research/RQ-20261125-cf48-04/45732327300/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 1259.4
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

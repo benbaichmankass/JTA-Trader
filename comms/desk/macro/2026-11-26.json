@@ -1,0 +1,217 @@
+{
+ "schema": "desk_macro_brief/1",
+ "brief_id": "DMB-20261126T1305Z",
+ "judged_at": "2026-11-26T13:05:00Z",
+ "info_cutoff_at": "2026-11-26T13:04:23Z",
+ "model": "sonnet-tier",
+ "skill_sha": "trading-desk-7b",
+ "packet_sha": "32621783dbd7e781ebeb8055b730cc646c4aa6f318cfbc8350dec58284aacea2",
+ "sources": [
+  {
+   "source_id": "S1",
+   "kind": "econ_calendar",
+   "ref": "comms/macro/econ_calendar_upcoming.json",
+   "retrieved_at": "2026-11-26T13:02:00Z",
+   "content_sha256": "534c3da70b84d68e354c6961732a23c04190fc6f46d62e3020e0805477a8469c",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S2",
+   "kind": "bigdata_news",
+   "ref": "bigdata:F6EA81F8C5BB10F18821242AFE163F1A (Morningstar/Dow Jones 2026-11-25 Treasury yields after PCE/GDP)",
+   "retrieved_at": "2026-11-26T13:04:23Z",
+   "content_sha256": "a5f09939d0f60760f30ed2900dd817d98d68fb89d8a0318d8c23bec7250be609",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S3",
+   "kind": "bigdata_news",
+   "ref": "bigdata:926ADB483DA3C3E51755D67F15BC1364 (FXStreet 2026-11-25 Dow/AI selling, PCE 3.3%, GDP 4.3%, Dec hike ~94%, tariffs)",
+   "retrieved_at": "2026-11-26T13:04:23Z",
+   "content_sha256": "cf1843930e3b0c7b608bfd9a48435ada3843f87050007ea8b32eecb6a16b6951",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S4",
+   "kind": "bigdata_news",
+   "ref": "bigdata:D17B0D51FB209DBBCC664066833C6486 (MT Newswires 2026-11-24 defensives rotation, gold -2.6%, WTI +2.4%, 10y 4.93%)",
+   "retrieved_at": "2026-11-26T13:04:23Z",
+   "content_sha256": "552ebbbffe1ffa31490ae3405316d408e5d2b8ebb176653e78bcbb5d8fe8bc20",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S5",
+   "kind": "bigdata_news",
+   "ref": "bigdata:BA55536FAF1B80CD4BC43FEF5734B5CF (FXStreet 2026-11-25 gold, Hormuz shipping attacks, US-Iran war)",
+   "retrieved_at": "2026-11-26T13:04:23Z",
+   "content_sha256": "870a470cfaa5ff02d58f1de51de2ffcd59c0dd803c5d7a438de023ebf0296dd5",
+   "influence": "supporting"
+  }
+ ],
+ "regime": {
+  "call": "risk_off",
+  "axes": {
+   "growth": 1,
+   "inflation": 1,
+   "liquidity": -1,
+   "vol": 0
+  },
+  "confidence": 0.55,
+  "basis": "S3,S2: Fed in a hiking cycle, Dec 9 25bp hike ~94-99% priced; core PCE 3.3% y/y vs 3.2% forecast, Q3 GDP 4.3% vs 3.4% (growth strong, inflation hot, liquidity tightening). S4,S3: AI-led equity weakness with defensive rotation, new tariff proposals on 14 partners (+20% China). S5: US-Iran war / Hormuz shipping attacks keep oil bid."
+ },
+ "tilts": [
+  {
+   "asset": "TLT",
+   "tilt": -1,
+   "horizon_days": 20,
+   "confidence": 0.45,
+   "basis": "S2,S3: hiking cycle with hot core PCE; 10y ~4.84-4.93%, 30y 5.3% (S4); duration still exposed to hike repricing."
+  },
+  {
+   "asset": "QQQ",
+   "tilt": -1,
+   "horizon_days": 5,
+   "confidence": 0.4,
+   "basis": "S3,S4: AI trade weakening, rate-hike pricing cited as driver of the tech selling."
+  },
+  {
+   "asset": "GLD",
+   "tilt": 0,
+   "horizon_days": 20,
+   "confidence": 0.3,
+   "basis": "S4,S5: gold -2.6% on Nov 24 on firm USD/hike bets, offset by Hormuz geopolitics; no edge either way."
+  },
+  {
+   "asset": "MES",
+   "tilt": -1,
+   "horizon_days": 5,
+   "confidence": 0.35,
+   "basis": "S3: Dow erased drop on AI stocks; Fri half-day, last Fed speaking day before blackout; thin liquidity."
+  }
+ ],
+ "calendar": [
+  {
+   "event_key": "US_PCE_2026-11-27",
+   "at": "2026-11-27T13:30:00Z",
+   "class": "scheduled.macro.cpi",
+   "read": "S3 reports core PCE already printed Nov 25 (3.3% y/y, above 3.2% forecast); S1 still lists 11-27 rows; treat as already digested. US cash markets shut Nov 26 (Thanksgiving), early close Nov 27 18:00 GMT.",
+   "affected": [
+    "SPY",
+    "TLT"
+   ],
+   "source_ids": [
+    "S1",
+    "S3"
+   ]
+  },
+  {
+   "event_key": "US_NFP_2026-12-04",
+   "at": "2026-12-04T13:30:00Z",
+   "class": "scheduled.macro.nfp",
+   "read": "First jobs print before the Dec 9 FOMC; strong labour data keeps the hike (and a possible 50bp tail, ~4% per S2-era FedWatch) live.",
+   "affected": [
+    "SPY",
+    "QQQ",
+    "TLT",
+    "GLD"
+   ],
+   "source_ids": [
+    "S1",
+    "S2"
+   ]
+  },
+  {
+   "event_key": "US_FOMC_2026-12-09",
+   "at": "2026-12-09T19:00:00Z",
+   "class": "scheduled.macro.rate_decision",
+   "read": "25bp hike to 4.00-4.25% near fully priced (S3); risk is the dots and guidance for early 2027 tightening.",
+   "affected": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "TLT",
+    "GLD",
+    "BTCUSDT"
+   ],
+   "source_ids": [
+    "S1",
+    "S3"
+   ]
+  },
+  {
+   "event_key": "US_CPI_2026-12-10",
+   "at": "2026-12-10T13:30:00Z",
+   "class": "scheduled.macro.cpi",
+   "read": "Day after FOMC; no consensus in S1.",
+   "affected": [
+    "SPY",
+    "TLT",
+    "GLD"
+   ],
+   "source_ids": [
+    "S1"
+   ]
+  }
+ ],
+ "events": [
+  {
+   "event_id": "EV-20261125-TARIFF",
+   "published_at": "2026-11-25T21:39:57Z",
+   "first_seen_at": "2026-11-26T13:04:23Z",
+   "class": "unscheduled.policy.tariff",
+   "entities": [
+    "USTR",
+    "China",
+    "EU",
+    "Japan",
+    "South Korea",
+    "Taiwan"
+   ],
+   "direction": -1,
+   "magnitude": "medium",
+   "horizon_days": 5,
+   "confidence": 0.5,
+   "affected": [
+    "SPY",
+    "QQQ",
+    "IWM"
+   ],
+   "source_ids": [
+    "S3",
+    "S4"
+   ],
+   "summary": "White House/USTR proposes tariffs on 14 trading partners, +20% on China; formal unveiling expected this week."
+  },
+  {
+   "event_id": "EV-20261125-HORMUZ",
+   "published_at": "2026-11-25T04:14:39Z",
+   "first_seen_at": "2026-11-26T13:04:23Z",
+   "class": "unscheduled.geopolitical.conflict",
+   "entities": [
+    "US",
+    "Iran"
+   ],
+   "direction": 1,
+   "magnitude": "medium",
+   "horizon_days": 5,
+   "confidence": 0.45,
+   "affected": [
+    "MGC",
+    "GLD"
+   ],
+   "source_ids": [
+    "S5",
+    "S4"
+   ],
+   "summary": "Shipping attacks near Hormuz and stalled US-Iran diplomacy; WTI +2.4% to ~82 on Nov 24."
+  }
+ ],
+ "trades": [],
+ "no_trade_reason": "No verified current daily-bar panel (closes/ATR) for the desk symbols was available to this lane, so any entry/stop/TP levels would be fabricated; US cash markets are shut today (Thanksgiving) and Fri is a half-day; the regime call is low-confidence and the catalysts (NFP Dec 4, FOMC Dec 9) are 1-2 weeks out. Tilts are recorded as teacher labels only.",
+ "informs": [],
+ "training": {
+  "train_eligible": true,
+  "gate_eligible": false,
+  "label_clean_from": "2026-06-30"
+ }
+}

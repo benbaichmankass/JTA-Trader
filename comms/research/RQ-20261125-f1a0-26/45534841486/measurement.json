@@ -1,0 +1,94 @@
+{
+  "arms": {
+    "metastate": {
+      "n_trades": 6158,
+      "money_base": 0.08305,
+      "money_arm": 0.09986,
+      "delta": 0.01681,
+      "se_week_boot": 0.01285,
+      "t": 1.308,
+      "random": {
+        "draws": 200,
+        "kind": "raw tilts permuted within leg x month",
+        "mean": 9e-05,
+        "p95": 0.01141,
+        "share_ge_arm": 0.005
+      },
+      "yearly_delta": {
+        "2022": 0.0468,
+        "2023": 0.0071,
+        "2024": 0.0051,
+        "2025": 0.0228,
+        "2026": -0.0012
+      },
+      "share_tilted": 0.5906,
+      "share_up_tilt": 0.3353,
+      "checks": {
+        "delta_ge_min": true,
+        "t_ge_min": false,
+        "beats_random": true,
+        "years_positive": true
+      },
+      "verdict": "indeterminate",
+      "walk_forward": {
+        "2022": {
+          "n_train": 1792,
+          "n_test": 1290,
+          "q1": -0.44151,
+          "q2": -0.04734,
+          "corr_pred_r_test": 0.0935
+        },
+        "2023": {
+          "n_train": 3090,
+          "n_test": 1284,
+          "q1": -0.44781,
+          "q2": -0.13645,
+          "corr_pred_r_test": 0.0156
+        },
+        "2024": {
+          "n_train": 4372,
+          "n_test": 1283,
+          "q1": -0.46507,
+          "q2": -0.20335,
+          "corr_pred_r_test": 0.0304
+        },
+        "2025": {
+          "n_train": 5659,
+          "n_test": 1262,
+          "q1": -0.45941,
+          "q2": -0.23343,
+          "corr_pred_r_test": 0.0538
+        },
+        "2026": {
+          "n_train": 6917,
+          "n_test": 1039,
+          "q1": -0.46995,
+          "q2": -0.26338,
+          "corr_pred_r_test": -0.0153
+        }
+      },
+      "btc_state": "present",
+      "feature_coverage": {
+        "own_sma50": 1.0,
+        "own_sma200": 1.0,
+        "own_ret20": 1.0,
+        "own_ret5": 1.0,
+        "own_rv_ratio": 1.0,
+        "own_rv5_20": 1.0,
+        "own_hi20": 1.0,
+        "btc_sma50": 1.0,
+        "btc_sma200": 1.0,
+        "btc_ret20": 1.0,
+        "btc_ret5": 1.0,
+        "btc_rv_ratio": 1.0,
+        "btc_rv5_20": 1.0,
+        "btc_hi20": 1.0,
+        "dir": 1.0,
+        "leg": 1.0,
+        "fam": 1.0
+      }
+    }
+  },
+  "verdict": "indeterminate",
+  "n_legs": 21
+}

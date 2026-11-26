@@ -1,6 +1,6 @@
 # Manager handoff 2026-10-24 (evening): session_01EfjqotNYj6MppcEBqbGvkA → new
 
-> **Doc status:** `unknown` · category `unknown` · last verified `never` · written 2026-10-24 ~21:25Z by the outgoing manager `session_01EfjqotNYj6MppcEBqbGvkA`
+> **Doc status:** `historical` · category `history` · last verified `never` · written 2026-10-24 ~21:25Z by the outgoing manager `session_01EfjqotNYj6MppcEBqbGvkA`
 
 **Why I'm rotating:** context was about 627k at 21:19Z, near the ~650k threshold. Most of it was repeated PR-subscription notice text. **This is a slim handover:** follow `.claude/skills/manager/SKILL.md` § Start of session (Rotation case).
 

@@ -95,7 +95,7 @@ the expensive one (see § Cost).
 
 **Every Track-1 unit is an ITERATION unit** ([`docs/plans/OPERATING-PLAN-2026-09-21.md`](../../../docs/plans/OPERATING-PLAN-2026-09-21.md) § 2 "What does not pass goes back into research — THE research workflow"): it carries the `iteration:` block defined
 once in `.claude/skills/research-ops/SKILL.md` § "THE CORE MANDATE", so `scripts/research/iteration_orphans.py` counts the leg as
-covered and the 4x/day pass continues its loop. A leg already covered there gets its NEXT attempt here only from a new diagnosis.
+covered and the daily research-ops pass continues its loop. A leg already covered there gets its NEXT attempt here only from a new diagnosis.
 
 *Operator point 1.* For each leg the review marks underperforming (negative net window,
 `grade_drift`, a `proposed_tweaks` demote/kill candidate, or a low-grade cluster):
@@ -129,6 +129,10 @@ covered and the 4x/day pass continues its loop. A leg already covered there gets
 3. **Try-again loop:** if a prior unit for this leg already ran and failed, the new unit
    must change the *hypothesis*, not re-run the same parameters. Cite the prior unit id.
    (A first FAIL re-queues for a confirmatory run automatically — don't duplicate that.)
+4. **Count the tries and use the deflated bar** (row PERF-FOLLOWUP-DEFLATION, principles M5 / M13): a Track-1 re-test is another look at the same leg, so
+   the unit states `n_tries` (the arms and prior units already run on that leg and window; `holdout_lock.py families` prints it per family and window) and
+   its pass rule is the research-ops deflated bar for that count (`bar["ci_z"]` / `bar["point_t_min"]`), never the single-test bar. Reuses the
+   existing research-ops machinery; adds no gate.
 
 ### Track 2 — LESSONS: the wider-context post-mortem (not grading)
 

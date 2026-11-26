@@ -1,0 +1,510 @@
+{
+  "verdict": "measured",
+  "read_state": "measured",
+  "population": "test corpus tmb-73f5c3660014 (emitted path files comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl): 2627 trades on 6 legs passing the peak_r==mfe_r parity control; train corpus tmb-9c95df6d6034 (combined shard dir corpus_v2), 145839 trades, cross-symbol purged; as traded (harness paths), full cost stack, 6 purged calendar folds by entry",
+  "n": 2627,
+  "measurement": {
+    "schema": "tm_bench/1",
+    "selfcheck": {
+      "pass": true,
+      "checks": [
+        {
+          "check": "synthetic: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-4e14430561be, 900 trades"
+        },
+        {
+          "check": "synthetic: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "synthetic-planted: frozen corpus re-reads to the same corpus_id",
+          "pass": true,
+          "detail": "tmb-a164b47a7dde, 900 trades"
+        },
+        {
+          "check": "synthetic-planted: B0 - B0 == 0 exactly",
+          "pass": true,
+          "detail": "0.0"
+        },
+        {
+          "check": "synthetic-planted: engine replays B0 to the harness exit_r on >= 99% of trades",
+          "pass": true,
+          "detail": "1.0"
+        },
+        {
+          "check": "synthetic-planted: action-value ceiling >= every labelled action per trade",
+          "pass": true,
+          "detail": "max excess 0.00e+00"
+        },
+        {
+          "check": "synthetic-planted: census oracle == first_passage_paths.census",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "planted: lgbm action-value beats B0 (CI lower > 0)",
+          "pass": true,
+          "detail": "0.37298 [0.31186, 0.44038]"
+        },
+        {
+          "check": "null: lgbm action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null 0.04112 [-0.08612, 0.1563]"
+        },
+        {
+          "check": "Stage A: planted corpus has a passing action class, driftless null has none",
+          "pass": true,
+          "detail": "planted passes ['close', 'partial_close_50', 'tighten_sl_be', 'tighten_sl_atr1', 'tighten_sl_atr2', 'tp_pull_in_0p5r', 'tp_pull_in_1r']; null passes []"
+        },
+        {
+          "check": "null: logit action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null -0.02492 [-0.18847, 0.12346]"
+        },
+        {
+          "check": "planted: catboost action-value beats B0 (CI lower > 0)",
+          "pass": true,
+          "detail": "0.38986 [0.33797, 0.4453]"
+        },
+        {
+          "check": "null: catboost action-value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null -0.0328 [-0.14637, 0.07599]"
+        },
+        {
+          "check": "catboost margin chosen from its own inner OOF",
+          "pass": true,
+          "detail": "inner_oof"
+        },
+        {
+          "check": "planted: fitted-Q stop value beats B0 (CI lower > 0)",
+          "pass": true,
+          "detail": "0.32073 [0.26454, 0.37083]"
+        },
+        {
+          "check": "null: fitted-Q stop value does not pass on a driftless walk (CI lower <= 0)",
+          "pass": true,
+          "detail": "null 0.06821 [-0.02025, 0.15207]"
+        },
+        {
+          "check": "fitted-Q margin chosen from its own inner OOF",
+          "pass": true,
+          "detail": "inner_oof"
+        },
+        {
+          "check": "path_state: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+          "pass": true,
+          "detail": "2954 truncations, max |diff| 0.0"
+        },
+        {
+          "check": "path_state: positive control -- a feature reading bar s+1 FAILS the truncation test",
+          "pass": true,
+          "detail": "leaky max |diff| inf"
+        },
+        {
+          "check": "signature: every feature at state s is unchanged when the trade is cut after bar s (causal)",
+          "pass": true,
+          "detail": "2954 truncations, max |diff| 0.0"
+        },
+        {
+          "check": "signature: Chen's identity -- a straight-line path's signature equals the tensor exponential of its increment",
+          "pass": true,
+          "detail": "39 columns"
+        },
+        {
+          "check": "stage_a_folds: planted reads pass, driftless null reads fail",
+          "pass": true,
+          "detail": "planted 4/6, null 0/6"
+        },
+        {
+          "check": "horizon label == full label when H >= the remaining bars",
+          "pass": true,
+          "detail": "max |diff| 0.0"
+        },
+        {
+          "check": "lgbm quantile 0.3 head sits below the mean head; default objective is regression; bad alpha refused",
+          "pass": true,
+          "detail": "mean q30 -0.604 vs mean 0.046"
+        },
+        {
+          "check": "horizon label differs from the full label when H < the remaining bars (positive control)",
+          "pass": true,
+          "detail": "45/45 trades differ at H=2"
+        },
+        {
+          "check": "stage_a_folds at horizon 12: planted reads pass, driftless null does not",
+          "pass": true,
+          "detail": "planted pass, null fail"
+        },
+        {
+          "check": "cross-symbol purge leaves no overlapping train trade",
+          "pass": true,
+          "detail": "0 leaks; purged [20, 23, 23, 23, 22, 22]"
+        },
+        {
+          "check": "same trade_key in train and test is de-duplicated",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "check": "train-sample: seeded -- same seed gives the same sample, another seed a different one",
+          "pass": true,
+          "detail": "seed 11 sizes [250, 244, 244, 246, 244, 244]"
+        },
+        {
+          "check": "train-sample: trade-grouped -- whole trades, no repeats, every state of a sampled trade is in the fit",
+          "pass": true,
+          "detail": "1472 trades over 6 folds"
+        },
+        {
+          "check": "train-sample: purged -- no sampled trade overlaps its test fold window + embargo (and the pool had overlappers)",
+          "pass": true,
+          "detail": "0 leaks; 349 pool trades overlap a window; purged [50, 53, 54, 52, 54, 53]"
+        },
+        {
+          "check": "train-sample: de-duplicated vs v1 -- by trade_key AND by (leg, symbol, entry, direction) under a different key string",
+          "pass": true,
+          "detail": "0 duplicates sampled; dropped per fold [30, 30, 30, 30, 30, 30] of 30 planted (25 re-keyed + 5 same key)"
+        },
+        {
+          "check": "train-sample: size = K x v1 train-fold trades, or the whole purged pool if smaller",
+          "pass": true,
+          "detail": "target [250, 244, 244, 246, 244, 244] pool [550, 547, 546, 548, 546, 547]"
+        },
+        {
+          "check": "train-sample: score() trains on exactly that sample and reports it",
+          "pass": true,
+          "detail": "folds [250, 244, 244, 246, 244, 244]"
+        }
+      ]
+    },
+    "lgbm_objective": "regression",
+    "lgbm_quantile_alpha": null,
+    "test_corpus": {
+      "corpus_id": "tmb-73f5c3660014",
+      "source": "emitted path files comms/research/RQ-20261030-c7a1-01/41134401720/tm_bench_v1_4t7ondlz/*__paths.jsonl",
+      "legs": [
+        {
+          "leg": "ada_pullback_2h",
+          "n_trade_rows": 402,
+          "n_path_rows": 8876,
+          "n_trades": 402,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 402,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "trend_donchian_eth_4h",
+          "n_trade_rows": 275,
+          "n_path_rows": 3594,
+          "n_trades": 275,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 275,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "trend_donchian_eth_prop",
+          "n_trade_rows": 1085,
+          "n_path_rows": 15381,
+          "n_trades": 1085,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 1085,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_sol_prop",
+          "n_trade_rows": 403,
+          "n_path_rows": 8287,
+          "n_trades": 403,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 403,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_xrp_4h",
+          "n_trade_rows": 68,
+          "n_path_rows": 545,
+          "n_trades": 68,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 68,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "xrp_pullback_2h",
+          "n_trade_rows": 394,
+          "n_path_rows": 16870,
+          "n_trades": 394,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 394,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        }
+      ],
+      "failed": [],
+      "runs": {},
+      "parity_ok": true
+    },
+    "train_corpus": {
+      "corpus_id": "tmb-9c95df6d6034",
+      "source": "combined shard dir corpus_v2",
+      "legs": [
+        {
+          "leg": "ada_pullback_2h",
+          "n_trade_rows": 22817,
+          "n_path_rows": 463438,
+          "n_trades": 22817,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22817,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        },
+        {
+          "leg": "trend_donchian_eth_4h",
+          "n_trade_rows": 15139,
+          "n_path_rows": 171343,
+          "n_trades": 15139,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 15139,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "trend_donchian_eth_prop",
+          "n_trade_rows": 58881,
+          "n_path_rows": 839260,
+          "n_trades": 58881,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 58881,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00011,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_sol_prop",
+          "n_trade_rows": 22653,
+          "n_path_rows": 406168,
+          "n_trades": 22653,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22653,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "1h"
+        },
+        {
+          "leg": "trend_donchian_xrp_4h",
+          "n_trade_rows": 4213,
+          "n_path_rows": 36929,
+          "n_trades": 4213,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 4213,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "4h"
+        },
+        {
+          "leg": "xrp_pullback_2h",
+          "n_trade_rows": 22136,
+          "n_path_rows": 794737,
+          "n_trades": 22136,
+          "n_without_path": 0,
+          "n_exit_r_mismatch_gross_r": 0,
+          "parity_n": 22136,
+          "parity_share": 1.0,
+          "c_exit_vs_harness_slippage_median_gap_r": 0.00015,
+          "state": "included",
+          "timeframe": "2h"
+        }
+      ],
+      "failed": [],
+      "parity_ok": true,
+      "materialise": {
+        "schema": "corpus_v2_materialise/1",
+        "corpus_id": "bp2-f4271084b120",
+        "state": "regenerated",
+        "attempts": [
+          {
+            "tried": "artifact",
+            "artifact_name": "broad-paths-bp2-f4271084b120-data",
+            "n_listed_unexpired": 0,
+            "found": false
+          },
+          {
+            "tried": "regenerate",
+            "universe_id_reproduced": true,
+            "recomputed_corpus_id": "bp2-f4271084b120",
+            "source_tree": "manifest git_sha",
+            "git_sha": "0fa9a0c0a8d26c09390583931685074415b6ea26",
+            "shard_exit_codes": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 0,
+              "5": 0
+            },
+            "shard_seconds": 3025,
+            "merge_exit": 0,
+            "could_not_run": 0,
+            "cells_run": 360
+          }
+        ],
+        "present": true,
+        "trade_key_sha256_expected": "a9f58fb2eaf7c706d9cc5d19b7c66d5663a9c380d9a680053eec04bd8d8b39fe",
+        "trade_key_sha256_observed": "a0345041d078ed47f29c07b25c12769dfa2f768d1f85bee7aca5f4f49ebe8cee",
+        "trade_key_sha256_match": false,
+        "n_trades_expected": 146158,
+        "n_trades_observed": 145839,
+        "n_trades_match": false,
+        "manifest_git_sha": "0fa9a0c0a8d26c09390583931685074415b6ea26",
+        "manifest_run_id": "40999208713",
+        "population": "corpus bp2-f4271084b120: 60 symbols x 6 legs"
+      }
+    },
+    "transfer": {
+      "n_test_trades": 2558,
+      "n_train_corpus_trades": 145839,
+      "mse_by_fraction": {
+        "0.0": 0.600527,
+        "0.25": 0.592026,
+        "1.0": 0.57779,
+        "4.0": 0.564684
+      },
+      "relative_reduction": 0.05969,
+      "ci95": [
+        0.04738,
+        0.0732
+      ],
+      "folds": {
+        "0": 0.05143,
+        "1": 0.06971,
+        "2": 0.05134,
+        "3": 0.05307,
+        "4": 0.08238,
+        "5": 0.0562
+      },
+      "folds_positive": 6,
+      "nested_steps_mse_rises": 0,
+      "folds_cross": {
+        "k": 6,
+        "embargo_hours_by_leg": {
+          "ada_pullback_2h": 400.0,
+          "trend_donchian_eth_4h": 800.0,
+          "trend_donchian_eth_prop": 200.0,
+          "trend_donchian_sol_prop": 200.0,
+          "trend_donchian_xrp_4h": 552.0,
+          "xrp_pullback_2h": 400.0
+        },
+        "rule": "train trade purged if [entry, exit + leg max hold] overlaps the test fold window (any symbol); train trades whose trade_key or (leg, symbol, entry, direction) identity is in the test corpus dropped",
+        "per_fold": [
+          {
+            "fold": 0,
+            "lo": "2020-07-02 15:00:00+00:00",
+            "hi": "2021-07-20 07:50:00+00:00",
+            "test": 462,
+            "train": 118596,
+            "n_purged": 24646,
+            "n_dedup": 2597
+          },
+          {
+            "fold": 1,
+            "lo": "2021-07-20 07:50:00+00:00",
+            "hi": "2022-08-07 00:40:00+00:00",
+            "test": 432,
+            "train": 115937,
+            "n_purged": 27305,
+            "n_dedup": 2597
+          },
+          {
+            "fold": 2,
+            "lo": "2022-08-07 00:40:00+00:00",
+            "hi": "2023-08-24 17:30:00+00:00",
+            "test": 438,
+            "train": 118011,
+            "n_purged": 25231,
+            "n_dedup": 2597
+          },
+          {
+            "fold": 3,
+            "lo": "2023-08-24 17:30:00+00:00",
+            "hi": "2024-09-10 10:20:00+00:00",
+            "test": 417,
+            "train": 118038,
+            "n_purged": 25204,
+            "n_dedup": 2597
+          },
+          {
+            "fold": 4,
+            "lo": "2024-09-10 10:20:00+00:00",
+            "hi": "2025-09-28 03:10:00+00:00",
+            "test": 438,
+            "train": 118421,
+            "n_purged": 24821,
+            "n_dedup": 2597
+          },
+          {
+            "fold": 5,
+            "lo": "2025-09-28 03:10:00+00:00",
+            "hi": "2026-10-15 20:00:00+00:00",
+            "test": 440,
+            "train": 122145,
+            "n_purged": 21097,
+            "n_dedup": 2597
+          }
+        ]
+      }
+    }
+  },
+  "note": "tm_bench transfer/none: transfer is graded by its unit's registered rule (RULE-RQ20261029-7294-01-DATA-TRANSFER)"
+}

@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "Dispatcher fix (Manager Session 2026-11-26a, 06:48Z): research-queue-dispatch went red because run 45763324547 (RQ-20261126-7c11-01) could not land -- research_result --emit refused its fanned-out rows (no population.n). pool_ticker_reuse_audit.py now fans out emit-valid rows (run verdict, read_state measured, population, n = bars read; audit dict in measurement; self-test asserts it). The run's landed records.jsonl is re-fanned from its own verdict.json and its E5 record emitted (7 rows), so recollect_orphans stops refusing it. No number changed; research tooling + results only. Revert: git revert."
+}

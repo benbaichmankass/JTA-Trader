@@ -14,7 +14,7 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-13",
+  "due_by": "2026-11-30",
   "_seq": 375,
   "note": "Operator 2026-10-10: Overview Prop view showed all dashes and 'No open prop trades' while velotrade_1 had an OPEN fill (id 96) and fresh equity on two accounts. ROOT CAUSE (SPA, not API): ExecSummary.svelte hard-coded the prop branch to equity=null, open=[] and segPerf=null ('lives on the Prop tab'); Overview never fetched any prop endpoint. FIX: API GET /api/bot/prop/overview (equity over fresh snapshots only, stale listed+excluded; open = open/filled with no closing row; realized over closed fills in window, population stated) + SPA wiring in ict-trader-dashboard. OBSERVATION THAT CLOSES: after the API deploys AND the SPA Pages build publishes, Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity = sum of fresh accounts. [2026-10-11 UNPROVEN-SWEEP-2 session_01N1MY4x6EWjqf5LMJ5KSFio] KEPT landed_unproven. API half observed: /api/bot/prop/overview?window=7d returns open tradeify_1 ETHUSDT long and equity.total_usd 19891.41 = 9935.43+4955.98+5000.00 (3 of 3 counted). SPA render (ict-trader-dashboard #221) not loaded by this sweep. Next: operator eyes or a browser pass. | [BACKLOG-DRAIN 2026-11-01] PENDING: PARTIAL. GET /api/bot/prop/overview?window=7d: accounts_counted 3 of 3 and equity.total_usd equals the sum of the counted accounts (checked). open_trades is empty now, so the open velotrade_1 ETHUSDT long cannot be shown; the SPA render needs an operator view. 2026-11-10 manager: the operator's dashboard screenshots partly DISPROVE this row: the open prop trade shows no SL/TP, and closed prop trades are excluded from the closed log ('not included here yet'). Follow-up row: PROP-UI-BRACKETS-CLOSED (post-reset).",
   "observation": {
@@ -29,6 +29,6 @@
     "what": "Overview > Prop > 7d shows the open velotrade_1 ETHUSDT long and total equity equal to the sum of fresh prop accounts"
   },
   "phase": "A",
-  "updated_at": "2026-11-10T11:11:35Z",
-  "updated_by": "Manager Session 2026-11-09a"
+  "updated_at": "2026-11-25T18:44:54Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS"
 }

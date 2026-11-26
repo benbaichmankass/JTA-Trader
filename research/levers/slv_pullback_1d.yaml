@@ -943,6 +943,27 @@ levers:
       best_delta_r_per_trade: 0.1147
       fold_stability: 0.5
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    entry_at:
+      tests:
+      - value: next_open
+        baseline_value: 'off'
+        arm: NEXT
+        unit: RQ-20261126-11d7-09
+        window: 2019-08-16..2026-11-25
+        n: 68
+        net_r: 10.0767
+        baseline_n: 69
+        baseline_net_r: 11.8896
+        delta_net_r: -1.8129
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 5.4861
+        verdict: fail
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0263
+      fold_stability: 0.25
+      reading: every tested value is worse than the baseline
     direction_filter:
       tests:
       - value: di

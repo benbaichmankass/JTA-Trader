@@ -2,8 +2,8 @@
   "id": "ORPHANWATCH-ALERT",
   "title": "mirror-orphan-watch.yml has no alert step: scheduled failures ping nobody (PI-20261018-ORPHANWATCH-0001)",
   "state": "queued",
-  "owner": "AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk)",
-  "lane": "session_01AFoLuMroLtrU2biw4ZDoBk",
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: manager (re-owned 2026-11-25 by BACKLOG-TRIAGE-W48; was: AM-TRADING (session_01AFoLuMroLtr)",
+  "lane": null,
   "model": "claude-sonnet-5-5",
   "tier": 1,
   "roadmap": [
@@ -14,10 +14,11 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
+  "due_by": "2026-12-09",
   "_seq": 643,
   "note": "[2026-10-25 ROUTE-1025] Owns PI-20261018-ORPHANWATCH-0001. RE-CHECKED on main 2026-10-25: grep -c 'send-ping\\|outcomes' .github/workflows/mirror-orphan-watch.yml = 0; the workflow still has only the 'Read positions' and 'Compare mirror to live' steps and its last commit is unrelated (batch-land). BUILD (Tier 1 CI/observability): a failure()-conditioned step that sends ONE ping via the send-ping system-action (or the outcomes report path) naming the orphan rows, distinguishing ORPHAN from stale_ack so a decided hold cannot mask a new divergence; an unreadable positions read pings as 'could not look', not as clean. Also fold in: drop the two stale_ack entries from config/mirror_window_exclusions.yaml once PI-20261018-XRPORPHAN-0001 is decided (config edit: a lane may do it only if that decision is recorded). Related: MIRROR-QTY-DIVERGE.",
   "phase": null,
-  "updated_at": "2026-10-25T06:05:43Z",
-  "updated_by": "session_01MCfi31EKuoRfriU5E7yj2e",
+  "updated_at": "2026-11-26T06:11:27Z",
+  "updated_by": "session_01AFoLuKkaywKeYRyMNpaZC6",
   "week_lane": "throttle"
 }

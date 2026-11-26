@@ -98,6 +98,11 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
 
     ``actions``  timed: ``{ts, kind: set_stop|set_tp|close, level|frac}``; effective on the first bar OPENING at/after ts.
                  ``set_stop`` only ever tightens; ``close`` exits ``frac`` of the position at that bar's open.
+                 AM-V2 Stage B additions (``am_policy_arm.py``; additive, every earlier input replays byte-identically):
+                 ``loosen_stop`` moves the stop to ``level`` ONLY IF that is looser than the live stop (the mirror of ``set_stop``);
+                 ``bank_at`` rests ONE partial limit order (``level``, ``frac``) that fills the first bar price trades THROUGH the
+                 level (a gap fills at the open), reason ``partial`` (so ``net_of`` charges its exit slippage: conservative);
+                 a later ``bank_at`` replaces the pending order until it has filled, and a trade banks at most once.
     ``rules``    conditional on the favourable extreme: ``{kind:'stop_at', trigger_r, level_r}`` (stop to entry_ref +
                  level_r in R once the extreme has reached trigger_r), effective from the next bar.
     ``trail_dist`` price distance behind the running extreme; the stop never loosens.
@@ -114,6 +119,8 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
     pending_stop: Optional[float] = None
     ext_r = 0.0
     tight = lambda new, old: (new > old) if sign > 0 else (new < old)   # noqa: E731
+    bank_order: Optional[dict] = None
+    banked = False
     last = None
     for b in bars:
         if b["time"] < t_entry:
@@ -130,6 +137,12 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
                 stop = a["level"]
             elif a["kind"] == "widen_stop":                        # CF-D3: a deliberate LOOSENING (``set_stop`` only ever tightens)
                 stop = a["level"]
+            elif a["kind"] == "loosen_stop":                       # AM-V2 Stage B: only ever LOOSENS (never overrides a tighter live stop)
+                if not tight(a["level"], stop) and a["level"] != stop:
+                    stop = a["level"]
+            elif a["kind"] == "bank_at":                           # AM-V2 Stage B: one resting partial limit order
+                if not banked:
+                    bank_order = {"level": a["level"], "frac": float(a.get("frac", 0.5))}
             elif a["kind"] == "set_tp":
                 cur_tp = a["level"]
             elif a["kind"] == "close":
@@ -143,6 +156,14 @@ def simulate(bars: Sequence[dict], *, side: str, entry_ref: float, r_dist: float
             fills.append({"frac": remaining, "px": px, "ts": b["time"], "reason": "stop"})
             remaining = 0.0
             break
+        if bank_order is not None and not banked and ((h > bank_order["level"]) if sign > 0 else (lo < bank_order["level"])):
+            f = min(remaining, bank_order["frac"])
+            px = max(bank_order["level"], o) if sign > 0 else min(bank_order["level"], o)
+            fills.append({"frac": f, "px": px, "ts": b["time"], "reason": "partial"})
+            remaining -= f
+            banked = True
+            if remaining <= 1e-12:
+                break
         if cur_tp is not None and ((h > cur_tp) if sign > 0 else (lo < cur_tp)):
             px = max(cur_tp, o) if sign > 0 else min(cur_tp, o)
             fills.append({"frac": remaining, "px": px, "ts": b["time"], "reason": "tp"})

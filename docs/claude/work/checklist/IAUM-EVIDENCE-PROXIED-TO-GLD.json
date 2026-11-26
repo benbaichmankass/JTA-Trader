@@ -1,0 +1,21 @@
+{
+  "id": "IAUM-EVIDENCE-PROXIED-TO-GLD",
+  "title": "iaum_pullback_1d's backtest evidence is a copy of gld_pullback_1d's (Dukascopy proxies IAUM to GLD with identical params)",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-DATA"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26 06:30Z by ML-PRIMARY (manager 06:12Z). MEASURED in RQ-20261126-b71e-01 run 45756680656: the rostered_leg_replay fetch logs 'dukascopy: IAUM -> INSTRUMENT_ETF_CFD_US_GLD_US_USD (relation=proxy: close: same underlying (gold), different vehicle)'; work/iaum_pullback_1d.csv and work/gld_pullback_1d.csv are byte-identical (cmp), both legs run backtest_pullback with the same declared params (40/15/0.618, ATR stop 2.0, trail 4.0), so both read n 47, net +21.04 R. Consequence: any population read that counts both legs double-counts one gold pullback stream, and IAUM has no evidence record of its own vehicle (IAUM's real price/cost history). Fix options: (1) feed IAUM from Alpaca 1Day (the venue it trades on) in the replay/evidence tooling, (2) treat IAUM and GLD as one stream (one book) in population reads. Done when IAUM's evidence record is produced from IAUM's own bars, or the duplication is declared and de-duplicated in population counts.",
+  "phase": "research",
+  "updated_at": "2026-11-26T06:22:42Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

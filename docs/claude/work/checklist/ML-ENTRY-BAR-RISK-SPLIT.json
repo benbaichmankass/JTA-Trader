@@ -1,0 +1,21 @@
+{
+  "id": "ML-ENTRY-BAR-RISK-SPLIT",
+  "title": "PROPOSAL (Tier 3 sizing, operator's call): split one decision bar's risk across its k same-side ml_entry entries instead of risk_pct per entry",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-08",
+  "note": "Filed 2026-11-24 by lane ML-ENTRY-REVIEW-20261124. MEASURED live 11-15..11-24: 11 of 11 decision bars single-signed across symbols; bybit_2 risk_pct 0.015 x 4-5 entries = 6-7.5% of the book on one market call vs an armed 3% daily_dd_switch; 11-20 15:00Z and 11-22 07:00Z lost about 4R each. Sizing is not a gate. Evidence to read first: RQ-20261124-e1a7-02 (top-1 selection; local partial 6/8 folds +0.0158 vs all -0.0005) and its per-arm bar_risk (mean/sd per bar, max drawdown in R). Decide after that unit's runner verdict: top-1 selection (if it passes) or risk/k split (if within-bar ranking carries no information). Not proposed as a change today. Value read registered and RUNNING: RQ-20261124-f1a0-02 (bar_split, 1/k weights vs full R, non-inferiority per 1R + bar Sharpe + maxDD<=0.7x at matched risk, random-weight control), run 45484678545 dispatched 2026-11-24 20:48Z by lane ML-PRIMARY.",
+  "phase": "research",
+  "updated_at": "2026-11-24T20:49:35Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

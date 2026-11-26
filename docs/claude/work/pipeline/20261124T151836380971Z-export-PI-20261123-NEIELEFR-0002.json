@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-25",
+    "kind": "date"
+  },
+  "id": "PI-20261123-NEIELEFR-0002",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "research",
+    "ref": "lane INDEX-LEVERAGED-ETF-ROSTER-20261123 (own mistake: probe run 45250700088 printed the paper account payload)",
+    "rerun": "Open https://github.com/benbaichmankass/JTA-Trader/actions/runs/45250700088 and check whether its log still exists / shows the account payload."
+  },
+  "state": "queued",
+  "what": "The first broker-fractional-probe run (45250700088, 2026-11-23 19:36Z) printed the full paper /v2/account JSON (paper account number and balances) into a public repo's job log. The script was fixed (#28459) but the log was not deleted: delete_workflow_run_logs was denied to the lane by the auto-mode classifier. Manager or operator must delete that run's logs (gh run delete 45250700088 or the Actions UI). Also delete the redundant remote branch lane/index-leveraged-etf-roster-20261123-lintfix (a git push --delete from the lane hung up)."
+}

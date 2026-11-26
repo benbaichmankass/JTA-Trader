@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "clears_when": "scripts/research/research_watchdog.py dispatcher_fires excludes units the compute router defers for a trainer busy/closing window (compute_router.window_problem), with a test; or the manager kills it with a reason",
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261120-RIMARY17-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY-17 2026-11-20, manager instruction 23:26Z",
+    "rerun": "python3 scripts/research/dispatch_queue.py --json | python3 -c \"import json,sys;d=json.load(sys.stdin);print(d['counts'])\"   # 'deferred' units are trainer-window waits, not runnable-but-unfired"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": 1,
+  "what": "research watchdog FALSE POSITIVE: dispatcher_fires (scripts/research/research_watchdog.py) counts units the dispatcher DEFERS for the trainer window as runnable, so it escalates 'runnable units, none in flight' when the only runnable work is waiting for the next trainer window. Observed 2026-11-20 ~23:15Z: RQ-20261120-f1a9-04/-05 deferred ('trainer queue: ~180 / ~270 min (est x1.5) does not fit before the window closes at 24:00Z'; trainer windows_utc 03:00-05:00, 07:00-24:00 in scripts/research/research_compute.yaml) and the watchdog escalated dispatcher_fires (2 runnable, none in flight). Fix (Tier 1, after the Wed 11-25 usage reset per the manager): count only outcome would_dispatch, or report deferred_for_window separately with the next window's open time. RECURRED 2026-11-24 12:50Z (incident dispatcher_fires@20261124T1250Z, escalated to PR #17895): \"6 runnable, no research compute run for 202 min\". MEASURED 12:58Z: the 6 (RQ-20261017-ae17-40/41/44, RQ-20261027-b376-02, RQ-20261101-e5b1-17/18) are DAILY units that last ran 11-23 17:14-18:27Z; dispatch_queue.py says not_due for all 6 (cadence not yet elapsed). queue_replenish.runnable() looks DISPATCH_CYCLE_HOURS ahead, and check_fires uses that look-ahead count, so a unit due later today reads as owed a fire now. Second gap: compute_workflows() did not count the 5 am-policy-arm.yml runs that were queued/in progress (AM v2 Stage B, dispatched 11:27Z), so real compute in flight was invisible to the check. FIX: check_fires should use the due-NOW count (queue_facts already computes by_backend_due_now) and count every workflow the dispatcher can fire (include am-policy-arm.yml via the router/unit backend map). Tier 1."
+}

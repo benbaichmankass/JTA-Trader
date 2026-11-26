@@ -19,7 +19,7 @@
   ],
   "blocked_on": null,
   "next_action": null,
-  "due_by": "2026-11-16",
+  "due_by": "2026-12-02",
   "frontier": {
     "baseline": "LightGBM on identical purged folds and rows (ff8f-04 design)",
     "blocking_lever": "scripts/research/ml_bakeoff.py has no bootstrap or multi-seed support (grep 2026-11-13: none). Needed: a paired moving-block bootstrap of the row-level macro_f1 delta (block = label horizon) within each test fold, pooled across folds, giving a CI on delta; OR an n_seeds paired design. Then author the unit with power from the measured row-level sd.",
@@ -33,5 +33,8 @@
     "unit": "RQ-20261113-4654-02",
     "why": "deep_sequence's only open plan item; a resolvable design needs a row-level statistic, not fold-level"
   },
+  "note": "2026-11-25 RESEARCH-UNBLOCK-BUILDS-W48: the BUILD half is already on main -- scripts/research/ml_bakeoff.py cv.row_bootstrap {block_rows, n_boot, seed} (paired moving-block bootstrap of the pooled OOS metric delta; rule clause stat boot_ci_low / boot_mean; self-test covers it). Only the GRU-vs-LightGBM unit remains to author (ML-PRIMARY told).",
+  "updated_at": "2026-11-25T19:07:06Z",
+  "updated_by": "session_01AFoLuKBiJeC9uLaBdnfyRj",
   "week_lane": "surge"
 }

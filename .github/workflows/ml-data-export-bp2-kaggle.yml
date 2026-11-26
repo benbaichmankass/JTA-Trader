@@ -1,0 +1,132 @@
+name: ml-data-export-bp2-kaggle
+
+# ML-DATA-PUBLISH-WIDEN-BP2 (2026-11-26): build market_raw + a kline-only market_features 1h projection for the frozen bp2 60-perp
+# universe ON THIS RUNNER, from public data.binance.vision USD-M perp klines, and publish it as the PRIVATE Kaggle dataset
+# `metis-market-bp2`, so pooled 60-perp units (row ML-GRU-POOLED-BP2) can run on the Kaggle GPU. The trainer does no work and is
+# not contacted: no SSH, no VM secret. Market data only (docs/research/ml-data-classification-2026-10-13.md); nothing of ours.
+#
+# HOW. scripts/research/market_data_bp2.py stage (fetch in a thread pool, then the canonical `python -m ml.datasets build` for
+# market_raw and market_features with the trainer's label params), then scripts/research/market_data_export.py build
+# --dataset metis-market-bp2 (allowlist, our-data column refusal, MANIFEST with sha256/rows/first-last ts/stale flag), then a
+# version of the private dataset, then job `verify-runner` downloads it on a fresh runner and re-hashes every file.
+# A symbol the archive cannot serve is recorded in STAGE_REPORT.json and absent from the dataset (MANIFEST.absent), never invented.
+#
+# CADENCE. Weekly Mon 07:13Z (research reads closed history; a week's lag on a 5-year window is immaterial) and on dispatch.
+#
+# no-durable-result: data-publishing job (a private dataset + verification artifacts), computes no research verdict or measurement
+#
+# Tier-1: writes only the private Kaggle dataset + 14-day artifacts.
+
+on:
+  schedule:
+    - cron: "13 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: "Comma list to stage (default: the whole bp2 universe)"
+        default: ""
+      verify_only:
+        description: "Skip the build and only re-verify the dataset as published"
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ml-data-export-bp2-kaggle
+  cancel-in-progress: false
+
+jobs:
+  export:
+    if: ${{ inputs.verify_only != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      SYMBOLS: ${{ inputs.symbols }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "kaggle>=2.0" six pandas numpy requests pyyaml
+      - name: Self-test the stager and the exporter
+        run: |
+          python3 scripts/research/market_data_export.py self-test
+          python3 scripts/research/market_data_bp2.py self-test
+      - name: Stage the bp2 universe from data.binance.vision
+        run: |
+          set -uo pipefail
+          python3 scripts/research/market_data_bp2.py stage --out /tmp/bp2 --workers 8 ${SYMBOLS:+--symbols "$SYMBOLS"} | tee /tmp/stage.json
+          du -sh /tmp/bp2/datasets-out
+      - name: Build MANIFEST and publish the private dataset
+        run: |
+          set -uo pipefail
+          [ -n "${KAGGLE_API_TOKEN}" ] || { echo "::error::KAGGLE_API_TOKEN is empty"; exit 1; }
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          USERNAME=$(python - <<'PY'
+          from kaggle.api.kaggle_api_extended import KaggleApi
+          a = KaggleApi(); a.authenticate()
+          print(a.config_values.get("username", ""))
+          PY
+          )
+          [ -n "$USERNAME" ] || { echo "::error::token did not resolve to a Kaggle user"; exit 1; }
+          echo "::add-mask::$USERNAME"
+          scrub() { sed "s|$USERNAME|<user>|g"; }
+          python3 scripts/research/market_data_export.py build --dataset metis-market-bp2 --src /tmp/bp2/datasets-out --out /tmp/stage --username "$USERNAME" | tee /tmp/build.json
+          cp /tmp/bp2/STAGE_REPORT.json /tmp/stage/STAGE_REPORT.json
+          if kaggle datasets status "$USERNAME/metis-market-bp2" >/dev/null 2>&1; then
+            # The CLI can exit non-zero while a version is still processing (seen on metis-market-data 2026-10-14); the
+            # `ready` poll below is the verdict, not the exit code.
+            kaggle datasets version -p /tmp/stage -r zip -m "bp2 export $(date -u +%Y-%m-%dT%H:%MZ) run ${GITHUB_RUN_ID}" 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          else
+            kaggle datasets create -p /tmp/stage -r zip 2>&1 | scrub | grep -v "it/s\|B/s" | tail -5 || true
+          fi
+          READY=0
+          for i in $(seq 1 120); do
+            # `|| true`: while a NEW dataset is still being created, `status` exits non-zero, and under -e/pipefail that
+            # killed the step before this poll ran (first run 45742758768, 2026-11-26: upload OK, step exit 1).
+            st=$(kaggle datasets status "$USERNAME/metis-market-bp2" 2>&1 | scrub || true)
+            echo "dataset: $st"
+            case "$st" in *[Rr]eady*|*READY*) READY=1; break;; esac
+            sleep 15
+          done
+          [ "$READY" = "1" ] || { echo "::error::dataset never became ready"; exit 1; }
+          mkdir -p out && cp /tmp/stage/MANIFEST.json /tmp/stage/STAGE_REPORT.json /tmp/build.json /tmp/stage.json out/
+          sed -i "s|$USERNAME|<user>|g" out/MANIFEST.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ml-data-export-bp2-${{ github.run_id }}
+          path: out
+          retention-days: 14
+
+  verify-runner:
+    needs: export
+    if: ${{ !cancelled() && (needs.export.result == 'success' || inputs.verify_only == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "kaggle>=2.0" six pyyaml
+      - name: Download the published dataset on a fresh runner and re-hash it
+        run: |
+          set -uo pipefail
+          echo "::add-mask::${KAGGLE_API_TOKEN}"
+          python3 scripts/research/published_data.py download --dataset metis-market-bp2 --dest /tmp/dl
+          python3 scripts/research/market_data_export.py verify --root /tmp/dl | tee verify-runner.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ml-data-verify-bp2-runner-${{ github.run_id }}
+          path: verify-runner.json
+          retention-days: 14

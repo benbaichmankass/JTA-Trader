@@ -63,5 +63,20 @@
     "disposition": "landed_elsewhere",
     "reason": "research-store-bundle of research-queue-grade run 43689172680: its research-store job (ship to the trainer store) succeeded; the grade content is re-derived from committed results by later grade runs. See docs/research/loss-disposition-research-store-bundle-43689172680.md.",
     "ref": "RESEARCH-OPS-20261115-2247"
+  },
+  "45069395246": {
+    "disposition": "landed_on_main",
+    "reason": "watchdog-rows of research-watchdog run 45069395246: the `land` job was cancelled, so its one `resolved` row (backend:github_runner@20261122T2028Z, ts 2026-11-22T21:00:46Z) never reached main; landed by hand into comms/research/ops/watchdog_incidents.jsonl (idempotent append, same as the workflow). See docs/research/loss-disposition-expiring-artifacts-2026-11-25.md.",
+    "ref": "RT-EXPIRE-1125"
+  },
+  "45094782352": {
+    "disposition": "landed_elsewhere",
+    "reason": "research-store-bundle of research-queue-grade run 45094782352: its research-store job (ship to the trainer store) concluded success; the 50 grade events are re-derived from committed research/results (50 of 50 unit dirs present on main). See docs/research/loss-disposition-expiring-artifacts-2026-11-25.md.",
+    "ref": "RT-EXPIRE-1125"
+  },
+  "45488242811": {
+    "disposition": "cancelled_by_design",
+    "reason": "am-policy-arm run 45488242811 (unit RQ-20261124-a3b0-02, class tighten_early) was cancelled before it started: lane ML-PRIMARY deliberately dropped the AM v3 a3b0 units and classes in commit 1d65b0272 (2026-11-24T21:39Z) because the AM-V2-ITER2 action-value units RQ-20261124-c7e3-01..04 (PR #28633) superseded them. The unit no longer exists on main, so there is no result to land and nothing to re-dispatch; the question it asked is carried by the c7e3 series (c7e3-05..09). Known non-loss.",
+    "ref": "AM-V2-STAGE-B-POLICY-ARM"
   }
 }

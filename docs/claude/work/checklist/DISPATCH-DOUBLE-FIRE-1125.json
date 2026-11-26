@@ -1,0 +1,21 @@
+{
+  "id": "DISPATCH-DOUBLE-FIRE-1125",
+  "title": "Research dispatcher re-dispatched queued units twice on 2026-11-25 (RQ-FIX's stamp-race double-fire recurring): c7e3-01 runs 45525550688 (01:24Z) + 45527540463 (01:41Z), c7e3-02 runs 45537635254 (03:06Z) + 45541569251 (03:40Z); later runs cancelled by hand",
+  "state": "done",
+  "owner": "manager",
+  "lane": "session_01AFoLuKsh7bGBPtaXSdAnnQ",
+  "model": "claude-sonnet-5-5",
+  "tier": 1,
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "ceiling_usd": 10,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-28",
+  "note": "[2026-11-25 21:41Z lane] OBSERVED (GitHub Actions run list, am-action-value.yml, 30 runs listed): after the fix (#28860 = cebb78384d, ancestor of run head ee60337) the 21:05Z cycle fired c7e3-08 (run 45701037131) and c7e3-09 (run 45701041853) EXACTLY ONCE each, both still queued at 21:40Z; no second run for either in the 35 min since. Before the fix every am-action-value unit had a second run 7-34 min later (c7e3-01..07, a9d2-02). Caveat: n=2 units; both still queued, so the collect/stamp path afterwards is not yet observed, and 21:05Z not 19:00Z/21:00Z (dispatcher cycle timing). Closing as done; reopen if any am-action-value unit shows a second run.",
+  "phase": "investigate",
+  "updated_at": "2026-11-25T21:41:10Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

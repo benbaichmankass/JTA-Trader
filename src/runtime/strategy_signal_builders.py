@@ -4255,6 +4255,155 @@ def tqqq_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     return _with_signal_package("tqqq_trend_long_1d", sig)
 
 
+#: symbol -> (entry session date, SIP closed-bar frame): closed daily bars do not change within a session, so the SIP read is made
+#: once per symbol per session (18 reads a day), not on every tick (row INDEX-CAPIT-SIP-CLOSED-BARS).
+_INDEX_CAPIT_SIP_CACHE: Dict[str, tuple] = {}
+
+
+def _index_capit_sip_frame(symbol: str, exchange: Any, frame: Any, window: int = 200) -> tuple:
+    """``(frame, signal_feed)`` for ``index_capitulation_1x``: the CLOSED daily rows from Alpaca ``feed=sip`` plus the venue frame's
+    last (forming entry-session) row, which stays on the account's feed (IEX) as the entry reference. Row INDEX-CAPIT-SIP-CLOSED-BARS.
+
+    WHY: measured over 975 sessions on 12 tickers, the IEX daily bars reproduce 144 of the backtest's 148 signals but add 21 IEX-only
+    signals and cost ~4.9 R in entry price on matched trades (``comms/research/INDEX-CAPIT-1X-LEG/feed_agreement.json``). The backtest
+    read consolidated bars; SIP is the consolidated tape, and the free plan serves it for requests ending > 15 minutes ago
+    (``AlpacaMarketData.get_closed_bars``). Only this leg's signal input changes; ``ALPACA_DATA_FEED`` and every other consumer keep
+    their feed.
+
+    When SIP cannot be read (a venue without ``get_closed_bars``, a failed read, or SIP not yet holding the previous session), the
+    venue frame is returned unchanged and ``signal_feed`` names why (``iex_fallback:<reason>``): the leg keeps trading on the feed
+    it traded on before this row (the manager's accepted option A), and the reason is on every eval row and package. Never raises.
+    """
+    from src.units.strategies.index_capitulation_1x import _session_dates
+
+    getter = getattr(exchange, "get_closed_bars", None)
+    if getter is None:
+        return frame, "venue_default"
+    try:
+        dates = _session_dates(frame)
+        entry_session = dates[-1]
+        prev_session = dates[-2] if len(dates) >= 2 else None
+        cached = _INDEX_CAPIT_SIP_CACHE.get(symbol)
+        if cached is not None and cached[0] == entry_session:
+            sip_closed = cached[1]
+        else:
+            sip = getter(symbol, "1d", limit=window + 5, feed="sip")
+            if sip is None or len(sip) == 0:
+                state = (getattr(exchange, "last_read_state", {}) or {}).get(symbol) or "none"
+                return frame, f"iex_fallback:sip_{state}"
+            sip_dates = _session_dates(sip)
+            keep = [i for i, d in enumerate(sip_dates) if d < entry_session]
+            sip_closed = sip.iloc[keep].reset_index(drop=True)
+            if len(sip_closed) == 0:
+                return frame, "iex_fallback:sip_no_closed_rows"
+            last_closed = _session_dates(sip_closed)[-1]
+            if prev_session is not None and last_closed < prev_session:
+                return frame, f"iex_fallback:sip_stale:{last_closed}<{prev_session}"
+            _INDEX_CAPIT_SIP_CACHE[symbol] = (entry_session, sip_closed)
+        cols = [c for c in frame.columns if c in sip_closed.columns]
+        out = pd.concat([sip_closed[cols].tail(window - 1), frame[cols].iloc[[-1]]], ignore_index=True)
+        return out, "sip_closed"
+    except Exception as exc:  # noqa: BLE001 - the venue frame is the floor; the reason rides on the eval row
+        logger.warning("index_capitulation_1x: SIP closed-bar splice failed for %s (%s); signal on the venue feed", symbol, exc)
+        return frame, f"iex_fallback:splice_error:{type(exc).__name__}"
+
+
+def index_capitulation_1x_signal_builder(settings: dict) -> Dict[str, Any]:
+    """Daily LONG-ONLY capitulation-bounce leg on 18 1x index ETFs (row INDEX-CAPIT-1X-LEG; module
+    ``src.units.strategies.index_capitulation_1x``, spec ``comms/research/INDEX-CAPIT-1X-LEG/spec.json``).
+
+    Decides on the CLOSED daily bars and enters during the entry session (spec: "buy the next session's open"). So it emits only
+    in US regular hours, on a frame whose last row is that session's bar (``_fetch_session_frame``), and only once per signal:
+    a package already created for this symbol in the entry session means the signal's one trade was taken (a stop-out followed
+    by a bounce above the stop the same day must not re-enter; the bar debounce that used to hold this was removed 2026-11-12).
+    These three are the strategy's own entry rule, not account or execution gates. Honours the YAML ``enabled`` flag.
+    """
+    from src.units.strategies import load_strategy_config
+    from src.units.strategies.index_capitulation_1x import NAME, order_package
+    from src.runtime.market_hours import us_equity_session
+
+    try:
+        strategies_cfg = load_strategy_config()
+    except Exception:  # noqa: BLE001 - never fail-open on a config error
+        strategies_cfg = {}
+    cfg_yaml = strategies_cfg.get(NAME, {}) or {}
+    symbol = settings.get("SYMBOL", settings.get("symbol", ""))
+
+    signal_feed: Dict[str, Any] = {"feed": None}
+
+    def _none(reason: str, candles_df: Any = None) -> Dict[str, Any]:
+        if candles_df is not None:
+            try:
+                log_signal(_stamp_regime({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol,
+                                          "timeframe": "1d", "side": "none", "reason": reason,
+                                          "signal_feed": signal_feed["feed"]}, candles_df))
+            except Exception:  # noqa: BLE001
+                logger.exception("%s: dedicated audit emit failed", NAME)
+        return _with_signal_package(NAME, {"symbol": symbol, "side": "none",
+                                           "meta": {"strategy_name": NAME, "reason": reason}})
+
+    if not bool(cfg_yaml.get("enabled", False)):
+        return _none("disabled_in_yaml")
+    if symbol not in (cfg_yaml.get("symbols") or []):
+        return _none("symbol_not_in_leg_population")
+    try:
+        session = us_equity_session()
+    except Exception:  # noqa: BLE001 - unreadable clock: let the frame check below decide
+        session = "rth"
+    if session != "rth":
+        return _none(f"outside_entry_session:{session}")
+
+    timeframe = "1d"
+    exchange = _build_killzone_exchange(settings)
+    candles_df, _session_skip = _fetch_session_frame(NAME, symbol, timeframe, exchange)
+    if _session_skip is not None:
+        return _none(_session_skip)
+    if candles_df is None:
+        raise RuntimeError(f"{NAME}: no candle data returned for symbol={symbol} timeframe={timeframe}")
+    _publish_liquidity_state(symbol, candles_df)
+    # INDEX-CAPIT-SIP-CLOSED-BARS: the signal reads SIP closed bars; the forming row (entry reference) stays on the venue feed
+    candles_df, signal_feed["feed"] = _index_capit_sip_frame(symbol, exchange, candles_df)
+
+    cfg: Dict[str, Any] = {**cfg_yaml, "symbol": symbol, "timeframe": timeframe, "strategy_label": NAME}
+    try:
+        pkg = order_package(cfg, candles_df=candles_df)
+    except ValueError as exc:
+        return _none(str(exc), candles_df)
+
+    try:
+        from src.runtime.strategy_monocle import _same_bar_entry_for_strategy
+        taken = _same_bar_entry_for_strategy(NAME, symbol=symbol)
+    except Exception:  # noqa: BLE001 - an unreadable journal must not strand the leg; the open-package gate still holds stacking
+        taken = None
+    if taken is not None:
+        return _none(f"signal_already_entered:{taken.get('order_package_id')}", candles_df)
+
+    pkg_meta = pkg.get("meta") or {}
+    logger.info("%s: buy signal at %s (signal %s, entry=%s sl=%s tp=%s K*=%s)", NAME, symbol,
+                pkg_meta.get("signal_date"), pkg["entry"], pkg["sl"], pkg["tp"], pkg_meta.get("k_star"))
+    try:
+        log_signal(_stamp_regime({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
+                                  "side": "buy", "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],
+                                  "confidence": pkg["confidence"], "signal_date": pkg_meta.get("signal_date"),
+                                  "signal_feed": signal_feed["feed"]}, candles_df))
+    except Exception:  # noqa: BLE001
+        logger.exception("%s: dedicated audit emit failed", NAME)
+    sig = {
+        "symbol": symbol,
+        "side": "buy",
+        "price": pkg["entry"],
+        "entry_price": pkg["entry"],
+        "stop_loss": pkg["sl"],
+        "take_profit": pkg["tp"],
+        "pattern": NAME,
+        "meta": {**pkg_meta, "strategy_name": NAME, "confidence": pkg["confidence"], "direction": "long",
+                 "signal_feed": signal_feed["feed"]},
+    }
+    _stamp_regime_on_meta(sig.setdefault("meta", {}), candles_df, symbol=symbol, timeframe=timeframe)
+    _stamp_trend_align_on_signal(sig, candles_df, symbol=symbol, timeframe=timeframe, exchange=exchange)  # label only
+    return _with_signal_package(NAME, sig)
+
+
 def qld_trend_long_1d_signal_builder(settings: dict) -> Dict[str, Any]:
     """QLD (2x Nasdaq-100) daily LONG-ONLY trend-follower.
 
@@ -6780,15 +6929,28 @@ def _ml_entry_pending(name: str, symbol: str, refs: Any) -> Dict[str, Any]:
                                        "meta": {"strategy_name": name, "reason": reason}})
 
 
-def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None) -> str:
+def _ml_entry_decision_line(symbol: str, bars: Any, reason: Any = None, side: Any = None,
+                            meta: Any = None) -> str:
     """The one INFO line per symbol per ml_entry closed-bar decision (observability only, no behaviour): symbol, bars available,
     outcome = evaluated (a package) | no_signal (below_tau) | no_decision_bar | refused: <reason>. Row ML-ENTRY-SERVE-FIXES: the
-    journal used to say only 'returned no actionable signal', so 'refused insufficient_bars' could not be told from 'no signal'."""
+    journal used to say only 'returned no actionable signal', so 'refused insufficient_bars' could not be told from 'no signal'.
+    2026-11-26 (manager-approved, Tier 1, logging only): a ``no_signal`` line now CARRIES the model's numbers from the
+    ``below_tau:pred=..;p_long=..;p_short=..;tau=..;n_ref=..`` reason (the decision itself is unchanged: the reason string is
+    built by ``ml_entry.order_package`` before this line runs), and an evaluated line carries p_long / p_short / tau / n_ref
+    from the package meta, so how far a bar sat from tau is readable from the journal."""
     if reason is None:
         outcome = f"evaluated side={side}"
+        if isinstance(meta, dict):
+            nums = ";".join(f"{k}={meta[k]}" for k in ("p_long", "p_short", "tau", "n_reference") if meta.get(k) is not None)
+            if nums:
+                outcome += f" ({nums})"
     else:
         r = str(reason)
-        outcome = "no_signal" if r.startswith("below_tau") else "no_decision_bar" if r == "not_a_decision_bar" else f"refused: {r}"
+        if r.startswith("below_tau"):
+            detail = r.split(":", 1)[1] if ":" in r else ""
+            outcome = f"no_signal ({detail})" if detail else "no_signal"
+        else:
+            outcome = "no_decision_bar" if r == "not_a_decision_bar" else f"refused: {r}"
     return f"ml_entry_decision symbol={symbol} bars={bars} outcome={outcome}"
 
 
@@ -6865,7 +7027,7 @@ def ml_entry_signal_builder(settings: dict) -> Dict[str, Any]:
                                            "meta": {"strategy_name": NAME, "reason": str(exc)}})
     _record_closed_decision(key, frame, timeframe, vcfg, _now)
     side = "buy" if pkg["direction"] == "long" else "sell"
-    logger.info(_ml_entry_decision_line(symbol, len(df), side=pkg["direction"]))
+    logger.info(_ml_entry_decision_line(symbol, len(df), side=pkg["direction"], meta=pkg.get("meta")))
     try:
         log_signal({"event": f"{NAME}_eval", "strategy": NAME, "symbol": symbol, "timeframe": timeframe,
                     "side": side, "entry": pkg["entry"], "stop_loss": pkg["sl"], "take_profit": pkg["tp"],

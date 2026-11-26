@@ -38,7 +38,10 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -87,6 +90,7 @@ class Snapshot:
     candles: Dict[str, Any] = field(default_factory=dict)  # "SYM|tf" -> candles read or None
     trades: List[dict] = field(default_factory=list)
     packages: Dict[str, dict] = field(default_factory=dict)
+    timings: Dict[str, float] = field(default_factory=dict)  # read name -> wall seconds (LTR-PACKET-BUILD-TIMEOUT)
 
     def get(self, name: str) -> Any:
         return self.reads.get(name)
@@ -111,23 +115,49 @@ def collect(wanted: Optional[List[str]] = None, *, max_pages: int = 3, diag: Cal
     s = Snapshot()
     s.reads["generator"] = generator_state()
 
+    # LTR-PACKET-BUILD-TIMEOUT (2026-11-25): these ~15 reads are independent and I/O bound (each 1-10 s at the 4h
+    # bar-close burst, ~48 s sequential), so they run concurrently, each timed. The names still in flight are
+    # written to $LTR_STAGE_FILE (set by the wake's build_bundle) so a killed build names the stage it died in.
+    pending: set = set()
+    lock = threading.Lock()
+
+    def stage() -> None:
+        path = os.environ.get("LTR_STAGE_FILE")
+        if path:
+            try:
+                Path(path).write_text(json.dumps(sorted(pending)))
+            except OSError:
+                pass
+
     def read(name: str, fn: Callable[[str], Any], path: str) -> None:
+        with lock:
+            pending.add(name)
+            stage()
+        t0 = time.monotonic()
         try:
             s.reads[name] = fn(path)
             s.read_at[name] = _now_iso()
         except Exception as exc:  # allow-silent: recorded in errors and surfaced as could_not_look
             s.errors[name] = str(exc)[:200]
+        finally:
+            s.timings[name] = round(time.monotonic() - t0, 2)
+            with lock:
+                pending.discard(name)
+                stage()
 
-    read("telemetry", diag, "position_telemetry?limit=300")
-    read("positions", public, "api/bot/positions")
-    read("prop_tickets", public, "api/bot/prop/tickets")
-    read("bybit_orders", diag, "bybit_open_orders")
-    read("alpaca_orders", diag, "alpaca_open_orders")
-    read("ib_orders", diag, "ib_open_orders")
-    read("news", public, "api/bot/news/recent?limit=60")
-    read("perf_recent", public, "api/bot/performance/recent?n=200")  # context_v3.live_vs_backtest
-    for acct in ("breakout_2", "tradeify_1", "velotrade_1"):
-        read(f"prop_status:{acct}", public, f"api/bot/prop/status?account_id={acct}")
+    jobs: List[Tuple[str, Callable[[str], Any], str]] = [
+        ("telemetry", diag, "position_telemetry?limit=300"),
+        ("positions", public, "api/bot/positions"),
+        ("prop_tickets", public, "api/bot/prop/tickets"),
+        ("bybit_orders", diag, "bybit_open_orders"),
+        ("alpaca_orders", diag, "alpaca_open_orders"),
+        ("ib_orders", diag, "ib_open_orders"),
+        ("news", public, "api/bot/news/recent?limit=60"),
+        ("perf_recent", public, "api/bot/performance/recent?n=200"),  # context_v3.live_vs_backtest
+    ] + [(f"prop_status:{acct}", public, f"api/bot/prop/status?account_id={acct}")
+         for acct in ("breakout_2", "tradeify_1", "velotrade_1")]
+    with ThreadPoolExecutor(max_workers=len(jobs)) as ex:
+        list(ex.map(lambda j: read(*j), jobs))
 
     open_ids = set(wanted or open_package_ids(s))
     # order_packages: newest first BY ID, so an older open sits deeper. Paged until every wanted package is found or
@@ -667,9 +697,15 @@ def _package_view(s: Snapshot, pkg: str) -> dict:
     # ``source: "order_package"`` on REAL tickets too (2026-11-15 read: 90 of 100 rows had a ticket_id AND an account_id
     # AND source order_package). Filtering on source dropped every real ticket, so every prop-only packet had no account
     # rows (mechanics could_not_look) and the prop open-R derivation (#26164) never ran (LR-20261115T0401Z, pkg-48c5cfab).
-    tickets = [t for t in (s.get("prop_tickets") or {}).get("tickets", [])
-               if t.get("order_package_id") == pkg and t.get("account_id") and t.get("ticket_id")]
-    return {"package": p, "trades": trade_rows, "telemetry": tel, "tickets": tickets}
+    own = [t for t in (s.get("prop_tickets") or {}).get("tickets", [])
+           if t.get("order_package_id") == pkg and t.get("account_id") and t.get("ticket_id")]
+    # LTR-PACKET-PROP-SUPPRESSED-LEGS (2026-11-25): a ticket the executor SUPPRESSED at entry (e.g.
+    # opposite_direction_blocked) never opened, so its account carries no exposure from this package. Listing it in
+    # accounts/account_bounds implied prop exposure that did not exist (pkg-858c60dc674d418f held a real-money close
+    # ~2h on a prop-leg risk that did not apply). It is kept apart and shown as ``suppressed_accounts``.
+    tickets = [t for t in own if str(t.get("status") or "").lower() != "suppressed"]
+    suppressed = [t for t in own if str(t.get("status") or "").lower() == "suppressed"]
+    return {"package": p, "trades": trade_rows, "telemetry": tel, "tickets": tickets, "suppressed_tickets": suppressed}
 
 
 def _accounts_for(view: dict, cfg: Dict[str, dict]) -> List[dict]:
@@ -876,6 +912,7 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
     for a in accts:
         aid, cls, ex = a["account_id"], a["account_class"], a.get("exchange")
         bad0, fail0, ev0 = bad, looked_fail, len(ev)
+        level_bad = 0   # mismatches that are ONLY a venue bracket LEVEL differing while the position rests there
         item = {"account_id": aid, "account_class": cls, "read": None,
                 "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
                 "read_if_amend": "unknown", "evidence": None}
@@ -989,6 +1026,7 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
                         ev.append(f"{aid}: {floor_note}")
                     bad_i, ev_i, compared = _compare_levels(aid, symbol, ex or "", acct_sl, tp, v)
                     bad += bad_i
+                    level_bad += bad_i
                     ev.extend(ev_i)
                     if not compared:
                         # no level of this package was compared on this account: that is NOT a match
@@ -1024,6 +1062,10 @@ def _mechanics(s: Snapshot, view: dict, accts: List[dict], sl: Optional[float], 
             "verdict": "mismatch" if bad > bad0 else "could_not_look" if looked_fail > fail0 else "match",
             "evidence": "; ".join(ev[ev0:]) or None,
             "by_design": next((e.split(": ", 1)[1] for e in ev[ev0:] if "by design" in e), None),
+            # PI-20261124-RORTRAIL-0001: every mismatch on this account is a bracket-LEVEL difference with the
+            # position resting at the venue. A close / reduce does not depend on a bracket level, so the
+            # dispatcher does not skip such an account for those actions (mechanics_scope).
+            "level_only": bool(bad > bad0 and level_bad == bad - bad0),
         }
         item["mechanics"] = per_account[aid]
         bounds.append(item)
@@ -1406,6 +1448,9 @@ def build_packet(pkg: str, s: Snapshot, now: datetime, *, write_tables: bool = F
                     "previous_review": prev, "symbol": symbol, "direction": direction},
         "context_v3": ctx3,
         "cost": cost,
+        **({"suppressed_accounts": [{"account_id": t.get("account_id"), "status": t.get("status"),
+                                     "reason": str(t.get("close_reason") or t.get("message") or "suppressed at entry")[:120]}
+                                    for t in view["suppressed_tickets"]]} if view.get("suppressed_tickets") else {}),
         **({"desk_handoff": handoff} if handoff is not None else {}),
         "features_at_review": {"atr_now_over_entry": atr_ratio, "bars_since_peak": tel.get("bars_since_peak") if tel else pos_r.get("barsSincePeak"),
                                "giveback_r": giveback, "open_r": open_r, "peak_r": peak_r,
@@ -1539,6 +1584,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         out.append({"packet": pk, "packet_sha": sha})
     print(json.dumps(out if a.all_open else out[0], indent=1, sort_keys=True))
     print(f"# open set ({len(ids)}): {', '.join(ids)}; read errors: {snap.errors or 'none'}", file=sys.stderr)
+    print(f"# read timings (s): {snap.timings}", file=sys.stderr)
     return 0
 
 

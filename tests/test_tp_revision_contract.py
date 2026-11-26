@@ -137,7 +137,10 @@ def _apply(monkeypatch, ok: bool):
 def test_exchange_path_forwards_the_revised_tp_and_names_the_prediction(monkeypatch):
     sent, db, summary, pings = _apply(monkeypatch, ok=True)
     assert sent and sent[0]["tp"] == 120.0 and sent[0]["sl"] is None
-    assert db.pkg_updates == [{"tp": 120.0}]
+    # SIBLING RE-SYNC (PI-20261124-RORTRAIL-0001): the package write also names the monitor's own TP move.
+    assert len(db.pkg_updates) == 1 and db.pkg_updates[0]["tp"] == 120.0
+    mv = db.pkg_updates[0]["meta"]["last_tp_move"]
+    assert mv["from"] == 109.9 and mv["to"] == 120.0 and mv["ts"]
     assert db.trade_updates == [(7, {"take_profit_1": 120.0})]
     assert summary.updated_count == 1
     assert pings and any("measured move" in c for c in pings[0]["changes"])

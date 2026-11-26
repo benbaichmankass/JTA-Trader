@@ -124,6 +124,13 @@ jobs:
           # download only leaves those arms `unavailable`, which the kernel's probe line records).
           mkdir -p /tmp/kb/wheels
           pip download --no-deps --only-binary=:all: -d /tmp/kb/wheels tabicl==2.2.0 tabpfn==9.1.0 einops skrub || echo "learner wheel download failed (arms will report unavailable)"
+          # D3-TABULAR-LEARNER-ARMS: a unit running the tabicl arm needs its regressor checkpoint offline (BSD-3-Clause weights,
+          # 114 MB); only such units pay for the download. A failed download leaves the arm unavailable -> INDETERMINATE, never FAIL.
+          if grep -q -- "tabicl" "research/queue/${UNIT}.yaml" 2>/dev/null; then
+            curl -sSfL --retry 3 -o /tmp/kb/wheels/tabicl-regressor-v2-20260212.ckpt \
+              https://huggingface.co/jingang/TabICL/resolve/main/tabicl-regressor-v2-20260212.ckpt \
+              && ls -l /tmp/kb/wheels/*.ckpt || echo "tabicl checkpoint download failed (the arm will report unavailable)"
+          fi
           python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
               --username "$USERNAME" --out /tmp/kb/bundle --sha "$GITHUB_SHA" --wheels /tmp/kb/wheels | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
           # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset

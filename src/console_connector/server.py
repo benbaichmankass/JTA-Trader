@@ -161,7 +161,8 @@ TOOLS: list[dict[str, Any]] = [
 WRITE_TOOL = {"name": "set_wake_toggle", "title": "Flip a wake switch",
               "description": "Turn one wake-notification switch on or off on the trader VM (POST /api/bot/wake-toggles). Logged with who/when.",
               "inputSchema": {"type": "object", "required": ["key", "on"], "properties": {
-                  "key": {"type": "string"}, "on": {"type": "boolean"}}},
+                  "key": {"type": "string"}, "on": {"type": "boolean"},
+                  "actor": {"type": "string", "description": "Who is flipping (a session id or name). Logged as the actor; omit only for a human at the console."}}},
               "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}}
 _TOOL_NAMES = {t["name"] for t in TOOLS} | {WRITE_TOOL["name"]}
 
@@ -208,7 +209,12 @@ def wake_toggle_write(args: dict[str, Any]) -> dict[str, Any]:
     key, on = args.get("key"), args.get("on")
     if not isinstance(key, str) or not isinstance(on, bool):
         return {"as_of": data._iso(data._now()), "read_state": "bad_request", "reason": "key (string) and on (boolean) required"}
-    body = json.dumps({"key": key, "on": on, "by": "console (operator Google sign-in)"}).encode()
+    # The connector cannot tell the operator from a session using the operator's sign-in, so it never claims the operator:
+    # a named actor is logged as given; an unnamed caller is logged as unidentified (WAKE-TOGGLE-ACTOR-ATTRIBUTION).
+    actor = args.get("actor")
+    actor = " ".join(actor.split())[:60] if isinstance(actor, str) and actor.strip() else None
+    by = f"console connector, actor: {actor}" if actor else "console connector (Google sign-in; caller not identified)"
+    body = json.dumps({"key": key, "on": on, "by": by}).encode()
     req = urllib.request.Request(WAKE_API, data=body, method="POST", headers={
         "Authorization": "Bearer " + os.environ["WAKE_TOGGLES_WRITE_TOKEN"].strip(),
         "Content-Type": "application/json", "User-Agent": "jta-console-connector"})

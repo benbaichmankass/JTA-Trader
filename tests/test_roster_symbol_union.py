@@ -262,4 +262,5 @@ class TestLiveConfigIsUnchangedByThisPR:
             "roster-symbol-reachability finding with it rather than only "
             "updating this assertion." % added
         )
-        assert len(after) == 23, "expected the 2026-09-22 fetch set of 23 symbols"
+        # 23 (2026-09-22) + 18 index ETFs on the alpaca pull lists (2026-11-25 INDEX-CAPIT-1X-LEG, pull list updated with the roster).
+        assert len(after) == 41, "expected the 2026-11-25 fetch set of 41 symbols"

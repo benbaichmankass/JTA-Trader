@@ -111,10 +111,16 @@ jobs:
         if: "!(github.event_name == 'workflow_dispatch' && inputs.test_alert == true)"
         env:
           STAMP_TRIAGE_LIVE: "true"
+          # 2026-11-26 (manager, after three conflicted_automation incidents in one night): LANDING is on. A dirty stamp PR whose
+          # stamp is newer than main gets main merged in (stamp = max), and a dirty research-queue-receipt PR is closed when
+          # main's receipt is as new, else main is merged in and its own file kept. The push needs a token whose pushes trigger
+          # CI (a GITHUB_TOKEN push would leave the PR with no checks): the same PAT this workflow's land job already uses.
+          # REVERT: drop --land and this env line (closing superseded PRs stays as it was).
+          STAMP_TRIAGE_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
         run: |
           set -uo pipefail
           LIVE=""
-          if [ "${STAMP_TRIAGE_LIVE}" = "true" ] || [ "${{ inputs.stamp_triage_live }}" = "true" ]; then LIVE="--live"; fi
+          if [ "${STAMP_TRIAGE_LIVE}" = "true" ] || [ "${{ inputs.stamp_triage_live }}" = "true" ]; then LIVE="--live --land --min-age-min 10"; fi
           python3 scripts/research/stamp_pr_triage.py ${LIVE} | tee /tmp/stamp-triage.txt
           { echo '### stamp-pr-triage ('"${LIVE:-dry run}"')'; echo '```'; cat /tmp/stamp-triage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 

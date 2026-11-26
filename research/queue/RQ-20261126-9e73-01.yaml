@@ -1,0 +1,255 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (ML-MECE D2/F29; manager OK 02:48Z: 'author the raw-OHLCV-window GRU unit NOW'). The representation iteration
+# after 9e72-01 fixed the recipe and tied LightGBM. Arms named before the run and counted. Gates this adds or changes: none.
+id: RQ-20261126-9e73-01
+title: 'D2/F29 GRU on RAW OHLCV WINDOWS (GPU): the 9e72-01 calibrated recipe fed only per-bar raw inputs from market_raw (return, range, body, gap, relative
+  volume) over 64- and 168-bar lookbacks vs LightGBM on the 10 engineered features, 1h regime log-loss on BTC/ETH/SOL, paired block-bootstrap rule'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-sequence-gru
+  subject_kind: ml_model
+  from_result: RQ-20261126-9e72-01/45735661023
+  verdict_read: fail
+  diagnosis: '9e72-01 FIXED the recipe (early stopping + temperature calibration): the GRU went from 0.11-0.26 nats WORSE than the class prior (9e71-01)
+    to +0.09..+0.11 better, and then TIED LightGBM on the same 10 engineered per-bar features (BTC -0.012 nats, CI below 0; ETH -0.0005 and SOL -0.0024,
+    CIs span 0). On hand-made features a sequence model has nothing the trees lack, so the open question is REPRESENTATION: does the GRU find structure
+    in the RAW bar sequence (returns, ranges, bodies, gaps, relative volume over a long lookback) that the 10 engineered columns do not carry?'
+  search: two lookback arms named before the run (window_bars 64 and 168 1h bars), the 9e72-01 recipe otherwise unchanged, raw_bars inputs only (base_features
+    []); no other grid.
+  levers:
+  - model_family
+  - representation
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 4
+  due_by: '2026-12-03'
+question: Does a calibrated GRU on RAW 1h OHLCV windows (two arms, 64 and 168 bars) beat LightGBM on the 10 engineered features in out-of-fold regime log-loss
+  on ALL of BTC/ETH/SOL (block-bootstrap 95% lower bound > 0), or lose on every symbol?
+why_this_matters: 9e72-01 showed the GRU recipe is fixed and that on engineered features it only ties the trees. Raw windows are the representation a sequence
+  model is supposed to need; a pass re-opens the deep_sequence family for the entry model, and a fail moves D2/D3 to a pretrained encoder.
+power:
+  expected_n: 72000
+  min_detectable_effect: 0.008
+  effect_units: logloss_nats_per_row
+  sd: 0.003
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED from 9e72-01 on the same rows: per-symbol bootstrap sd of the GRU-minus-LightGBM log-loss delta 0.0030-0.0032 nats/row (24k OOS rows
+    per symbol, 24-row blocks), so the 95% lower bound clears 0 at a delta of ~0.006 per symbol; MDE 2.8 x 0.003 = ~0.008 per symbol, 0.008 declared. Two
+    arms counted. INDETERMINATE is possible and stated now.'
+  feasibility:
+    source: none
+    accrual_basis: 'Published market shards (metis-market-data: market_features + market_raw BTC/ETH/SOL 1h v002); nothing accrues.'
+evidence_class:
+  claim: model_quality
+  holdout: none
+ml_consumer:
+  not_applicable: 'a model-family gate on a market regime target: no order, leg or book consumes this result; a PASS authors the entry-label GRU unit (ML-ENTRY-FINETUNE),
+    which carries its own consumer'
+baseline:
+  definition: LightGBM (n_estimators 200, lr 0.05, num_leaves 31, min_child_samples 50) on the 10 ENGINEERED columns (the 9e72-01 baseline, unchanged),
+    same rows and folds; the class prior is a reported control. The GRU arms see ONLY the 5 raw_bars columns (raw_r1, raw_hl, raw_co, raw_gap, raw_lv) from
+    market_raw.
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-kaggle.yml
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261126-9e73-01
+decision_rule:
+  id: RULE-RQ-20261126-9e73-01
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: LightGBM on the 10 engineered columns, same rows and folds; candidates = two raw-window GRU arms
+  statistic: 'scripts/research/ml_bakeoff.py: per symbol, the paired moving-block (block_rows 24, n_boot 1000, seed 0) bootstrap of the POOLED out-of-fold
+    log-loss improvement (LightGBM minus GRU; positive = GRU better), stat boot_ci_low (95% lower bound) and boot_mean; the fold-level paired mean and the
+    prior control are reported. Reported: per-fit epochs run, best epoch, best validation log-loss and temperature (measurement.torch_gru_fit); GRU vs the
+    class prior.'
+  rule: PASS iff for at least one arm (gru_raw_w64 or gru_raw_w168) boot_ci_low vs LightGBM is > 0 on ALL of BTCUSDT_1h, ETHUSDT_1h, SOLUSDT_1h (>= 3 folds
+    measured). FAIL iff for BOTH arms boot_mean vs LightGBM is <= 0 on EVERY symbol. INDETERMINATE otherwise. Fixed now; machine form in ml_bakeoff.rule.
+  pass_action: 'A best-of-2 pass is a LEAD: confirm on the pooled twin RQ-20261126-9e73-02 before authoring the entry-label GRU arm (net R per side, frozen
+    v1 recipe baseline, net of the full cost stack) as its own unit.'
+  fail_action: Record that a calibrated GRU on raw OHLCV windows (64 and 168 bars) does not beat LightGBM on the engineered features; the remaining deep_sequence
+    form is a PRETRAINED TS encoder (MLP-F-COVARIATE-TSFM), authored from this result.
+  proposal_mapping: pass -> confirmation then entry-label GRU unit; fail -> pretrained TS encoder next; indeterminate -> state the CI width and iterate.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate.
+  min_n: 3
+  multiple_testing:
+    arms_counted: 2
+    variants_vs_control: 2
+    correction: each arm must clear the rule on its own; a best-of-2 pass is a LEAD that needs the confirmation read, never a finding
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'ESTIMATE: a model-family gate; value is the decision it unlocks for D2/D3, not a direct P&L.'
+practice_precedent: paired comparison vs the established baseline with a block-bootstrap CI on a proper scoring rule (principles M6, M13); arms named up
+  front and counted; a representation change on a fixed recipe after the recipe was fixed (9e72-01).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-data
+  peak_memory_gb: 6.0
+  est_minutes: 120
+  basis: 'ESTIMATE from MEASURED 9e72-01 (same harness and recipe on a T4): two GRU arms instead of one, longer windows (64 / 168 x 5 columns instead of
+    48 x 10), so ~1.5-2.5x its runtime. Re-declare from the first run.'
+  published_paths:
+  - datasets-out/market_raw/BTCUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/ETHUSDT/1h/v002/data.jsonl
+  - datasets-out/market_raw/SOLUSDT/1h/v002/data.jsonl
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- FRONTIER-Q-GRU-RESOLVABLE
+- MLP-F-SEQUENCE-GRU
+- RQ-20261014-4591-02
+- RQ-20261014-65cc-10
+- RQ-20261018-ff8f-04
+- RQ-20261125-9e71-01
+- RQ-20261126-2819-01
+- RQ-20261126-9e72-01
+- RQ-20261126-9e73-02
+- scripts/research/ml_bakeoff.py
+not_before: '2026-11-26T05:00:00+00:00'
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    groups:
+      BTCUSDT_1h:
+        path: datasets-out/market_features/BTCUSDT/1h/v002/data.jsonl
+      ETHUSDT_1h:
+        path: datasets-out/market_features/ETHUSDT/1h/v002/data.jsonl
+      SOLUSDT_1h:
+        path: datasets-out/market_features/SOLUSDT/1h/v002/data.jsonl
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 24
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 24
+      n_boot: 1000
+      seed: 0
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - gru_raw_w64
+  - gru_raw_w168
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru_raw_w64:
+      kind: torch_gru
+      base_features: []
+      feature_blocks:
+      - kind: raw_bars
+        path: datasets-out/market_raw/{group_sym}/1h/v002/data.jsonl
+        vol_window: 96
+      params:
+        window_bars: 64
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 40000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+    gru_raw_w168:
+      kind: torch_gru
+      base_features: []
+      feature_blocks:
+      - kind: raw_bars
+        path: datasets-out/market_raw/{group_sym}/1h/v002/data.jsonl
+        vol_window: 96
+      params:
+        window_bars: 168
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 40000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - BTCUSDT_1h
+      - ETHUSDT_1h
+      - SOLUSDT_1h
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+last_dispatched_at: null
+grading:
+  attested: RULE-RQ-20261126-9e73-01
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261126-9e73-01
+  evidence:
+  - research/results/RQ-20261126-9e73-01/45763508047.jsonl
+  first_fail: 2 row(s), all measured, all fail
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

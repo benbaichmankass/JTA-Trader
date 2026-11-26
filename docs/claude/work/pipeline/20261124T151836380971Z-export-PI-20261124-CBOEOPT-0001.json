@@ -1,0 +1,17 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-27",
+    "kind": "date"
+  },
+  "id": "PI-20261124-CBOEOPT-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "Manager Session 2026-11-22a, alert RUN failure options-snapshot-capture 05:23Z",
+    "rerun": "curl -A Mozilla/5.0 -w %{http_code} https://cdn-api.cboe.com/api/global/delayed_quotes/options/SPY.json; and the verify table of the latest options-snapshot-capture run (source=cboe)"
+  },
+  "state": "killed",
+  "terminal_reason": "duplicate of checklist row CBOE-OPTIONS-SOURCE-BLOCKED (filed earlier, already measured the block from runners, trainer VM and containers, with plan A = Alpaca contracts OI + option-bar volume); my search missed it because it grepped only the workflow name. Evidence from 11-24 05:27Z folds into that row.",
+  "what": "options-snapshot-capture: the keyless CBOE source has been dead since 2026-11-20 (5 consecutive failed runs: 44660566775 11-20 02:24Z through 45332796290 11-24 05:21Z). verify: cboe 55/55 underlyings STALE, last capture 2026-11-19 (16 days); alpaca source fine (55/55 ok, last 2026-11-24). MEASURED cause 2026-11-24 05:27Z from a cloud container: cdn.cboe.com/api/global/delayed_quotes/options/SPY.json now 307-redirects to cdn-api.cboe.com, which returns 403 (Cloudflare HTML challenge); scripts/ops/capture_options_snapshot.py:52 hard-codes cdn.cboe.com and raises on >=400. Loses open-interest + volume (cboe-only fields) for the options-history accrual (row OPTIONS-IV-HISTORY-GAP). Fix options: (a) follow the new host and test from the Actions runner / trainer VM (a different egress may not get the challenge); (b) another keyless OI source; (c) if none, retire the cboe source by record and stop the daily red flag. Tier 1."
+}

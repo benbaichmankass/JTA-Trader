@@ -1,0 +1,88 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (manager 2026-11-26 05:07Z: "the trainer does not stay idle; that's the operator's standing
+# rule ... make the pre-flight recurring (weekly) ... so it's standing trainer work"). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a read-only integrity read; a FAIL opens a fix row, it blocks nothing).
+id: RQ-20261126-f17a-01
+title: 'Weekly registry-wide feature pre-flight: would any SERVED ML head (stage shadow / advisory) be scored on a degraded row (a missing
+  feature column read as NaN, an unseen categorical read as -1) on its manifest dataset''s latest rows?'
+status: queued
+cadence: weekly
+kind: deterministic
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+question: For every registry entry at stage shadow or advisory, do the last 2,000 rows of its manifest dataset carry every feature column the head
+  reads (non-null) and only categorical values in its frozen mappings; and for regime heads, does vol_bucket match the head's frozen edges?
+why_this_matters: 'ml/predictors/lightgbm.py::_encode_row degrades SILENTLY: a missing numeric becomes NaN and an unseen categorical becomes -1,
+  and either still yields a plausible prediction. RQ-20261126-7f3d-01 found a live/offline divergence in the fc_* columns that no check had
+  caught for weeks. This read sweeps every served head weekly, so a dataset rebuild that drops or renames a column, or a new categorical value,
+  is caught within a week. It uses the trainer''s idle capacity: streamed, projected, one head at a time.'
+why_not_inferential: 'A census of the served heads, each checked for a fixed property (columns present, categoricals in the frozen mapping)
+  on a fixed window. There is no sample or effect size: the verdict names the heads that fail the property.'
+ml_consumer:
+  not_applicable: 'an integrity pre-flight across every served head; a FAIL opens a fix row for each named head, and that row carries the decision'
+decision_rule:
+  id: RULE-REGISTRY-FEATURE-PREFLIGHT-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: the head's own frozen feature list and categorical mappings (what it was trained on)
+  statistic: 'scripts/research/registry_feature_preflight.py: per served head, ml_vol_label_replay.audit_feature_rows over the last 2,000 rows of
+    datasets-out/<family>/<symbol>/<tf>/<version>/data.jsonl (streamed, projected to the head''s columns); features_ok = no column
+    missing/null and no unseen categorical; vol_bucket parity reported for regime heads.'
+  rule: 'FAIL iff >= 1 checked served head has features_ok false (named in the note). PASS iff every served head was checked and features_ok.
+    INDETERMINATE iff no head could be checked. A head that could not be checked is listed with its reason and never counted clean.'
+  pass_action: Nothing to do; the next weekly run repeats the census.
+  fail_action: File one fix row per named head (the column or categorical at fault and its dataset), and flag it to the ML lane; if the head
+    is advisory (it feeds a live decision), say so in the row.
+  proposal_mapping: fail -> one fix row per named head; pass -> none; indeterminate -> check the trainer registry/dataset paths.
+  what_it_does_not_do: Changes no model, registry stage, dataset or config; scores nothing into a decision; adds no gate.
+  min_n: 1
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.3
+  basis: 'stand-in: a silently degraded advisory head steers live decisions until someone notices; not a P&L measurement.'
+practice_precedent: 'M2 train/serve parity (docs/reference/trading-and-model-practice-principles.md): verify the served feature path before
+  trusting a served model''s output, continuously rather than once.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  basis: 'One head at a time: one predictor in memory plus a deque of 2,000 projected rows; the dataset is streamed line by line
+    (iter_projected_rows), so memory is flat in file size. Fits the trainer''s ~1 GB p95 spare (manager 2026-11-26). Single-threaded.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/registry_feature_preflight.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261126-f17a-01
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_vol_label_replay.py
+- RQ-20261126-7f3d-01
+- TRAINER-LIGHT-READS
+last_dispatched_at: '2026-11-26T07:19:20+00:00'
+grading:
+  attested: RULE-REGISTRY-FEATURE-PREFLIGHT-20261126
+  auto: true
+  decision_rule_id: RULE-REGISTRY-FEATURE-PREFLIGHT-20261126
+  evidence:
+  - research/results/RQ-20261126-f17a-01/45774478743.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  latest: true
+  needs_review: false
+  reason: 19 row(s), all measured, all pass
+  rows: 19
+  verdict: pass

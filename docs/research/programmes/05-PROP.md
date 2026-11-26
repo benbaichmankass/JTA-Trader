@@ -2,6 +2,14 @@
 
 > **Doc status:** `unknown` · category `evidence` · last verified `2026-10-16` · registered in [`../../DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane `P5-PROP-PROGRAMME` (manager dispatch, weekly planning 2026-10-14) · map: [`RESEARCH-MAP.md`](RESEARCH-MAP.md) · roadmap `L-PROP` · **Tier-1 document: it proposes tests; every roster, sizing or switch change it leads to is Tier-3 with an evidence record.**
 
+## Programme review 2026-11-25 (lane PROGRAMME-REVIEW-20261125) — TRADING track
+
+Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-25T18:25Z: 2,906 units read (0 unreadable), 953 result rows in the window, **534 units with rows** (graded: 142 pass / 261 fail / 78 indeterminate / 2 no-action / 19 ungraded). 312 carry a programme field, 222 do not; this review assigns the unprogrammed clusters by what they ask: live_strategy 161 → P3, ml_health 35 + regime 10 → P2, infra 11 → P6, new_strategy_prop 3 → P5. **P5 in the window:** 8 programmed units (7 fail, 1 indeterminate) + 3 unprogrammed new_strategy_prop units assigned here.
+
+**What was learned.** The Donchian-55 / trail-6 prop-pace lead does not travel: FAIL on both alt-symbol holdouts at 4h and 2h (abab-01/-02/-63) and on the pooled paired read (5d2a-01). The disjoint-window confirmations of the prop-stack V3 legs (e5b1-08/-09/-10) are 2 FAIL + 1 IND. The Tradeify ORB on real CME MNQ 5m (09d2-05) FAILED. Belief: none of this week's prop leads survive a second window or population; the prop roster's EV case rests on the legs already rostered, not on new ones.
+
+**Failed tests: diagnosis.** D55: *idea* is now the leading cause (four independent populations), with *regime* the rival; no further symbol twin. e5b1: *regime / window*. **Retired:** none (D55 goes to a family-review note only if a timeframe or exit variant is also flat). **Next 3–4 weeks:** prop survival recheck of the rostered legs against the firms' DD limits (comms/prop_survival) after this week's FAILs — decides whether any prop leg is at risk; owner research-ops.
+
 ## Programme review 2026-11-18 (lane PROGRAMME-REVIEW-20261118) — TRADING track
 
 Population: `research_ops_checks.py --kind programme_review --since 7d` at 2026-11-18T18:10Z — 2,528 units read (0 unreadable), 1,044 result rows in the window, **428 units with rows** (graded 7d: TRADING 85 pass / 160 fail / 28 ind / 34 no-action; MODEL 33 / 67 / 28; INFRA 11 pass); 256 of the 428 carry no `programme:` field and are assigned by what they ask in the record (`comms/research/programme_review/20261118.json` § analysis.unprogrammed).

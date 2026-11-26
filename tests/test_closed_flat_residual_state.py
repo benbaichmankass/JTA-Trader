@@ -241,7 +241,7 @@ def test_alert_level_is_forwarded_to_telegram():
     captured = {}
     original = outcomes.report
 
-    def _spy(channel, **kw):
+    def _spy(channel, status, **kw):
         captured.update(kw)
 
     outcomes.report = _spy
@@ -359,3 +359,30 @@ def _db_with_one_closed_trade():
     )
     conn.commit()
     return conn
+
+
+def test_default_alerter_matches_real_report_signature(tmp_path):
+    """End to end through the REAL ``outcomes.report`` signature: the alert
+    raised TypeError (missing ``status``) on every violation and never sent."""
+    import inspect
+    from src.runtime import outcomes
+
+    calls = []
+    original = outcomes.report
+    sig = inspect.signature(original)
+
+    def _strict(*a, **k):
+        sig.bind(*a, **k)  # raises TypeError on a signature mismatch
+        calls.append((a, k))
+
+    outcomes.report = _strict
+    try:
+        alerter = cfi._default_alerter()
+        alerter("closed_flat_invariant", "summary", {"trade_id": 1})
+    finally:
+        outcomes.report = original
+
+    assert len(calls) == 1
+    assert calls[0][0][1] == "violation"
+    assert calls[0][1]["level"] == outcomes.Level.ERROR
+

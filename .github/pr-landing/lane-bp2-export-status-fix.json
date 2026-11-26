@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "One-line fix to ml-data-export-bp2-kaggle.yml: the readiness poll's `st=$(kaggle datasets status ... | scrub)` exited the step under -e/pipefail while a NEW dataset was still being created (first run 45742758768: upload OK, 'Your private Dataset is being created', step exit 1 before the poll). Adds `|| true` so the poll, not the CLI exit code, is the verdict (the same rule the step's create/version line already follows). R5 cannot vouch .github/workflows/, so the manager merges. Revert: git revert.",
+  "why": "ML-DATA-PUBLISH-WIDEN-BP2: the first export's publish step failed on this line (manager alert 02:55Z). Gates this adds or changes: none."
+}

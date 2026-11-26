@@ -214,6 +214,7 @@ RECORD_DIRS: List[Tuple[str, str]] = [
     ("docs/sprints/", "dir:sprints-are-session-records"),
     ("docs/claude/checkpoints/", "dir:checkpoints-are-session-state-records"),
     ("docs/claude/dispositions/", "dir:dispositions-record-decisions-taken"),
+    ("docs/claude/work/handoffs/", "dir:handoffs-record-manager-transitions"),
 ]
 
 # STRONG name rules — the filename DECLARES the document's kind, and that beats

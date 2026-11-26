@@ -42,6 +42,9 @@ def test_kaggle_cpu_is_not_gated_on_gpu_quota_and_has_its_own_capacity():
     st3 = cr.BackendState(quota_hours=30.0, inflight={"kaggle": 1})   # the GPU slot being busy does not block CPU
     assert not cr.resolve(unit("auto"), CFG, st3).wait
     st4 = cr.BackendState(quota_hours=30.0, inflight={"kaggle_cpu": 1})
+    # full CPU kernel: the idle GPU kernel takes it (kaggle_overflow; it mounts the same dataset), never the plain runner
+    assert cr.resolve(unit("auto"), CFG, st4).backend == "kaggle"
+    st4 = cr.BackendState(quota_hours=30.0, inflight={"kaggle_cpu": 1, "kaggle": 1})
     w = cr.resolve(unit("auto"), CFG, st4)
     assert w.ok and w.wait and "kaggle_cpu at capacity" in w.reason
 

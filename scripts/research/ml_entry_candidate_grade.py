@@ -19,6 +19,12 @@ touches ``ml/served``; the workflow turns a PASS into a DRAFT PR and a human mer
      a REPLACEMENT passes iff BOTH models have n >= 100 per side (Amendment 2; 300 stays for the absolute read) on >= 10 symbols AND
      candidate mean net R >= served mean net R. Under the floor on either model -> ``insufficient_n``; candidate worse -> ``fail``. The absolute deflated bar and the CI are reported,
      not gating.
+  5. AMENDMENT 4 (operator 2026-11-23, reconfirmed 2026-11-25: "a number measured only over the grading window must not promote";
+     OPERATING-PLAN § 2 "A number measured only over the grading window never promotes"): the window is split in time. The SELECTION
+     half ``[S, S + window_days - confirm_days - 1]`` chooses (candidate >= served there, else ``fail``); the CONFIRMATION half (the last
+     ``confirm_days`` days, disjoint from the selection half) is where the Amendment-1/2 test must pass again, floors included. Only the
+     confirmation-half number promotes and is the headline. The full-window read is kept as information. A record with no confirmation
+     half (every record before Amendment 4) recomputes to ``no_disjoint_number``.
 
   python3 scripts/research/ml_entry_candidate_grade.py run --cache DIR --out DIR [--run-date YYYY-MM-DD] [--candidate-json F]
   python3 scripts/research/ml_entry_candidate_grade.py recompute --evidence comms/research/ml_entry_grade/<run>/grade_evidence.json
@@ -47,12 +53,18 @@ RULE_DOC = REPO / "docs/research/ml-entry-promotion-rule-2026-11-06.md"
 WINDOW_DAYS = 14
 FAMILY = "ENTRY"
 REPLACEMENT_N_FLOOR = 100   # AMENDMENT 2: per side, for a replacement verdict; E.N_FLOOR (300) stays for the absolute / edge read
+CONFIRM_DAYS = 7            # AMENDMENT 4: the last CONFIRM_DAYS of the window confirm; the days before them select
 
 
-def plan(run_date: date, window_days: int = WINDOW_DAYS) -> dict:
+def plan(run_date: date, window_days: int = WINDOW_DAYS, confirm_days: int = CONFIRM_DAYS) -> dict:
+    if not 0 < confirm_days < window_days:
+        raise ValueError(f"confirm_days {confirm_days} must be inside the {window_days}-day window (Amendment 4 needs both halves)")
     s = run_date - timedelta(days=window_days)
+    c = run_date - timedelta(days=confirm_days)
     return {"run_date": run_date.isoformat(), "asof": s.isoformat(), "window_start": s.isoformat(),
-            "window_end": (run_date - timedelta(days=1)).isoformat(), "window_days": window_days}
+            "window_end": (run_date - timedelta(days=1)).isoformat(), "window_days": window_days,
+            "selection_start": s.isoformat(), "selection_end": (c - timedelta(days=1)).isoformat(),
+            "confirm_start": c.isoformat(), "confirm_end": (run_date - timedelta(days=1)).isoformat(), "confirm_days": confirm_days}
 
 
 def _read_tab(cache: Path):
@@ -86,14 +98,33 @@ def rule_verdict(cand: dict, served: dict, bar: dict) -> tuple[str, list[str]]:
     return "fail", [f"worse than served: {mean:+.4f} < {sm:+.4f} (candidate n={cand['n']}, served n={served['n']})", info]
 
 
+def split_verdict(sel_cand: dict, sel_served: dict, conf_cand: dict, conf_served: dict, bar: dict) -> tuple[str, list[str]]:
+    """AMENDMENT 4 (operator 2026-11-23): the selection half CHOOSES, the disjoint confirmation half PROMOTES. Pure.
+
+    Selection: candidate mean net R >= served on the selection half (no floor: choosing is not promoting); otherwise ``fail``.
+    Confirmation: ``rule_verdict`` (Amendments 1-3: both floors, at least as good) on the confirmation half; its verdict is the run's."""
+    sm, ss = sel_cand.get("mean_net_r"), sel_served.get("mean_net_r")
+    if sm is None or ss is None:
+        return "insufficient_n", [f"selection half has no taken decisions (candidate n={sel_cand.get('n', 0)}, served n={sel_served.get('n', 0)})"]
+    if sm < ss:
+        return "fail", [f"not chosen on the selection half: {sm:+.4f} < served {ss:+.4f} (candidate n={sel_cand.get('n')}, served n={sel_served.get('n')})"]
+    v, why = rule_verdict(conf_cand, conf_served, bar)
+    return v, [f"chosen on the selection half: {sm:+.4f} >= served {ss:+.4f} (candidate n={sel_cand.get('n')}, served n={sel_served.get('n')})"] + \
+        [f"confirmation half (disjoint): {w}" for w in why]
+
+
 def recompute(a) -> int:
     """Re-apply the CURRENT rule to a committed evidence record. No fetch, no fit, no ledger read: it only re-reads numbers already
     measured, and writes verdict_amended.json beside the record."""
     p = Path(a.evidence)
     ev = json.loads(p.read_text())
     cand, served, bar = ev["candidate"]["result"], ev["served"]["result"], ev["bar"]
-    verdict, why = rule_verdict(cand, served, bar)
-    out = {"rule_id": RULE_ID, "rule_amendment": "Amendment 1 (operator 2026-11-06 ~16:58Z) + Amendment 2 (replacement floor n>=100 per side, manager relay)", "rule_doc_sha256": _sha(RULE_DOC),
+    if "selection_result" in ev["candidate"] and "selection_result" in ev["served"]:
+        verdict, why = split_verdict(ev["candidate"]["selection_result"], ev["served"]["selection_result"], cand, served, bar)
+    else:   # AMENDMENT 4: a record graded on one window has only a number that also chose; it can never promote
+        verdict, why = "no_disjoint_number", ["AMENDMENT 4 (operator 2026-11-23): this record holds one window only, the one that chose the "
+                                              "candidate; a number measured only over the grading window does not promote", *rule_verdict(cand, served, bar)[1]]
+    out = {"rule_id": RULE_ID, "rule_amendment": "Amendments 1-3 (at least as good, floor n>=100 per side) + Amendment 4 (operator 2026-11-23: the selection half chooses, the disjoint confirmation half promotes)", "rule_doc_sha256": _sha(RULE_DOC),
            "recomputed_from": str(p), "source_run_verdict": ev.get("verdict"), "window": ev["plan"],
            "candidate": {k: cand.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
            "served": {k: served.get(k) for k in ("n", "n_symbols", "mean_net_r", "se_net_r")},
@@ -128,7 +159,7 @@ def run(a) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     run_date = date.fromisoformat(a.run_date) if a.run_date else datetime.now(timezone.utc).date()
-    p = plan(run_date, a.window_days)
+    p = plan(run_date, a.window_days, a.confirm_days)
     served_path = served_artifact()
     served_meta, served_boost = E._frozen_models(served_path)
     tau = served_meta["tau"]
@@ -179,15 +210,28 @@ def run(a) -> int:
         bar = claim["bar"]
         ev["holdout_claim"] = {k: claim[k] for k in ("model_id", "family", "start", "end", "train_end", "n_tries", "variants_on_window", "read_at")}
         ev["bar"] = bar
-        cand = E.summarize(_score(models, test, tau)) if len(test) else {"n": 0, "mean_net_r": None}
         sp = {s: served_boost[s] for s in ("long", "short")}
-        served = E.summarize(_score(sp, test, tau)) if len(test) else {"n": 0, "mean_net_r": None}
-        for d in (cand, served):
-            d.pop("by_month", None)
+        cut = pd.Timestamp(p["confirm_start"], tz="UTC")
+
+        def _both(rows):
+            if not len(rows):
+                return {"n": 0, "mean_net_r": None}, {"n": 0, "mean_net_r": None}
+            c_, s_ = E.summarize(_score(models, rows, tau)), E.summarize(_score(sp, rows, tau))
+            for d in (c_, s_):
+                d.pop("by_month", None)
+            return c_, s_
+        # AMENDMENT 4: score each half on its own rows (the one-open-per-symbol policy restarts at the cut, so no decision straddles it)
+        sel_c, sel_s = _both(test[test.ts < cut])
+        cand, served = _both(test[test.ts >= cut])
+        full_c, full_s = _both(test)
+        ev["selection_rows"], ev["confirm_rows"] = int((test.ts < cut).sum()), int((test.ts >= cut).sum())
         if cand.get("mean_net_r") is not None and cand.get("se_net_r"):
             cand["deflated_ci_lower_reported_not_gating"] = HL.ci_lower(cand["mean_net_r"], cand["se_net_r"], bar)
+        # result = the CONFIRMATION half, the only number that may promote (and the headline the workflow copies)
         ev["candidate"]["result"], ev["served"]["result"] = cand, served
-        verdict, why = rule_verdict(cand, served, bar)
+        ev["candidate"]["selection_result"], ev["served"]["selection_result"] = sel_c, sel_s
+        ev["candidate"]["full_window_result_information_only"], ev["served"]["full_window_result_information_only"] = full_c, full_s
+        verdict, why = split_verdict(sel_c, sel_s, cand, served, bar)
         ev.update(verdict=verdict, why=why, read_state="measured")
         if True:   # the graded boosters are ALWAYS kept (a refit is not bit-reproducible, so what is promoted must be what was scored)
             tag = run_date.strftime("%Y%m%d")
@@ -199,13 +243,14 @@ def run(a) -> int:
                         "recipe_sha": hashlib.sha256(json.dumps({"f": E.FEATURES, "l": E.LGB_PARAMS}, sort_keys=True).encode()).hexdigest()[:16],
                         "evidence": [f"{RULE_ID} grade run (see grade_evidence.json beside this PR)"],
                         "provenance": f"RUNNER-BUILT refit as of {p['asof']} by scripts/research/ml_entry_candidate_grade.py; graded on "
-                                      f"{start}..{end}: n {cand.get('n')}, mean net R {cand.get('mean_net_r')} vs served {served.get('mean_net_r')}",
+                                      f"{start}..{end}; chosen on {p['selection_start']}..{p['selection_end']}, confirmed on the disjoint "
+                                      f"{p['confirm_start']}..{p['confirm_end']}: n {cand.get('n')}, mean net R {cand.get('mean_net_r')} vs served {served.get('mean_net_r')}",
                         "booster_txt": {s: models[s].booster_.model_to_string() for s in ("long", "short")}})
             (d / "model.json").write_text(json.dumps(art, indent=1, default=str) + "\n")
             ev["promote_dir" if verdict == "pass" else "graded_dir"] = d.name
             ev["graded_model_sha256"] = _sha(d / "model.json")
         (out / "grade_evidence.json").write_text(json.dumps(ev, indent=1, default=str) + "\n")
-        print(f"{RULE_ID}: {verdict} | window {start}..{end} | candidate n={cand.get('n')} mean={cand.get('mean_net_r')} | "
+        print(f"{RULE_ID}: {verdict} | select {p['selection_start']}..{p['selection_end']} | confirm {p['confirm_start']}..{p['confirm_end']} | candidate n={cand.get('n')} mean={cand.get('mean_net_r')} | "
               f"served n={served.get('n')} mean={served.get('mean_net_r')} | read {bar['n_tries']} | " + "; ".join(why), flush=True)
         return 0 if verdict == "pass" else 1
     except Exception as exc:  # noqa: BLE001  # allow-silent: not silent; writes the evidence record (error + why) and exits 1 so the run is the one red flag
@@ -218,6 +263,14 @@ def run(a) -> int:
 def _self_test() -> None:
     p = plan(date(2026, 11, 8))
     assert p["asof"] == "2026-10-25" and p["window_end"] == "2026-11-07", p
+    assert (p["selection_start"], p["selection_end"], p["confirm_start"], p["confirm_end"]) == \
+        ("2026-10-25", "2026-10-31", "2026-11-01", "2026-11-07"), p                          # AMENDMENT 4: disjoint halves, no gap
+    for bad in (0, 14):
+        try:
+            plan(date(2026, 11, 8), 14, bad)
+            raise AssertionError("confirm_days outside the window must refuse")
+        except ValueError:
+            pass
     b1, b5 = HL.bar_for(1), HL.bar_for(5)
     good = {"n": 400, "n_symbols": 30, "mean_net_r": 0.05, "se_net_r": 0.04}
     served_ok = {"n": 380, "n_symbols": 30, "mean_net_r": 0.01}
@@ -235,6 +288,15 @@ def _self_test() -> None:
     first = ({"n": 281, "n_symbols": 48, "mean_net_r": 0.0018, "se_net_r": 0.065}, {"n": 342, "n_symbols": 49, "mean_net_r": -0.0918, "se_net_r": 0.059})
     assert rule_verdict(*first, HL.bar_for(4))[0] == "pass"
     assert rule_verdict({**first[0], "n": 99}, first[1], HL.bar_for(4))[0] == "insufficient_n"
+    # AMENDMENT 4: the selection half chooses, the disjoint confirmation half promotes
+    sel_good, sel_served = {"n": 150, "n_symbols": 30, "mean_net_r": 0.05}, {"n": 150, "n_symbols": 30, "mean_net_r": 0.0}
+    assert split_verdict(sel_good, sel_served, good, served_ok, b1)[0] == "pass"
+    assert split_verdict({**sel_good, "mean_net_r": -0.1}, sel_served, good, served_ok, b1)[0] == "fail"    # not chosen
+    assert split_verdict(sel_good, sel_served, {**good, "mean_net_r": 0.0}, served_ok, b1)[0] == "fail"     # chosen, not confirmed
+    assert split_verdict(sel_good, sel_served, {**good, "n": 99}, served_ok, b1)[0] == "insufficient_n"     # floors apply on the confirm half
+    assert split_verdict({**sel_good, "n": 40}, sel_served, good, served_ok, b1)[0] == "pass"               # choosing carries no floor
+    assert split_verdict({"n": 0, "mean_net_r": None}, sel_served, good, served_ok, b1)[0] == "insufficient_n"
+    # the 45021344426 shape: a strong one-window read with no disjoint half recomputes to no_disjoint_number (see recompute)
     import pandas as pd
     t = pd.Series(pd.date_range("2026-10-27", periods=6, freq="h", tz="UTC")).drop([2, 3])
     assert hourly_gaps(t) == [{"after": "2026-10-27 01:00:00+00:00", "before": "2026-10-27 04:00:00+00:00"}], hourly_gaps(t)
@@ -249,6 +311,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="/tmp/ml_entry_grade_out")
     ap.add_argument("--run-date", default="")
     ap.add_argument("--window-days", type=int, default=WINDOW_DAYS)
+    ap.add_argument("--confirm-days", type=int, default=CONFIRM_DAYS, help="AMENDMENT 4: the last N days of the window confirm (disjoint from the selection days)")
     ap.add_argument("--evidence", default="")
     ap.add_argument("--tag", default="", help="recompute: suffix of the output file (verdict_amended<tag>.json) so an earlier recompute is never overwritten")
     ap.add_argument("--candidate-json", default="")

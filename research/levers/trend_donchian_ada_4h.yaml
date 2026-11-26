@@ -583,6 +583,20 @@ levers:
         baseline_value: '50.0'
         arm: tp_r_hi
         unit: RQ-20261106-025
+        window: 2021-11-19..2026-11-21
+        n: 196
+        net_r: 39.3711
+        baseline_n: 196
+        baseline_net_r: 39.3711
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.3153
+        verdict: fail
+        joint_change: false
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261106-025
         window: 2021-11-11..2026-11-14
         n: 197
         net_r: 40.6071
@@ -605,6 +619,20 @@ levers:
         delta_net_r: 0.0
         folds_ge_baseline: 4/4
         max_drawdown_r: 8.5447
+        verdict: fail
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261106-025
+        window: 2021-11-19..2026-11-21
+        n: 196
+        net_r: 39.3711
+        baseline_n: 196
+        baseline_net_r: 39.3711
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 13.3153
         verdict: fail
         joint_change: false
       - value: '37.5'
@@ -636,7 +664,7 @@ levers:
         verdict: fail
         joint_change: false
       shape: flat
-      points: 4
+      points: 6
       best_delta_r_per_trade: 0.0
       fold_stability: 1.0
       reading: no response at the tested values
@@ -1504,6 +1532,34 @@ levers:
         max_drawdown_r: 15.9824
         verdict: fail
         joint_change: false
+      - value: '0.9'
+        baseline_value: 'off'
+        arm: VH90
+        unit: RQ-20261031-3ef3-09
+        window: 2020-07-01..2026-10-15
+        n: 223
+        net_r: 43.5696
+        baseline_n: 257
+        baseline_net_r: 57.359
+        delta_net_r: -13.7894
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 15.9824
+        verdict: fail
+        joint_change: false
+      - value: '0.95'
+        baseline_value: 'off'
+        arm: VH95
+        unit: RQ-20261031-3ef3-09
+        window: 2020-07-01..2026-10-15
+        n: 236
+        net_r: 48.0744
+        baseline_n: 257
+        baseline_net_r: 57.359
+        delta_net_r: -9.2846
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 14.4672
+        verdict: fail
+        joint_change: false
       - value: '0.8'
         baseline_value: 'off'
         arm: VH80
@@ -1547,9 +1603,9 @@ levers:
         verdict: fail
         joint_change: false
       shape: noisy
-      points: 5
+      points: 7
       best_delta_r_per_trade: -0.0338
-      fold_stability: 0.317
+      fold_stability: 0.321
       reading: every tested value is worse than the baseline
     adx_max:
       tests:

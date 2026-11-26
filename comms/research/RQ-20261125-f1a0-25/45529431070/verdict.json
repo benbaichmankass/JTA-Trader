@@ -1,0 +1,86 @@
+{
+ "verdict": "indeterminate",
+ "read_state": "measured",
+ "n": 7963,
+ "note": "tradestate: indeterminate delta +0.0074 t 0.742 share 0.175",
+ "population": "21 of 21 rostered crypto legs (trend/pullback/fade/squeeze harnesses) replayed with DECLARED params over 2020-09-01..2026-10-26 (7963 trades, harness net_r full cost stack); books = leg x direction; test weeks 2022-01-03..2026-10-26",
+ "rule": {
+  "id": "RULE-REGIME-TRADESTATE-20261125",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.05,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "data_window": {
+  "start": "2020-09-01",
+  "end": "2026-10-26",
+  "legs": [
+   "ada_pullback_2h",
+   "avax_pullback_2h",
+   "eth_pullback_2h",
+   "eth_pullback_prop_2h",
+   "fade_breakout_4h",
+   "htf_pullback_trend_2h",
+   "sol_pullback_2h",
+   "squeeze_breakout_4h",
+   "trend_donchian",
+   "trend_donchian_1h",
+   "trend_donchian_ada_4h",
+   "trend_donchian_avax_4h",
+   "trend_donchian_eth",
+   "trend_donchian_eth_4h",
+   "trend_donchian_eth_prop",
+   "trend_donchian_sol",
+   "trend_donchian_sol_4h",
+   "trend_donchian_sol_prop",
+   "trend_donchian_xrp_4h",
+   "trend_donchian_xrp_adx25",
+   "xrp_pullback_2h"
+  ]
+ },
+ "measurement": {
+  "arms": {
+   "tradestate": {
+    "n_trades": 6158,
+    "money_base": 0.08305,
+    "money_arm": 0.09044,
+    "delta": 0.00738,
+    "se_week_boot": 0.00995,
+    "t": 0.742,
+    "random": {
+     "draws": 200,
+     "kind": "raw tilts permuted within leg x month",
+     "mean": -0.00053,
+     "p95": 0.01412,
+     "share_ge_arm": 0.175
+    },
+    "yearly_delta": {
+     "2022": 0.0002,
+     "2023": -0.0018,
+     "2024": 0.0023,
+     "2025": 0.0244,
+     "2026": 0.0132
+    },
+    "share_tilted": 0.7551,
+    "share_up_tilt": 0.4714,
+    "cell_counts_test": {
+     "dn_lv": 1836,
+     "up_lv": 1766,
+     "dn_hv": 1427,
+     "up_hv": 1129
+    },
+    "checks": {
+     "delta_ge_min": false,
+     "t_ge_min": false,
+     "beats_random": false,
+     "years_positive": true
+    },
+    "verdict": "indeterminate"
+   }
+  },
+  "verdict": "indeterminate",
+  "n_legs": 21
+ }
+}

@@ -275,6 +275,7 @@ FAMILIES = (
     "deep_sequence",
     "ts_foundation_model",
     "tabular_foundation_model",
+    "deep_tabular",          # trained deep tabular nets (FT-Transformer, ...); added 2026-11-26 for RQ-20261118-f7c1-06
     "rl_bandit",
     "bayesian_probabilistic",
     "conformal_calibration",

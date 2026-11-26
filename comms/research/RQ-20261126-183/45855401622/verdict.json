@@ -1,0 +1,454 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "population": "turtle_soup: 711 trades in the baseline arm 'A' on BTCUSDT 15m candles 2021-11-14 00:00:00+00:00 .. 2026-11-17 23:45:00+00:00, net of fee+slippage+funding (the harness's venue-aware stack); arms ['A', 'sweep_lookback_15m_lo', 'sweep_lookback_15m_hi']",
+  "n": 711,
+  "measurement": {
+    "leg": "turtle_soup",
+    "label": "no_reachable_lever_beats_removed",
+    "grade": {
+      "verdict": "fail",
+      "label": "no_reachable_lever_beats_removed",
+      "baseline": "A",
+      "candidates": {
+        "sweep_lookback_15m_lo": {
+          "delta_net_r": -152.6656,
+          "delta_max_drawdown_r": 153.6571,
+          "fold_wins": 0,
+          "passes": false
+        },
+        "sweep_lookback_15m_hi": {
+          "delta_net_r": -9.7056,
+          "delta_max_drawdown_r": 9.7056,
+          "fold_wins": 1,
+          "passes": false
+        }
+      },
+      "delta_r_bar": 4.0,
+      "fold_majority": 3,
+      "n_floor": 39,
+      "control": null,
+      "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+    },
+    "arms": {
+      "A": {
+        "reach_ge_6r": null,
+        "n": 711,
+        "net_r": -177.4092,
+        "net_r_fee_only": -120.3717,
+        "max_drawdown_r": 177.4092,
+        "by_outcome": {
+          "sl": 341,
+          "tp": 369,
+          "flip": 1
+        },
+        "mean_bars_held": null,
+        "net_r_per_capital_day": null,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2021-11-14 00:00:00+00:00",
+        "data_end": "2026-11-17 23:45:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-14 00:00:00+00:00",
+            "end": "2023-02-14 11:56:15+00:00",
+            "trades": 250,
+            "net_r": -62.4022
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-14 11:56:15+00:00",
+            "end": "2024-05-16 23:52:30+00:00",
+            "trades": 155,
+            "net_r": 24.6575
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-16 23:52:30+00:00",
+            "end": "2025-08-17 11:48:45+00:00",
+            "trades": 185,
+            "net_r": -104.0276
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-17 11:48:45+00:00",
+            "end": "2026-11-17 23:45:00+00:00",
+            "trades": 121,
+            "net_r": -35.6369
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/A__bt.json",
+          "--override",
+          "sweep_lookback_15m=60",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ]
+      },
+      "sweep_lookback_15m_lo": {
+        "reach_ge_6r": null,
+        "n": 804,
+        "net_r": -330.0748,
+        "net_r_fee_only": -264.7503,
+        "max_drawdown_r": 331.0663,
+        "by_outcome": {
+          "sl": 380,
+          "tp": 423,
+          "flip": 1
+        },
+        "mean_bars_held": null,
+        "net_r_per_capital_day": null,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2021-11-14 00:00:00+00:00",
+        "data_end": "2026-11-17 23:45:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-14 00:00:00+00:00",
+            "end": "2023-02-14 11:56:15+00:00",
+            "trades": 263,
+            "net_r": -69.6803
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-14 11:56:15+00:00",
+            "end": "2024-05-16 23:52:30+00:00",
+            "trades": 175,
+            "net_r": -63.8743
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-16 23:52:30+00:00",
+            "end": "2025-08-17 11:48:45+00:00",
+            "trades": 230,
+            "net_r": -135.8447
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-17 11:48:45+00:00",
+            "end": "2026-11-17 23:45:00+00:00",
+            "trades": 136,
+            "net_r": -60.6754
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_lo__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_lo__bt.json",
+          "--override",
+          "sweep_lookback_15m=45",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ]
+      },
+      "sweep_lookback_15m_hi": {
+        "reach_ge_6r": null,
+        "n": 632,
+        "net_r": -187.1148,
+        "net_r_fee_only": -136.9693,
+        "max_drawdown_r": 187.1148,
+        "by_outcome": {
+          "tp": 331,
+          "sl": 300,
+          "flip": 1
+        },
+        "mean_bars_held": null,
+        "net_r_per_capital_day": null,
+        "cost_stack": {
+          "fee_bps_roundtrip": 7.5,
+          "slippage_bps_roundtrip": 3.0,
+          "funding_bps_per_window": 1.0
+        },
+        "params": null,
+        "data_start": "2021-11-14 00:00:00+00:00",
+        "data_end": "2026-11-17 23:45:00+00:00",
+        "folds": [
+          {
+            "fold": 1,
+            "start": "2021-11-14 00:00:00+00:00",
+            "end": "2023-02-14 11:56:15+00:00",
+            "trades": 216,
+            "net_r": -67.1337
+          },
+          {
+            "fold": 2,
+            "start": "2023-02-14 11:56:15+00:00",
+            "end": "2024-05-16 23:52:30+00:00",
+            "trades": 136,
+            "net_r": 44.7303
+          },
+          {
+            "fold": 3,
+            "start": "2024-05-16 23:52:30+00:00",
+            "end": "2025-08-17 11:48:45+00:00",
+            "trades": 186,
+            "net_r": -120.3659
+          },
+          {
+            "fold": 4,
+            "start": "2025-08-17 11:48:45+00:00",
+            "end": "2026-11-17 23:45:00+00:00",
+            "trades": 94,
+            "net_r": -44.3455
+          }
+        ],
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_hi__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_hi__bt.json",
+          "--override",
+          "sweep_lookback_15m=75",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ]
+      }
+    },
+    "window": {
+      "start": null,
+      "end": null,
+      "fetch_days": 1830,
+      "feed": {
+        "source": "binance",
+        "ticker": "BTCUSDT",
+        "interval": "15",
+        "resample": "15m"
+      },
+      "fold_edges": [
+        "2021-11-14 00:00:00+00:00",
+        "2023-02-14 11:56:15+00:00",
+        "2024-05-16 23:52:30+00:00",
+        "2025-08-17 11:48:45+00:00",
+        "2026-11-17 23:45:00+00:00"
+      ]
+    },
+    "argv": {
+      "A": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/A__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/A__bt.json",
+          "--override",
+          "sweep_lookback_15m=60",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ],
+        "cfg_set": {},
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [],
+        "routed_cfg_keys": []
+      },
+      "sweep_lookback_15m_lo": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_lo__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_lo__bt.json",
+          "--override",
+          "sweep_lookback_15m=45",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ],
+        "cfg_set": {
+          "sweep_lookback_15m": 45
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [],
+        "routed_cfg_keys": []
+      },
+      "sweep_lookback_15m_hi": {
+        "argv": [
+          "/usr/bin/python3",
+          "/tmp/repo/scripts/backtest_turtle_soup.py",
+          "--data",
+          "<data>",
+          "--symbol",
+          "BTCUSDT",
+          "--resample",
+          "15m",
+          "--emit-trades",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_hi__trades.jsonl",
+          "--json",
+          "comms/research/RQ-20261126-183/45855401622/arms/sweep_lookback_15m_hi__bt.json",
+          "--override",
+          "sweep_lookback_15m=75",
+          "--override",
+          "min_sweep_buffer_bps=10",
+          "--override",
+          "min_body_to_range=0.6",
+          "--override",
+          "atr_period=14",
+          "--override",
+          "atr_stop_mult=0.3",
+          "--override",
+          "be_at_r=0.75",
+          "--override",
+          "be_offset_bps=15",
+          "--override",
+          "tp1_at_r=1.0",
+          "--override",
+          "tp2_at_r=3.0",
+          "--override",
+          "partial_close_pct=0.25",
+          "--override",
+          "setup_lookback_bars=4"
+        ],
+        "cfg_set": {
+          "sweep_lookback_15m": 75
+        },
+        "cfg_unset": [],
+        "extra_flags": [],
+        "omitted_levers_per_builder": [],
+        "routed_cfg_keys": []
+      }
+    }
+  },
+  "note": "FAIL / no_reachable_lever_beats_removed: no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+}

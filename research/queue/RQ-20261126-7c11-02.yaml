@@ -1,0 +1,144 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (row ML-ENTRY-EQ-CORP-EVENTS, step (b); manager 06:12Z: "GO on authoring (b) now, the security-keyed
+# retrain unit with de-duplicated FB/META history and its own Stage-0 population test. It's research, so Tier 1."). The fail_action of
+# RQ-20261126-7c11-01 (FAIL, run 45763324547). Rule registered BEFORE any run; no outcome of the security-keyed pool has been read.
+# Gates this adds or changes: none (an opt-in --security-keyed flag on ml_entry_equity.py `structure`; the default pool is unchanged).
+id: RQ-20261126-7c11-02
+title: 'ml_entry_eq_struct SECURITY-KEYED retrain: with every pool ticker whose 1h history is not ONE continuous security dropped (FB = Meta then
+  an ETF, INFO = IHS Markit then an ETF, SIX delisted, ...), does the 5-seed structure ensemble still clear the registered 98e3-06 bar on the
+  confirming window, at the deflated ledger bar for this window?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: diagnosis
+question: 'Rebuild POOL_RULE''s 173-ETF pool, then drop every ticker whose RTH 1h bars from 2021-01-01 to the data end are not one run (gap
+  < 30 d) starting within 30 d of 2021-01-01 and ending within 30 d of the data end (scripts/research/ml_entry_equity.py security_keyed_pool).
+  On the remaining pool, re-run the registered RQ-20261107-98e3-06 recipe unchanged: config B, structure exit pivot=5;sl_only, the mean of
+  pinned fits at seeds 1-5, tau selected on the purged dev walk-forward over {0.20, 0.25} (max pooled OOF mean net R, >= 300 OOF trades),
+  refit on rows <= 2025-06-30, the confirming window 2025-07-15..last complete month read ONCE. Does it pass?'
+why_this_matters: 'ml_entry_eq_struct trades real money on alpaca_live (and alpaca_portfolio). RQ-20261126-7c11-01 read that its training
+  window holds two securities under FB (Meta to 2022-06-08, so a duplicate of META, plus 18 h of the 2025 FB ETF) and INFO (IHS Markit to
+  2022-02-25, plus 378 h of the 2024 INFO ETF); SIX is Six Flags, delisted 2024-07. Contamination is small (ESTIMATED ~0.013% new-security
+  bars, ~0.18% duplicate-Meta bars), so the served artifact is not withdrawn. Its evidence still rests on a population that does not exist
+  live. This unit is the security-keyed model''s own Stage-0 population test, so the Tier-3 live-pool exclusion (step (a), with the operator)
+  is backed by a model trained and graded on the securities the book actually trades.'
+evidence_class:
+  holdout: time_disjoint
+  claim: edge
+practice_precedent: 'M13 (docs/reference/trading-and-model-practice-principles.md): data provenance before modelling; survivorship / ticker-reuse
+  clean-up of an equity universe before a trained population is trusted.'
+power:
+  expected_n: 200
+  min_detectable_effect: 0.2
+  effect_units: R
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED: RQ-20261107-98e3-06 took n 207 on the same window at tau 0.25 (mean +0.4922 R). Dropping <= 6 of 173 tickers, none of
+    which the graded read traded in any number (the journal read found 0 live trades in the six), should leave n near 200; at sd ~1 R the
+    iid se is ~0.07, so the deflated point bar (t_min ~0.9-1.0 at N 4-5) is met by a mean of ~+0.07 R and the +0.04 R margin binds below it.'
+  feasibility:
+    source: none
+    accrual_basis: Replays Alpaca 1h RTH history 2021-01-01 .. last complete month; nothing accrues.
+baseline:
+  definition: 'The served artifact ml/candidates/ml_entry_eq_v3_struct_ens5 (ENTRY-EQ-v3-B-tau0.25-STRUCT-pivot5-sl_only-ENS5): confirm mean
+    +0.4922 R at n 207 on 2025-07-15..2026-10-31 (RQ-20261107-98e3-06, run 42432561069). REPORTED beside the result; it does not grade.'
+  net_of_cost: true
+decision_rule:
+  id: RULE-RQ20261126-7c11-02-SECKEY
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  statistic: 'scripts/research/ml_entry_equity.py structure --security-keyed --ensemble-seeds 1,2,3,4,5 --taus 0.2,0.25 --min-mean 0.04:
+    the excluded tickers with their runs (measurement.pool.security_keyed); pooled restricted-long mean net R per decision under the structure
+    exit over decisions closing in 2025-07-15..last complete month, n, n_symbols, iid se, month-clustered se (reported), by month, by symbol;
+    ledger family ENTRY-EQ with model id suffix -SECKEY; N = the prior ENTRY-EQ reads on this window and an overlapping symbol set + 1, as
+    holdout_lock.claim_read counts it (>= 4: 98e3-06 was N=3); bar = holdout_lock.bar_for(N).'
+  rule: 'INDETERMINATE IF pooled n < 30. PASS IF (a) confirm mean net R >= bar.point_t_min * iid se at the claimed N AND (b) the selected
+    tau''s dev pooled OOF mean net R > 0 AND (c) confirm mean >= +0.04 R (98e3-06''s seed-noise margin, unchanged). FAIL otherwise. The served
+    artifact''s +0.4922 R is reported, never graded against. Thresholds never change after any result.'
+  pass_action: 'Export the security-keyed ensemble as a candidate artifact (ml_entry_equity.py export --security-keyed is a follow-up build)
+    and bring the Tier-3 swap to the operator together with step (a): the live pool and the served model then both key on the security.'
+  fail_action: 'Record that the security-keyed recipe does not clear the bar on this window. Step (a)''s exclusion of FB and INFO from the
+    live pool still stands on 7c11-01 alone (a population-identity fix). The served model''s evidence is then flagged on
+    ML-ENTRY-EQ-CORP-EVENTS as resting on a population that includes non-live securities, for the operator''s Tier-3 read.'
+  proposal_mapping: pass -> Tier-3 swap proposal to the security-keyed artifact alongside (a); fail -> (a) alone + evidence flag; indeterminate
+    -> report n and the excluded list.
+  what_it_does_not_do: Changes no config, roster, pool, served model or order path. The default pool of every other ml_entry_equity.py
+    command is unchanged (the filter is opt-in). The confirming window has been read before; the ledger deflates the bar for it.
+  min_n: 30 pooled decisions
+ml_consumer:
+  consumer: ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+  decision: whether ml_entry_eq_struct's served artifact is proposed (Tier 3) for a swap to a security-keyed refit alongside the FB/INFO live-pool exclusion
+  legs:
+  - ml_entry_eq_struct
+  book: money
+compute: cpu_long
+value:
+  bucket: own_losses
+  usd_at_stake_per_month: 200
+  confidence: 0.3
+  basis: 'stand-in: the real-money ml_entry_eq_struct book; the contaminated share is small, so this protects the evidence record rather than a
+    measured loss.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 150
+  why_runner: Alpaca market data (read-only, paper key) exists only on research-script-run; LightGBM fits on ~0.37M rows.
+  basis: 'MEASURED analogue: RQ-20261107-98e3-06 (same command without the flag) ran within its 330-min budget on a 4 vCPU / 16 GB runner.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_equity.py
+  - structure
+  - --cache
+  - /tmp/ml_entry_equity
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - research-script-run
+  - --security-keyed
+  - --ensemble-seeds
+  - 1,2,3,4,5
+  - --taus
+  - 0.2,0.25
+  - --min-mean
+  - '0.04'
+  - --rule-id
+  - RULE-RQ20261126-7c11-02-SECKEY
+  - --registered-at
+  - '2026-11-26'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261126-7c11-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+population: 'POOL_RULE of scripts/research/ml_entry_alpaca_score.py, UNCHANGED (sha256 e9702661...), rebuilt at run time, MINUS every ticker
+  security_keyed_pool excludes (one continuous 1h run from 2021-01-01 to the data end, 30-day gap / grace); the excluded list is written
+  into the result.'
+related:
+- ML-ENTRY-EQ-CORP-EVENTS
+- RQ-20261126-7c11-01
+- RQ-20261107-98e3-06
+- ml/candidates/ml_entry_eq_v3_struct_ens5/model.json
+last_dispatched_at: '2026-11-26T07:19:20+00:00'
+grading:
+  attested: RULE-RQ20261126-7c11-02-SECKEY
+  auto: true
+  decision_rule_id: RULE-RQ20261126-7c11-02-SECKEY
+  evidence:
+  - research/results/RQ-20261126-7c11-02/45774481659.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  verdict: pass

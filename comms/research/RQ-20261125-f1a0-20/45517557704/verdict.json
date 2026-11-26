@@ -1,0 +1,141 @@
+{
+ "verdict": "pass",
+ "read_state": "measured",
+ "n": 395186,
+ "note": "advol: pass delta +0.0134 t 2.024 random share 0.0 trade share 1.0; hmm2: pass delta +0.0247 t 3.874 random share 0.0 trade share 1.0",
+ "population": "backtest trade corpus (cf_bulk.TRADE_GLOBS, 7375 files, 510883 distinct jobs) -> 395186 unique crypto trades of ['trend_donchian', 'htf_pullback', 'fade_breakout', 'squeeze_breakout'] with entries 2020-09-01..2026-10-26 (variants averaged), 210 family x symbol x direction books, weekly; test weeks 2022-01-03..2026-10-26 (251); harness net_r (fee + slippage + funding)",
+ "rule": {
+  "id": "RULE-REGIME-R3-STATE-CELLS-20261125",
+  "min_delta_r": 0.01,
+  "min_t": 2.0,
+  "max_random_share": 0.025,
+  "min_years_positive": 4,
+  "n_test_years": 5,
+  "fail_random_share": 0.5
+ },
+ "data_window": {
+  "data_start": "2020-09-01",
+  "data_end": "2026-10-26",
+  "test_start": "2022-01-03",
+  "corpus_sha256": "32483d60814c4980d7ea341d7d021f57845451db7ccf42bc13c71d593c04cd55",
+  "n_unique_trades": 395186,
+  "n_files": 7375
+ },
+ "measurement": {
+  "arms": {
+   "advol": {
+    "n_weeks": 251,
+    "trades": 323016,
+    "money_arm": -0.02944,
+    "money_base": -0.04286,
+    "delta": 0.01343,
+    "se_week_boot": 0.00663,
+    "t": 2.024,
+    "random": {
+     "draws": 200,
+     "kind": "weights permuted across books within each week",
+     "mean": -0.04319,
+     "p95": -0.03918,
+     "share_ge_arm": 0.0
+    },
+    "yearly_delta": {
+     "2022": 0.0122,
+     "2023": 0.0232,
+     "2024": -0.0029,
+     "2025": 0.0177,
+     "2026": 0.0188
+    },
+    "share_book_weeks_up": 0.3765,
+    "trade_share": 1.0,
+    "checks": {
+     "delta_ge_min": true,
+     "t_ge_min": true,
+     "beats_random": true,
+     "years_positive": true
+    },
+    "verdict": "pass",
+    "cell_counts_test": {
+     "up_lv": 82,
+     "dn_lv": 65,
+     "dn_hv": 60,
+     "up_hv": 44
+    }
+   },
+   "hmm2": {
+    "n_weeks": 251,
+    "trades": 323016,
+    "money_arm": -0.0182,
+    "money_base": -0.04286,
+    "delta": 0.02466,
+    "se_week_boot": 0.00637,
+    "t": 3.874,
+    "random": {
+     "draws": 200,
+     "kind": "weights permuted across books within each week",
+     "mean": -0.04301,
+     "p95": -0.03835,
+     "share_ge_arm": 0.0
+    },
+    "yearly_delta": {
+     "2022": 0.0193,
+     "2023": 0.0047,
+     "2024": 0.0366,
+     "2025": 0.0347,
+     "2026": 0.0269
+    },
+    "share_book_weeks_up": 0.4028,
+    "trade_share": 1.0,
+    "checks": {
+     "delta_ge_min": true,
+     "t_ge_min": true,
+     "beats_random": true,
+     "years_positive": true
+    },
+    "verdict": "pass",
+    "cell_counts_test": {
+     "s0": 239,
+     "s1": 12
+    },
+    "hmm": {
+     "n_fit_weeks": 78,
+     "mu": [
+      0.02064,
+      0.02211
+     ],
+     "sd": [
+      0.07157,
+      0.13802
+     ],
+     "A": [
+      [
+       0.9609,
+       0.0391
+      ],
+      [
+       0.0623,
+       0.9377
+      ]
+     ]
+    }
+   }
+  },
+  "verdict": "pass",
+  "books": {
+   "n_books": 210,
+   "trades": 395186,
+   "sum_r": -15255.45
+  },
+  "n_test_weeks": 251,
+  "level": "symbol",
+  "mode": "state",
+  "rule": {
+   "id": "RULE-REGIME-R3-STATE-CELLS-20261125",
+   "min_delta_r": 0.01,
+   "min_t": 2.0,
+   "max_random_share": 0.025,
+   "min_years_positive": 4,
+   "n_test_years": 5,
+   "fail_random_share": 0.5
+  }
+ }
+}

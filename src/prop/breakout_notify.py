@@ -598,15 +598,98 @@ def emit_prop_fill(fill: Dict[str, Any], *, push: bool = True,
 
     if telegram:
         try:
-            # TELEGRAM-CHANNELS: routed by the one table -> prop_fill.
-            from src.runtime import telegram_channels
-
-            out["telegram"] = telegram_channels.send(
-                "prop_fill", text, parse_mode=None, mirror_to_fcm=False)
+            out["telegram"] = _route_prop_fill_telegram(fill, text)
         except Exception as exc:  # noqa: BLE001
             logger.warning("emit_prop_fill: telegram send failed: %s", exc)
 
     return out
+
+
+def _fill_anomaly(fill: Dict[str, Any], *, late_minutes: float) -> Optional[str]:
+    """Why this MACHINE-account fill/close is worth a Telegram ping, else ``None``.
+
+    Routine fills and closes are NOT news (the executor placed or recorded them
+    itself); only these are: a close with no exit price or P&L (the trade is
+    ungraded), and a fill that arrived more than ``late_minutes`` after its
+    signal. Unknowns (no ticket, unparsable time) are never an anomaly -- we
+    could not look, which is not "late". Operator popup 2026-11-24: "Fold into
+    digest (Recommended)".
+    """
+    if str(fill.get("status") or "").lower() == "closed":
+        missing = [n for n, k in (("exit price", "exit_price"), ("P&L", "pnl"))
+                   if fill.get(k) is None]
+        return f"close recorded with no {' / '.join(missing)}" if missing else None
+    try:
+        from src.prop import prop_journal
+        from src.prop.prop_monitor_pulse import _parse_iso
+
+        tid = fill.get("ticket_id")
+        ticket = prop_journal.get_ticket(str(tid)) if tid else None
+        sig = _parse_iso((ticket or {}).get("signal_time") or (ticket or {}).get("created_at"))
+        filled = _parse_iso(fill.get("opened_at") or fill.get("reported_at"))
+        if sig is None or filled is None:
+            return None
+        delay = (filled - sig).total_seconds() / 60.0
+        if delay > late_minutes:
+            return f"fill arrived {delay:.0f} min after its signal (limit {late_minutes:g} min)"
+    except Exception as exc:  # noqa: BLE001 — an unreadable journal is not an anomaly
+        logger.warning("emit_prop_fill: latency check failed: %s", exc)
+    return None
+
+
+def _route_prop_fill_telegram(fill: Dict[str, Any], text: str) -> bool:
+    """Telegram leg of :func:`emit_prop_fill` (operator 2026-11-24, popup "Fold
+    into digest (Recommended)").
+
+    A MANUAL account's fill/close still goes out one-by-one (a human reported
+    it). For a machine-executed account a routine fill/close is only RECORDED in
+    the alerts ledger (``suppressed_by_policy``, reason ``routine_prop_fill``);
+    an anomaly goes to the SYSTEM channel as ``prop_alert``. Fail-OPEN: an
+    unreadable policy sends the fill as before.
+    """
+    from src.runtime import telegram_channels, telegram_policy
+
+    account = fill.get("account_id") or fill.get("account")
+    if not _machine_executed(account):
+        return telegram_channels.send("prop_fill", text, parse_mode=None, mirror_to_fcm=False)
+    pf = telegram_policy.prop_fill_policy()
+    if pf is None:  # no policy / unreadable: over-send, never silence
+        return telegram_channels.send("prop_fill", text, parse_mode=None, mirror_to_fcm=False)
+    why = _fill_anomaly(fill, late_minutes=pf["fill_late_minutes"])
+    if why:
+        return telegram_channels.send(
+            "prop_alert", f"⚠️ PROP ANOMALY — {why}\n{text}",
+            parse_mode=None, mirror_to_fcm=False)
+    telegram_policy.record_suppressed(
+        "prop_fill", text, reason="routine_prop_fill", channel=telegram_channels.TRADES,
+        account=str(account or ""), symbol=str(fill.get("symbol") or ""))
+    return False
+
+
+def render_unfilled_signal_message(ticket: Dict[str, Any]) -> str:
+    sym = ticket.get("symbol") or "?"
+    direction = str(ticket.get("direction") or "").upper()
+    account = ticket.get("account_id") or "prop"
+    return (
+        f"⚠️ PROP ANOMALY — signal never filled {sym} {direction} [{account}]\n"
+        f"entry {_fmt(ticket.get('entry'))} · SL {_fmt(ticket.get('sl'))} · "
+        f"TP {_fmt(ticket.get('tp'))} · valid until {ticket.get('valid_until') or '?'} "
+        f"(now past, no fill logged)."
+    )
+
+
+def emit_prop_unfilled_signal(ticket: Dict[str, Any]) -> bool:
+    """One Telegram ``prop_alert`` for a machine-account ticket that expired with
+    no fill. Called once per ticket (the expiry CAS fires once). Best-effort."""
+    try:
+        from src.runtime import telegram_channels
+
+        return bool(telegram_channels.send(
+            "prop_alert", render_unfilled_signal_message(ticket),
+            parse_mode=None, mirror_to_fcm=False))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("emit_prop_unfilled_signal: send failed: %s", exc)
+        return False
 
 
 def render_sl_tp_alert_message(
@@ -654,6 +737,19 @@ def render_sl_tp_alert_message(
     levels_line = (
         f"entry {_fmt(entry)} · SL {_fmt(sl)} · TP {_fmt(tp)}{age_str}"
     )
+
+    missed = position.get("missed_close_minutes")
+    if missed is not None:
+        # Machine-executed account (2026-11-24): the executor records its own
+        # closes, so this only fires when NO close was recorded in the grace.
+        what = "SL" if is_sl else "TP"
+        return (
+            f"🚨 PROP {what} CROSSED, NO CLOSE RECORDED {sym} {direction} [{account}]\n"
+            f"{cross_desc} {missed}m ago and the position is still open in the journal "
+            f"— the executor may have missed the close.\n"
+            f"{levels_line}\n"
+            "Check the terminal; a recorded close would have suppressed this alert."
+        )
 
     report_template = json.dumps({
         "account_id": account,

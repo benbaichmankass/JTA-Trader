@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "DECISION: merge + pull-and-deploy the trader. Touches src/runtime/order_monitor.py (reconciler close + pending pnl sweep) and src/units/accounts/clients.py (demo fills reader): journal exit-price attribution only, no order placed, amended or cancelled. Manager merges and deploys under the operator's 2026-11-25 real-money-path surge; lane verifies on the next bybit_1 same-symbol close. Revert: git revert of the squash commit.",
+  "why": "A netted demo row's exit_price was taken from a same-symbol sibling's fill (MEASURED 7 bybit_1 rows of 314 Bybit closes, trade ids 6614-8613); the row's own venue order now prices it."
+}

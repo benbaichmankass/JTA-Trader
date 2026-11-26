@@ -1,7 +1,7 @@
 {
   "id": "AUD-20261104-AMENDMENTS-UNLOGGED",
   "title": "28 SKILL/BRIEF versions of live-trade-review and trading-desk since 10-27 have no AMENDMENTS.md entry (18 at last audit); the owning pipeline item PI-20261028-KD5SQ3JJ-0004 was killed",
-  "state": "queued",
+  "state": "landed_unproven",
   "owner": "manager",
   "lane": null,
   "model": null,
@@ -13,7 +13,7 @@
   "spend_usd": null,
   "prs": [],
   "blocked_on": [],
-  "due_by": "2026-11-18",
+  "due_by": "2026-12-02",
   "_seq": 914,
   "lane_history": [
     {
@@ -21,9 +21,18 @@
       "lane": "session_01AFoLuMroLtrU2biw4ZDoBk"
     }
   ],
-  "note": "WEEKLY-AUDIT-20261111 L0: HIT, STALLED and WORSE: check_claude_grade_loop.py --live amendments findings 28 -> 29 (LTR SKILL 12, REVIEWER-BRIEF 8, DESK-BRIEF 9); ltr_graded could_not_look under --live (journal not read; DIAG token 401 since 18:16Z). Re-dated.",
+  "note": "[2026-11-25 23:17Z housekeeping lane] Q12 backfill MERGED (#28943): 42 unlogged versions logged (33 live-trade-review, 9 trading-desk), basis stated unrecorded n=0; brief_check pass for all 3 briefs (26/25/11 versions) on a history-complete checkout before merge. Merged, not yet observed by the weekly audit. 'Then keep it': new SKILL/BRIEF versions need their own entry from the amending PR. WEEKLY-AUDIT-20261111 L0: HIT, STALLED and WORSE: check_claude_grade_loop.py --live amendments findings 28 -> 29 (LTR SKILL 12, REVIEWER-BRIEF 8, DESK-BRIEF 9); ltr_graded could_not_look under --live (journal not read; DIAG token 401 since 18:16Z). Re-dated. WEEKLY-AUDIT-2026-11-25: stalled (no state change since 11-18; handed to AM-OPS-7, archived 11-19). Thursday 11-26 planning gives it a live lane + due_by or kills it with a reason (AUD-20261125-HANDOFF-TO-DYING-LANE). Operator decision 2026-11-25 ~22:36-22:41Z, W48 planning decision doc (https://claude.ai/artifact/QKm88J2sU91vk4KqvzKQXc), verbatim choice: Q12 \"One backfill pass by the housekeeping lane, then keep it (Recommended)\". 2026-11-26 ~06:12Z MEASURED on origin/main: python3 scripts/ops/check_claude_grade_loop.py reports amendments findings [] for live-trade-review SKILL.md, REVIEWER-BRIEF.md and trading-desk DESK-BRIEF.md (backfill #28943 merged; SKILL.md 27 versions, REVIEWER-BRIEF 25, DESK-BRIEF 11 since 2026-10-27). KEEP-IT part: a new SKILL.md version needs its own entry; PR #29067 changed live-trade-review SKILL.md and I added its AMENDMENTS line (sha 4f40698d) after the same check failed on my branch. Stays landed_unproven until the weekly audit C13 reads zero findings.",
+  "observation": {
+    "due_by": "2026-12-02",
+    "how_to_check": "python3 scripts/ops/check_claude_grade_loop.py --live (needs a history-complete checkout: git fetch --shallow-since=2026-10-26)",
+    "what": "check_claude_grade_loop.py --live amendments findings = 0 for SKILL.md, REVIEWER-BRIEF.md and DESK-BRIEF.md at the 12-02 weekly audit (C13)"
+  },
   "phase": "ops",
-  "updated_at": "2026-11-18T18:19:33Z",
-  "updated_by": "session_01AFoLuKqdbFM5rj92pWUEn9",
-  "week_lane": "throttle"
+  "updated_at": "2026-11-26T06:11:29Z",
+  "updated_by": "session_01AFoLuL7uPCnQRukaQVwLHS",
+  "week_lane": "throttle",
+  "writeback": {
+    "arch": "none: no architecture change",
+    "roadmap": "none: docs log"
+  }
 }

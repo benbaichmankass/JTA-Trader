@@ -1,0 +1,255 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (ML-MECE D2/F29; manager OK 02:48Z: 'author the raw-OHLCV-window GRU unit NOW'). The representation iteration
+# after 9e72-01 fixed the recipe and tied LightGBM. Arms named before the run and counted. Gates this adds or changes: none.
+id: RQ-20261126-9e73-02
+title: 'D2/F29 POOLED GRU on RAW OHLCV WINDOWS (GPU): the 9e72-01 calibrated recipe on raw per-bar market_raw inputs (64- and 168-bar lookbacks), trained
+  once per fold on the bp2 60-perp universe pooled, vs LightGBM on the 10 engineered features, 1h regime log-loss, calendar day-block bootstrap (metis-market-bp2)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-sequence-gru
+  subject_kind: ml_model
+  from_result: RQ-20261126-9e72-01/45735661023
+  verdict_read: fail
+  diagnosis: '9e72-01 FIXED the recipe (early stopping + temperature calibration): the GRU went from 0.11-0.26 nats WORSE than the class prior (9e71-01)
+    to +0.09..+0.11 better, and then TIED LightGBM on the same 10 engineered per-bar features (BTC -0.012 nats, CI below 0; ETH -0.0005 and SOL -0.0024,
+    CIs span 0). On hand-made features a sequence model has nothing the trees lack, so the open question is REPRESENTATION: does the GRU find structure
+    in the RAW bar sequence (returns, ranges, bodies, gaps, relative volume over a long lookback) that the 10 engineered columns do not carry? Pooled 60-perp
+    version for power (twin of RQ-20261126-9e73-01).'
+  search: two lookback arms named before the run (window_bars 64 and 168 1h bars), the 9e72-01 recipe otherwise unchanged, raw_bars inputs only (base_features
+    []); no other grid.
+  levers:
+  - model_family
+  - representation
+  - population
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 5
+  due_by: '2026-12-03'
+question: Pooled over the bp2 60-perp universe, does a calibrated GRU on RAW 1h OHLCV windows (64 or 168 bars) beat LightGBM on the 10 engineered features
+  in out-of-fold regime log-loss (day-block bootstrap 95% lower bound > 0), or lose for both arms?
+why_this_matters: The same representation question as 9e73-01 at ~20x the data, which a sequence model needs; it is also the confirmation read for a 9e73-01
+  lead.
+power:
+  expected_n: 1400000
+  min_detectable_effect: 0.005
+  effect_units: logloss_nats_per_row
+  sd: 0.3
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED + ESTIMATE. 60 symbols x tail 40,000 1h rows (the dataset holds 2020-07 onward; the tail keeps the newest ~4.6 years per symbol, as 9e72-01)
+    = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4), so ~1.4M paired OOS rows. The bootstrap resamples whole calendar days (block_rows
+    1440 = 24 h x 60 symbols), so the effective n is the ~1,000 OOS days, not 1.4M rows. MEASURED 2026-11-26: a local CPU smoke of this exact spec on 3
+    real bp2 symbols (ADA/BTC/DOGE, 72,000 OOS rows, 1-day blocks of 72 rows; cut-down GRU budget: 4 epochs, hidden 32, 1 layer, 60k windows; n_boot 200)
+    gave a bootstrap sd of the GRU-minus-LightGBM log-loss delta of 0.00176 nats/row over the same ~1,000 day-blocks. ESTIMATE: averaging 60 symbols per
+    day instead of 3 lowers the per-block variance (cross-sectional correlation ~0.3 assumed), so sd ~0.0014 and MDE ~2.8 x sd ~0.004; 0.005 is declared
+    to leave margin. The smoke is NOT a result of this unit (3 symbols, reduced GRU). INDETERMINATE is possible and stated now. For this unit: the same
+    pooled rows and day-block bootstrap as 2819-01 (its MDE estimate 0.005 carried over); two arms counted; raw_bars adds 60 market_raw reads (~29 MB each).'
+  feasibility:
+    source: none
+    accrual_basis: 'Published market shards (metis-market-bp2: market_features + market_raw, 60 perps, 1h v102, built from public data.binance.vision klines);
+      nothing accrues.'
+evidence_class:
+  claim: model_quality
+  holdout: none
+ml_consumer:
+  not_applicable: 'a model-family gate on a market regime target: no order, leg or book consumes this result; a PASS authors the entry-label GRU unit (ML-ENTRY-FINETUNE),
+    which carries its own consumer'
+baseline:
+  definition: LightGBM (n_estimators 200, lr 0.05, num_leaves 31, min_child_samples 50) on the 10 ENGINEERED columns (the 9e72-01 baseline, unchanged),
+    same pooled rows and folds; the class prior is a reported control. The GRU arms see ONLY the 5 raw_bars columns (raw_r1, raw_hl, raw_co, raw_gap, raw_lv)
+    from market_raw.
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-kaggle.yml
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261126-9e73-02
+decision_rule:
+  id: RULE-RQ-20261126-9e73-02
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: LightGBM on the 10 engineered columns, same rows and folds; candidates = two raw-window GRU arms
+  statistic: 'scripts/research/ml_bakeoff.py POOLED mode (dataset.paths + entity_col symbol): group POOLED, the paired moving-block (block_rows 1440 = one
+    calendar day across 60 symbols, n_boot 1000, seed 0) bootstrap of the out-of-fold log-loss improvement (LightGBM minus GRU; positive = GRU better),
+    stat boot_ci_low (95% lower bound) and boot_mean. Reported: fold-level paired mean, the prior control, per-fit epochs/best epoch/temperature (measurement.torch_gru_fit),
+    the files pooled (measurement.pooled_files) and n_entities.'
+  rule: PASS iff for at least one arm (gru_raw_w64 or gru_raw_w168) boot_ci_low vs LightGBM is > 0 on POOLED (>= 3 folds measured). FAIL iff for BOTH arms
+    boot_mean vs LightGBM is <= 0 on POOLED. INDETERMINATE otherwise. Fixed now; machine form in ml_bakeoff.rule.
+  pass_action: 'A best-of-2 pass is a LEAD: confirm on a later out-of-time window before authoring the entry-label GRU arm (net R per side, frozen v1 recipe
+    baseline, net of the full cost stack) as its own unit.'
+  fail_action: Record that a calibrated GRU on raw OHLCV windows (64 and 168 bars) does not beat LightGBM on the engineered features at 60-perp scale; the
+    remaining deep_sequence form is a PRETRAINED TS encoder (MLP-F-COVARIATE-TSFM), authored from this result.
+  proposal_mapping: pass -> confirmation then entry-label GRU unit; fail -> pretrained TS encoder next; indeterminate -> state the CI width and iterate.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate. Binance-vision klines,
+    not Bybit; the basis is not measured, and the target is a market regime label, so the venue does not enter a cost.
+  min_n: 3
+  multiple_testing:
+    arms_counted: 2
+    variants_vs_control: 2
+    correction: each arm must clear the rule on its own; a best-of-2 pass is a LEAD that needs the confirmation read, never a finding
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'ESTIMATE: a model-family gate; the value is the decision it unlocks for D2/D3, not a direct P&L.'
+practice_precedent: paired comparison vs the established baseline with a block-bootstrap CI on a proper scoring rule (principles M6, M13); arms named up
+  front and counted; a representation change on a fixed recipe after the recipe was fixed (9e72-01).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  peak_memory_gb: 14.0
+  est_minutes: 150
+  basis: 'ESTIMATE: 2819-01''s pooled GRU (<= 1M windows) x 2 arms with longer windows (64 / 168 x 5 columns vs 48 x 10: ~0.7-1.75x the tensor size) plus
+    reading 60 market_raw shards. Re-declare from the first run.'
+not_before: '2026-11-26T06:00:00+00:00'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- FRONTIER-Q-GRU-RESOLVABLE
+- ML-DATA-PUBLISH-WIDEN-BP2
+- ML-GRU-POOLED-BP2
+- MLP-F-SEQUENCE-GRU
+- RQ-20261125-9e71-01
+- RQ-20261126-2819-01
+- RQ-20261126-9e72-01
+- RQ-20261126-9e73-01
+- scripts/research/market_data_bp2.py
+- scripts/research/ml_bakeoff.py
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    paths: datasets-out/market_features/*/1h/v102/data.jsonl
+    entity_col: symbol
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 1440
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 1440
+      n_boot: 1000
+      seed: 0
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - gru_raw_w64
+  - gru_raw_w168
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru_raw_w64:
+      kind: torch_gru
+      base_features: []
+      feature_blocks:
+      - kind: raw_bars
+        path: datasets-out/market_raw/{entity}/1h/v102/data.jsonl
+        vol_window: 96
+        entity_col: symbol
+      params:
+        window_bars: 64
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 1000000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+    gru_raw_w168:
+      kind: torch_gru
+      base_features: []
+      feature_blocks:
+      - kind: raw_bars
+        path: datasets-out/market_raw/{entity}/1h/v102/data.jsonl
+        vol_window: 96
+        entity_col: symbol
+      params:
+        window_bars: 168
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 1000000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - POOLED
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+last_dispatched_at: null
+grading:
+  attested: RULE-RQ-20261126-9e73-02
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261126-9e73-02
+  evidence:
+  - research/results/RQ-20261126-9e73-02/45773203332.jsonl
+  first_fail: 2 row(s), all measured, all fail
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

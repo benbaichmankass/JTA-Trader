@@ -1,0 +1,225 @@
+# Authored 2026-11-26 by lane ML-DATA-PUBLISH-WIDEN-BP2 (Manager Session 2026-11-25b dispatch: build the widened published data
+# and author the pooled 60-perp twin of RQ-20261126-9e72-01 as row ML-GRU-POOLED-BP2's first unit). Rule registered BEFORE any run.
+# Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261126-2819-01
+title: 'D2/F29 POOLED GRU (GPU): the 9e72-01 recipe (early stopping + temperature calibration) trained ONCE PER FOLD on the bp2 60-perp
+  universe pooled, vs LightGBM on the same 10 features, 1h regime log-loss, calendar folds, paired day-block bootstrap (metis-market-bp2)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-MECE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-sequence-gru
+  subject_kind: ml_model
+  from_result: RQ-20261125-9e71-01/45724458202
+  verdict_read: fail
+  diagnosis: '9e71-01 failed with a mis-trained GRU (no validation, no calibration; worse than the class prior). 9e72-01 re-opens it with
+    a fair recipe on 3 symbols, about 40k rows each. A sequence learner is data-hungry. This twin keeps that exact recipe and widens the
+    population to 60 perps pooled into one fit per fold (up to 1,000,000 train windows), the data the deep_sequence family is supposed to
+    need. If the GRU loses at 60 symbols, "not enough data" is no longer the excuse.'
+  search: one fixed recipe (the 9e72-01 GRU params; only max_train_windows widened for the pooled population); no grid.
+  levers:
+  - model_family
+  - population
+  map_entries:
+  - research/levers/ml-entry.yaml
+  attempt: 4
+  due_by: '2026-12-03'
+question: Trained on the 60 bp2 perps pooled (calendar folds, windows inside each symbol), does the early-stopped, temperature-calibrated
+  GRU have a LOWER 1h regime log-loss than LightGBM on the same 10 features, with the paired day-block bootstrap 95% lower bound of the
+  pooled improvement above 0?
+why_this_matters: It gives the deep_sequence family its data-rich read on free Kaggle GPU (operator 2026-11-25, "these resources are free
+  and should never sit idle"). PASS -> the entry-label GRU arm on the pooled population. FAIL -> the GRU is closed on these engineered
+  features at both 3-symbol and 60-symbol scale, and the family re-opens only on a new representation. It is also the first unit on
+  metis-market-bp2, so it proves the route for every pooled unit after it.
+power:
+  expected_n: 1400000
+  min_detectable_effect: 0.005
+  effect_units: logloss_nats_per_row
+  sd: 0.3
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'MEASURED + ESTIMATE. 60 symbols x tail 40,000 1h rows (the dataset holds 2020-07 onward; the tail keeps the newest ~4.6 years per symbol, as 9e72-01) = up to 2.4M pooled rows. Folds score the last 60% (min_train_frac 0.4),
+    so ~1.4M paired OOS rows. The bootstrap resamples whole calendar days (block_rows 1440 = 24 h x 60 symbols), so the effective n is
+    the ~1,000 OOS days, not 1.4M rows. MEASURED 2026-11-26: a local CPU smoke of this exact spec on 3 real bp2 symbols (ADA/BTC/DOGE,
+    72,000 OOS rows, 1-day blocks of 72 rows; cut-down GRU budget: 4 epochs, hidden 32, 1 layer, 60k windows; n_boot 200) gave a
+    bootstrap sd of the GRU-minus-LightGBM log-loss delta of 0.00176 nats/row over the same ~1,000 day-blocks. ESTIMATE: averaging 60
+    symbols per day instead of 3 lowers the per-block variance (cross-sectional correlation ~0.3 assumed), so sd ~0.0014 and MDE ~2.8 x sd
+    ~0.004; 0.005 is declared to leave margin. The smoke is NOT a result of this unit (3 symbols, reduced GRU). INDETERMINATE is
+    possible and stated now.'
+  feasibility:
+    source: none
+    accrual_basis: Published market shards (metis-market-bp2, built from public data.binance.vision klines); nothing accrues.
+evidence_class:
+  holdout: none
+  claim: model_quality
+ml_consumer:
+  not_applicable: 'a model-family gate on a market regime target: no order, leg or book consumes this result; a PASS authors the entry-label
+    GRU unit (ML-ENTRY-FINETUNE), which carries its own consumer'
+baseline:
+  definition: LightGBM (n_estimators 200, lr 0.05, num_leaves 31, min_child_samples 50) on the SAME 10 columns, the same pooled rows and
+    folds; the class prior is a reported control.
+  net_of_cost: false
+run:
+  command:
+  - python3
+  - scripts/research/ml_bakeoff.py
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  workflow: research-script-run-kaggle.yml
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261126-2819-01
+decision_rule:
+  id: RULE-RQ-20261126-2819-01
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: LightGBM on the same 10 columns, pooled rows and folds
+  statistic: 'scripts/research/ml_bakeoff.py POOLED mode (dataset.paths + entity_col symbol): group POOLED, the paired moving-block
+    (block_rows 1440 = one calendar day across 60 symbols, n_boot 1000, seed 0) bootstrap of the out-of-fold log-loss improvement
+    (LightGBM minus GRU; positive = GRU better), stat boot_ci_low (95% lower bound) and boot_mean. Reported: fold-level paired mean, the
+    prior control, per-fit epochs/best epoch/temperature (measurement.torch_gru_fit), the files pooled (measurement.pooled_files) and
+    n_entities.'
+  rule: PASS iff the GRU boot_ci_low vs LightGBM is > 0 on POOLED (>= 3 folds measured). FAIL iff the GRU boot_mean vs LightGBM is <= 0
+    on POOLED. INDETERMINATE otherwise. Fixed now; machine form in ml_bakeoff.rule.
+  pass_action: Author the entry-label GRU arm on the pooled bp2 population (net R per side, frozen v1 recipe as baseline, net of the full
+    cost stack) as its own pre-registered unit (MLP-F-SEQUENCE-GRU levers_ahead).
+  fail_action: If 9e72-01 also FAILED, close the GRU on these engineered features at both scales. The deep_sequence family re-opens
+    only on a new representation (raw OHLCV windows, or a pretrained TS encoder over the bp2 market_raw), authored from this diagnosis.
+    If 9e72-01 PASSED, author the split read (which symbols the pooled fit loses on).
+  proposal_mapping: pass -> entry-label GRU unit; fail -> line closed (with 9e72-01) or split read; indeterminate -> one re-read at a
+    larger train cap authored from the CI width.
+  what_it_does_not_do: Changes no served model, config or order path; reads no held-out window; is not a promotion; adds no gate. Binance-vision
+    klines, not Bybit; the basis is not measured, and the target is a market regime label, so the venue does not enter a cost.
+  min_n: 3
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 100
+  confidence: 0.15
+  basis: 'ESTIMATE: a model-family gate; the value is the decision it unlocks for D2/D3, not a direct P&L.'
+practice_precedent: paired comparison on identical features with a calendar-block bootstrap CI on a proper scoring rule (principles M6,
+  M13); pooled cross-sectional training (ML-F29); RQ-20261126-9e72-01.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  peak_memory_gb: 12.0
+  est_minutes: 90
+  basis: 'ESTIMATE: reading 60 x 29 MB of JSONL (~2 min). Per fold, one GRU on <= 1,000,000 windows of 48 x 10 for <= 30 epochs with
+    patience 3 on a T4, plus LightGBM on <= 2M rows. Train windows take ~1.9 GB in memory. Re-declare from the first run.'
+# not_before: the dataset metis-market-bp2 is first published by ml-data-export-bp2-kaggle.yml AFTER this PR merges (~30-40 min run);
+# firing earlier would spend one of the 2 non-verdict retries on a missing mount.
+not_before: '2026-11-26T04:00:00+00:00'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261126-9e72-01
+- RQ-20261125-9e71-01
+- ML-GRU-POOLED-BP2
+- ML-DATA-PUBLISH-WIDEN-BP2
+- scripts/research/ml_bakeoff.py
+- scripts/research/market_data_bp2.py
+- MLP-F-SEQUENCE-GRU
+- FRONTIER-Q-GRU-RESOLVABLE
+ml_bakeoff:
+  task: classification
+  metric: logloss
+  higher_is_better: false
+  dataset:
+    kind: jsonl
+    paths: datasets-out/market_features/*/1h/v102/data.jsonl
+    entity_col: symbol
+    ts_col: ts
+    target: regime_label
+    features:
+    - rolling_log_return_vol
+    - log_return
+    - log_return_lag_1
+    - log_return_lag_2
+    - hour_of_day
+    - dayofweek
+    - parkinson_vol
+    - garman_klass_vol
+    - rogers_satchell_vol
+    - yang_zhang_vol
+    tail_rows: 40000
+  cv:
+    folds: 5
+    embargo_rows: 1440
+    min_train_frac: 0.4
+    row_bootstrap:
+      block_rows: 1440
+      n_boot: 1000
+      seed: 0
+  baseline: lgbm
+  controls:
+  - prior
+  candidates:
+  - gru
+  learners:
+    prior:
+      kind: prior
+    lgbm:
+      kind: lightgbm
+      params:
+        n_estimators: 200
+        learning_rate: 0.05
+        num_leaves: 31
+        min_child_samples: 50
+    gru:
+      kind: torch_gru
+      params:
+        window_bars: 48
+        hidden: 64
+        layers: 2
+        epochs: 30
+        batch_size: 256
+        max_train_windows: 1000000
+        seed: 0
+        device: auto
+        val_frac: 0.2
+        patience: 3
+        calibrate: temperature
+        weight_decay: 0.0001
+  rule:
+    min_folds: 3
+    pass_if:
+    - group:
+      - POOLED
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_ci_low
+    fail_if_no_candidate_reaches:
+    - group: any
+      vs: baseline
+      window: cv
+      op: '>'
+      value: 0.0
+      stat: boot_mean
+last_dispatched_at: null
+grading:
+  attested: RULE-RQ-20261126-2819-01
+  auto: true
+  confirmatory_run: 1
+  decision_rule_id: RULE-RQ-20261126-2819-01
+  evidence:
+  - research/results/RQ-20261126-2819-01/45756683501.jsonl
+  first_fail: 2 row(s), all measured, all fail
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

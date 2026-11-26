@@ -1,0 +1,24 @@
+{
+  "based_on": "work_store:v2",
+  "due_when": {
+    "check_every_days": 7,
+    "clears_when": "the rerun prints 0 for rows written after the fix, and check_live_review_records.py refuses info_cutoff_at > reviewed_at",
+    "kind": "observation",
+    "last_checked": "2026-11-25"
+  },
+  "id": "PI-20261026-DTRPDXRH-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "CJ-2-DATASET lane session_017V1wkDRE6KDqbkdtRpDXrh",
+    "rerun": "python3 -c \"import json;rows=[json.loads(l) for l in open('comms/live_review/reviews.jsonl') if l.strip()];print(sum(r['info_cutoff_at']>r['reviewed_at'] for r in rows),len(rows))\""
+  },
+  "owner": "manager (re-owned 2026-11-26 by BACKLOG-DRAIN-20261126; was: AM-TRADING (session_01AFoLuMroLtrU2biw4ZDoBk): routed to its owning row LTR-REVIEWED-AT-SE)",
+  "redate": {
+    "observation": "BACKLOG-TRIAGE-W48 2026-11-25 read routed_to: owning row LTR-REVIEWED-AT-SECONDS is queued (due_by now 2026-12-02); the finding is unchanged and routed work is owned by that row, so the date follows the row's re-dated bucket",
+    "observed_at": "2026-11-25"
+  },
+  "routed_to": "checklist:LTR-REVIEWED-AT-SECONDS",
+  "state": "routed",
+  "what": "LTR writer stamps reviewed_at minute-truncated while info_cutoff_at carries seconds: MEASURED on main 2026-10-26, 8 of 24 comms/live_review/reviews.jsonl rows (the 12:26Z batch) have info_cutoff_at 8 s AFTER reviewed_at, which reads as a judgment made before its own inputs (distillation § 3.5 test 1). The claude_judgments builder (CJ-2) tolerates <=60 s and flags the row (judged_at_rounded) instead of excluding it. Fix: the live-review writer (skill live-trade-review / scripts/ops live-review record path) stamps reviewed_at to the second, and check_live_review_records.py refuses info_cutoff_at > reviewed_at. Then the builder tolerance can drop to 0."
+}

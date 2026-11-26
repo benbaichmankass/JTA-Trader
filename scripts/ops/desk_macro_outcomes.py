@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+# wiring: run by the 13:00Z DESK-MACRO-DAILY brief lane before it drafts the day's brief (.claude/skills/trading-desk/SKILL.md section 7b); row DESK-MACRO-DAILY
+"""DESK-MACRO-DAILY grading adapter: every shadow trade in a `desk_macro_brief/1` brief becomes a graded outcome row.
+
+Spec docs/research/desk-macro-daily-SPEC-2026-11-25.md section 5 ("Trades: replayed from info_cutoff_at on real daily candles by
+the desk outcome replayer, daily timeframe, net of the full cost stack"). The replay is `desk_outcomes.replay` UNCHANGED (forward
+bars open at or after info_cutoff_at; limit / stop / market fills within good_till_bars; a bar touching both stop and target is the
+stop; horizon exit at the close; R = the proposal's own |entry - stop|; net of `execution_costs.roundtrip_cost_r` with the
+venue-aware `desk_scan_packet.cost_policy`). Only closed 1d bars are read.
+
+Rows append to comms/desk/macro/outcomes.jsonl (schema desk_macro_outcome/1), one per (brief_id, trade index), never edited.
+A trade whose horizon has not elapsed, or whose candles could not be read, gets NO row this run (could-not-look is retried, never
+written as zero); one still unreadable 2 days past its horizon gets a `not_computable` row naming why.
+
+  python3 scripts/ops/desk_macro_outcomes.py [--briefs comms/desk/macro] [--outcomes comms/desk/macro/outcomes.jsonl]
+  python3 scripts/ops/desk_macro_outcomes.py --summary      # n, hit rate, mean net R, Brier of judge_prior / tp.p_hit
+  python3 scripts/ops/desk_macro_outcomes.py --self-test
+
+Exit: 0 ok · 2 could not look (briefs directory missing).
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+for _p in (ROOT, ROOT / "scripts" / "ci", ROOT / "scripts" / "ops"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+import desk_outcomes as do  # noqa: E402
+import desk_scan_packet as dsp  # noqa: E402
+
+BRIEFS = ROOT / "comms" / "desk" / "macro"
+OUTCOMES = BRIEFS / "outcomes.jsonl"
+SCHEMA = "desk_macro_outcome/1"
+DAY = 86400
+
+
+def _ts(s: str) -> datetime:
+    return datetime.fromisoformat(str(s).replace("Z", "+00:00")).astimezone(timezone.utc)
+
+
+def _briefs(d: Path) -> list[dict]:
+    out = []
+    for p in sorted(d.glob("*.json")):
+        try:
+            b = json.loads(p.read_text())
+        except (OSError, ValueError):  # allow-silent: an unreadable file is not a brief; desk_macro_write refuses malformed briefs at write time
+            continue
+        if isinstance(b, dict) and b.get("schema") == "desk_macro_brief/1":
+            out.append(b)
+    return out
+
+
+def _done(outcomes: Path) -> set[str]:
+    if not outcomes.exists():
+        return set()
+    ids = set()
+    for line in outcomes.read_text().splitlines():
+        if line.strip():
+            try:
+                ids.add(json.loads(line)["outcome_id"])
+            except (ValueError, KeyError):  # allow-silent: a damaged line keeps its id unknown, so that trade is re-graded, never dropped
+                continue
+    return ids
+
+
+def row(b: dict, i: int, t: dict, res: dict, now: datetime, policy: str | None) -> dict:
+    p = t["proposal"]
+    nums = {k: do._r4(res.get(k)) for k in ("net_r", "mae_r", "mfe_r", "giveback_r")}
+    return {"schema": SCHEMA, "outcome_id": f"{b['brief_id']}-T{i}", "brief_id": b["brief_id"], "trade_index": i,
+            "judged_at": b["judged_at"], "info_cutoff_at": b["info_cutoff_at"], "symbol": p.get("symbol"), "side": p.get("side"),
+            "horizon_bars": p.get("horizon_bars"), "catalyst": t.get("catalyst"), "judge_prior": t.get("judge_prior"),
+            "tp_p_hit": (p.get("tp") or {}).get("p_hit"), "expected_r_net": p.get("expected_r_net"), "kind": res["kind"], **nums,
+            "bars_held": res.get("bars_held"), "close_reason": res.get("close_reason"), "computed_at": do._iso(now),
+            "provenance": "computed", "net_of_full_cost_stack": res["kind"] == "replayed",
+            "cost_policy": policy if res["kind"] == "replayed" else None, "reason": res.get("reason")}
+
+
+def run(briefs: Path, outcomes: Path, candles: Callable[[str, str], list | None], now: datetime | None = None) -> dict:
+    if not briefs.is_dir():
+        return {"state": "could_not_look", "reason": f"{briefs} missing"}
+    now = now or datetime.now(timezone.utc)
+    done, new, waiting, cache = _done(outcomes), [], [], {}
+    for b in _briefs(briefs):
+        cutoff = _ts(b["info_cutoff_at"])
+        for i, t in enumerate(b.get("trades") or []):
+            oid = f"{b['brief_id']}-T{i}"
+            if oid in done:
+                continue
+            p = t.get("proposal") or {}
+            if p.get("timeframe") != "1d":
+                new.append(row(b, i, t, {"kind": "not_computable", "reason": f"timeframe {p.get('timeframe')!r} is not 1d"}, now, None))
+                continue
+            span = timedelta(seconds=DAY * (int(p["entry"]["good_till_bars"]) + int(p["horizon_bars"])))
+            if now < cutoff + timedelta(seconds=DAY):
+                waiting.append(oid)
+                continue
+            sym = p["symbol"]
+            if sym not in cache:
+                cache[sym] = candles(sym, "1d")
+            bars = cache[sym]
+            res = None
+            if bars:
+                closed = [x for x in bars if x["time"] + DAY <= now.timestamp()]
+                res = do.replay(p, cutoff, closed, do._cost_fn(sym))
+            if res is None:
+                if now > cutoff + span + timedelta(days=2):
+                    why = "forward daily candles missing past the horizon + 2 days" if bars else "daily candles unreadable past the horizon + 2 days"
+                    res = {"kind": "not_computable", "reason": why}
+                else:
+                    waiting.append(oid)
+                    continue
+            policy = ("execution_costs.roundtrip_cost_r with desk_scan_packet.cost_policy(%s): fee %.2f + slippage %.2f bps rt, funding %.2f bps/window"
+                      % ((sym,) + tuple(dsp.cost_policy(sym))))
+            new.append(row(b, i, t, res, now, policy))
+    if new:
+        text = outcomes.read_text() if outcomes.exists() else ""
+        sep = "" if (not text or text.endswith("\n")) else "\n"
+        outcomes.parent.mkdir(parents=True, exist_ok=True)
+        outcomes.write_text(text + sep + "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in new))
+    return {"state": "ok", "written": len(new), "outcome_ids": [r["outcome_id"] for r in new], "waiting": waiting}
+
+
+def summary(outcomes: Path) -> dict:
+    """Population = replayed rows only (expired / not_computable are counted, never scored as 0 R)."""
+    rows = [json.loads(x) for x in outcomes.read_text().splitlines() if x.strip()] if outcomes.exists() else []
+    rep = [r for r in rows if r["kind"] == "replayed"]
+    kinds = {k: sum(1 for r in rows if r["kind"] == k) for k in sorted({r["kind"] for r in rows})}
+    if not rep:
+        return {"read_state": "measured" if outcomes.exists() else "no_outcomes_file", "n_rows": len(rows), "kinds": kinds, "n_replayed": 0,
+                "hit_rate": None, "mean_net_r": None, "brier_judge_prior": None, "brier_tp_p_hit": None}
+    hit = [1.0 if r["close_reason"] == "tp_hit" else 0.0 for r in rep]
+
+    def brier(key: str):
+        xs = [(float(r[key]), h) for r, h in zip(rep, hit) if r.get(key) is not None]
+        return round(sum((p - h) ** 2 for p, h in xs) / len(xs), 4) if xs else None
+    return {"read_state": "measured", "n_rows": len(rows), "kinds": kinds, "n_replayed": len(rep), "hit_rate": round(sum(hit) / len(hit), 4),
+            "mean_net_r": round(sum(r["net_r"] for r in rep) / len(rep), 4), "brier_judge_prior": brier("judge_prior"), "brier_tp_p_hit": brier("tp_p_hit")}
+
+
+def _self_test() -> int:
+    import tempfile
+    ok = True
+
+    def check(name, cond):
+        nonlocal ok
+        ok &= bool(cond)
+        print(("  ok   " if cond else "  FAIL ") + name)
+    t0 = datetime(2026, 11, 2, 13, 0, tzinfo=timezone.utc)
+    day0 = int(datetime(2026, 11, 3, tzinfo=timezone.utc).timestamp())          # first daily bar opening after the cutoff
+    bars = [{"time": day0 + k * DAY, "open": 100.0 + k, "high": 101.5 + k, "low": 99.5 + k, "close": 100.5 + k} for k in range(10)]
+    early = [{"time": day0 - DAY, "open": 50.0, "high": 500.0, "low": 1.0, "close": 50.0}]  # a pre-cutoff bar that would hit everything
+    prop = {"symbol": "BTCUSDT", "side": "long", "timeframe": "1d", "horizon_bars": 5, "entry": {"type": "market", "level": 100.0, "good_till_bars": 1},
+            "stop": {"level": 97.0, "basis": "S1"}, "tp": {"level": 103.0, "basis": "S1", "p_hit": 0.4}, "expected_r_net": 0.2}
+    brief = {"schema": "desk_macro_brief/1", "brief_id": "DMB-20261102T1300Z", "judged_at": "2026-11-02T13:00:00Z", "info_cutoff_at": "2026-11-02T13:00:00Z",
+             "trades": [{"proposal": prop, "judge_prior": 0.5, "catalyst": "regime"},
+                        {"proposal": dict(prop, symbol="ETHUSDT"), "judge_prior": 0.3, "catalyst": "regime"}]}
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        (d / "2026-11-02.json").write_text(json.dumps(brief))
+        out = d / "outcomes.jsonl"
+        feed = {"BTCUSDT": early + bars, "ETHUSDT": None}
+        r0 = run(d, out, lambda s, tf: feed[s], now=t0 + timedelta(hours=5))
+        check("nothing is graded before one daily bar has closed after the cutoff", r0["written"] == 0 and len(r0["waiting"]) == 2)
+        r1 = run(d, out, lambda s, tf: feed[s], now=t0 + timedelta(days=5))
+        rows = [json.loads(x) for x in out.read_text().splitlines()]
+        btc = next(x for x in rows if x["symbol"] == "BTCUSDT")
+        check("the trade replays on post-cutoff daily bars only (market fill at the first forward open, TP at 103)",
+              r1["written"] == 1 and btc["kind"] == "replayed" and btc["close_reason"] == "tp_hit" and btc["net_of_full_cost_stack"])
+        check("net R is the planned 1 R target minus a positive cost", 0.9 < btc["net_r"] < 1.0)
+        check("unreadable candles inside horizon + 2 days are retried, never written", "DMB-20261102T1300Z-T1" in r1["waiting"])
+        r2 = run(d, out, lambda s, tf: feed[s], now=t0 + timedelta(days=6))
+        check("a re-run writes nothing new (one row per brief x trade)", r2["written"] == 0)
+        r3 = run(d, out, lambda s, tf: feed[s], now=t0 + timedelta(days=20))
+        eth = [json.loads(x) for x in out.read_text().splitlines()][-1]
+        check("still unreadable past horizon + 2 days -> one not_computable row naming why",
+              r3["written"] == 1 and eth["kind"] == "not_computable" and "unreadable" in eth["reason"] and eth["net_r"] is None)
+        s = summary(out)
+        check("summary scores replayed rows only and counts the rest", s["n_replayed"] == 1 and s["kinds"]["not_computable"] == 1
+              and s["hit_rate"] == 1.0 and s["brier_judge_prior"] == 0.25)
+        check("missing briefs directory is could-not-look, not zero", run(d / "nope", out, lambda s, tf: None)["state"] == "could_not_look")
+    print("SELF-TEST " + ("PASS" if ok else "FAIL"))
+    return 0 if ok else 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--briefs", type=Path, default=BRIEFS)
+    ap.add_argument("--outcomes", type=Path, default=OUTCOMES)
+    ap.add_argument("--summary", action="store_true")
+    ap.add_argument("--self-test", action="store_true")
+    a = ap.parse_args(argv)
+    if a.self_test:
+        return _self_test()
+    if a.summary:
+        print(json.dumps(summary(a.outcomes), indent=2))
+        return 0
+    res = run(a.briefs, a.outcomes, lambda s, tf: dsp.candles_from_api([s], tf).get(s))
+    print(json.dumps(res, indent=2))
+    return 0 if res["state"] == "ok" else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,22 @@
+{
+  "due_when": {
+    "check_every_days": 3,
+    "clears_when": "the next velotrade_1/tradeify_1 close is journaled with exit_price and pnl on its FIRST report (no unpriced interval), or the executor decision to accept a short unpriced interval is recorded",
+    "kind": "observation"
+  },
+  "id": "PI-20261124-VEANGDN1-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane PROP-ALERT-NOISE 2026-11-24 (session_01AFoLuJUHv1coqivEANgDN1)",
+    "rerun": "curl -s 'https://ict-bot.duckdns.org/api/bot/prop/fills?limit=1000' | python3 -c \"import json,sys;f=json.load(sys.stdin)['fills'];print([(x['id'],x['account_id'],x['created_at'],x['reported_at'],x['exit_price']) for x in f if x['status']=='closed'][:10])\"  # compare created_at vs reported_at (priced-late rows differ by minutes)"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "tier": 2,
+  "what": "Prop close priced late: velotrade_1 ETH long close (fill 362, ticket prop-manual-921410558cf1) was first journaled unpriced at 2026-11-24T15:28:12Z (Telegram 'PnL — · exit —', reason closed_on_terminal) and only repriced in place at 15:33:17Z by the existing VELO-CLOSE-RECON path (raw.repriced='exit read from the venue after an unpriced close', exit 1675.84, pnl -16.59, reason inferred 'manual'). So the mechanism is built (VELO-CLOSE-RECON, done 2026-10-11) but the FIRST close report still goes out unpriced ~5 min before the venue trade history has the exit; with the 2026-11-24 routing change each such first report is a Telegram anomaly ('close recorded with no exit price / P&L'). Population: closed prop_fills since 2026-11-17 on /api/bot/prop/fills (limit 1000, 363 rows): 0 closes now have null exit_price (all repriced), so the defect is latency, not a permanent gap. Fix options: hold the first close report until the history read hits (bounded wait, then report unpriced), or reprice sooner; owner src/prop/prop_executor.py _reconcile_journal (CLOSE_UNREAD_REASON) + venue_exit. Also check why both accounts' 15:18Z ETH exits infer reason 'manual' (neither near SL 1667 / TP 1754): ml_entry live_review_close or a strategy exit is the likely cause, unverified."
+}

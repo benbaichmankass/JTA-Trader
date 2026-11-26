@@ -1,0 +1,564 @@
+{
+  "leg": "fade_breakout_4h",
+  "grade": {
+    "verdict": "fail",
+    "label": "no_reachable_lever_beats_removed",
+    "baseline": "A",
+    "candidates": {
+      "atr_stop_buffer_lo": {
+        "delta_net_r": 5.6176,
+        "delta_max_drawdown_r": 0.5798,
+        "fold_wins": 3,
+        "passes": false
+      },
+      "atr_stop_buffer_hi": {
+        "delta_net_r": -7.3103,
+        "delta_max_drawdown_r": 5.4803,
+        "fold_wins": 1,
+        "passes": false
+      },
+      "timeout_bars_lo": {
+        "delta_net_r": -9.6735,
+        "delta_max_drawdown_r": 0.1885,
+        "fold_wins": 0,
+        "passes": false
+      },
+      "timeout_bars_hi": {
+        "delta_net_r": 2.1413,
+        "delta_max_drawdown_r": -2.0132,
+        "fold_wins": 2,
+        "passes": false
+      }
+    },
+    "delta_r_bar": 4.0,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "no candidate clears the bar: honest negative for the lever settings tested on these legs and this window -- removing those config lines is a Tier-3 proposal (not done here); it closes these CONFIGURATIONS, not the lever family (family retirement needs a review record, scripts/research/family_retirement_policy.yaml)"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 136,
+      "net_r": 1.5573,
+      "net_r_fee_only": 8.8879,
+      "max_drawdown_r": 16.4202,
+      "by_outcome": {
+        "stop": 93,
+        "target": 41,
+        "timeout": 2
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 33,
+          "net_r": 7.1403
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 34,
+          "net_r": 16.6683
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 37,
+          "net_r": -7.257
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 32,
+          "net_r": -14.994
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-158/45838942720/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-158/45838942720/arms/A__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "atr_stop_buffer_lo": {
+      "reach_ge_6r": 0.007,
+      "n": 142,
+      "net_r": 7.1749,
+      "net_r_fee_only": 15.4052,
+      "max_drawdown_r": 17.0,
+      "by_outcome": {
+        "stop": 99,
+        "target": 41,
+        "timeout": 2
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.375,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 35,
+          "net_r": 2.0588
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 36,
+          "net_r": 25.783
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 39,
+          "net_r": -7.1111
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 32,
+          "net_r": -13.5558
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.375",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-158/45838942720/arms/atr_stop_buffer_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-158/45838942720/arms/atr_stop_buffer_lo__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "atr_stop_buffer_hi": {
+      "reach_ge_6r": 0.0,
+      "n": 131,
+      "net_r": -5.753,
+      "net_r_fee_only": 0.961,
+      "max_drawdown_r": 21.9005,
+      "by_outcome": {
+        "stop": 88,
+        "target": 40,
+        "timeout": 3
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.625,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 32,
+          "net_r": 5.5287
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 34,
+          "net_r": 12.9323
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 33,
+          "net_r": -12.2536
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 32,
+          "net_r": -11.9602
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.625",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-158/45838942720/arms/atr_stop_buffer_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-158/45838942720/arms/atr_stop_buffer_hi__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "48",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "timeout_bars_lo": {
+      "reach_ge_6r": 0.0,
+      "n": 143,
+      "net_r": -8.1162,
+      "net_r_fee_only": -0.7186,
+      "max_drawdown_r": 16.6087,
+      "by_outcome": {
+        "stop": 96,
+        "target": 38,
+        "timeout": 9
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 35,
+          "net_r": 6.6234
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 37,
+          "net_r": 8.3677
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 39,
+          "net_r": -7.9613
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 32,
+          "net_r": -15.1458
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-158/45838942720/arms/timeout_bars_lo__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-158/45838942720/arms/timeout_bars_lo__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "36",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    },
+    "timeout_bars_hi": {
+      "reach_ge_6r": 0.0,
+      "n": 135,
+      "net_r": 3.6986,
+      "net_r_fee_only": 11.04,
+      "max_drawdown_r": 14.407,
+      "by_outcome": {
+        "stop": 92,
+        "target": 42,
+        "timeout": 1
+      },
+      "mean_bars_held": null,
+      "net_r_per_capital_day": null,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_buffer": 0.5,
+        "pierce_min": 0.0,
+        "exit_style": "far",
+        "tp_r": 50.0,
+        "trail_mult": 3.5,
+        "adx_max": 20.0,
+        "min_confidence": 0.0
+      },
+      "data_start": "2021-11-22 00:00:00+00:00",
+      "data_end": "2026-11-25 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-22 00:00:00+00:00",
+          "end": "2023-02-22 11:00:00+00:00",
+          "trades": 33,
+          "net_r": 7.1403
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-22 11:00:00+00:00",
+          "end": "2024-05-24 22:00:00+00:00",
+          "trades": 34,
+          "net_r": 16.7152
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-24 22:00:00+00:00",
+          "end": "2025-08-25 09:00:00+00:00",
+          "trades": 37,
+          "net_r": -7.257
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-25 09:00:00+00:00",
+          "end": "2026-11-25 20:00:00+00:00",
+          "trades": 31,
+          "net_r": -12.8997
+        }
+      ],
+      "argv": [
+        "/opt/hostedtoolcache/Python/3.11.18/x64/bin/python3",
+        "/home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_fade.py",
+        "--data",
+        "<data>",
+        "--symbol",
+        "BTCUSDT",
+        "--resample",
+        "4h",
+        "--donchian",
+        "20",
+        "--atr-period",
+        "14",
+        "--atr-stop-buffer",
+        "0.5",
+        "--pierce-min",
+        "0.0",
+        "--trail-mult",
+        "3.5",
+        "--exit-style",
+        "far",
+        "--min-confidence",
+        "0.0",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-158/45838942720/arms/timeout_bars_hi__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-158/45838942720/arms/timeout_bars_hi__bt.json",
+        "--adx-max",
+        "20.0",
+        "--adx-period",
+        "14",
+        "--timeout-bars",
+        "60",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "50.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "BTCUSDT",
+      "interval": "240",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2021-11-22 00:00:00+00:00",
+      "2023-02-22 11:00:00+00:00",
+      "2024-05-24 22:00:00+00:00",
+      "2025-08-25 09:00:00+00:00",
+      "2026-11-25 20:00:00+00:00"
+    ]
+  }
+}

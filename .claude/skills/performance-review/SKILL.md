@@ -108,7 +108,7 @@ caveats for each pull are in § "Reference" below.
 
 | # | Check | Computed by | Population / note |
 |---|---|---|---|
-| **C1** | **Per-leg scorecard, four windows**: n, net R (sum, mean), net $ (measured-only beside total), win rate, R per capital-day | `/api/bot/performance` `perStrategy[]` (lifetime, provenance counts) + `scripts/research/giveback_census.py` (R/cap-day; filter the trade dump by `closed_at` per window, its `--since-days` is ignored on the JSON path) | bucket-A rows (§ Bucket records) + flagged C; `pnl_coverage` beside every $ |
+| **C1** | **Per-leg scorecard, four windows**: n, net R (sum, mean, **p10 and p25**) and max drawdown in R (the left tail beside the mean, row VERDICT-LEFT-TAIL, practice review T14; computed from the same per-trade dump, each with its n; reporting only, no rule reads them), net $ (measured-only beside total), win rate, R per capital-day | `/api/bot/performance` `perStrategy[]` (lifetime, provenance counts) + `scripts/research/giveback_census.py` (R/cap-day; filter the trade dump by `closed_at` per window, its `--since-days` is ignored on the JSON path) | bucket-A rows (§ Bucket records) + flagged C; `pnl_coverage` beside every $ |
 | **C2** | **Expected vs realised**: live cumulative R against the leg's own Stage-0 band for the same n | `python3 scripts/research/live_vs_backtest.py` (default Stage-2 legs; `--leg` for Stage-1 legs) | whole history per book; verdict `CONSISTENT / BELOW_BACKTEST / NO_BACKTEST / INSUFFICIENT_N` |
 | **C3** | **Decay**: is the recent window drifting from the leg's own lifetime and backtest mean? | interim: C1's 30d and 90d mean R vs lifetime mean R vs the C2 band, and `scripts/research/as_traded_stage0.py` (latest-25% fold) for legs C2 flags. **No CUSUM / sequential test exists yet** (row `PERF-CHECKS-SCORECARD`) | say `interim` until the scorecard lands |
 | **C4** | **Attribution**: entry vs exit vs execution vs cost, per flagged leg | `scripts/research/live_bt_trade_join.py` (per-trade join to the backtest bar), `scripts/research/real_money_close_attribution.py` (what actually closed each real-money trade), `giveback_census.py` (peak R vs realised R) | run for every leg C2 or C3 flags and every real-money leg |
@@ -554,7 +554,7 @@ false` if the generator hasn't run yet) and:
 **Operator directive, 2026-08-30:** the review owns *"ensuring there is a healthy pipeline of
 backtests, monitoring that they are running properly, reviewing and validating results, running
 analyses to infer decisions, and then creating and implementing action items based on the
-findings."* Since 2026-10-10 stages 1–3 run 4×/day as `.claude/skills/research-ops/SKILL.md`; this
+findings."* Since 2026-10-10 stages 1–3 run once a day (14:47Z) as `.claude/skills/research-ops/SKILL.md`; this
 review **reads its newest record** (`ls -1 comms/research/ops/*.json | sort | tail -1`) and re-derives
 nothing it already covers. What stays here:
 

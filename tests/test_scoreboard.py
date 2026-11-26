@@ -35,6 +35,32 @@ def test_books_split_and_populations():
     assert "pnl NOT NULL" in rm["population"]
 
 
+def test_net_is_split_by_provenance_never_folded():
+    """AUD-20261125-SCOREBOARD-SIGN-ON-ESTIMATED: the headline net may carry estimated pnl; the split must show it."""
+    measured = _t(1, "bybit_1", "paper", -10.0, notes='{"exit_price_source": "bybit_closed_pnl"}')
+    estimated = _t(2, "bybit_1", "paper", 50.0, notes='{"exit_price_source": "recorded_exit_price"}')
+    a = sb.aggregate([measured, estimated], "x")
+    by = a["net_usd_by_provenance"]
+    assert a["net_usd"] == 40.0
+    assert round(sum(by.values()), 2) == a["net_usd"]          # the split partitions the headline exactly
+    assert by["measured"] == -10.0 and by["estimated"] == 50.0   # positive control: the +50 is not measured
+    assert a["net_usd_measured"] == -10.0                       # the sign flips on the provenance filter
+
+
+def test_headline_is_measured_with_other_parts_beside_it_and_exclusions_labelled():
+    """Operator 2026-11-25 (W48 Q6/Q3): measured headline, other parts labelled beside, excluded trade listed, not dropped."""
+    measured = _t(1, "ib_paper", "paper", -10.0, notes='{"exit_price_source": "bybit_closed_pnl"}')
+    big = _t(4773, "ib_paper", "paper", 249000.0, notes='{"exit_price_source": "recorded_exit_price"}')
+    a = sb.aggregate([measured, big], "x")
+    assert a["headline_usd"] == -10.0 and a["headline_basis"] == "venue-measured pnl"
+    assert a["headline_beside"]["estimated_usd"] == 249000.0 and a["headline_beside"]["estimated_n"] == 1
+    assert a["net_usd"] == 248990.0                               # the all-priced total is unchanged, not the headline
+    px = a["promotion_exclusions"]
+    assert px["n"] == 1 and px["rows"][0]["trade_id"] == 4773 and px["net_usd_priced_without_excluded"] == -10.0
+    only_est = sb.aggregate([big], "x")
+    assert only_est["headline_usd"] is None                       # no measured row: a dash, never 0
+
+
 def test_empty_book_is_empty_not_zero():
     a = sb.aggregate([], "x")
     assert a["read_state"] == "empty" and a["net_usd"] is None and a["profit_factor"] is None

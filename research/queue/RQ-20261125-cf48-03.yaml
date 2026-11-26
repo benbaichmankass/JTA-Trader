@@ -1,0 +1,91 @@
+# Hand-authored 2026-11-25 by lane COMPUTE-FILL-W48 (Manager Session 2026-11-25b assigned MLP-D9-WHIPPET), from the plan step
+# docs/plans/ml-dev-plan.yaml MLP-D9-WHIPPET next_weeks W48/W49 ("count real-money fills that carry a decision price; the D9 reopening
+# floor is 300 fills"). Rule registered before the run. Gates this adds or changes: none.
+id: RQ-20261125-cf48-03
+title: 'D9 Whippet re-entry count: how many closed REAL-MONEY fills in the journal carry a decision price (order_packages.entry > 0), against
+  the plan''s reopening floor of 300?'
+status: done
+cadence: once
+theme: ml_health
+priority: 2
+programme: P2
+kind: deterministic
+roadmap:
+- L-ML-MECE
+plan_node: docs/plans/ml-dev-plan.yaml MLP-D9-WHIPPET (W48 + W49 step; re-entry test from docs/plans/ML-ROADMAP-MECE-2026-11.md section 8)
+question: >-
+  MLP-D9-WHIPPET (maker-first / offset fill policy) is parked with one re-entry test: it reopens when >= 300 real-money fills carry a
+  decision price. Nobody has counted. Over the whole synced trade_journal.db on the trainer: closed, non-backtest, non-demo trades with
+  account_class real_money, joined to their order_package (op.linked_trade_id = t.id or op.order_package_id = t.order_package_id) with
+  op.entry > 0 and t.entry_price set (the execution_quality family join). Per account, per strategy and in total; every class as context.
+why_not_inferential: >-
+  A census of the journal, not a test: every qualifying row is counted and the answer is compared to a fixed floor. Upper bound read
+  2026-11-25 via the console data_query (matched_total, all statuses incl. rejected/dry rows): bybit_2 1,780 + alpaca_live 386 trade rows,
+  so the floor cannot be settled without this join.
+decision_rule:
+  id: RULE-RQ20261125-cf48-03-D9-REENTRY-COUNT
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  statistic: verdict.json n = measurement.total_real_money (distinct trade ids passing the join and filters above).
+  rule: >-
+    PASS iff n >= 300 (the plan's reopening floor, unchanged): the D9 fill-replay design (baseline today's order type per venue, realised
+    cost incl. missed fills priced at counterfactual R) may be authored next; the manager is told the count. FAIL iff n < 300: D9 stays
+    parked and this count is its re-entry reading (record it on the plan line). no_data / producer_failed (tables absent on the synced
+    journal) is a ROUTE FAULT, never a verdict. The floor is not changed after the count.
+  what_it_does_not_do: Changes nothing (no config, roster, order type or registry). Does not measure slippage or grade any order type.
+practice_precedent: 'none: a row count against a floor the plan already fixed (no intervention, no model, no comparison).'
+ml_consumer:
+  consumer: MLP-D9-WHIPPET
+  decision: whether the D9 fill-model / post-only entry line reopens (count >= 300) or stays parked; no order type changes from this unit
+  legs:
+  - ml_entry
+  book: money
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.2
+  basis: plan node P2-PR1125-D9-limit-entry-through-fill-model value (usd 200, conf 0.2); this count decides whether that line can reopen.
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 5
+  basis: 'ESTIMATE: three grouped SELECTs over the trainer''s synced trade_journal.db (a few thousand trades); the same shape as
+    RQ-20261014-9807-01 (est 10 min, runs weekly on the trainer).'
+run:
+  command:
+  - python3
+  - scripts/research/d9_fill_count.py
+  - --db
+  - data/trade_journal.db
+  - --floor
+  - '300'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 15
+  inputs:
+    research_unit: RQ-20261125-cf48-03
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- docs/plans/ml-dev-plan.yaml MLP-D9-WHIPPET
+- research/programmes/02-ai-trader.yaml P2-PR1125-D9-limit-entry-through-fill-model
+- ml/datasets/families/execution_quality.py (the join)
+- scripts/research/d9_fill_count.py (--self-test)
+last_dispatched_at: '2026-11-26T03:18:32+00:00'
+grading:
+  attested: RULE-RQ20261125-cf48-03-D9-REENTRY-COUNT
+  auto: true
+  decision_rule_id: RULE-RQ20261125-cf48-03-D9-REENTRY-COUNT
+  evidence:
+  - research/results/RQ-20261125-cf48-03/45746716863.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass

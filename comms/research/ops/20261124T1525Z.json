@@ -1,0 +1,295 @@
+{
+ "run": "RESEARCH-OPS-2026-11-24-1447",
+ "finished_at": "2026-11-24T15:25:00Z",
+ "by": "research-ops lane dispatched by manager session_01AFoLuKifPRuyeVhkQU1Fsg",
+ "floor": 31,
+ "floor_basis": "computed_floor(fired_24h 39), diagnostic only",
+ "idle_backends": [],
+ "needs_review_triaged": 0,
+ "needs_review_left": 79,
+ "throughput": {
+  "runnable_before": 11,
+  "queued": 227,
+  "fired_24h": 39,
+  "results_landed_24h": 36,
+  "hours_since_last_dispatch": 3.3,
+  "idle_alarm": false,
+  "runnable_after": 16,
+  "runnable_by_track_before": {
+   "TRADING": 0,
+   "MODEL": 5,
+   "INFRA": 6
+  },
+  "runnable_hours_note": "per-backend hours not computed: dispatch_queue.py dry run lists 5 new units would_dispatch on github_runner (est 20-35 min each, ~2.2 h); the 11 pre-existing runnable are 5 MODEL + 6 INFRA; trainer/kaggle backends: could_not_look (no utilization read this pass)"
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (liveness receipts landing on main, newest #28568)",
+  "collector": "ok (36 results landed 24h)",
+  "stranded_stamp_prs": [],
+  "incident": null,
+  "read_state": "tree_only (github-actions MCP down; github MCP not queried for workflow runs)"
+ },
+ "results_read": {
+  "pass": 6,
+  "fail": 6,
+  "indeterminate": 0,
+  "units": [
+   "RQ-20261123-f3a8-01 pass: qqq_pullback_1h n210 net +47.30R 5/6 folds on Dukascopy 2019-01..2025-06 (disjoint from the record); fold 4 (2022-03..2023-04) -2.49R",
+   "RQ-20261123-c5d2-02 pass: mes_trend_long_1d VL20 26.72 vs 25.06R, 6/6 folds >= A, n 49 vs 51, DD 2.25 vs 2.92 (2 arms)",
+   "RQ-20261123-c5d2-01 fail: mes VH80/VH90 top-vol skip",
+   "RQ-20261124-b163-01 fail: qqq_pullback_1h cold-vol skip: VL20 +4.73R (5/6 folds >= A) below the 5.12R bar; fold 6 (2025-06..2026-10) VL20 -3.45 vs A +2.86",
+   "RQ-20261124-b163-02 pass: splg_trend_long_1d VL30 +6.17R, VL20 +5.51R, 4/6 folds, same window as mes",
+   "RQ-20261124-b163-03 fail: fade_breakout_4h SOL S_ASIA exit grid (T25/T50/24/96 bars)",
+   "RQ-20261124-b5a1-04 fail: AM v2 stage B bank policy fails R4 (0 of 100 matched random re-timings beaten; dev net -12268R vs baseline -8526R)",
+   "RQ-20261123-d3a1-01 fail: D3 side gate trend delta +0.0119 R/trade t=0.83; short-only t=0.46; refit persistence gap t=-0.15 (noise)",
+   "RQ-20261123-a9f3-01 pass / RQ-20261123-b4c1-01 pass: S_ASIA session skip on XRP fvg_range_15m and SOL fade_breakout_4h; legs stay net negative (read from grading rows, not reopened)",
+   "RQ-20261123-1e01-01 fail (+1e01-02..06 same family, titles/grading only): inverse-ETF twin of tqqq_trend_long_1d on SQQQ n72 net -13.0R, 1 of 4 folds positive"
+  ],
+  "not_opened": "1e01-02..06, a9f3-01 and b4c1-01 rows were read at grading-summary level only; per-arm tables not opened this pass"
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [],
+ "units_authored": [
+  "RQ-20261124-bd30-01",
+  "RQ-20261124-bd30-02",
+  "RQ-20261124-bd30-03",
+  "RQ-20261124-bd30-04",
+  "RQ-20261124-bd30-05"
+ ],
+ "authoring": {
+  "queue_depth": null,
+  "nodes_drafted": 0,
+  "skipped_on_purpose": true,
+  "reason": "no programme node chosen; all five units are iteration units from diagnoses (STOP-GENERATED-AUTHORING)"
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 12,
+   "of": 12
+  },
+  "map_entries_added": "lever_map.py --backfill rewrote 40 research/levers/*.yaml from committed results (the arithmetic); the readings are in analysis below",
+  "next_tests_from_map": 5,
+  "lever_coverage": "iteration_orphans.py --levers: strategy_leg 57 subjects (covered 11, overdue 40, orphan 6); ml_model 13 (covered 10, overdue 0, orphan 3); ltr_class 7 (covered 0, overdue 2, orphan 5)",
+  "orphans_before": {
+   "strategy_leg": 6,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": "4 (qqq_pullback_1h and spy_pullback_1h now have live units; claude_desk, and 3 others unreached)",
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "results_iterated": [
+   {
+    "result": "RQ-20261123-f3a8-01",
+    "verdict": "pass",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261124-bd30-01 (QQQM proxy Stage-0) and RQ-20261124-bd30-02 (direction)",
+    "attempt": 1
+   },
+   {
+    "result": "RQ-20261124-b163-01",
+    "verdict": "fail",
+    "subject": "qqq_pullback_1h",
+    "next": "RQ-20261124-bd30-02",
+    "attempt": 1
+   },
+   {
+    "result": "RQ-20261123-c5d2-02 + RQ-20261124-b163-02",
+    "verdict": "pass",
+    "subject": "mes_trend_long_1d",
+    "next": "RQ-20261124-bd30-03 (pre-dev twin confirmation)",
+    "attempt": 3
+   },
+   {
+    "result": "RQ-20261017-ae17-05 + map",
+    "verdict": "fail",
+    "subject": "xrp_pullback_2h",
+    "next": "RQ-20261124-bd30-04",
+    "attempt": 2
+   },
+   {
+    "result": "RQ-20261112-003 / 203c-01",
+    "verdict": "fail",
+    "subject": "spy_pullback_1h",
+    "next": "RQ-20261124-bd30-05",
+    "attempt": 1
+   }
+  ],
+  "advanced": 4,
+  "survivors": [],
+  "overdue": "40 strategy_leg subjects have OVERDUE iteration units (list: iteration_orphans.py); not re-dated this pass",
+  "retired_by_review": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "f3a8-01",
+   "c5d2-02",
+   "b163-01",
+   "b163-02",
+   "1e01-01",
+   "b5a1-04 (headline),d3a1-01 (headline)"
+  ],
+  "trading": {
+   "meaning": [
+    "qqq_pullback_1h: confirmed positive on a disjoint 2019-2025 window (n 210, +47.3R, 5/6 folds) and the full 2019-2026 A arm is +54.0R (n 256) with fold 3 (2021-08..2022-11) -4.6R, so the lead is real enough to run the proxy and direction tests; but the 2025-06..2026-10 fold is only +2.86R (down from +11.3R the fold before), so recent decay is the live watch item, so bd30-01 reads the proxy on exactly that recent window.",
+    "qqq cold-vol skip: VL20 raises net +4.73R (58.76 vs 54.04) with 5/6 folds >= A but misses the 5.12R bar and flips fold 6 to -3.45R, so the lever is a near-miss that is concentrated before 2025 and not a recent-regime improvement; it is not authored again until direction is read.",
+    "mes/splg cold-vol skip: both index-twin legs pass on 2012+ (mes VL20 6/6 folds; splg VL30 4/6), two discoveries sharing one window and one index, so evidence is one window not two; the 2005+ splg run failed on materiality, so bd30-03 reads pre-2012 where it was not separately read.",
+    "inverse-ETF twin (1e01-01): SQQQ with the TQQQ config is -13.0R with only the last fold positive, so a trend-follower does not transfer to the inverse product (decay drag), so the six twins are closed as configurations and no variant is authored without a mechanism.",
+    "AM v2 bank (b5a1-04): beats 0 of 100 matched random re-timings and is worse than HOLD on net R, so the bank policy is not a gate; the other four stage-B units are not re-read here.",
+    "D3 side gate (d3a1-01): +0.012 R/trade at t=0.83 and a refit persistence gap at t=-0.15 are indistinguishable from noise, so trailing-return side agreement is not a D3 gate."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "qqq cold-vol",
+     "hypotheses": [
+      "noise",
+      "window/regime (fold 6)",
+      "idea wrong"
+     ],
+     "test": "bd30-02 direction, then regime_gating cells",
+     "survivor": "regime",
+     "next": "RQ-20261124-bd30-02"
+    },
+    {
+     "cluster": "inverse-ETF trend twins",
+     "hypotheses": [
+      "noise",
+      "decay drag of inverse product",
+      "idea wrong"
+     ],
+     "test": "none authored: no mechanism for a variant",
+     "survivor": "idea",
+     "next": "no action, because trend config fails 4 folds on the inverse series and the 1e01 family records stay as honest negatives"
+    },
+    {
+     "cluster": "fade_breakout_4h S_ASIA exit grid",
+     "hypotheses": [
+      "noise",
+      "cost drag",
+      "exit not the problem"
+     ],
+     "test": "not re-run",
+     "survivor": "cost",
+     "next": "left to the existing fade iteration unit; not opened this pass"
+    }
+   ],
+   "next_tests": [
+    {
+     "id_or_node": "RQ-20261124-bd30-01",
+     "decision_changed": "whether QQQM can carry qqq_pullback_1h's evidence toward real money",
+     "on_pass": "proxy has its own Stage-0 record, manager can propose the swap",
+     "on_fail": "leg stays on QQQ, proxy route blocked",
+     "premortem": "same window as the record so a pass is a fidelity read, not independent edge; spread not visible in candles"
+    },
+    {
+     "id_or_node": "RQ-20261124-bd30-02",
+     "decision_changed": "keep or drop the short half of qqq_pullback_1h",
+     "on_pass": "confirmation then Tier-3 proposal",
+     "on_fail": "direction closed for this window, regime cells next",
+     "premortem": "short loss may be concentrated in fold 3 only"
+    },
+    {
+     "id_or_node": "RQ-20261124-bd30-03",
+     "decision_changed": "Tier-3 declare proposal for the cold-vol skip on mes/splg",
+     "on_pass": "proposal with two windows",
+     "on_fail": "lever acts only post-2012, MES PASS stays a discovery",
+     "premortem": "n ~30 may land INDETERMINATE"
+    },
+    {
+     "id_or_node": "RQ-20261124-bd30-04",
+     "decision_changed": "whether adx_max 40 goes to a Tier-3 proposal on xrp_pullback_2h",
+     "on_pass": "symbol-twin confirmation then proposal",
+     "on_fail": "filter lead is a 2020+ artefact",
+     "premortem": "2018-19 regime differs from 2024-26"
+    },
+    {
+     "id_or_node": "RQ-20261124-bd30-05",
+     "decision_changed": "whether the long-only lead on spy_pullback_1h is real",
+     "on_pass": "Tier-3 proposal with QQQ read",
+     "on_fail": "direction closed for SPY",
+     "premortem": "n ~50"
+    }
+   ]
+  },
+  "model": {
+   "meaning": [
+    "D3 and AM v2 stage B results above are the MODEL-track reads; no MODEL next-test unit authored this pass (see handoff and manager alarm): D-slot status below."
+   ],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [
+   {
+    "from": "TRADING",
+    "finding": "direction (long vs short side) shows the same sign on qqq and spy pullback legs (shorts lose gross)",
+    "feeds": "D3 entry label: side-conditional target; RQ-20261124-bd30-02/05"
+   }
+  ],
+  "surprises": [
+   "b5a1-04 dev baseline book net_r -8526R over n=312008 replayed trades, an enormous negative book that no stage-B reader flagged as a population question",
+   "Expected 11-23 'f3a8-01 PASS' confirms qqq on a window where the leg's fold 4 is negative, so 'PASS' hides one weak fold"
+  ]
+ },
+ "d_slot_status": {
+  "D1": "rule by design (CLAUDE.md ladder); queued f251-02",
+  "D2": "19 units since 11-01, newest results fail/indeterminate; no next unit authored",
+  "D3": "d3a1-01 FAIL 11-23; NO next unit authored",
+  "D4": "queued b18a-02 (next unit exists)",
+  "D5": "0104-08 pass / fa22-06 indeterminate; NO next unit authored",
+  "D6": "b18a-03/04 FAIL; NO next unit authored",
+  "D7": "no unit matched by title scan; NO next unit authored",
+  "D8": "2780-01..03 FAIL; NO next unit authored",
+  "D9": "b18a-01 indeterminate; NO next unit authored",
+  "D10": "several FAIL/indeterminate; NO next unit authored",
+  "slots_with_a_next_unit": "1/10 queued (D4) + D1 rule; derived by title scan of research/queue/RQ-202611*.yaml, not by iteration_subjects"
+ },
+ "not_run": [
+  "E: ML decision-slot D2/D3/D5-D10 next units not authored (no meaningful next test identified within the budget; manager alarm sent)",
+  "C: needs_review triage 0 of 79 (owner/disposition edits need a separate held PR)"
+ ],
+ "limits": [
+  "github-actions MCP down; workflow runs not listed, tree-only mechanism check",
+  "per-backend runnable hours not measured (trainer/kaggle utilization not read)",
+  "next_rq_id.py --fetch hung on network; ids minted with --day (hash 'bd30') and checked unique by the id-bands guard",
+  "units 04 and 05 harness flags taken from existing units' argv (side-filter, adx-max, cooldown-bars) not dry-run"
+ ],
+ "calls": [
+  {
+   "call": "bd30-04 grades INDETERMINATE or FAIL (adx_max does not confirm on 2018-19)",
+   "p": 0.6,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "bd30-04 verdict",
+    "resolves_when": "2026-11-30"
+   }
+  },
+  {
+   "call": "bd30-01 QQQM proxy passes Stage-0 (net>0, >=3/4 folds)",
+   "p": 0.55,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "bd30-01 verdict",
+    "resolves_when": "2026-11-30"
+   }
+  },
+  {
+   "call": "bd30-02 long-only beats declared on QQQ",
+   "p": 0.4,
+   "check": {
+    "command": "python3 scripts/research/research_ops_checks.py --since 7d",
+    "rule": "bd30-02 verdict",
+    "resolves_when": "2026-11-30"
+   }
+  }
+ ],
+ "handoff": [
+  "MODEL track: D2,D3,D5-D10 have no next unit; manager decision needed (alarm sent)",
+  "40 strategy_leg subjects have OVERDUE iteration units (iteration_orphans.py): re-date or replace",
+  "orphans: claude_desk (indeterminate, no backtest harness known), ml_model x3, ltr_class x5 unreached",
+  "needs_review 79 (16 unowned): triage in a held PR",
+  "PI-20261124-QQQPROXY-0001 / XRPPBITER-0001 / MESVL20C-0001 cited by the manager were not found in docs/claude/work/pipeline on this checkout: units bd30-01/04/03 are written against them, ids to be linked by the manager"
+ ]
+}

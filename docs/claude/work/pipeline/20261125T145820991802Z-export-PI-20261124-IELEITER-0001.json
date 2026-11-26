@@ -1,0 +1,15 @@
+{
+  "due_when": {
+    "due_date": "2026-11-26",
+    "kind": "date"
+  },
+  "id": "PI-20261124-IELEITER-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "research",
+    "ref": "lane INDEX-LEVERAGED-ETF-ROSTER-20261123, build lane 2026-11-24, handoff to the single ML lane (manager stop order ~20:58Z)",
+    "rerun": "git show origin/lane/iele-iterations-1126 --stat; python3 scripts/research/index_signal_etf_harness.py --self-test; read runner records comms/research/RQ-20261123-1e04-0{1,2,3}/ and RQ-20261123-1e02-01/"
+  },
+  "state": "queued",
+  "what": "ETF index-driven iterations NOT registered. Harness landed (#28622); units 1e04-01/02/03 and 1e02-01 queued, local reads FAIL/FAIL/INDETERMINATE/FAIL (index rises after breakdown/failed rally, so the inverse buy is structurally negative). Authored but held on branch lane/iele-iterations-1126 (PR #28628 closed, automerge removed): RQ-20261124-1e06-01 bear-regime breakdown (close<SMA200, SMA200<SMA200[-20]) -> inverse; 1e06-02 breakdown as bounce buy of the 3x bull ETF, stop = 5-bar index low, hold 10; 1e06-03 capitulation flush 1.5 ATR (n>=25); 1e06-04 pooled confirmation on TECL/SOXL/FAS/MIDU/DRN/CURE (local: rule PASS, +41.0R 3x vs +26.4R 1x, but timing control puts actual at the 86th percentile of 200 re-timed replays, so NOT a proven timing edge). The branch's harness copy predates the lint and capability-index fixes now on main: rebase onto main, resolve in favour of main plus the new families, then register. Local exploratory reads preceded the YAMLs; the runner record is the graded one."
+}

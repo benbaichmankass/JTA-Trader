@@ -76,7 +76,7 @@ manifest:
   symbol_set: untested
   direction: tested
   session: tested
-  sizing_vs_cost: untested
+  sizing_vs_cost: tested
 levers:
   direction:
     side_filter:
@@ -95,6 +95,34 @@ levers:
         max_drawdown_r: 128.7608
         verdict: pass
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-36
+        window: 2021-11-19..2026-11-21
+        n: 368
+        net_r: -127.1439
+        baseline_n: 768
+        baseline_net_r: -189.5242
+        delta_net_r: 62.3803
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 129.7899
+        verdict: pass
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: LONG
+        unit: RQ-20261118-abab-36
+        window: 2021-11-19..2026-11-21
+        n: 368
+        net_r: -127.1439
+        baseline_n: 768
+        baseline_net_r: -189.5242
+        delta_net_r: 62.3803
+        folds_ge_baseline: 5/6
+        max_drawdown_r: 129.7899
+        verdict: pass
+        joint_change: false
       - value: short
         baseline_value: 'off'
         arm: SHORT
@@ -109,12 +137,61 @@ levers:
         max_drawdown_r: 60.771
         verdict: pass
         joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-36
+        window: 2021-11-19..2026-11-21
+        n: 400
+        net_r: -62.3713
+        baseline_n: 768
+        baseline_net_r: -189.5242
+        delta_net_r: 127.1529
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 64.1858
+        verdict: pass
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: SHORT
+        unit: RQ-20261118-abab-36
+        window: 2021-11-19..2026-11-21
+        n: 400
+        net_r: -62.3713
+        baseline_n: 768
+        baseline_net_r: -189.5242
+        delta_net_r: 127.1529
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 64.1858
+        verdict: pass
+        joint_change: false
       shape: monotone
-      points: 2
-      best_delta_r_per_trade: 0.1655
-      fold_stability: 1.0
+      points: 6
+      best_delta_r_per_trade: 0.1656
+      fold_stability: 0.944
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   exit:
+    atr_sl_buffer_mult:
+      tests:
+      - value: '0.6'
+        baseline_value: 'off'
+        arm: SLB
+        unit: RQ-20261101-78fc-46
+        window: 2024-10-05..2026-10-04
+        n: 347
+        net_r: -48.2404
+        baseline_n: 349
+        baseline_net_r: -115.033
+        delta_net_r: 66.7926
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 53.5348
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.1914
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     timeout_bars:
       tests:
       - value: '12'
@@ -207,6 +284,27 @@ levers:
       fold_stability: 0.417
       reading: no response at the tested values
   filter:
+    htf_rule:
+      tests:
+      - value: 4h
+        baseline_value: 1h
+        arm: H4
+        unit: RQ-20261101-78fc-46
+        window: 2024-10-05..2026-10-04
+        n: 438
+        net_r: -140.3907
+        baseline_n: 349
+        baseline_net_r: -115.033
+        delta_net_r: -25.3577
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 142.5057
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: -0.0727
+      fold_stability: 0.167
+      reading: every tested value is worse than the baseline
     cooldown_bars:
       tests:
       - value: '12'
@@ -362,5 +460,29 @@ levers:
       best_delta_r_per_trade: 0.0978
       fold_stability: 0.625
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  sizing_vs_cost:
+    entry_mode:
+      tests:
+      - value: limit
+        baseline_value: 'off'
+        arm: LIM
+        unit: RQ-20261101-78fc-46
+        window: 2024-10-05..2026-10-04
+        n: 336
+        net_r: -79.32
+        baseline_n: 349
+        baseline_net_r: -115.033
+        delta_net_r: 35.713
+        folds_ge_baseline: 6/6
+        max_drawdown_r: 85.7344
+        verdict: pass
+        joint_change: false
+      shape: single_point
+      points: 1
+      best_delta_r_per_trade: 0.1023
+      fold_stability: 1.0
+      reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
 manifest_notes:
-  abab_36_loses_less_2026_11_23: 'RQ-20261118-abab-36 (side filter) graded PASS under the registered rule, but the best arm is net negative: A n=768 net -189.52 R; SHORT n=400 net -62.37 R; LONG n=368 net -127.14 R. Loses less, not a positive edge: no confirmation unit (manager ruling 2026-11-23).'
+  abab_36_loses_less_2026_11_23: 'RQ-20261118-abab-36 (side filter) graded PASS under the registered rule, but the best arm is net negative: A
+    n=768 net -189.52 R; SHORT n=400 net -62.37 R; LONG n=368 net -127.14 R. Loses less, not a positive edge: no confirmation unit (manager ruling
+    2026-11-23).'

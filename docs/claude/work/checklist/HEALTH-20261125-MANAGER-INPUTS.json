@@ -1,0 +1,21 @@
+{
+  "id": "HEALTH-20261125-MANAGER-INPUTS",
+  "title": "Health 11-25 manager inputs: (1) desk rows stopped 11-20 04:08Z (wakes not spawned under throttle; manager says spawning resumes 20:00Z bar) (2) liveness checks red on main: trainer-capture-watch receipt 35.8 h stale, cadence-liveness (research-loss-detector stale) (3) live-review volume 155 -> 45 week on week",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "HEALTH-REVIEW-20261125. Not measured by this lane; relayed from the manager with the checks that close each part. (1) Closes when a desk row is written at the 20:00Z bar or later and DESK-V1-SPAWN (spawn independent of manager liveness) is scheduled. (2) Closes when trainer-capture-watch and cadence-liveness pass in prepush on main, or each has its own row naming the stale producer. (3) Closes when live-review rows per account class this week vs last are compared: if the real-money-only throttle explains the whole drop, record no action; otherwise name the gap. The live-review/rows 403 cleared itself at ~19:01Z (manager's report, not re-checked): no action unless it recurs (lane LTR-PIPELINE-FIXES-W48).",
+  "phase": null,
+  "updated_at": "2026-11-25T19:25:14Z",
+  "updated_by": "session_01AFoLuMH8nrsuFCQzohVsUA"
+}

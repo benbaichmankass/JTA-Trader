@@ -102,7 +102,8 @@ def fetch_through(cache: Path, symbols: list[str], p: dict) -> dict:
 
 def recipe_sha() -> str:
     blob = json.dumps({"features": E.FEATURES, "lgb": E.LGB_PARAMS, "sl": E.SL_ATR, "tp": E.TP_ATR, "atr": E.ATR_N,
-                       "horizon": E.HORIZON_H, "every": E.DECISION_EVERY_H, "embargo": E.EMBARGO_DAYS}, sort_keys=True)
+                       "horizon": E.HORIZON_H, "every": E.DECISION_EVERY_H, "embargo": E.EMBARGO_DAYS,
+                       "mask_dead": True}, sort_keys=True)   # ML-ENTRY-DEAD-REF-FLAT-BARS (2026-11-26): recipe changed
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -151,10 +152,11 @@ def run(a) -> int:
         syms = E.universe()
         rep = fetch_through(cache, syms, p)
         last = max(v["last_bar"] for v in rep.values())
-        tab = E.build_table(cache, syms)
+        tab = E.build_table(cache, syms, mask_dead=True)   # delisted perps' flat zero-volume bars leave the cross-section, as live
         served = json.loads(SERVED.read_text())
         served = {k: v for k, v in served.items() if k != "booster_txt"}
         fr = build_candidate(tab, p, syms, served, out)
+        fr["dead_bars_masked"] = dict(tab.attrs.get("dead_bars_masked") or {})
         fr["fetch"] = {"symbols": len(rep), "latest_bar_fetched": last,
                        "symbols_with_missing_files": {k: v["missing"][:5] for k, v in rep.items() if v["missing"]}}
         (out / "freshness.json").write_text(json.dumps(fr, indent=1, default=str) + "\n")
