@@ -17,7 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO / "scripts"), str(REPO)]
 
-import lever_design as ld  # noqa: E402
+import lever_design as ld
 
 FAMS = ["entry", "exit", "filter", "regime_gating", "timeframe", "symbol_set", "direction", "session", "sizing_vs_cost"]
 PB = {"symbols": ["X"], "timeframe": "2h", "trend_lookback": 60, "pullback_lookback": 12, "pullback_frac": 0.5}
