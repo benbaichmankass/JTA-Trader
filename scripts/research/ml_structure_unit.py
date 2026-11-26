@@ -39,6 +39,10 @@ import ml_decision_entry as E  # noqa: E402
 import ml_structure_bracket as SB  # noqa: E402
 
 PIVOTS = (3, 5, 8)
+#: the bracket the unit REGISTERED (RQ-20261101-5e01-09: "ATR stop 2.0, TP 1.5R"), not the harness's: TP at 1.5 R of a 2.0 ATR stop is 3.0 ATR.
+#: Today that equals the harness base (E.SL_ATR, E.TP_ATR) = (2.0, 3.0); the check below keeps it true or relabels the table when it is not.
+REGISTERED_SL_ATR = 2.0
+REGISTERED_TP_R = 1.5
 N_BINS = 6
 MIN_N = 39
 DRAWS = 100
@@ -49,13 +53,14 @@ STRUCT_COLS = ("gross", "net", "cost", "reason", "bars", "risk_r_unit", "fallbac
 
 
 # ------------------------------------------------------------------------------------------ structure relabel
-def structure_labels(tab: pd.DataFrame, cache: Path, pivot_n: int, hole_safe: bool = True) -> pd.DataFrame:
+def structure_labels(tab: pd.DataFrame, cache: Path, pivot_n: int, hole_safe: bool = True, sl_atr: float = E.SL_ATR,
+                     tp_atr: float = E.TP_ATR) -> pd.DataFrame:
     """The structure-bracket labels for pivot ``pivot_n`` reindexed onto the table's rows (columns ``<col>_long|short``).
     A row absent from the labelled frame is a keying error and refuses; a NaN net is an unobservable outcome (a data hole)."""
     parts = []
     for sym in tab["symbol"].unique():
         raw = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
-        lab = SB.label_cell_structure(E.regrid_hourly(raw) if hole_safe else raw, pivot_n)
+        lab = SB.label_cell_structure(E.regrid_hourly(raw) if hole_safe else raw, pivot_n, sl_atr, tp_atr)
         lab["symbol"] = sym
         parts.append(lab)
     lab = pd.concat(parts, ignore_index=True)
@@ -86,7 +91,7 @@ def rescore(trades: pd.DataFrame, tab: pd.DataFrame, lab: pd.DataFrame) -> pd.Da
 
 # ------------------------------------------------------------------------------------------ controls
 def random_exit_controls(trades: pd.DataFrame, tab: pd.DataFrame, cache: Path, draws: int = DRAWS, seed: int = SEED,
-                         hole_safe: bool = True) -> np.ndarray:
+                         hole_safe: bool = True, sl_atr: float = E.SL_ATR) -> np.ndarray:
     """One mean net R per draw: every taken trade exits at the close of a uniformly random bar j in 1..H, at the declared risk unit."""
     H = E.HORIZON_H
     key = pd.MultiIndex.from_frame(tab[["symbol", "ts"]])
@@ -107,7 +112,7 @@ def random_exit_controls(trades: pd.DataFrame, tab: pd.DataFrame, cache: Path, d
         i = idx[m]
         win = i[:, None] + np.arange(1, H + 1)[None, :]
         entry.append((np.flatnonzero(m), o[i + 1]))
-        risk.append((np.flatnonzero(m), E.SL_ATR * atr[i]))
+        risk.append((np.flatnonzero(m), sl_atr * atr[i]))
         closes.append((np.flatnonzero(m), c[win]))
         t_entry.append((np.flatnonzero(m), t_ns[i + 1] / 1e9))
         t_ns_all.append((np.flatnonzero(m), t_ns[win] / 1e9))
@@ -211,33 +216,44 @@ def judge_structure(a: pd.DataFrame, per_pivot: dict, controls: np.ndarray) -> d
 
 
 # ------------------------------------------------------------------------------------------ the unit
-def score_structure(base_trades: pd.DataFrame, tab: pd.DataFrame, cache: Path, draws: int = DRAWS) -> dict:
+def score_structure(base_trades: pd.DataFrame, tab: pd.DataFrame, cache: Path, draws: int = DRAWS, sl_atr: float = E.SL_ATR,
+                    tp_atr: float = E.TP_ATR) -> dict:
     """Pure over its inputs (the declared arm's trades, the table, the kline cache): labels, rescore, controls, verdict."""
     a = base_trades.sort_values(["ts", "symbol"]).reset_index(drop=True)
-    per = {p: rescore(a, tab, structure_labels(tab, cache, p)) for p in PIVOTS}
-    controls = random_exit_controls(a, tab, cache, draws)
+    per = {p: rescore(a, tab, structure_labels(tab, cache, p, sl_atr=sl_atr, tp_atr=tp_atr)) for p in PIVOTS}
+    controls = random_exit_controls(a, tab, cache, draws, sl_atr=sl_atr)
     return judge_structure(a, per, controls)
 
 
-def structure_unit(tab: pd.DataFrame, out: Path, n_jobs: int, cache: Path, unit: str = "5e01") -> dict:
+def structure_unit(tab: pd.DataFrame, out: Path, n_jobs: int, cache: Path, unit: str = "5e01", sl_atr: float = REGISTERED_SL_ATR,
+                   tp_r: float = REGISTERED_TP_R) -> dict:
+    """``sl_atr`` / ``tp_r`` default to the bracket the unit REGISTERED. The table's labels (and so the fold models) are made at that
+    bracket: when it is not the harness base (E.SL_ATR, E.TP_ATR) the table is relabelled FIRST, so models, declared arm, structure
+    clamp / fallback and controls all share one bracket."""
     import ml_entry_levers as L  # noqa: PLC0415 -- late: ml_entry_levers dispatches to this module
 
-    brackets = [(E.SL_ATR, E.TP_ATR)]
-    tab, dropped = L.drop_unobservable(tab, cache, brackets)
+    tp_atr = float(tp_r) * float(sl_atr)
+    relabelled = (float(sl_atr), tp_atr) != (E.SL_ATR, E.TP_ATR)
+    if relabelled:
+        tab = L.relabel_table(tab, cache, float(sl_atr), tp_atr)
+    tab, dropped = L.drop_unobservable(tab, cache, [(float(sl_atr), tp_atr)])
     for p in PIVOTS:                                   # a structure NaN is unobservable too: drop it from EVERY arm, count it
-        m = structure_labels(tab, cache, p)[["net_long", "net_short"]].isna().any(axis=1).to_numpy()
+        m = structure_labels(tab, cache, p, sl_atr=sl_atr, tp_atr=tp_atr)[["net_long", "net_short"]].isna().any(axis=1).to_numpy()
         if m.any():
             tab = tab.loc[~m].reset_index(drop=True)
             dropped["n_dropped"] += int(m.sum())
     mem = L.base_members(tab, out, n_jobs)
-    res = {"unit": unit, "sealed_windows_read": 0, "unobservable_rows_dropped": dropped, "per_seed": {}}
+    res = {"schema": "ml_structure_unit/1", "unit": unit, "sealed_windows_read": 0, "unobservable_rows_dropped": dropped,
+           "bracket": {"sl_atr": float(sl_atr), "tp_r": float(tp_r), "tp_atr": tp_atr, "table_relabelled": relabelled},
+           "per_seed": {}}
     for k, sd in enumerate(L.SEEDS):
         trades = L.run_arm(L.fold_frames(tab, mem[sd]), mem[sd])
-        r = score_structure(trades, tab, cache)
+        r = score_structure(trades, tab, cache, sl_atr=float(sl_atr), tp_atr=tp_atr)
         res["per_seed"][str(sd)] = r
         print("seed", sd, r["verdict"], flush=True)
         if k == 0:
             res["verdict_seed"] = str(sd)
             res["verdict"] = r["verdict"]
+            res["n"] = r["n"]
     res["result"] = f"{res['verdict']} (first seed decides; other seeds in per_seed)"
     return res

@@ -69,12 +69,9 @@ decision_rule:
     stop price (no gap), equally in S, A and the R controls.
 blocked_on:
 - kind: work_item
-  ref: ML-STRUCTURE-UNIT-RUNNER
-  what: 'Detector and the ML first-passage labeller arm now exist (src/runtime/structure_levels.py; scripts/research/ml_structure_bracket.py label_cell_structure,
-    tests/test_ml_structure_bracket.py). Still missing: a unit runner that fits the c692 fold models and scores the structure-labelled table (ml_entry_levers
-    units call label_cell only), plus the 100 random-exit controls.'
-  clears_when: A runner script calls ml_structure_bracket.label_cell_structure inside the ml_entry_levers fold loop with the arms S3/S5/S8, tests; then
-    git mv to research/queue/, fill run.command, set status queued.
+  ref: ML-STRUCTURE-ENTRY-V2-POPULATION
+  what: 'Needs ml_entry_v2 population in ml_entry_levers. The structure-exit runner (scripts/research/ml_structure_unit.py, PR 29312) scores the c692 ml_entry population. This unit registered ml_entry_v2 (bybit_1, served model): ml_entry_levers has no table or fold-model path for that population yet, so the runner cannot score it. Needs an ml_entry_v2 population (its served features, folds and tau) in ml_entry_levers, then run.command = ml_entry_v2_run.py levers <unit> {out_dir}.'
+  clears_when: 'ml_entry_levers can build the ml_entry_v2 table and fold models; then git mv to research/queue/, fill run.command, set status queued.'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 400

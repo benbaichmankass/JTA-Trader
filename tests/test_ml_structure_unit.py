@@ -5,6 +5,7 @@ re-scores the SAME (symbol, ts, side) with the structure bracket.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -106,3 +107,31 @@ def test_a_win_that_does_not_beat_the_random_exit_controls_is_not_a_pass():
     base = rng.normal(0.0, 1.0, 240)
     r = U.judge_structure(_frame(base), {p: _frame(base + 0.5) for p in U.PIVOTS}, np.full(100, 5.0))
     assert r["R4"] is False and r["verdict"] == "FAIL"
+
+
+def test_the_registered_bracket_is_the_parameter_default_and_equals_the_harness_base():
+    # RQ-20261101-5e01-09 registered "ATR stop 2.0, TP 1.5R": 1.5 R of a 2.0 ATR stop is a 3.0 ATR target = the harness base
+    assert U.REGISTERED_SL_ATR * U.REGISTERED_TP_R == pytest.approx(E.TP_ATR) and U.REGISTERED_SL_ATR == E.SL_ATR
+    import inspect
+    d = inspect.signature(U.structure_unit).parameters
+    assert d["sl_atr"].default == U.REGISTERED_SL_ATR and d["tp_r"].default == U.REGISTERED_TP_R
+
+
+def test_a_different_bracket_changes_the_structure_labels(world):
+    # negative control: the bracket argument must reach the labeller (clamp reference and fallback), not be ignored
+    tab, cache, _ = world
+    a = U.structure_labels(tab, cache, 5)
+    b = U.structure_labels(tab, cache, 5, sl_atr=1.0, tp_atr=1.5)
+    assert not np.allclose(a["risk_r_unit_long"].to_numpy(), b["risk_r_unit_long"].to_numpy(), equal_nan=True)
+
+
+def test_the_unit_verdict_is_mapped_to_the_script_run_contract(tmp_path):
+    import ml_entry_v2_run as RUN
+    (tmp_path / "5e01_result.json").write_text(json.dumps({"schema": "ml_structure_unit/1", "verdict": "PASS_NONINFERIOR", "n": 812,
+                                                           "bracket": {"sl_atr": 2.0, "tp_r": 1.5}}))
+    assert RUN.write_verdict("RQ-X-5e01-09", tmp_path)
+    v = json.loads((tmp_path / "verdict.json").read_text())
+    assert v["verdict"] == "pass" and v["read_state"] == "measured" and v["n"] == 812
+    (tmp_path / "verdict.json").unlink()
+    (tmp_path / "5e01_result.json").write_text(json.dumps({"schema": "ml_structure_unit/1", "verdict": "SOMETHING_ELSE"}))
+    assert not RUN.write_verdict("RQ-X-5e01-09", tmp_path) and not (tmp_path / "verdict.json").exists()   # an unmapped word writes nothing
