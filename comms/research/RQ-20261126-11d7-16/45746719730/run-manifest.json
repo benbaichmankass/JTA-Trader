@@ -1,0 +1,90 @@
+{
+  "unit": "RQ-20261126-11d7-16",
+  "run_id": "45746719730",
+  "commit_sha": "637390fea6c78bf7797bfa25f44d70cca74f7d0f",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45746719730",
+  "timeout_minutes": 120,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "tlt_pullback_1h",
+        "--arm",
+        "S26=--slippage-bps-roundtrip=26",
+        "--arm",
+        "LE1=--entry-mode=limit;--limit-expire-bars=1;--maker-fee-bps=0;--taker-fee-bps=0;--slippage-bps-roundtrip=26",
+        "--arm",
+        "LE2=--entry-mode=limit;--limit-expire-bars=2;--maker-fee-bps=0;--taker-fee-bps=0;--slippage-bps-roundtrip=26",
+        "--arm",
+        "LE3=--entry-mode=limit;--limit-expire-bars=3;--maker-fee-bps=0;--taker-fee-bps=0;--slippage-bps-roundtrip=26",
+        "--days",
+        "540",
+        "--start",
+        "2025-06-02",
+        "--end",
+        "2026-11-11 23:59",
+        "--grade",
+        "sweep",
+        "--baseline",
+        "S26",
+        "--delta-r",
+        "27",
+        "--folds",
+        "4",
+        "--fold-majority",
+        "3",
+        "--n-floor",
+        "39",
+        "--research-unit",
+        "RQ-20261126-11d7-16",
+        "--out",
+        "comms/research/RQ-20261126-11d7-16/45746719730"
+      ],
+      "log": "comms/research/RQ-20261126-11d7-16/45746719730/logs/cmd-0.log",
+      "exit_code": 0,
+      "seconds": 4.1
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
