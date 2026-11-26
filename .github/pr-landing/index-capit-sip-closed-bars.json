@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Data path on a REAL-MONEY leg: index_capitulation_1x reads its signal from Alpaca SIP closed daily bars (feed=sip, end = now - 16 min, the free-plan window) and keeps the IEX forming row as the entry reference; on any SIP failure it decides on the IEX frame as today, naming why. Only this leg's input changes (ALPACA_DATA_FEED untouched). Dispatched by Manager Session 2026-11-25a (decision 19:10Z: go live on IEX now, SIP closed bars at once). The manager merges and deploys."
+}

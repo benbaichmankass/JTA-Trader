@@ -65,3 +65,16 @@ def test_cli_write_uses_saved_inputs(tmp_path):
     assert lb.main(["--trades", str(trades), "--packages", str(pk), "--json", "--write", str(dest)]) == 0
     doc = json.loads(dest.read_text())
     assert doc["population"]["trades_read"] == 0 and "generated_at" in doc
+
+
+def test_operator_excluded_trade_is_out_of_the_read_but_listed():
+    """Operator 2026-11-25 (W48 Q3): trade 4773 is excluded from every promotion/demotion read and stays visible, labelled."""
+    meta = {"risk_per_unit": 1.0}
+    def t(i, pnl):
+        return {"id": i, "status": "closed", "pnl": pnl, "entry_price": 100.0, "stop_loss": 99.0, "take_profit_1": 103.0,
+                "direction": "long", "qty": 1.0, "symbol": "MGC", "strategy_name": "leg_x", "account_id": "ib_paper",
+                "account_class": "paper", "order_package_id": "p"}
+    out = lb.live_bar([t(1, 2.0), t(4773, 250000.0)], {"p": meta})
+    assert out["legs"]["leg_x"]["n"] == 1 and out["legs"]["leg_x"]["sum_r"] < 5.0   # 4773 does not count (its R would be ~25000)
+    ex = out["excluded_from_promotion_read"]
+    assert [e["trade_id"] for e in ex] == [4773] and ex[0]["provenance"] == "ESTIMATED"
