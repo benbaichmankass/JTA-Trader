@@ -74,6 +74,8 @@ narrowing one can strand a leg or blind a position check.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 #: Declared ``symbols:`` only — the pre-E42 behaviour.
@@ -102,40 +104,81 @@ def _clean(symbols: Optional[Iterable[Any]]) -> list[str]:
     return out
 
 
-#: A leg MAY declare, beside its venue-agnostic ``symbols:``, a per-account scope
-#: ``account_symbols: {account_id: [symbols]}`` (DESK-PAPER-ACCOUNTS, 2026-10-27: the
-#: ``claude_desk`` leg trades Bybit perps on ``bybit_1``, ETFs on ``alpaca_paper`` and
-#: micro futures on ``ib_paper`` under ONE leg name). ``symbols:`` stays the union the
-#: builder evaluates; ``account_symbols`` says which of them each rostering account
-#: trades and pulls. It is not a gate on any other leg: a leg without the key is
-#: unchanged everywhere.
+#: ML-UNIVERSE-RULE (2026-11-26; operator 2026-11-04 canonical § "An account configures strategies, never symbols", and
+#: 2026-11-26: order paths "should be able to accept any symbols on the broker that they're working on"): there is NO
+#: per-account symbol map. The per-leg ``account_symbols`` maps (DESK-PAPER-ACCOUNTS 2026-10-27, ML-ENTRY-PROP-BASELINE
+#: 2026-11-08) were removed; a leg's set on an account is DERIVED: its ``symbols:`` that the account's venue can trade
+#: (src/config/venue_capability.py), on a prop account only the population its prop superset gate scored
+#: (``comms/prop_survival/<leg>.json::symbols``), plus every passed ML population on the venue (src/config/ml_universe.py).
+#: The key name survives only so a stale config fails loudly in CI (roster-symbol-reachability), never as an input.
 ACCOUNT_SYMBOLS_KEY = "account_symbols"
+
+#: Where the prop superset gate's evidence records live (OPERATING-PLAN § 2: prop legs clear a SUPERSET).
+PROP_SURVIVAL_DIR = Path(__file__).resolve().parents[2] / "comms" / "prop_survival"
+
+
+_ACCOUNTS_CACHE: Optional[tuple] = None   # ((path, mtime), {account_id: cfg}) -- leg_symbols runs on tick paths
+
+
+def _account(account_id: str) -> Optional[Mapping[str, Any]]:
+    """One account's accounts.yaml entry, re-parsed only when the file changes; None when unreadable."""
+    global _ACCOUNTS_CACHE
+    try:
+        import os
+
+        from src.config.accounts_loader import _resolve_path, load_accounts_dict
+        path = _resolve_path(None)
+        key = (str(path), os.path.getmtime(path))
+        if _ACCOUNTS_CACHE is None or _ACCOUNTS_CACHE[0] != key:
+            _ACCOUNTS_CACHE = (key, load_accounts_dict() or {})
+        acct = _ACCOUNTS_CACHE[1].get(str(account_id))
+    except Exception:  # noqa: BLE001  # allow-silent: None -> the caller keeps the unfiltered set (never narrows on a read failure)
+        return None
+    return acct if isinstance(acct, Mapping) else None
+
+
+def prop_population(leg: Optional[str], base: Optional[Path] = None) -> Optional[list[str]]:
+    """The symbols the leg's prop superset gate SCORED (``comms/prop_survival/<leg>.json::symbols``), or None when the
+    record is absent or carries no structured list (the prop-roster gate guard owns whether such a leg may be rostered)."""
+    if not leg:
+        return None
+    path = (base or PROP_SURVIVAL_DIR) / f"{leg}.json"
+    try:
+        import json
+        rec = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    syms = rec.get("symbols") if isinstance(rec, Mapping) else None
+    return _clean(syms) if isinstance(syms, list) else None
 
 
 def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
                 account_id: Optional[str] = None, *, leg: Optional[str] = None) -> list[str]:
-    """The symbols one leg trades — on ``account_id`` when it is given.
+    """The symbols one leg trades -- on ``account_id`` when it is given.
 
-    No ``account_id``, or a leg without ``account_symbols``: the leg's
-    ``symbols:`` (the pre-2026-10-27 answer, unchanged). A scoped leg on an
-    account its map does not name trades nothing there (``[]``); a scoped entry
-    outside the leg's own ``symbols:`` is dropped, so the map can only NARROW
-    the union. ``roster-symbol-reachability`` reports both shapes in CI.
-
-    ``leg`` (the leg's NAME): an ML leg with a population pass record
-    (``comms/ml_universe/<leg>.json``, ``src/config/ml_universe.py``; operator
-    2026-11-04 "the MLs trade whatever ... their roster is internal to the ML,
-    and it's based on what tests have passed", group-level) has its configured
-    set WIDENED by every passed population's symbols on the account's venue; it
-    never narrows. No record (every leg today) = the configured set, byte-identical.
+    No ``account_id``: the leg's ``symbols:`` (plus every passed ML population when ``leg`` names one). With
+    ``account_id``: the leg's ``symbols:`` the account's VENUE can trade (``venue_capability.venue_symbols``), on a prop
+    account narrowed to the prop gate's scored population (:func:`prop_population`), then widened by every passed ML
+    population on the venue (``ml_universe.apply``; it never narrows). An unreadable account, or a venue
+    ``venue_capability`` does not model, keeps the leg's ``symbols:`` unfiltered: a config-read failure must never narrow.
     """
     scfg = strategy_cfg if isinstance(strategy_cfg, Mapping) else {}
     syms = _clean(scfg.get("symbols"))
-    scope = scfg.get(ACCOUNT_SYMBOLS_KEY)
-    if account_id is None or not isinstance(scope, Mapping):
+    venue: Optional[str] = None
+    if account_id is None:
         out = syms
     else:
-        out = [s for s in _clean(scope.get(str(account_id))) if s in syms]
+        from src.config import venue_capability as _vc
+        acct = _account(str(account_id))
+        venue = str((acct or {}).get("exchange") or "").lower() or None
+        if acct is None or venue not in _vc.VENUE_ASSET_CLASSES:
+            out = syms
+        else:
+            out = _vc.venue_symbols(syms, venue)
+            if str(acct.get("account_class") or "").lower() == "prop":
+                pop = prop_population(leg)
+                if pop is not None:
+                    out = [s for s in out if s in pop]
     if leg is None:
         return out
     from src.config import ml_universe as _mu
@@ -144,28 +187,20 @@ def leg_symbols(strategy_cfg: Optional[Mapping[str, Any]],
         return out
     if account_id is None:   # the union the builder evaluates: configured plus every passed population, any venue
         return out + [s for s in _mu.passed_symbols(rec) if s not in out]
-    return _mu.apply(out, rec, _mu.account_venue(account_id))
+    return _mu.apply(out, rec, venue or _mu.account_venue(account_id))
 
 
-def scoped_leg_accounts(leg: str | None, scope: Mapping[str, Any] | None) -> list[str]:
-    """The accounts a leg declaring ``account_symbols`` is evaluated on: the map's own accounts, then every account whose
-    ``strategies:`` roster names the leg (accounts.yaml order). An account the map does not name resolves through
-    :func:`leg_symbols` to ``[]`` plus the leg's passed population on its venue (``src/config/ml_universe.py``), so for a leg
-    with no population record this list changes nothing (each extra account still trades ``[]``). Without it, an account
-    whose map entry was REPLACED by a population record (ML-ENTRY-POPULATION-TEST, 2026-11-12) would be dropped by the
-    coordinator's ``leg_account_scope`` and the profile resolver. Unreadable accounts.yaml: the map's accounts only."""
-    out = [str(a) for a in (scope or {})]
+def rostering_accounts(leg: str | None) -> list[str]:
+    """Every account whose ``strategies:`` roster names ``leg`` (accounts.yaml order); [] when unreadable."""
     if not leg:
-        return out
+        return []
     try:
         from src.config.accounts_loader import load_accounts_dict
         accts = load_accounts_dict() or {}
-    except Exception:  # noqa: BLE001  # allow-silent: falls back to the map's own accounts (the pre-2026-11-12 behaviour)
-        accts = {}
-    for a, acct in accts.items():
-        if isinstance(acct, Mapping) and str(leg) in [str(x) for x in (acct.get("strategies") or [])] and str(a) not in out:
-            out.append(str(a))
-    return out
+    except Exception:  # noqa: BLE001  # allow-silent: [] -> the coordinator applies no per-account scope (pre-rule behaviour)
+        return []
+    return [str(a) for a, acct in accts.items()
+            if isinstance(acct, Mapping) and str(leg) in [str(x) for x in (acct.get("strategies") or [])]]
 
 
 #: A leg declaring ``pool_scored: true`` (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) has its population scored ONCE per

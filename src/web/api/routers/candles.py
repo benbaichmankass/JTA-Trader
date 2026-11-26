@@ -21,7 +21,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
@@ -67,41 +66,9 @@ _CACHE_TTL_S = 10.0
 _CONNECTOR_CACHE: Dict[str, Any] = {}
 
 
-_CRYPTO_SUFFIXES = ("USDT", "USDC", "PERP")
-_EQUITY_RE = re.compile(r"^[A-Z]{1,5}(\.[A-Z])?$")
-_FUTURES_MONTH_RE = re.compile(r"^([A-Z]{2,})([FGHJKMNQUVXZ]\d{1,2})$")
-
-
-def _profiles() -> Dict[str, Any]:
-    try:
-        from src.core.profile_loader import load_instrument_profiles
-        return load_instrument_profiles() or {}
-    except Exception:  # noqa: BLE001  # allow-silent: no profiles -> every symbol is classified by its shape alone
-        return {}
-
-
-def classify(symbol: str, profiles: Optional[Dict[str, Any]] = None) -> Dict[str, Optional[str]]:
-    """Which venue answers for *symbol*: its instrument profile's exchange, else its shape.
-
-    DESK-MACRO-DAILY (operator 2026-11-26: the macro brief may "recommend trades on any symbols that we are able to
-    trade"): an equity/ETF with no instrument profile used to fall through to the process default (Bybit) and read
-    ``no_data``; it now routes to Alpaca. Crypto-suffixed symbols route to Bybit, a futures contract month to its
-    profiled root. Read-only: nothing here can place an order.
-    """
-    s = str(symbol or "").strip().upper()
-    profiles = _profiles() if profiles is None else profiles
-    prof = profiles.get(s)
-    if prof is None:
-        m = _FUTURES_MONTH_RE.match(s)
-        if m and m.group(1) in profiles:
-            prof = profiles[m.group(1)]
-    if prof is not None:
-        return {"exchange": getattr(prof, "exchange", None), "basis": "instrument_profile"}
-    if s.endswith(_CRYPTO_SUFFIXES):
-        return {"exchange": "bybit", "basis": "crypto_suffix"}
-    if _EQUITY_RE.match(s):
-        return {"exchange": "alpaca", "basis": "equity_shape_unprofiled"}
-    return {"exchange": None, "basis": "unrecognised"}
+# ML-UNIVERSE-RULE (2026-11-26): the venue classification moved to src/config/venue_capability.py so the order path
+# (src/config/symbol_sets.py::leg_symbols) and these read-only routes share ONE answer. Re-exported here for callers.
+from src.config.venue_capability import classify  # noqa: E402,F401
 
 
 def _routed_settings(symbol: str, settings: Dict[str, Any]) -> Dict[str, Any]:
