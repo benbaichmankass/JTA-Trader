@@ -131,17 +131,6 @@ roadmap:
 related:
 - research/levers/xrp_pullback_2h.yaml
 - RQ-20261017-ae17-05
-grading:
-  attested: RULERQ20261124bd3004
-  auto: true
-  decision_rule_id: RULERQ20261124bd3004
-  evidence:
-  - research/results/RQ-20261124-bd30-04/45432785102.jsonl
-  - research/results/RQ-20261124-bd30-04/45447813912.jsonl
-  graded_at: '2026-11-24'
-  grader: scripts/research/queue_grade.py
-  rows: 2
-  verdict: null
 amendments:
 - date: '2026-11-25'
   before_any_run: true
@@ -150,3 +139,17 @@ amendments:
     .. 2019-12-31, producer_failed, no verdict was produced), so the registered pre-dev window held no data. The new window is the pre-dev history earlier than the
     b18a-04 dev window (starts 2021-11-25) on the same feed. Arms, bars and rule unchanged.'
 last_dispatched_at: '2026-11-26T00:25:09+00:00'
+grading:
+  attested: RULERQ20261124bd3004
+  auto: true
+  decision_rule_id: RULERQ20261124bd3004
+  evidence:
+  - research/results/RQ-20261124-bd30-04/45432785102.jsonl
+  - research/results/RQ-20261124-bd30-04/45447813912.jsonl
+  - research/results/RQ-20261124-bd30-04/45726142837.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  needs_review: true
+  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  rows: 3
+  verdict: null
