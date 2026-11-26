@@ -1,7 +1,7 @@
 # Authored 2026-11-25 by lane QUEUE-FILL-STANDING-W49 (Tier 1) on the manager PRIORITY (row ALPACA-LIVE-COST-REPRICE-FAIL). Rule registered BEFORE the run. Gates this adds or changes: none.
 id: RQ-20261125-11d7-02
 title: 'FOLD-ROBUSTNESS ITERATION 1 of slv_trend_1h: at 26 bps, does donchian 32, stale_exit_bars 8/12 or a vol-skip-above filter make the +25.5 R edge hold across >= 3 of 4 folds?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -124,3 +124,16 @@ related:
 - research/levers/slv_trend_1h.yaml
 - RQ-20261119-f2a4-06
 last_dispatched_at: '2026-11-25T22:33:45+00:00'
+grading:
+  attested: RULERQ20261125-11d7-02
+  auto: true
+  decision_rule_id: RULERQ20261125-11d7-02
+  evidence:
+  - research/results/RQ-20261125-11d7-02/45711853337.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail

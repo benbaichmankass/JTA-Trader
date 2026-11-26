@@ -5,7 +5,7 @@ id: RQ-20261126-b71e-01
 title: 'REGIME-PROGRAM rates / risk-off HAND RULE: on the rostered bond and gold legs, does skipping each LONG entry taken after a US 10-year REAL-yield
   shock (FRED DFII10 up > 20 bp over the prior 20 observations, read before the entry day) beat taking every trade by +0.01 R per available trade,
   and beat random skips of the same count within leg-month, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -149,3 +149,16 @@ related:
 - REGIME-PROGRAM
 - .claude/skills/regime-selectivity/SKILL.md
 last_dispatched_at: '2026-11-26T05:43:39+00:00'
+grading:
+  attested: RULE-REGIME-RATES-SHOCK-20261126
+  auto: true
+  decision_rule_id: RULE-REGIME-RATES-SHOCK-20261126
+  evidence:
+  - research/results/RQ-20261126-b71e-01/45756680656.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail
