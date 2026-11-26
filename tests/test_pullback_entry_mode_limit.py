@@ -88,3 +88,10 @@ def test_unknown_mode_and_bad_expiry_raise_and_forming_refuses():
         _pb(df, entry_mode="limit", limit_expire_bars=0)
     with pytest.raises(ValueError, match="closed-bar only"):
         _pb(df, entry_mode="limit", decision_bar="forming", decision_1m=pd.DataFrame(), decision_cfg={})
+
+
+def test_fill_bar_stop_helper_is_direction_aware_and_inclusive():
+    assert bp._fill_bar_stopped("long", 110.0, 99.0, 99.0) is True       # a touch counts as stopped (SL-first)
+    assert bp._fill_bar_stopped("long", 110.0, 99.5, 99.0) is False
+    assert bp._fill_bar_stopped("short", 101.0, 90.0, 101.0) is True
+    assert bp._fill_bar_stopped("short", 100.5, 90.0, 101.0) is False
