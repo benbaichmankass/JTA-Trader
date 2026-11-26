@@ -21,3 +21,14 @@ def test_sha_ok_detects_an_edit():
     assert P.sha_ok(pkt) and not P.prices_could_not_look(pkt)
     pkt["parts"]["prices"]["read_state"] = "could_not_look"
     assert not P.sha_ok(pkt) and P.prices_could_not_look(pkt)
+
+
+def test_desk_macro_analysis_self_test():
+    from scripts.ops import desk_macro_analysis as A
+    assert A.self_test() == 0
+
+
+def test_desk_macro_outcomes_self_test():
+    sys.path.insert(0, str(REPO / "scripts" / "ops"))
+    import desk_macro_outcomes as O
+    assert O._self_test() == 0

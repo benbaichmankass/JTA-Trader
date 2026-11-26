@@ -26,6 +26,12 @@ Rules (spec section 2):
     equal packet_sha and its built_at must be <= judged_at
   - trades == [] is REFUSED unless that packet itself shows prices could_not_look (operator 2026-11-26: "it needs to be proposing
     trades"); a thesis-free day still lists its best-ranked candidate trades, each with judge_prior. no_trade_reason is then required
+  - forecasts: the brief's OWN forecasts (operator 2026-11-26, verbatim: "It should be looking at data to develop its own forecasts
+    ... Not just aggregating open source data, but actually making inferences of deep big data analysis."): forecasts[] is
+    non-empty; each has forecast_id, target {kind: release|asset_return|asset_p_tp, key, resolves_at > judged_at}, own_point
+    inside interval {lo, hi, level}, method, inputs (source_ids and/or analysis_ref = an analysis_id from a listed analysis file:
+    sha valid, same packet, computed_at <= judged_at), consensus (or null) and own_minus_consensus = own_point - consensus.
+    trades[].forecast_ids, when given, must name known forecasts
   - write-once: an existing comms/desk/macro/<date>.json is never overwritten (a correction is a new brief with `supersedes`)
 
   python3 scripts/ops/desk_macro_write.py validate BRIEF.json
@@ -162,6 +168,81 @@ def evidence(pkt: dict | None, fetches: list[dict], judged_at: datetime) -> tupl
     return ev, probs
 
 
+FORECAST_KINDS = ("release", "asset_return", "asset_p_tp")
+
+
+def analyses_ok(analyses: list[dict], pkt: dict | None, judged_at: datetime) -> tuple[set, list[str]]:
+    ids, probs = set(), []
+    for a in analyses:
+        aid = a.get("analysis_id", "?")
+        if not sha_ok(a, "analysis_sha"):
+            probs.append(f"analysis {aid}: analysis_sha does not match its body")
+        elif pkt and a.get("packet_sha") != pkt.get("packet_sha"):
+            probs.append(f"analysis {aid}: computed on a different packet")
+        else:
+            try:
+                if _ts(a["computed_at"]) > judged_at:
+                    probs.append(f"analysis {aid}: computed_at is after judged_at")
+                else:
+                    ids.add(aid)
+            except (KeyError, ValueError):
+                probs.append(f"analysis {aid}: computed_at missing or not ISO")
+    return ids, probs
+
+
+def forecast_problems(fs, sids: set, aids: set, jt: datetime) -> tuple[set, list[str]]:
+    if not isinstance(fs, list) or not fs:
+        return set(), ["forecasts[]: at least one own forecast is required (the brief develops its own forecasts, it does not only "
+                       "aggregate; run scripts/ops/desk_macro_analysis.py)"]
+    out, ids = [], set()
+    for i, f in enumerate(fs):
+        tag = f"forecasts[{i}]"
+        if not isinstance(f, dict):
+            out.append(f"{tag}: an object is required")
+            continue
+        fid = f.get("forecast_id")
+        if not fid or fid in ids:
+            out.append(f"{tag}: a unique forecast_id is required")
+        ids.add(fid)
+        tg = f.get("target") or {}
+        if tg.get("kind") not in FORECAST_KINDS or not tg.get("key"):
+            out.append(f"{tag}: target {{kind: {'|'.join(FORECAST_KINDS)}, key}} is required")
+        try:
+            if _ts(tg["resolves_at"]) <= jt:
+                out.append(f"{tag}: target.resolves_at must be after judged_at (a forecast of the future)")
+        except (KeyError, ValueError, TypeError):
+            out.append(f"{tag}: target.resolves_at (ISO) is required")
+        iv = f.get("interval") or {}
+        try:
+            pt, lo, hi, lvl = float(f["own_point"]), float(iv["lo"]), float(iv["hi"]), float(iv["level"])
+            if not (lo <= pt <= hi and 0 < lvl < 1):
+                out.append(f"{tag}: need interval.lo <= own_point <= interval.hi and 0 < interval.level < 1")
+        except (KeyError, TypeError, ValueError):
+            out.append(f"{tag}: own_point and interval {{lo, hi, level}} (numbers) are required")
+            pt = None
+        if not str(f.get("method") or "").strip():
+            out.append(f"{tag}: method is required")
+        inp = f.get("inputs") or {}
+        src, aref = set(inp.get("source_ids") or []), inp.get("analysis_ref")
+        if not src and not aref:
+            out.append(f"{tag}: inputs.source_ids and/or inputs.analysis_ref is required")
+        if src - sids:
+            out.append(f"{tag}: cites unknown source_id(s) {sorted(src - sids)}")
+        if aref and aref not in aids:
+            out.append(f"{tag}: analysis_ref {aref!r} is not a valid listed analysis file (analysis_paths)")
+        cons, gap = f.get("consensus"), f.get("own_minus_consensus")
+        if cons is None:
+            if gap is not None:
+                out.append(f"{tag}: own_minus_consensus must be null when consensus is null")
+        elif pt is not None:
+            try:
+                if gap is None or abs(float(gap) - (pt - float(cons))) > 1e-6:
+                    out.append(f"{tag}: own_minus_consensus must equal own_point - consensus ({pt - float(cons):.6g})")
+            except (TypeError, ValueError):
+                out.append(f"{tag}: consensus must be a number or null")
+    return ids, out
+
+
 def _load_json(ref: str):
     path = Path(ref) if Path(ref).is_absolute() else REPO / ref
     return json.loads(path.read_text())
@@ -247,7 +328,7 @@ def packet_problems(b: dict, pkt: dict | None, why: str | None) -> list[str]:
 
 
 def problems(b: dict, universe: set | None = None, legs: set | None = None, packet: dict | None = None,  # inert: universe — retired 2026-11-26, kept positional for callers
-             fetches: list[dict] | None = None) -> list[str]:
+             fetches: list[dict] | None = None, analyses: list[dict] | None = None) -> list[str]:
     """``universe`` is retired (any venue-tradable symbol with data); kept positional for callers. ``fetches`` overrides
     reading ``b['fetch_paths']``."""
     if legs is None:
@@ -305,8 +386,22 @@ def problems(b: dict, universe: set | None = None, legs: set | None = None, pack
                 out.append(f"fetch_paths {ref}: cannot read ({type(e).__name__})")
     ev, fprobs = evidence(pkt, fetches, jt)
     out += fprobs
+    if analyses is None:
+        analyses = []
+        for ref in b.get("analysis_paths") or []:
+            try:
+                analyses.append(_load_json(ref))
+            except (OSError, ValueError) as e:
+                out.append(f"analysis_paths {ref}: cannot read ({type(e).__name__})")
+    aids, aprobs = analyses_ok(analyses, pkt, jt)
+    out += aprobs
+    fids, fcprobs = forecast_problems(b.get("forecasts"), sids, aids, jt)
+    out += fcprobs
     for i, t in enumerate(b["trades"]):
         out += trade_problems(t, i, ev, sids)
+        bad = set(t.get("forecast_ids") or []) - fids
+        if bad:
+            out.append(f"trades[{i}]: forecast_ids {sorted(bad)} are not in forecasts[]")
     for i, f in enumerate(b["informs"]):
         if f.get("leg") not in legs:
             out.append(f"informs[{i}]: leg {f.get('leg')!r} is not in config/strategies.yaml")
@@ -345,6 +440,13 @@ def render(b: dict) -> str:
             L.append(f"- thesis invalidated by: {m.get('thesis_invalidated_by')}")
     else:
         L += ["## Trades: none", "", str(b.get("no_trade_reason", ""))]
+    if b.get("forecasts"):
+        L += ["", "## Own forecasts", "", "| id | target | own (interval) | consensus | own - consensus | method |", "|---|---|---|---|---|---|"]
+        for f in b["forecasts"]:
+            iv = f.get("interval") or {}
+            L.append(f"| {f.get('forecast_id')} | {(f.get('target') or {}).get('kind')}: {(f.get('target') or {}).get('key')} | "
+                     f"{f.get('own_point')} ({iv.get('lo')} .. {iv.get('hi')}, {iv.get('level')}) | {f.get('consensus')} | "
+                     f"{f.get('own_minus_consensus')} | {f.get('method')} |")
     for name in ("informs", "calendar", "events", "tilts"):
         if b[name]:
             L += ["", f"## {name.capitalize()}", ""] + [f"- {json.dumps(x, sort_keys=True)}" for x in b[name]]
@@ -353,8 +455,8 @@ def render(b: dict) -> str:
 
 
 def write(b: dict, out_dir: Path = OUT_DIR, universe: set | None = None, legs: set | None = None,
-          packet: dict | None = None, fetches: list[dict] | None = None) -> Path:
-    probs = problems(b, universe, legs, packet, fetches)
+          packet: dict | None = None, fetches: list[dict] | None = None, analyses: list[dict] | None = None) -> Path:
+    probs = problems(b, universe, legs, packet, fetches, analyses)
     if probs:
         raise ValueError("refused:\n  " + "\n  ".join(probs))
     day = _ts(b["judged_at"]).strftime("%Y-%m-%d")
@@ -388,6 +490,9 @@ GOOD = {
                                "catalyst_timing": ["2026-12-10T13:30:00Z CPI"], "tighten_if": [],
                                "exit_early_if": [{"signal": "daily close below 88.5", "check": {"kind": "close_below", "level": 88.5}}],
                                "do_not": ["do not trail inside 1 ATR before CPI"], "thesis_invalidated_by": "10y yield closes above 4.8%"}}],
+    "forecasts": [{"forecast_id": "F1", "target": {"kind": "release", "key": "US_CPI_2026-12-10", "resolves_at": "2026-12-10T13:30:00Z"},
+                   "own_point": 0.28, "interval": {"lo": 0.18, "hi": 0.38, "level": 0.8}, "method": "seasonal_ar_ols_v1 on CPILFESL",
+                   "inputs": {"source_ids": ["S1"]}, "consensus": 0.3, "own_minus_consensus": -0.02}],
     "informs": [], "no_trade_reason": None,
     "training": {"train_eligible": True, "gate_eligible": False, "label_clean_from": "2026-06-01"},
 }
@@ -445,6 +550,18 @@ def self_test() -> int:
     check("a trade without a management block is refused", bad(lambda b: b["trades"][0].pop("management")))
     check("management without an exit_early_if item is refused", bad(lambda b: b["trades"][0]["management"].update(exit_early_if=[])))
     check("a malformed machine check is refused", bad(lambda b: b["trades"][0]["management"]["exit_early_if"][0].update(check={"kind": "vibes", "level": 1})))
+    check("a brief with no own forecast is refused", bad(lambda b: b.update(forecasts=[])))
+    check("a forecast resolving before judged_at is refused", bad(lambda b: b["forecasts"][0]["target"].update(resolves_at="2026-11-01T00:00:00Z")))
+    check("a point outside its interval is refused", bad(lambda b: b["forecasts"][0].update(own_point=0.5)))
+    check("a wrong own_minus_consensus is refused", bad(lambda b: b["forecasts"][0].update(own_minus_consensus=0.1)))
+    check("a forecast citing an unlisted analysis is refused", bad(lambda b: b["forecasts"][0]["inputs"].update(analysis_ref="DMA-x")))
+    check("a trade citing an unknown forecast is refused", bad(lambda b: b["trades"][0].update(forecast_ids=["F9"])))
+    an = {"schema": "desk_macro_analysis/1", "analysis_id": "DMA-ok", "computed_at": "2026-11-26T13:04:00Z", "packet_sha": PKT["packet_sha"]}
+    an["analysis_sha"] = hashlib.sha256(json.dumps(an, sort_keys=True, default=str).encode()).hexdigest()
+    b2 = copy.deepcopy(GOOD)
+    b2["forecasts"][0]["inputs"] = {"analysis_ref": "DMA-ok"}
+    b2["trades"][0]["forecast_ids"] = ["F1"]
+    check("a forecast resting on a valid analysis file, cited by its trade, passes", problems(b2, uni, legs, PKT, [], [an]) == [])
     check("a management item citing an unknown source is refused", bad(lambda b: b["trades"][0]["management"]["watch_for"][0].update(source_ids=["S9"])))
     check("a size key is refused", bad(lambda b: b["trades"][0]["proposal"].update(qty=10)))
     check("an uncited judgement is refused", bad(lambda b: b["tilts"][0].update(basis="no citation")))

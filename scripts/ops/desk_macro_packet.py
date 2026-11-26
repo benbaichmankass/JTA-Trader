@@ -141,6 +141,7 @@ def bar_stats(bars: list[dict], now: datetime) -> dict:
         "high_20d": max(h[-20:]), "low_20d": min(lo[-20:]), "range_last_atr": round((h[-1] - lo[-1]) / atr, 3),
         "dist_sma20_atr": round((last - s20) / atr, 3) if s20 else None,
         "dist_sma50_atr": round((last - s50) / atr, 3) if s50 else None,
+        "closes_61": [round(x, 8) for x in c[-61:]], "closes_61_last_time": int(closed[-1]["time"]),
         "levels_1atr": {"long": {"stop": round(last - atr, 6), "tp_2r": round(last + 2 * atr, 6)},
                         "short": {"stop": round(last + atr, 6), "tp_2r": round(last - 2 * atr, 6)}},
     }

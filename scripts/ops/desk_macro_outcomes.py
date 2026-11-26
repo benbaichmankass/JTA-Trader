@@ -15,6 +15,13 @@ the replay does not expose its fill bar, so the window is the whole period the t
 the first bar it fired on; an item without a check is logged ``not_machine_checkable``. This is how the operator's LTR handoff
 (2026-11-26) is graded: did the conditions the brief told the reviewer to watch actually occur, and did the trade's result differ.
 
+FORECASTS (operator 2026-11-26: the brief develops its own forecasts) are graded into comms/desk/macro/forecast_outcomes.jsonl
+(schema desk_macro_forecast_outcome/1), one row per (brief_id, forecast_id), once the target has resolved: a ``release`` forecast
+whose target names its FRED series / transform / period is scored against the realised value AND against the naive point and the
+consensus it carried (|error| each, inside-interval, own beats naive / consensus); an ``asset_return`` forecast against the realised
+close-to-close return over its horizon; an ``asset_p_tp`` forecast is the trade's judge_prior and is scored by the trade rows' Brier.
+Unresolvable is retried, then ``not_computable`` with the reason, never a zero.
+
 A trade whose horizon has not elapsed, or whose candles could not be read, gets NO row this run (could-not-look is retried, never
 written as zero); one still unreadable 2 days past its horizon gets a `not_computable` row naming why.
 
@@ -173,6 +180,96 @@ def run(briefs: Path, outcomes: Path, candles: Callable[[str, str], list | None]
     return {"state": "ok", "written": len(new), "outcome_ids": [r["outcome_id"] for r in new], "waiting": waiting}
 
 
+FC_SCHEMA = "desk_macro_forecast_outcome/1"
+FC_OUT = BRIEFS / "forecast_outcomes.jsonl"
+
+
+def _fred_value(series: str, how: str, period: str, fred: Callable[[str], list]) -> float | None:
+    import desk_macro_analysis as dma
+    ser = dict(dma.transform(fred(series), how))
+    return ser.get(period)
+
+
+def grade_forecasts(briefs: Path, out: Path, fred: Callable[[str], list], candles: Callable[[str, str], list | None],
+                    now: datetime | None = None) -> dict:
+    now = now or datetime.now(timezone.utc)
+    done = _done(out)
+    rows, waiting = [], []
+    for b in _briefs(briefs):
+        for f in b.get("forecasts") or []:
+            oid = f"{b['brief_id']}-{f.get('forecast_id')}"
+            if oid in done:
+                continue
+            tg = f.get("target") or {}
+            try:
+                res_at = _ts(tg["resolves_at"])
+            except (KeyError, ValueError):
+                continue
+            if now < res_at + timedelta(days=1):
+                waiting.append(oid)
+                continue
+            base = {"schema": FC_SCHEMA, "outcome_id": oid, "brief_id": b["brief_id"], "forecast_id": f.get("forecast_id"),
+                    "target": tg, "own_point": f.get("own_point"), "interval": f.get("interval"), "consensus": f.get("consensus"),
+                    "computed_at": do._iso(now)}
+            kind, realised, naive = tg.get("kind"), None, None
+            try:
+                if kind == "release" and tg.get("series") and tg.get("period"):
+                    realised = _fred_value(tg["series"], tg.get("transform", "level"), tg["period"], fred)
+                    naive = tg.get("naive_point")
+                elif kind == "asset_return" and tg.get("base_close"):
+                    bars = [x for x in (candles(tg["key"], "1d") or []) if x["time"] >= res_at.timestamp() - DAY]
+                    if bars:
+                        realised = (float(bars[0]["close"]) / float(tg["base_close"]) - 1) * 100
+                        naive = 0.0
+                elif kind == "asset_p_tp":
+                    rows.append({**base, "kind": "graded_via_trade_outcome", "reason": "scored as judge_prior Brier on the trade rows"})
+                    continue
+                else:
+                    rows.append({**base, "kind": "not_computable", "reason": "target names no gradable series/period or base_close"})
+                    continue
+            except Exception as exc:  # noqa: BLE001  # allow-silent: an unreadable source is retried, then not_computable
+                if now > res_at + timedelta(days=7):
+                    rows.append({**base, "kind": "not_computable", "reason": f"{type(exc).__name__}: {exc}"[:200]})
+                else:
+                    waiting.append(oid)
+                continue
+            if realised is None:
+                if now > res_at + timedelta(days=7):
+                    rows.append({**base, "kind": "not_computable", "reason": "realised value not published 7 days after resolution"})
+                else:
+                    waiting.append(oid)
+                continue
+            own = float(f["own_point"])
+            iv = f.get("interval") or {}
+            e_own = abs(realised - own)
+            e_naive = abs(realised - float(naive)) if naive is not None else None
+            e_cons = abs(realised - float(f["consensus"])) if f.get("consensus") is not None else None
+            rows.append({**base, "kind": "graded", "realised": round(realised, 6), "abs_err_own": round(e_own, 6),
+                         "abs_err_naive": round(e_naive, 6) if e_naive is not None else None,
+                         "abs_err_consensus": round(e_cons, 6) if e_cons is not None else None,
+                         "inside_interval": (iv.get("lo") is not None and float(iv["lo"]) <= realised <= float(iv["hi"])),
+                         "own_beats_naive": (e_own < e_naive) if e_naive is not None else None,
+                         "own_beats_consensus": (e_own < e_cons) if e_cons is not None else None})
+    if rows:
+        text = out.read_text() if out.exists() else ""
+        sep = "" if (not text or text.endswith("\n")) else "\n"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text + sep + "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in rows))
+    return {"state": "ok", "written": len(rows), "waiting": waiting}
+
+
+def forecast_summary(out: Path) -> dict:
+    rows = [json.loads(x) for x in out.read_text().splitlines() if x.strip()] if out.exists() else []
+    g = [r for r in rows if r["kind"] == "graded"]
+
+    def rate(k):
+        xs = [r[k] for r in g if r.get(k) is not None]
+        return {"n": len(xs), "rate": round(sum(1 for x in xs if x) / len(xs), 4) if xs else None}
+    return {"read_state": "measured" if out.exists() else "no_forecast_outcomes_file", "n_rows": len(rows), "n_graded": len(g),
+            "own_beats_naive": rate("own_beats_naive"), "own_beats_consensus": rate("own_beats_consensus"),
+            "interval_coverage": rate("inside_interval")}
+
+
 def summary(outcomes: Path) -> dict:
     """Population = replayed rows only (expired / not_computable are counted, never scored as 0 R)."""
     rows = [json.loads(x) for x in outcomes.read_text().splitlines() if x.strip()] if outcomes.exists() else []
@@ -239,6 +336,26 @@ def _self_test() -> int:
         s = summary(out)
         check("summary scores replayed rows only and counts the rest", s["n_replayed"] == 1 and s["kinds"]["not_computable"] == 1
               and s["hit_rate"] == 1.0 and s["brier_judge_prior"] == 0.25)
+        fb = {"schema": "desk_macro_brief/1", "brief_id": "DMB-20261102T1301Z", "judged_at": "2026-11-02T13:01:00Z",
+              "info_cutoff_at": "2026-11-02T13:00:00Z", "trades": [], "forecasts": [
+                  {"forecast_id": "F1", "own_point": 50.0, "interval": {"lo": 20.0, "hi": 80.0, "level": 0.8}, "consensus": 90.0,
+                   "target": {"kind": "release", "key": "nfp", "resolves_at": "2026-11-06T13:30:00Z", "series": "PAYEMS",
+                              "transform": "diff", "period": "2026-10-01", "naive_point": 120.0}},
+                  {"forecast_id": "F2", "own_point": 0.4, "interval": {"lo": 0.3, "hi": 0.5, "level": 0.8}, "consensus": None,
+                   "target": {"kind": "asset_p_tp", "key": "BTCUSDT", "resolves_at": "2026-11-06T00:00:00Z"}}]}
+        (d / "2026-11-02b.json").write_text(json.dumps(fb))
+        fco = d / "fc.jsonl"
+        payems = [("2026-09-01", 1000.0), ("2026-10-01", 1060.0)]
+        g0 = grade_forecasts(d, fco, lambda sid: payems, lambda s, tf: None, now=t0 + timedelta(days=2))
+        check("forecasts wait until their target resolves", g0["written"] == 0 and len(g0["waiting"]) == 2)
+        g1 = grade_forecasts(d, fco, lambda sid: payems, lambda s, tf: None, now=t0 + timedelta(days=6))
+        fr = {r["forecast_id"]: r for r in (json.loads(x) for x in fco.read_text().splitlines())}
+        check("release forecast graded vs realised, naive and consensus (realised 60: own 50 beats naive 120 and consensus 90)",
+              fr["F1"]["realised"] == 60.0 and fr["F1"]["own_beats_naive"] and fr["F1"]["own_beats_consensus"] and fr["F1"]["inside_interval"])
+        check("a p_tp forecast is routed to the trade Brier, not double-scored", fr["F2"]["kind"] == "graded_via_trade_outcome")
+        fs = forecast_summary(fco)
+        check("forecast summary counts beats-naive / beats-consensus / coverage", fs["own_beats_naive"] == {"n": 1, "rate": 1.0}
+              and g1["written"] == 2)
         check("missing briefs directory is could-not-look, not zero", run(d / "nope", out, lambda s, tf: None)["state"] == "could_not_look")
     print("SELF-TEST " + ("PASS" if ok else "FAIL"))
     return 0 if ok else 1
@@ -254,9 +371,12 @@ def main(argv: list[str] | None = None) -> int:
     if a.self_test:
         return _self_test()
     if a.summary:
-        print(json.dumps(summary(a.outcomes), indent=2))
+        print(json.dumps({"trades": summary(a.outcomes), "forecasts": forecast_summary(a.outcomes.parent / FC_OUT.name)}, indent=2))
         return 0
+    import desk_macro_analysis as dma
     res = run(a.briefs, a.outcomes, lambda s, tf: dsp.candles_from_api([s], tf).get(s))
+    res["forecasts"] = grade_forecasts(a.briefs, a.outcomes.parent / FC_OUT.name, dma.fred_series,
+                                       lambda s, tf: dsp.candles_from_api([s], tf).get(s))
     print(json.dumps(res, indent=2))
     return 0 if res["state"] == "ok" else 2
 

@@ -129,3 +129,22 @@ def test_config_head_ignores_events_block_only():
     b = head + "\n" + _GENERATED_MARK + "\n# (scripts/macro/econ_calendar_produce.py --emit-config). Forward\n# high/medium-impact events mapped to x.\nevents:\n  - {class: fomc, time: \"2026-10-28T18:30:00Z\", impact: 1.0}\n"
     assert _config_head(a) == _config_head(b)
     assert _config_head(a) != _config_head(a.replace("MES: [fomc]", "MES: []"))
+
+
+def test_latest_upcoming_drops_a_rescheduled_release():
+    """ECON-CAL-CONSENSUS-AND-STALE-ROWS: PCE observed for 11-27 on 11-09, then re-observed for 11-25 -> the 11-27 row goes;
+    weekly claims 7 days apart and a different release kind are kept."""
+    from scripts.macro.econ_calendar_produce import _latest_upcoming
+
+    def row(eid, kind, at, obs, name="Core PCE"):
+        return {"status": "scheduled", "country": "US", "event_id": eid, "event_name": name, "kind": kind,
+                "scheduled_at": at, "observed_at": obs}
+    rows = [row("evt-core-pce-mom-2026-11-27-us", "core_pce_mom", "2026-11-27T13:30:00Z", "2026-11-09T01:55:40Z"),
+            row("evt-core-pce-mom-2026-11-25-us", "core_pce_mom", "2026-11-25T13:30:00Z", "2026-11-25T05:03:26Z"),
+            row("evt-core-pce-mom-2026-12-18-us", "core_pce_mom", "2026-12-18T13:30:00Z", "2026-11-25T05:03:26Z"),
+            row("evt-claims-2026-11-26-us", "initial_jobless_claims", "2026-11-26T13:30:00Z", "2026-11-09T01:55:40Z", "Claims"),
+            row("evt-claims-2026-12-03-us", "initial_jobless_claims", "2026-12-03T13:30:00Z", "2026-11-25T05:03:26Z", "Claims")]
+    ids = {r["event_id"] for r in _latest_upcoming(rows)}
+    assert "evt-core-pce-mom-2026-11-27-us" not in ids
+    assert {"evt-core-pce-mom-2026-11-25-us", "evt-core-pce-mom-2026-12-18-us",
+            "evt-claims-2026-11-26-us", "evt-claims-2026-12-03-us"} <= ids
