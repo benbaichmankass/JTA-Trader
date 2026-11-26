@@ -124,7 +124,22 @@ def grade(recs: List[Dict[str, Any]], days: int) -> Dict[str, Any]:
     return {"verdict": v, "read_state": "measured" if graded else "no_data", "n": int(sum(r["n"] for r in graded)),
             "population": f"served (shadow/advisory) 2-class vol-regime heads; their manifest dataset rows of the last {days} days "
                           f"with a complete forward regime_label; {len(graded)} head(s) graded at n >= {MIN_N}",
-            "note": note, "records": recs}
+            "note": note, "measurement": {"records": recs}, "records": [fanout_row(r, v, graded) for r in recs]}
+
+
+def fanout_row(rec: Dict[str, Any], verdict: str, graded: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """One emit-valid E5 row per head (research_result.py refuses a row without verdict / population / population.n;
+    run 45773199101 of f17a-02 could not land). A graded head is measured with n = its labelled rows; a head below the
+    n floor is no_data and one that is not a vol head / could not be read is not_attempted -- both n null, not_applicable."""
+    if rec in graded:
+        rs, n, v = "measured", int(rec.get("n") or 0), verdict
+    else:
+        rs = "no_data" if rec.get("state") == "checked" else "not_attempted"
+        n, v = None, "not_applicable"
+    return {"verdict": v, "read_state": rs,
+            "population": f"{rec.get('model_id')} ({rec.get('stage')}): manifest dataset rows with a forward regime_label"
+                          + ("" if rs == "measured" else f" -- not graded ({rec.get('state')}, n={rec.get('n')})"),
+            "n": n, "measurement": rec}
 
 
 def self_test() -> None:
@@ -138,6 +153,9 @@ def self_test() -> None:
     assert g["verdict"] == "fail" and "b" in g["note"]
     assert grade([{"model_id": "a", "state": "checked", **perfect}], 30)["verdict"] == "pass"
     assert grade([{"model_id": "a", "state": "checked", "n": 10}], 30)["verdict"] == "indeterminate"
+    rows = grade([{"model_id": "a", "state": "checked", "n": 10}, {"model_id": "z", "state": "not_a_vol_head"}], 30)["records"]
+    assert [r["read_state"] for r in rows] == ["no_data", "not_attempted"] and all(r["n"] is None for r in rows)
+    assert all(r["verdict"] == "not_applicable" and r["population"] for r in rows)
     print("SELF-TEST PASS")
 
 

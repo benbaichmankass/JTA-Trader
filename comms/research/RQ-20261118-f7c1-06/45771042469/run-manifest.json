@@ -1,0 +1,76 @@
+{
+  "unit": "RQ-20261118-f7c1-06",
+  "run_id": "45771042469",
+  "commit_sha": "f7a1f13b84a1131d0708cb488230f0e385e49f89",
+  "run_url": null,
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.1 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "e82f46504fe7",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_residual.py",
+        "run",
+        "--arms",
+        "raw,ftt",
+        "--cache",
+        "/tmp/ml_entry_klines",
+        "--cache-source",
+        "published",
+        "--gpu-arm-budget-min",
+        "290",
+        "--out",
+        "comms/research/RQ-20261118-f7c1-06/45771042469",
+        "--unit",
+        "RQ-20261118-f7c1-06",
+        "--where",
+        "kaggle",
+        "--rule-id",
+        "RULE-RQ20261118-f7c1-06-FTT-ENTRY",
+        "--registered-at",
+        "2026-11-18"
+      ],
+      "log": "comms/research/RQ-20261118-f7c1-06/45771042469/logs/cmd-0.log",
+      "exit_code": 1,
+      "seconds": 0.7
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}

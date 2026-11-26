@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "why": "CI-BRIEF-RENDER-TIMEOUT (Manager Session 2026-11-26a, rank 3): the daily-brief build parsed the ~3,100-unit research queue ~4x per build through PyYAML's pure-Python loader (cProfile: 12,905 safe_load calls = 255 s of a 269 s build; 90 s unprofiled), so test_every_scripts_research_module_the_brief_loads_is_runtime's 180 s guard timed out on loaded runners (#29083, #29091). The three hot readers (queue_replenish.existing_units, blocker_watch.load_units, render_daily_brief.atm_view) now parse through libyaml with a pure-loader fallback on error (the research_queue._fast_safe_load pattern). Build+render 90 s -> 23 s locally; existing_units returns identical units over all 3,123 queue files. The timeout is NOT raised. Tooling/read path only. Revert: git revert."
+}

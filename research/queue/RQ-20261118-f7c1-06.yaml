@@ -95,6 +95,8 @@ run:
   - RULE-RQ20261118-f7c1-06-FTT-ENTRY
   - --registered-at
   - '2026-11-18'
+  bundle_paths:
+  - comms/research/broad_paths/bp2-f4271084b120
   timeout_minutes: 330
   inputs:
     research_unit: RQ-20261118-f7c1-06
@@ -115,7 +117,7 @@ related:
 - FRONTIER-LEVER-TABULAR
 population: The ml_decision_entry universe (Binance USD-M perps in the bp2 manifest, BTCUSDT excluded), both sides at the served tau over 2025-10-01..2026-09-30
   in 13 x 28-day windows; a recipe comparison, not a promotion read.
-last_dispatched_at: '2026-11-26T06:50:39+00:00'
+last_dispatched_at: null  # re-armed 2026-11-26 by ML-PRIMARY (research-ops folded in): run of 06:50:39Z failed at Kaggle startup on the missing bp2 manifest; fixed by #29092 (bundle_paths); retry 2 of 2
 lands:
   store: research/results/
   assert_field: read_state

@@ -1,59 +1,29 @@
 {
-  "generated_at": "2026-11-25T21:56:25Z",
-  "overall": "findings",
+  "generated_at": "2026-11-26T08:40:36Z",
+  "overall": "clean",
   "produced_by": {
-    "run_id": "45707995183",
+    "run_id": "45784820645",
     "workflow": "research-loss-detector"
   },
   "questions": {
     "A_stuck_research_prs": {
       "findings": [],
-      "population": "19 open PRs; 5 automation/*; 0 carry research; 5 automation/* carry none (not graded here)",
+      "population": "26 open PRs; 10 automation/*; 5 carry research; 5 automation/* carry none (not graded here)",
       "state": "clean",
       "threshold_hours": 6.0
     },
     "B_unlanded_result_runs": {
-      "findings": [
-        {
-          "conclusion": "cancelled",
-          "created_at": "2026-11-24T21:09:43Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "45488242811",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45488242811",
-          "workflow": "am-policy-arm.yml"
-        }
-      ],
-      "lost": [
-        {
-          "conclusion": "cancelled",
-          "created_at": "2026-11-24T21:09:43Z",
-          "result_job": [
-            "failure"
-          ],
-          "run_id": "45488242811",
-          "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45488242811",
-          "workflow": "am-policy-arm.yml"
-        }
-      ],
+      "findings": [],
+      "lost": [],
       "pending_merge": [],
-      "population": "116 completed run(s) of 9 workflow(s) calling ./.github/actions/research-result since 2026-11-11 (am-action-value.yml, am-policy-arm.yml, dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 151 produced no result by design (skipped); 0 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3884 result file(s) on origin/main",
-      "state": "findings"
+      "population": "115 completed run(s) of 9 workflow(s) calling ./.github/actions/research-result since 2026-11-12 (am-action-value.yml, am-policy-arm.yml, dukascopy-span-probe.yml, ict-scalp-exit-sweep.yml, m20-exit-lever-sweep.yml, research-exit-head-build.yml, research-exit-head-replay-trainer.yml, research-harness-dispatch.yml, soak-book-grade-weekly.yml); 19 produced no result by design (skipped); 1 closed by a recorded disposition (docs/claude/work/RESEARCH-LOSS-DISPOSITIONS.json); 3982 result file(s) on origin/main",
+      "state": "clean"
     },
     "C_expiring_unlanded_artifacts": {
-      "findings": [
-        {
-          "artifact": "watchdog-rows",
-          "artifact_id": 15065651004,
-          "expires_at": "2026-11-28T21:33:56Z",
-          "run_id": "45703697928",
-          "workflow": "research-watchdog.yml"
-        }
-      ],
-      "population": "[bulk] 2618 artifact(s) listed, 2618 unexpired, 669 expire within 72.0h across 393 run(s); 28 of those from research workflows (research-watchdog.yml); 241 transport artifact(s) skipped by design (research-store-bundle); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
+      "findings": [],
+      "population": "[bulk] 2761 artifact(s) listed, 2761 unexpired, 630 expire within 72.0h across 374 run(s); 0 of those from research workflows (none); 261 transport artifact(s) skipped by design (research-store-bundle, watchdog-rows); a landed copy = run id named on origin/main in research/results, a commit message, or a file under research/**, docs/research/**, runtime_logs/replay_pregate/**",
       "read_via": "bulk",
-      "state": "findings"
+      "state": "clean"
     }
   },
   "ref": "origin/main",
