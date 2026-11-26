@@ -162,7 +162,7 @@ def test_alpaca_fill_exit_is_venue_fills_net_and_estimates_are_marked(tmp_path):
     db, path = _db(tmp_path)
     _add(path, id=10, account_id="alpaca_paper", symbol="IWM", direction="long", position_size=2275,
          entry_price=283.68, exit_price=279.450338, pnl=-9622.48, fee_taker_usd=0.0,
-         notes=json.dumps({"exit_price_source": "broker_leg_fill"}))
+         notes=json.dumps({"exit_price_source": "broker_leg_fill", "entry_price_source": "alpaca_order_status"}))
     _add(path, id=11, account_id="alpaca_paper", symbol="SPY", direction="long", position_size=1,
          entry_price=700, exit_price=701, pnl=1.0,
          notes=json.dumps({"exit_price_source": "candle_at_close"}))
@@ -171,6 +171,25 @@ def test_alpaca_fill_exit_is_venue_fills_net_and_estimates_are_marked(tmp_path):
     assert calls == [], "no Bybit read for an Alpaca row"
     assert _get(path, 10)[0]["pnl_basis"] == "venue_fills_net"
     assert _get(path, 11)[0]["pnl_basis"] == "computed_estimate"
+
+
+@pytest.mark.parametrize("entry_src", ["plan", None])
+def test_a_venue_fill_exit_against_an_unverified_entry_is_an_estimate_not_venue_fills_net(tmp_path, entry_src):
+    """ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26): trade 8521 USO journaled the package entry 132.715 against a
+    venue fill of 133.165649 (it filled 6.4 s after submit, past the 3 s confirm poll) and was labelled
+    venue_fills_net with pnl_gap 0. A venue-fill EXIT is not enough: the entry must be a venue fill too."""
+    db, path = _db(tmp_path)
+    notes = {"exit_price_source": "exchange_fill"}
+    if entry_src is not None:
+        notes.update({"entry_price_source": entry_src, "entry_price_source_reason": "no_venue_fill_read"})
+    _add(path, id=8521, account_id="alpaca_paper", symbol="USO", direction="long", position_size=1147,
+         entry_price=132.715, exit_price=137.77846556233655, pnl=5807.795, fee_taker_usd=0.0,
+         notes=json.dumps(notes))
+    om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([]))
+    r, n = _get(path, 8521)
+    assert r["pnl_basis"] == "computed_estimate"
+    assert n["pnl_basis_reason"] == "entry_not_venue_verified:" + (entry_src or "unlabelled")
+    assert r["pnl"] == pytest.approx(5807.795), "pnl itself is not rewritten by the classifier"
 
 
 def test_net_r_does_not_cost_a_venue_net_row_twice():
@@ -274,7 +293,8 @@ def test_the_replaced_figure_is_kept_and_long_close_notes_are_not_cut_to_500(tmp
 
 def test_a_row_the_sweep_adds_nothing_to_keeps_its_notes_byte_for_byte(tmp_path):
     db, path = _db(tmp_path)
-    raw = json.dumps({"exit_price_source": "broker_leg_fill", "closed_reason": "y" * 900}, separators=(",", ":"))
+    raw = json.dumps({"exit_price_source": "broker_leg_fill", "entry_price_source": "alpaca_order_status",
+                      "closed_reason": "y" * 900}, separators=(",", ":"))
     _add(path, account_id="alpaca_paper", symbol="SPY", notes=raw)
     om._sweep_venue_net_pnl(db, cfgs=CFGS, bybit_reader=_reader([]))
     r, _ = _get(path, 6817)

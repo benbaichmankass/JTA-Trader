@@ -16357,7 +16357,11 @@ _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
 
 # ── ENTRY-FILL-WRITEBACK (manager decision 2026-11-15, option a) ─────────────────────────────────────────────────
 # trades.entry_price was the PACKAGE's planned entry, not the fill (ENTRY-FILL-BIAS-30D measured the gap, PR #26166).
-# Alpaca already books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06). For Bybit this sweep reads
+# Alpaca books its confirm-poll fill as entry_price (ALPACA-LIVE-MECHANICS, 11-06) ONLY when the fill lands inside the
+# poll (ALPACA_PLACE_CONFIRM_S, 3 s). ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26, MEASURED): 15 of 65 Alpaca stock
+# entries 11-09..11-25 filled 3.5-20 s after submit, kept the package price and were still labelled venue_fills_net
+# (net +1,471.86 USD journal-minus-venue). Those rows are now marked fill_pending_writeback too and read here through
+# the Alpaca order-by-id read (filled_avg_price). For Bybit this sweep reads
 # the ENTRY ORDER's own avgPrice by orderId (trades.broker_order_id) once the order is terminal and rewrites
 # entry_price, keeping the plan in notes.package_entry, exactly the Alpaca shape. Conditions (manager, each pinned by
 # tests/test_entry_fill_writeback.py):
@@ -16368,11 +16372,22 @@ _LOCAL_PNL_BROKER_DEFER_MS = 6 * 60 * 60 * 1000  # 6h — match INV-2 grace
 #   4. no history backfill: only OPEN rows the insert marked fill_pending_writeback are read.
 ENTRY_FILL_PENDING = "fill_pending_writeback"
 ENTRY_FILL_SOURCE_BYBIT = "bybit_order_history"
+#: The same label the placement's confirm poll stamps (execute._submit_order venue_fill source), so a fill read late
+#: and a fill read inside the poll are indistinguishable downstream.
+ENTRY_FILL_SOURCE_ALPACA = "alpaca_order_status"
+#: entry_price_source values that ARE a venue measurement of the entry (venue_fills_net requires one of these).
+VENUE_ENTRY_SOURCES = frozenset({ENTRY_FILL_SOURCE_BYBIT, ENTRY_FILL_SOURCE_ALPACA, "venue_fill"})
 _ENTRY_FILL_QTY_TOL = 0.02
-_ENTRY_FILL_NONTERMINAL = frozenset({"New", "PartiallyFilled", "Untriggered", "Created", "Triggered"})
+_ENTRY_FILL_NONTERMINAL = frozenset({
+    "New", "PartiallyFilled", "Untriggered", "Created", "Triggered",                      # Bybit orderStatus
+    # Alpaca order status (lowercase): still working or not yet final, so ask again next tick
+    "new", "accepted", "pending_new", "accepted_for_bidding", "partially_filled", "held", "calculated",
+    "pending_replace", "pending_cancel", "done_for_day", "stopped", "suspended",
+})
 
 
-def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]],
+                        source: str = ENTRY_FILL_SOURCE_BYBIT) -> Dict[str, Any]:
     """Pure: what to do with one pending row, given ``clients.account_order_status``'s answer for its entry order.
 
     Returns ``{"action": "write" | "plan" | "wait", "entry": float|None, "reason": str}``. ``wait`` = ask again next
@@ -16392,14 +16407,42 @@ def entry_fill_decision(row: Dict[str, Any], order: Optional[Dict[str, Any]]) ->
     if qty and qty > 0 and (filled is None or abs(filled - qty) / qty > _ENTRY_FILL_QTY_TOL):
         # The order's fills are not this row's size: the fill cannot be isolated to the row. Keep the plan.
         return {"action": "plan", "entry": None, "reason": "entry_order_qty_mismatch"}
-    return {"action": "write", "entry": avg, "reason": ENTRY_FILL_SOURCE_BYBIT}
+    return {"action": "write", "entry": avg, "reason": source}
 
 
-def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20) -> Dict[str, int]:
-    """Rewrite entry_price from the entry order's own fill for OPEN Bybit rows marked fill_pending_writeback.
+def alpaca_entry_order_status(cfg: Dict[str, Any], order_id: str) -> Optional[Dict[str, Any]]:
+    """The Alpaca entry order by id, in :func:`entry_fill_decision`'s shape, or ``None`` on a read failure (wait).
+
+    Read-only (``clients.account_alpaca_order_history``, GET /v2/orders/{id}). An id Alpaca never issued (the executor's
+    uuid fallback when the venue returned none) cannot be read, so it is ``not_found`` (keep the plan, labelled)."""
+    from src.units.accounts.clients import account_alpaca_order_history
+    try:
+        res = account_alpaca_order_history(cfg, order_ids=[str(order_id)])
+    except ValueError:
+        return {"status": "not_found", "avg_price": 0.0, "filled_qty": 0.0}
+    except Exception as exc:  # noqa: BLE001  # allow-silent: logged; None = wait and retry next tick
+        logger.warning("alpaca_entry_order_status: %s raised: %s", order_id, exc)
+        return None
+    if not isinstance(res, dict):
+        return None
+    hit = (res.get("by_id") or {}).get(str(order_id)) or {}
+    state = hit.get("read_state")
+    if state == "not_found":
+        return {"status": "not_found", "avg_price": 0.0, "filled_qty": 0.0}
+    if state != "order_read" or not isinstance(hit.get("order"), dict):
+        return None
+    o = hit["order"]
+    return {"status": str(o.get("status") or ""), "avg_price": _safe_float(o.get("filled_avg_price")) or 0.0,
+            "filled_qty": _safe_float(o.get("filled_qty")) or 0.0}
+
+
+def _sweep_entry_fill_writeback(db, *, order_status: Any = None, alpaca_order_status: Any = None,
+                                limit: int = 20) -> Dict[str, int]:
+    """Rewrite entry_price from the entry order's own fill for OPEN Bybit / Alpaca rows marked fill_pending_writeback.
 
     DB field update only (entry_price + notes): it never touches an order, a bracket or a slice. Best-effort, never
-    raises. ``order_status`` is injectable for tests (default ``clients.account_order_status``)."""
+    raises. ``order_status`` (Bybit, default ``clients.account_order_status``) and ``alpaca_order_status`` (default
+    :func:`alpaca_entry_order_status`) are injectable for tests."""
     summary: Dict[str, int] = {"scanned": 0, "written": 0, "kept_plan": 0, "waiting": 0, "errors": 0}
     try:
         conn = db.connect()
@@ -16429,6 +16472,10 @@ def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20
             logger.warning("_sweep_entry_fill_writeback: clients import failed: %s", exc)
             summary["errors"] = len(rows)
             return summary
+    if alpaca_order_status is None:
+        alpaca_order_status = alpaca_entry_order_status
+    readers = {"bybit": (order_status, ENTRY_FILL_SOURCE_BYBIT),
+               "alpaca": (alpaca_order_status, ENTRY_FILL_SOURCE_ALPACA)}
     try:
         cfgs = _load_account_cfgs_for_reconcile()
     except Exception as exc:  # noqa: BLE001
@@ -16443,16 +16490,18 @@ def _sweep_entry_fill_writeback(db, *, order_status: Any = None, limit: int = 20
             if not isinstance(notes, dict) or notes.get("entry_price_source_reason") != ENTRY_FILL_PENDING:
                 continue  # the LIKE matched elsewhere in the blob; not ours
             cfg = (cfgs or {}).get(row.get("account_id"))
-            if cfg is None or str(cfg.get("exchange") or "bybit").lower() != "bybit":
+            reader = readers.get(str((cfg or {}).get("exchange") or "bybit").lower()) if cfg is not None else None
+            if reader is None:
                 summary["waiting"] += 1
                 continue
-            d = entry_fill_decision(row, order_status(cfg, str(row["broker_order_id"])))
+            read, source = reader
+            d = entry_fill_decision(row, read(cfg, str(row["broker_order_id"])), source)
             if d["action"] == "wait":
                 summary["waiting"] += 1
                 continue
             if d["action"] == "write":
                 notes["package_entry"] = _safe_float(row.get("entry_price"))
-                notes["entry_price_source"] = ENTRY_FILL_SOURCE_BYBIT
+                notes["entry_price_source"] = source
                 notes.pop("entry_price_source_reason", None)
                 new_entry = d["entry"]
             else:
@@ -18208,10 +18257,18 @@ def _sweep_venue_net_pnl(
                         updates["pnl_percent"] = pct
             elif exit_src == "ib_execution":
                 basis = vp.BASIS_VENUE_NET
-            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES and str(notes.get("entry_price_source") or "") in VENUE_ENTRY_SOURCES:
                 # Each of these is a venue fill (exchange_fill / exchange are MEASURED in
-                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240).
+                # provenance; broker_leg_fill is the Alpaca filled-leg read, PR #25240), AND the entry
+                # is a venue fill too. ALPACA-ENTRY-FILL-PRICE-UNSYNCED (2026-11-26): a venue-fill exit
+                # against the PACKAGE entry was labelled venue_fills_net, and pnl_computed used the same
+                # entry, so pnl_gap_usd read 0 and hid it (11 of 15 measured rows). Such a row is an
+                # estimate, with the reason kept.
                 basis = vp.BASIS_VENUE_FILLS_NET
+            elif exit_src in _VENUE_FILL_EXIT_SOURCES:
+                basis = vp.BASIS_COMPUTED_ESTIMATE
+                notes["pnl_basis_reason"] = "entry_not_venue_verified:" + str(
+                    notes.get("entry_price_source") or "unlabelled")
             else:
                 basis = vp.BASIS_COMPUTED_ESTIMATE
             updates["pnl_basis"] = basis
