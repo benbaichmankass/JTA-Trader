@@ -487,7 +487,7 @@ def self_test() -> int:
     allfail = part_prices(["A"], now, lambda sym: (_ for _ in ()).throw(OSError("down")), retry_pause_s=0)
     flaky = {"n": 0}
 
-    def once_empty(sym):
+    def once_empty(sym):  # inert: sym — the stub answers by call order, not by symbol
         flaky["n"] += 1
         return [] if flaky["n"] == 2 else bars           # B's first read is empty, its retry is full
     rt = part_prices(["A", "B"], now, once_empty, workers=1, retry_pause_s=0)

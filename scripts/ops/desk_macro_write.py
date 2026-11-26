@@ -246,7 +246,7 @@ def packet_problems(b: dict, pkt: dict | None, why: str | None) -> list[str]:
     return out
 
 
-def problems(b: dict, universe: set | None = None, legs: set | None = None, packet: dict | None = None,
+def problems(b: dict, universe: set | None = None, legs: set | None = None, packet: dict | None = None,  # inert: universe — retired 2026-11-26, kept positional for callers
              fetches: list[dict] | None = None) -> list[str]:
     """``universe`` is retired (any venue-tradable symbol with data); kept positional for callers. ``fetches`` overrides
     reading ``b['fetch_paths']``."""
