@@ -60,7 +60,9 @@ power:
     (listing_etf) and 2027-02-04 (macro_shock, the binding class); at the 12-month rate on 2026-12-19 and 2027-01-16. not_before
     2027-02-08 = the conservative macro_shock date + the 1d horizon + 2 days of panel / kline lag. The window itself ends by an OUTCOME-BLIND
     rule (confirm_window_end), so running early cannot grade an underpowered window: a cell below 88 events reads INSUFFICIENT and spends no
-    ledger test.'
+    ledger test. A real-data dry run on 2026-11-26 read exactly that (window_rule: listing_etf 57, macro_shock 34 panel
+    events, floor_reached false; no ledger row). Its graded n was 0 because the 10:1 matched baseline needs >= 10 same-coin, same-hour-of-week
+    non-event bars, i.e. a window of >= ~11 weeks. By not_before the window is ~17 weeks, and the synthetic test grades n >= 88 on an 11-week window.'
   feasibility:
     source: none
     accrual_basis: Events accrue forward from the daily GDELT panel append (news-gdelt-panel.yml, 03:17Z daily, comms/news_alpha/gdelt_panel/).
