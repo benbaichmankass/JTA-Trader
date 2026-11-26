@@ -1,0 +1,168 @@
+{
+  "leg": "trend_donchian_sol_prop",
+  "label": "stage0_edge",
+  "grade": {
+    "verdict": "pass",
+    "label": "stage0_edge",
+    "baseline": "A",
+    "net_r": 17.5072,
+    "n": 82,
+    "max_drawdown_r": 4.6724,
+    "folds_positive": 3,
+    "n_folds": 4,
+    "fold_majority": 3,
+    "n_floor": 39,
+    "control": null,
+    "why": "net_r=17.5072 > 0 with 3/4 positive folds at this arm's cost stack"
+  },
+  "arms": {
+    "A": {
+      "reach_ge_6r": 0.0,
+      "n": 82,
+      "net_r": 17.5072,
+      "net_r_fee_only": 19.2938,
+      "max_drawdown_r": 4.6724,
+      "by_outcome": {
+        "stop": 31,
+        "take_profit": 34,
+        "trail_stop": 17
+      },
+      "mean_bars_held": 17.585,
+      "net_r_per_capital_day": 0.0728,
+      "cost_stack": {
+        "fee_bps_roundtrip": 11.0,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0
+      },
+      "params": {
+        "donchian": 20,
+        "atr_stop_mult": 2.5,
+        "trail_mult": 4.5,
+        "min_confidence": 0.8
+      },
+      "data_start": "2021-11-13 20:00:00+00:00",
+      "data_end": "2026-11-17 20:00:00+00:00",
+      "folds": [
+        {
+          "fold": 1,
+          "start": "2021-11-13 23:00:00+00:00",
+          "end": "2023-02-14 11:00:00+00:00",
+          "trades": 16,
+          "net_r": -2.6346
+        },
+        {
+          "fold": 2,
+          "start": "2023-02-14 11:00:00+00:00",
+          "end": "2024-05-16 23:00:00+00:00",
+          "trades": 27,
+          "net_r": 5.275
+        },
+        {
+          "fold": 3,
+          "start": "2024-05-16 23:00:00+00:00",
+          "end": "2025-08-17 11:00:00+00:00",
+          "trades": 26,
+          "net_r": 8.8161
+        },
+        {
+          "fold": 4,
+          "start": "2025-08-17 11:00:00+00:00",
+          "end": "2026-11-17 23:00:00+00:00",
+          "trades": 13,
+          "net_r": 6.0509
+        }
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-138/45834806985/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-138/45834806985/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ]
+    }
+  },
+  "window": {
+    "start": null,
+    "end": null,
+    "fetch_days": 1830,
+    "feed": {
+      "source": "binance",
+      "ticker": "SOLUSDT",
+      "interval": "60",
+      "resample": "4h"
+    },
+    "fold_edges": [
+      "2021-11-13 23:00:00+00:00",
+      "2023-02-14 11:00:00+00:00",
+      "2024-05-16 23:00:00+00:00",
+      "2025-08-17 11:00:00+00:00",
+      "2026-11-17 23:00:00+00:00"
+    ]
+  },
+  "argv": {
+    "A": {
+      "argv": [
+        "/usr/bin/python3",
+        "/tmp/repo/scripts/backtest_trend.py",
+        "--donchian",
+        "20",
+        "--data",
+        "<data>",
+        "--symbol",
+        "SOLUSDT",
+        "--resample",
+        "4h",
+        "--atr-period",
+        "14",
+        "--atr-stop-mult",
+        "2.5",
+        "--trail-mult",
+        "4.5",
+        "--min-confidence",
+        "0.8",
+        "--fee-bps-roundtrip",
+        "11.0",
+        "--emit-trades",
+        "comms/research/RQ-20261126-138/45834806985/arms/A__trades.jsonl",
+        "--json",
+        "comms/research/RQ-20261126-138/45834806985/arms/A__bt.json",
+        "--long-only",
+        "--tp-cap-pct",
+        "0.099",
+        "--tp-r",
+        "6.0"
+      ],
+      "cfg_set": {},
+      "cfg_unset": [],
+      "extra_flags": [],
+      "omitted_levers_per_builder": [
+        "decision_bar"
+      ],
+      "routed_cfg_keys": []
+    }
+  }
+}
