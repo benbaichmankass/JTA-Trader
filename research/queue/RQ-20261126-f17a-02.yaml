@@ -1,0 +1,81 @@
+# Authored 2026-11-26 by lane ML-PRIMARY (manager 2026-11-26 05:07Z: "author BOTH light reads now ... then the streamed <= 1 GB scorer as part of
+# the (c) pair, so it's ready the moment #29052 lands"). Rule registered BEFORE any run. Gates this adds or changes: none.
+id: RQ-20261126-f17a-02
+title: 'Weekly vol-head label audit: does the label the live gate would use (P(volatile) >= the live threshold) predict REALIZED forward volatility
+  on each served vol-regime head''s latest 30 days?'
+status: queued
+cadence: weekly
+kind: deterministic
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+question: For each served (shadow / advisory) 2-class vol-regime head, over its manifest dataset's rows of the last 30 days with a complete forward
+  regime_label, is Cohen's kappa of the live label vs the realized class >= 0.2 and the Brier skill vs the base rate > 0?
+why_this_matters: 'The live router gates on the vol axis these heads produce (REGIME_ML_VERDICT_MODE=use for BTC), and c4f2-01 / aadc-01 showed
+  the regime labels drive real drops. Whether the live label still predicts realized volatility on recent data had no standing read. It also serves
+  as the (c) out-of-time re-score of the served regime heads (manager 2026-11-26): after the FC-STRIDE-PHASE fix (#29052) and the nightly
+  side-stream rebuild, the same weekly run grades the heads on the inputs they are then served.'
+why_not_inferential: 'A per-head census with fixed, pre-registered thresholds on a fixed window; the statistics are descriptive skill measures of
+  each served head, not a test of a hypothesis about a population. n is stated per head and a head below n 200 is not graded.'
+ml_consumer:
+  consumer: config/regime_policy.yaml
+  decision: whether a served vol head's live label still carries information about realized volatility; a FAIL opens a drift-remediation row for the named head (no change from this unit)
+  legs:
+  - trend_donchian
+  - squeeze_breakout_4h
+  - ict_scalp_5m
+  book: demo_floor
+decision_rule:
+  id: RULE-VOL-HEAD-LABEL-AUDIT-20261126
+  registered_at: '2026-11-26'
+  registered_before_run: true
+  baseline: the base-rate forecaster (Brier of always predicting the window's realized volatile share) and chance agreement (kappa 0)
+  statistic: 'scripts/research/vol_head_label_audit.py: per served vol head, rows of its manifest dataset within the last 30 days with
+    regime_label in {range, volatile}, scored by ml_vol_label_replay._score_rows (batched, verified) to P(volatile); live label = P >= live
+    threshold; kappa vs regime_label; Brier vs base-rate Brier.'
+  rule: 'FAIL iff >= 1 head with n >= 200 has kappa < 0.2 OR Brier skill <= 0 (named). PASS iff every head with n >= 200 clears both.
+    INDETERMINATE iff no head reaches n 200. Heads below n 200 and heads that could not be checked are listed, never graded.'
+  pass_action: Nothing to do; the next weekly run repeats.
+  fail_action: Open a drift-remediation row for each named head (drift-remediation skill), stating whether it is the advisory head the live
+    gate reads.
+  proposal_mapping: fail -> drift-remediation row per named head; pass -> none; indeterminate -> check dataset recency on the trainer.
+  what_it_does_not_do: Changes no model, stage, threshold, regime cell or config; adds no gate.
+  min_n: 200
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'stand-in: the vol label gates live BTC intents through trend_vol cells; not a P&L measurement.'
+practice_precedent: 'M2 / M13 (docs/reference/trading-and-model-practice-principles.md): monitor a served model''s skill on recent data
+  against a naive baseline, chance-corrected for an imbalanced label.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 1.0
+  est_minutes: 20
+  basis: 'One head at a time; only the last 30 days of 15m rows (~2,900 per head) are kept, projected to the head''s columns; the dataset is
+    streamed line by line. Fits the trainer''s ~1 GB p95 spare. Single-threaded.'
+run:
+  workflow: research-script-run-trainer.yml
+  timeout_minutes: 60
+  command:
+  - python3
+  - scripts/research/vol_head_label_audit.py
+  - --unit
+  - '{unit}'
+  - --days
+  - '30'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261126-f17a-02
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- scripts/research/ml_vol_label_replay.py
+- RQ-20261126-7f3d-01
+- TRAINER-LIGHT-READS
