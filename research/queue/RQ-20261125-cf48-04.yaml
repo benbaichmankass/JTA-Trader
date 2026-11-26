@@ -1,0 +1,168 @@
+# Hand-authored 2026-11-25 by lane COMPUTE-FILL-W48 (Manager Session 2026-11-25b assigned ML-EXITHEAD-ROWS-KAGGLE -> D8), from plan node
+# research/programmes/02-ai-trader.yaml P2-PR1125-D8-exit-now-powered (rollforward_2026_11_25 D8). Its authoring gate ("author only if the
+# recount powers MDE <= 0.05 R") was MET by the census below. Rule registered before any run. Gates this adds or changes: none.
+id: RQ-20261125-cf48-04
+title: 'D8 Labrador exit-now head on the WIDENED POOLED donchian-4h corpus (trend_donchian_eth_4h twins on the 60-perp bp2 universe, 2020-06..now):
+  does the learned exit-now head beat the declared exit by >= +0.05 R/trade out of sample AND beat a causal matched random exit at the 95th
+  percentile?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+programme: P2
+kind: experiment
+roadmap:
+- L-ML-LIVE
+plan_node: research/programmes/02-ai-trader.yaml P2-PR1125-D8-exit-now-powered (authoring_blocked cleared by the power census, see power.basis)
+iteration:
+  subject: ml-exit-head-donchian-1h
+  subject_kind: ml_model
+  from_result: RQ-20261118-f7c1-02
+  verdict_read: indeterminate
+  attempt: 1
+  due_by: '2026-12-08'
+  diagnosis: 'f7c1-02 (exit-head bake-off off the trainer, BTC/ETH/SOL 1h, backtest-source rows) was INDETERMINATE on power: OOS n 485,
+    se 0.0448 R, MDE ~0.12 R, and BTC never cleared the per-leg 64-trade fold floor. Earlier pooled donchian-4h reads FAILED on a 3-symbol
+    pool. The D8 node asks for a WIDENED pooled corpus with a matched-random-exit control. Per-leg folding cannot measure a 4h twin
+    (121-254 trades per leg vs ~384 needed), so this unit uses pooled calendar folds over 60 twins.'
+  search: 'one head (the champion holding_pays exit-now recipe, unchanged hyper-parameters) vs the declared exit, plus the f7c1-02 label arm
+    holding_pays_neg25 as reported context; population widened from 3 symbols at 1h to 60 perps at 4h'
+  levers:
+  - universe
+  map_entries:
+  - research/levers/ml-exit-head-donchian-1h.yaml
+question: >-
+  On backtest-source trades of the trend_donchian_eth_4h recipe (params unchanged from config/strategies.yaml) run as twins on each of the
+  60 bp2 perps, 4h Binance USD-M candles 2020-06-01..run date, 5 sequential folds cut on POOLED entry times with a 7-day embargo: does the
+  exit-now head (retrained per fold on rows with bar_t <= fold start - embargo, live predicate below_half_r) improve mean R per OOS trade over
+  the declared exit by >= +0.05 R, and beat the 95th percentile of a causal matched random exit?
+why_this_matters: 'PASS -> a learned exit-now head is a Tier-3 candidate to replace Labrador-2 on the trend_donchian demo leg (bybit_1), then
+  bybit_2, after its own confirmation. FAIL -> D8 keeps riding D7 Stage B (the node''s fail branch) and the universe lever is recorded as
+  tested at power. Either way the D8 slot gets its first powered read.'
+decision_rule:
+  id: RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED
+  registered_at: '2026-11-25'
+  registered_before_run: true
+  min_n: 3000
+  statistic: 'verdict.json from exit_head_kaggle_bakeoff.py --judge exit_now: measurement.legs[POOLED].random_control = {n_oos,
+    head_mean_dr_per_trade (champion replayed R minus declared R, every OOS trade), control_p95 (500 draws)}.'
+  rule: >-
+    Thresholds copied from plan node P2-PR1125-D8-exit-now-powered. PASS iff n_oos >= 3000 AND head_mean_dr_per_trade >= +0.05 R AND
+    head_mean_dr_per_trade > control_p95. FAIL iff n_oos >= 3000 and either clause fails: D8 keeps riding D7 Stage B; record the universe
+    lever as tested. INDETERMINATE iff n_oos < 3000 (the power floor: MDE <= 0.05 R needs ~3,077 at sd 0.99 R) or the pooled leg / control is
+    absent; producer_failed is a route fault, never a verdict. The node's registered first variant on FAIL: the same unit restricted to
+    trades whose MFE >= 2R. Nothing is changed after a result.
+  what_it_does_not_do: >-
+    Edits no config, roster, model or order path; serves nothing. A PASS is a Tier-3 candidate only after its confirmation on rostered
+    symbols; it is not a promotion. The twins are a research population (the recipe on symbols it is not rostered on). Both arms are
+    compared on gross R per trade (the harness trade loop reads no cost term). The head's discretionary close is not charged an extra
+    slippage side, so the delta is net of cost only to that stated extent.
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: the declared exit (arm B) is every OOS trade's pair; each arm keeps the leg's own entry, stop and trail and only the head's close decision differs, replayed by the live predicate
+  matched_random:
+    draws: 500
+    note: 'CAUSAL matched random exit (exit_head_label_bakeoff._causal_random_fold): per fold, as many trades as the head closed, each closed at
+      an age drawn from the head''s fold-level close ages, "if still open". It never uses a trade''s own exit time: the AM v2 lesson
+      (docs/reviews/2026-11-25-weekly-walkthrough.md, c7e3-05 voided). GATING in this unit (control_p95).'
+  best_static:
+    grid:
+    - holding_pays (champion exit-now recipe, fixed hyper-parameters)
+    - holding_pays_neg25 (f7c1-02 label arm, context)
+    excludes_test_folds: true
+    note: each fold trains on rows with bar_t <= fold start - 7 d only; nothing is tuned on a test fold
+  bootstrap_group: trade
+pre_run_reads: 'DISCLOSED: a 6-symbol SMOKE run (ETH/SOL/XRP/ADA/BNB/LINK twins, same command, --random-control 200, --n-floor 300) ran locally
+  2026-11-25 ~23:55Z AFTER this rule was committed (commit 7c4912ebf, before the result existed), to prove the pipeline end to end: OOS n
+  1,065, head -0.109 R/trade vs the declared exit, control p95 -0.122 (head beats 98.5% of draws), 5.0 min wall. It is a subset of this
+  unit''s population, so this unit is not blind to it; the rule and thresholds were not changed after it.'
+evidence_class:
+  holdout: walk_forward
+  claim: edge
+power:
+  expected_n: 9592
+  min_detectable_effect: 0.0283
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 0.99
+  basis: 'MEASURED by a census run 2026-11-25 (exit_head_kaggle_bakeoff --census-only, the same command with --census-only, local, data.binance.vision
+    4h through 2026-11-25): 11,511 harness trades on 60 legs (121-254 per leg), pooled 5-fold OOS n 9,592, MDE 0.0283 R at sd 0.99 R. The sd is
+    the per-trade dR sd MEASURED by RQ-20261118-f7c1-02 (se 0.0448 at n 485), not of this population.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a fixed window; nothing accrues.
+ml_consumer:
+  consumer: research/programmes/02-ai-trader.yaml
+  decision: whether a learned exit-now head (D8) becomes a Tier-3 candidate beside or instead of Labrador-2 on trend_donchian legs, or D8 keeps riding D7 Stage B
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention judged against the declared setting and a matched random intervention, out of sample, net of cost.'
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 120
+  confidence: 0.15
+  basis: plan node P2-PR1125-D8-exit-now-powered value (usd 120, conf 0.15).
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 150
+  why_runner: 'fetches 4h candles for 54 of the 60 perps from data.binance.vision (the Kaggle candle dataset holds 6); the kernel has no internet'
+  basis: 'ESTIMATE: the census (fetch + build, 11.5k trades, 335k rows) took ~12 min with 12 fetch workers; the replay of ~9.6k OOS trades x 2 arms
+    and 500 control draws is the cost: MEASURED 5.0 min for the 6-symbol smoke (1,065 OOS trades, 200 draws) -> ~45-60 min at 60 symbols;
+    150 kept as headroom. The first run replaces it.'
+run:
+  command:
+  - python3
+  - scripts/research/exit_head_kaggle_bakeoff.py
+  - --universe
+  - bp2
+  - --leg-template
+  - trend_donchian_eth_4h
+  - --timeframe
+  - 4h
+  - --candle-source
+  - candle_dataset
+  - --start
+  - '2020-06-01'
+  - --pool-folds
+  - --random-control
+  - '500'
+  - --judge
+  - exit_now
+  - --n-floor
+  - '3000'
+  - --pass-dr
+  - '0.05'
+  - --arms
+  - holding_pays_neg25
+  - --num-folds
+  - '5'
+  - --embargo-days
+  - '7'
+  - --fetch-workers
+  - '12'
+  - --rule-id
+  - RULE-RQ20261125-cf48-04-D8-EXIT-NOW-POOLED
+  - --registered-at
+  - '2026-11-25'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261125-cf48-04
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261118-f7c1-02
+- research/programmes/02-ai-trader.yaml P2-PR1125-D8-exit-now-powered
+- scripts/research/exit_head_kaggle_bakeoff.py (--self-test)
+- scripts/research/exit_head_label_bakeoff.py (run_pooled, _causal_random_fold)
