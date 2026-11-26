@@ -112,6 +112,23 @@ def _stamp_iteration(unit: Dict[str, Any], tpl: Dict[str, Any], params: Dict[str
                                "is_control": str(params.get(axis)) == ctrl, "siblings": vals,
                                "attributable": bool(st.get("attributable", False)), "gap": str(st.get("gap") or "")}
         return
+    if st and st.get("mode") == "twin" and "design_json" in params:
+        # a config-exact TWIN unit (scripts/research/twin_design.py): one pre-registered twin graded ABSOLUTE, no paired control
+        t = json.loads(params["design_json"])
+        unit["design"] = "single_config"
+        unit["levers_declared"] = [str(t["lever"])]
+        unit["iteration"] = {
+            "subject": str(t["leg"]), "subject_kind": "strategy_leg", "from_result": str(t["from_result"]),
+            "verdict_read": str(t["verdict_read"]), "diagnosis": str(t["diagnosis"])[:1200],
+            "hypothesis": str(st.get("hypothesis") or "the leg's edge is a property of the setup, not of one symbol or bar size").strip(),
+            "attempt": 1, "due_by": (date.fromisoformat(day) + timedelta(days=14)).isoformat(),
+            "design": {"control": f"none: the twin has a different trade set than the leg ({t['leg_value']} -> {t['twin_value']})",
+                       "kind": f"config-exact {t['twin_kind']} twin, graded absolute (Stage-0 rule)",
+                       "levers": {str(t["leg"]): t["lever"]}},
+            "multiple_testing": {"arms_counted": 1, "variants_vs_control": 0, "correction": "none: one pre-registered twin per unit",
+                                 "note": "a twin result is a lever-map reading, never a promotion or a retirement; per-symbol results never gate"},
+        }
+        return
     if not st or "design_json" not in params:
         return
     d = json.loads(params["design_json"])
@@ -256,6 +273,12 @@ def _leg_source(name: str, tpl: Dict[str, Any], facts: Dict[str, Any]) -> List[D
             fam = classify(cfg)
             if fam:
                 out.append({"leg": leg, **info, "harness": fam})
+    elif name in ("live_roster_legs_symbol_twins", "live_roster_legs_timeframe_twins"):
+        # RESEARCH-LEVER-FAMILY-REACH (a): one point per (leg, config-exact twin) for the lever families an ARM cannot express (a
+        # different symbol or bar size is a different trade set, so it has no paired control). The twin choice is pure config +
+        # the leg's lever map (scripts/research/twin_design.py); each twin is its own absolutely-graded Stage-0 unit.
+        from scripts.research import twin_design as _td
+        out = _td.points("symbol" if "symbol" in name else "timeframe", legs, facts.get("configs") or {}, Path(facts["root"]))
     elif name == "live_decay_legs":
         # LIVE-DECAY-MONITOR: every Stage-2 roster leg that has a committed Stage-0 per-trade series AND a readable live
         # series (scripts/research/live_decay_cusum.coverage re-parses config each call). Legs that cannot be monitored
@@ -368,6 +391,8 @@ def _structure(tpl: Dict[str, Any], p: Dict[str, Any], facts: Dict[str, Any]) ->
     from scripts.research import lever_design as ld
     st = tpl["structured"]
     if st.get("mode") == "siblings":           # macro-valuation: arms are sibling UNITS (grid axis), nothing to compute per point
+        return dict(p)
+    if st.get("mode") == "twin":               # leg-twin-*: the leg source (twin_design.points) already carries each point's design_json
         return dict(p)
     root = Path(facts.get("root") or ".")
     cfgs, q = facts.get("configs", {}), dict(p)

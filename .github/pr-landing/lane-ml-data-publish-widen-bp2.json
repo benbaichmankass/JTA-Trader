@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Tier-1 research data + tooling + 1 hand-authored queue unit (row ML-DATA-PUBLISH-WIDEN-BP2). (1) market_data_bp2.py builds market_raw + a kline-only market_features 1h projection (v102; the trainer's label params) for the frozen bp2 60-perp universe ON A RUNNER from public data.binance.vision klines. (2) market_data_export.py gets per-dataset allowlists, plus a second private dataset metis-market-bp2. compute_router checks a unit's paths against the dataset it names, and research_compute.yaml declares it. (3) New workflow ml-data-export-bp2-kaggle.yml (weekly + dispatch; no trainer SSH, no VM secret). (4) ml_bakeoff POOLED mode (dataset.paths + entity_col; torch_gru windows inside each symbol; absent = byte-identical). (5) RQ-20261126-2819-01, the pooled 60-perp GRU twin of 9e72-01, rule registered before the run. Market data only; nothing OURS is published. R5 cannot vouch for research/queue/ or .github/workflows/, so the manager merges. Revert: git revert.",
+  "why": "Manager 2026-11-25b dispatched ML-DATA-PUBLISH-WIDEN-BP2 (operator 2026-11-25: free compute must never sit idle; Kaggle units can read only published data, which covered BTC/ETH/SOL). Gates this adds or changes: none. Edits no config, roster or order path."
+}

@@ -142,3 +142,139 @@ def test_land_needs_a_token_and_the_flag(monkeypatch):
     assert pushed == []                                   # no flag, or no token: never pushes
     rows = t.triage("o/r", live=True, land=True, min_age_min=30, now=now, token="tok", out=lambda s: None)
     assert len(pushed) == 1 and rows[0]["done"] == "landed"
+
+
+# ── receipt PRs (2026-11-26: three watchdog incidents in one night, all the one shared receipt file) ──────────────────────────
+RCPT = t.RECEIPT_PATH
+
+
+def _rcpt_json(ts):
+    return '{\n  "run_id": "1",\n  "timestamp": "%s",\n  "fired": "true"\n}\n' % ts
+
+
+def _rcpt_file(ts):
+    return {"filename": RCPT, "patch": '@@ -1,4 +1,4 @@\n-  "timestamp": "2026-11-18T00:00:00+00:00",\n+  "timestamp": "%s",\n' % ts}
+
+
+def _rdecide(files, main_ts):
+    return t.decide_receipt(files, lambda rel: _rcpt_json(main_ts) if rel == RCPT and main_ts else None)
+
+
+def test_a_receipt_no_newer_than_main_is_superseded_and_closes():
+    d = _rdecide([_rcpt_file("2026-11-18T19:00:00+00:00")], "2026-11-18T20:00:00+00:00")
+    assert d["action"] == "close" and d["units"][0]["kind"] == t.SUPERSEDED
+    assert _rdecide([_rcpt_file("2026-11-18T20:00:00+00:00")], "2026-11-18T20:00:00+00:00")["action"] == "close"   # equal: main wins
+
+
+def test_a_receipt_newer_than_main_lands():
+    d = _rdecide([_rcpt_file("2026-11-18T21:00:00+00:00")], "2026-11-18T20:00:00+00:00")
+    assert d["action"] == "land" and d["units"][0]["kind"] == t.NEEDS_LAND and d["receipt"] is True
+
+
+def test_a_receipt_pr_touching_another_path_or_with_an_unreadable_stamp_is_left_alone():
+    ok = [_rcpt_file("2026-11-18T19:00:00+00:00"), {"filename": ".github/merge-slots/a.json"},
+          {"filename": ".github/pr-landing/a.json"}, {"filename": ".github/pr-automerge-requests/a.txt"}]
+    assert _rdecide(ok, "2026-11-18T20:00:00+00:00")["action"] == "close"          # its own landing files are not stray
+    assert _rdecide(ok + [{"filename": "src/x.py", "patch": ""}], "2026-11-18T20:00:00+00:00")["action"] == "leave"
+    assert _rdecide([{"filename": "docs/other.md"}], "2026-11-18T20:00:00+00:00")["action"] == "leave"   # no receipt file at all
+    assert _rdecide([_rcpt_file("2026-11-18T19:00:00+00:00")], None)["action"] == "leave"                # main's receipt unreadable
+    assert _rdecide([{"filename": RCPT, "patch": "@@ no timestamp line"}], "2026-11-18T20:00:00+00:00")["action"] == "leave"
+
+
+def test_triage_closes_a_dirty_superseded_receipt_pr_and_lands_a_newer_one(monkeypatch):
+    calls = []
+    monkeypatch.setattr(t, "_gh", lambda args, inp=None: calls.append((args, inp)) or "")
+    monkeypatch.setattr(t, "main_reader", lambda *a, **k: (lambda rel: _rcpt_json("2026-11-18T20:00:00+00:00")))
+    now = datetime(2026, 11, 18, 23, 0, tzinfo=timezone.utc)
+    ref = "automation/research-queue-receipt-9-1"
+    _prs(monkeypatch, [_pr(1, ref)], files=[_rcpt_file("2026-11-18T19:00:00+00:00")])
+    rows = t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    assert rows[0]["done"] == "closed" and any("close" in a for a, _ in calls)
+    assert "receipt" in next(inp for a, inp in calls if "comment" in a)
+    pushed = []
+    monkeypatch.setattr(t, "land_max", lambda *a, **k: pushed.append(a) or (True, "ok"))
+    calls.clear()
+    _prs(monkeypatch, [_pr(2, ref)], files=[_rcpt_file("2026-11-18T22:00:00+00:00")])
+    rows = t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    assert rows[0]["done"] == "landed" and len(pushed) == 1
+    assert "this receipt kept (latest wins)" in next(inp for a, inp in calls if "comment" in a)
+    # a dry run does nothing to a receipt PR either, and a clean one is left to auto-merge
+    calls.clear()
+    t.triage("o/r", live=False, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    _prs(monkeypatch, [_pr(3, ref)], dirty=False, files=[])
+    assert t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None) == [] and calls == []
+
+
+def test_the_workflow_passes_the_land_flag_and_a_ci_triggering_token_to_the_triage():
+    from pathlib import Path
+    wf = (Path(__file__).resolve().parents[1] / ".github/workflows/research-watchdog.yml").read_text()
+    step = wf.split("- name: Triage conflicted stamp PRs", 1)[1].split("- uses: actions/upload-artifact", 1)[0]
+    assert "STAMP_TRIAGE_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}" in step     # a GITHUB_TOKEN push would not trigger CI
+    assert 'LIVE="--live --land --min-age-min 10"' in step     # landing on, and acting well before the watchdog's 45-minute alarm
+
+
+# ── grade PRs + the "unknown" re-read (2026-11-26, run 429 named #28990) ───────────────────────────────────────────────────────
+def _qfile(uid):
+    return {"filename": f"research/queue/{uid}.yaml", "patch": "@@ -1 +1 @@\n+grading: {}\n"}
+
+
+def test_a_grade_pr_of_only_queue_edits_is_closed_and_anything_else_is_left():
+    ok = [_qfile("RQ-A"), {"filename": ".github/merge-slots/a.json"}, {"filename": ".github/pr-landing/a.json"},
+          {"filename": ".github/pr-automerge-requests/a.txt"}]
+    assert t.decide_grade(ok)["action"] == "close"
+    assert t.decide_grade(ok + [{"filename": "src/x.py"}])["action"] == "leave"
+    assert t.decide_grade([{"filename": "docs/other.md"}])["action"] == "leave"          # no queue edit at all
+    body = t.comment_body(t.decide_grade(ok), "closing")
+    assert "re-derives every disposition from scratch" in body and "Generated by [Claude Code]" in body
+
+
+def test_triage_closes_a_dirty_grade_pr_only_after_the_refresh_window(monkeypatch):
+    calls = []
+    monkeypatch.setattr(t, "_gh", lambda args, inp=None: calls.append((args, inp)) or "")
+    ref = "automation/research-queue-grade-9-1"
+    now = datetime(2026, 11, 18, 23, 0, tzinfo=timezone.utc)
+    _prs(monkeypatch, [_pr(1, ref, "2026-11-18T22:40:00Z")], files=[_qfile("RQ-A")])          # 20 min old: inside the 30 min window
+    assert t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None) == [] and calls == []
+    _prs(monkeypatch, [_pr(2, ref, "2026-11-18T22:20:00Z")], files=[_qfile("RQ-A")])          # 40 min old
+    rows = t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    assert rows[0]["done"] == "closed" and any("close" in a for a, _ in calls)
+    assert "grade family" in next(inp for a, inp in calls if "comment" in a)
+    calls.clear()                                                                          # dry run and a stray path do nothing
+    t.triage("o/r", live=False, land=False, min_age_min=10, now=now, out=lambda s: None)
+    _prs(monkeypatch, [_pr(3, ref, "2026-11-18T22:00:00Z")], files=[_qfile("RQ-A"), {"filename": "src/x.py"}])
+    rows = t.triage("o/r", live=True, land=True, min_age_min=10, now=now, token="tok", out=lambda s: None)
+    assert rows[0]["action"] == "leave" and calls == []
+
+
+def _seq_api(monkeypatch, prs, states, files):
+    reads = []
+
+    def api(path):
+        if path.endswith("/files?per_page=100"):
+            return files
+        if "/pulls/" in path:
+            reads.append(path)
+            return {"mergeable_state": states[min(len(reads) - 1, len(states) - 1)]}
+        return prs
+    monkeypatch.setattr(t, "_api", api)
+    return reads
+
+
+def test_an_unknown_state_is_re_read_once_before_it_is_read_as_not_dirty(monkeypatch):
+    calls, slept = [], []
+    monkeypatch.setattr(t, "_gh", lambda args, inp=None: calls.append((args, inp)) or "")
+    monkeypatch.setattr(t, "main_reader", lambda *a, **k: (lambda rel: _unit("weekly", "last_dispatched_at: '2026-11-18T21:00:00+00:00'")))
+    now = datetime(2026, 11, 18, 23, 0, tzinfo=timezone.utc)
+    ref = "automation/research-queue-stamp-9-1"
+    reads = _seq_api(monkeypatch, [_pr(1, ref)], ["unknown", "dirty"], [_file("RQ-A", "2026-11-18T19:30:00+00:00")])
+    rows = t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append)
+    assert len(reads) == 2 and slept == [t.UNKNOWN_RETRY_SLEEP_S] and rows[0]["done"] == "closed"
+    calls.clear()
+    slept.clear()
+    reads = _seq_api(monkeypatch, [_pr(1, ref)], ["unknown"], [_file("RQ-A", "2026-11-18T19:30:00+00:00")])   # still unknown: ONE re-read, no loop
+    assert t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append) == []
+    assert len(reads) == 2 and calls == []
+    reads = _seq_api(monkeypatch, [_pr(1, ref)], ["clean"], [])                                                # a known state is read once, no sleep
+    slept.clear()
+    t.triage("o/r", live=True, land=False, min_age_min=10, now=now, out=lambda s: None, sleep=slept.append)
+    assert len(reads) == 1 and slept == []
