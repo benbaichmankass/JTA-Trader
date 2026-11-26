@@ -121,6 +121,10 @@ def handoff_checks(t: dict, cutoff: datetime, closed: list | None) -> dict:
             "n_items": len(items), "n_evaluated": len(ev), "n_fired": sum(1 for x in ev if x["fired"]), "items": items}
 
 
+def _fmap(b: dict) -> dict:
+    return {f.get("forecast_id"): f for f in (b.get("forecasts") or []) if isinstance(f, dict)}
+
+
 def row(b: dict, i: int, t: dict, res: dict, now: datetime, policy: str | None, handoff: dict | None = None) -> dict:
     p = t["proposal"]
     nums = {k: do._r4(res.get(k)) for k in ("net_r", "mae_r", "mfe_r", "giveback_r")}
@@ -131,7 +135,11 @@ def row(b: dict, i: int, t: dict, res: dict, now: datetime, policy: str | None, 
             "bars_held": res.get("bars_held"), "close_reason": res.get("close_reason"), "computed_at": do._iso(now),
             "provenance": "computed", "net_of_full_cost_stack": res["kind"] == "replayed",
             "cost_policy": policy if res["kind"] == "replayed" else None, "reason": res.get("reason"),
-            "handoff": handoff if handoff is not None else {"read_state": "not_applicable", "items": []}}
+            "handoff": handoff if handoff is not None else {"read_state": "not_applicable", "items": []},
+            "forecast_ids": t.get("forecast_ids") or [],
+            # the operator's edge question (2026-11-26): did a trade resting on an own-vs-consensus GAP pay, net of cost
+            "gap_trade": any((fc or {}).get("consensus_read_state") == "measured"
+                             for fc in (_fmap(b).get(x) for x in (t.get("forecast_ids") or [])))}
 
 
 def run(briefs: Path, outcomes: Path, candles: Callable[[str, str], list | None], now: datetime | None = None) -> dict:
@@ -265,9 +273,21 @@ def forecast_summary(out: Path) -> dict:
     def rate(k):
         xs = [r[k] for r in g if r.get(k) is not None]
         return {"n": len(xs), "rate": round(sum(1 for x in xs if x) / len(xs), 4) if xs else None}
+    by_class = {}
+    for r in g:
+        cls = f"{(r.get('target') or {}).get('kind')}:{(r.get('target') or {}).get('series') or (r.get('target') or {}).get('key')}"
+        c = by_class.setdefault(cls, {"n": 0, "own_beats_consensus": [], "own_beats_naive": []})
+        c["n"] += 1
+        for k in ("own_beats_consensus", "own_beats_naive"):
+            if r.get(k) is not None:
+                c[k].append(bool(r[k]))
+    for c in by_class.values():
+        for k in ("own_beats_consensus", "own_beats_naive"):
+            xs = c[k]
+            c[k] = {"n": len(xs), "rate": round(sum(xs) / len(xs), 4) if xs else None}
     return {"read_state": "measured" if out.exists() else "no_forecast_outcomes_file", "n_rows": len(rows), "n_graded": len(g),
             "own_beats_naive": rate("own_beats_naive"), "own_beats_consensus": rate("own_beats_consensus"),
-            "interval_coverage": rate("inside_interval")}
+            "interval_coverage": rate("inside_interval"), "by_class": by_class}
 
 
 def summary(outcomes: Path) -> dict:
@@ -283,7 +303,11 @@ def summary(outcomes: Path) -> dict:
     def brier(key: str):
         xs = [(float(r[key]), h) for r, h in zip(rep, hit) if r.get(key) is not None]
         return round(sum((p - h) ** 2 for p, h in xs) / len(xs), 4) if xs else None
-    return {"read_state": "measured", "n_rows": len(rows), "kinds": kinds, "n_replayed": len(rep), "hit_rate": round(sum(hit) / len(hit), 4),
+    gap = [r for r in rep if r.get("gap_trade")]
+    gap_stat = {"n": len(gap), "mean_net_r": round(sum(r["net_r"] for r in gap) / len(gap), 4) if gap else None,
+                "population": "replayed trades citing a forecast with a measured consensus (the own-vs-consensus gap)"}
+    return {"read_state": "measured", "n_rows": len(rows), "kinds": kinds, "n_replayed": len(rep), "gap_trades": gap_stat,
+            "hit_rate": round(sum(hit) / len(hit), 4),
             "mean_net_r": round(sum(r["net_r"] for r in rep) / len(rep), 4), "brier_judge_prior": brier("judge_prior"), "brier_tp_p_hit": brier("tp_p_hit")}
 
 

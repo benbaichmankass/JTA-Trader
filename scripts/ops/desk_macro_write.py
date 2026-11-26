@@ -171,6 +171,12 @@ def evidence(pkt: dict | None, fetches: list[dict], judged_at: datetime) -> tupl
 FORECAST_KINDS = ("release", "asset_return", "asset_p_tp")
 
 
+def _z_of(level: float) -> float:
+    """Two-sided normal quantile for a central interval of ``level`` (0.8 -> 1.2816)."""
+    from statistics import NormalDist
+    return NormalDist().inv_cdf(0.5 + level / 2)
+
+
 def analyses_ok(analyses: list[dict], pkt: dict | None, judged_at: datetime) -> tuple[set, list[str]]:
     ids, probs = set(), []
     for a in analyses:
@@ -231,15 +237,29 @@ def forecast_problems(fs, sids: set, aids: set, jt: datetime) -> tuple[set, list
         if aref and aref not in aids:
             out.append(f"{tag}: analysis_ref {aref!r} is not a valid listed analysis file (analysis_paths)")
         cons, gap = f.get("consensus"), f.get("own_minus_consensus")
-        if cons is None:
-            if gap is not None:
-                out.append(f"{tag}: own_minus_consensus must be null when consensus is null")
-        elif pt is not None:
+        crs = f.get("consensus_read_state")
+        if crs not in ("measured", "could_not_look"):
+            out.append(f"{tag}: consensus_read_state must be measured | could_not_look (never a silent null; operator 2026-11-26)")
+        elif crs == "could_not_look":
+            if cons is not None or gap is not None:
+                out.append(f"{tag}: consensus could_not_look -> consensus and own_minus_consensus are null")
+            if not str(f.get("consensus_reason") or "").strip():
+                out.append(f"{tag}: consensus could_not_look needs consensus_reason (where you looked)")
+        else:
+            if not f.get("consensus_source") or f["consensus_source"] not in sids:
+                out.append(f"{tag}: a measured consensus cites its consensus_source (a known source_id)")
             try:
-                if gap is None or abs(float(gap) - (pt - float(cons))) > 1e-6:
-                    out.append(f"{tag}: own_minus_consensus must equal own_point - consensus ({pt - float(cons):.6g})")
-            except (TypeError, ValueError):
-                out.append(f"{tag}: consensus must be a number or null")
+                c = float(cons)
+                if pt is not None and (gap is None or abs(float(gap) - (pt - c)) > 1e-6):
+                    out.append(f"{tag}: own_minus_consensus must equal own_point - consensus ({pt - c:.6g})")
+                if pt is not None and gap is not None:
+                    sigma = (float(iv["hi"]) - float(iv["lo"])) / (2 * _z_of(float(iv["level"])))
+                    want = (pt - c) / sigma if sigma > 0 else None
+                    gz = f.get("gap_z")
+                    if want is not None and (gz is None or abs(float(gz) - want) > 1e-3):
+                        out.append(f"{tag}: gap_z must be own_minus_consensus / sigma of the interval ({want:.4g})")
+            except (TypeError, ValueError, KeyError):
+                out.append(f"{tag}: a measured consensus is a number")
     return ids, out
 
 
@@ -492,7 +512,8 @@ GOOD = {
                                "do_not": ["do not trail inside 1 ATR before CPI"], "thesis_invalidated_by": "10y yield closes above 4.8%"}}],
     "forecasts": [{"forecast_id": "F1", "target": {"kind": "release", "key": "US_CPI_2026-12-10", "resolves_at": "2026-12-10T13:30:00Z"},
                    "own_point": 0.28, "interval": {"lo": 0.18, "hi": 0.38, "level": 0.8}, "method": "seasonal_ar_ols_v1 on CPILFESL",
-                   "inputs": {"source_ids": ["S1"]}, "consensus": 0.3, "own_minus_consensus": -0.02}],
+                   "inputs": {"source_ids": ["S1"]}, "consensus": 0.3, "own_minus_consensus": -0.02,
+                   "consensus_read_state": "measured", "consensus_source": "S1", "gap_z": -0.02 / (0.2 / (2 * 1.2815515655446004))}],
     "informs": [], "no_trade_reason": None,
     "training": {"train_eligible": True, "gate_eligible": False, "label_clean_from": "2026-06-01"},
 }
@@ -554,6 +575,12 @@ def self_test() -> int:
     check("a brief with no own forecast is refused", bad(lambda b: b.update(forecasts=[])))
     check("a forecast resolving before judged_at is refused", bad(lambda b: b["forecasts"][0]["target"].update(resolves_at="2026-11-01T00:00:00Z")))
     check("a point outside its interval is refused", bad(lambda b: b["forecasts"][0].update(own_point=0.5)))
+    check("a forecast with no consensus_read_state is refused", bad(lambda b: b["forecasts"][0].pop("consensus_read_state")))
+    check("could_not_look consensus needs a reason and nulls", bad(lambda b: b["forecasts"][0].update(consensus_read_state="could_not_look")))
+    check("could_not_look consensus with nulls + reason passes", not bad(lambda b: b["forecasts"][0].update(
+        consensus_read_state="could_not_look", consensus=None, own_minus_consensus=None, gap_z=None, consensus_reason="searched S1; none published")))
+    check("a measured consensus without its source is refused", bad(lambda b: b["forecasts"][0].pop("consensus_source")))
+    check("a wrong gap_z is refused", bad(lambda b: b["forecasts"][0].update(gap_z=5.0)))
     check("a wrong own_minus_consensus is refused", bad(lambda b: b["forecasts"][0].update(own_minus_consensus=0.1)))
     check("a forecast citing an unlisted analysis is refused", bad(lambda b: b["forecasts"][0]["inputs"].update(analysis_ref="DMA-x")))
     check("a trade citing an unknown forecast is refused", bad(lambda b: b["trades"][0].update(forecast_ids=["F9"])))

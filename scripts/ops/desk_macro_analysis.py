@@ -168,7 +168,11 @@ def part_nowcasts(packet: dict, get: Callable[[str], list] = fred_series) -> dic
                                                     "naive_point": out[k]["naive_point"], "unit": spec["unit"]},
                 "own_point": out[k]["own_point"], "interval": {"lo": out[k]["interval_80"][0], "hi": out[k]["interval_80"][1], "level": 0.8},
                 "method": out[k]["method"], "inputs": {"analysis_ref": None},
-                "consensus": cons, "own_minus_consensus": out[k]["own_minus_consensus"]}
+                "consensus": cons, "own_minus_consensus": out[k]["own_minus_consensus"],
+                "consensus_read_state": "measured" if cons is not None else "could_not_look",
+                "consensus_source": "S1" if cons is not None else None,
+                "consensus_reason": None if cons is not None else "no consensus in the packet calendar; search it (Bigdata.com / web) and fill it",
+                "gap_z": (round(out[k]["own_minus_consensus"] / nc["rmse"], 6) if cons is not None and nc["rmse"] else None)}
         except Exception as exc:  # noqa: BLE001  # allow-silent: per-release could_not_look with the reason
             out[k] = {"read_state": "could_not_look", "reason": f"{type(exc).__name__}: {exc}"[:200]}
     if not upcoming:

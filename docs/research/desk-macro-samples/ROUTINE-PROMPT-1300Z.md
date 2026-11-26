@@ -41,7 +41,10 @@ built here."
    it is a price level; the outcomes replay grades those.
    Run python3 scripts/ops/desk_macro_analysis.py --packet <packet> --candidates CANDS.json for each candidate's empirical
    TP-before-SL rate on its own history; set tp.p_hit / judge_prior from it.
-   forecasts[] is required: copy each analysis brief_forecast, fill the consensus you found (or null), add any own asset
+   forecasts[] is required: copy each analysis brief_forecast and SOURCE ITS CONSENSUS in-run (Bigdata.com / web, cited):
+   consensus_read_state measured + consensus_source + gap_z, or could_not_look + consensus_reason. The own-vs-consensus gap
+   is the primary trade signal (operator 2026-11-26: "The best edge that we can get from this is when we think we know
+   better than what the consensus is."). Add any own asset
    forecasts, and list each trade's forecast_ids.
 6. Set packet_path, packet_sha, fetch_paths and analysis_paths in the brief. Then run: python3 scripts/ops/desk_macro_write.py validate BRIEF.json, then
    write BRIEF.json. Commit the packet, every fetch and analysis file, the brief JSON and its .md render together on main (Tier 1). Report to the manager:
