@@ -3,7 +3,7 @@
 # only while `queue_replenish.py --verify` reproduces it byte-for-byte from the template.
 id: RQ-20261126-050
 title: 'Config-exact symbol twin of qqq_pullback_1h: GLD (generated)'
-status: queued
+status: done
 cadence: once
 kind: experiment
 theme: live_strategy
@@ -132,3 +132,18 @@ generated:
     twin: GLD
     twin_key: symbol:GLD
 last_dispatched_at: '2026-11-26T09:07:39+00:00'
+grading:
+  auto: true
+  confirm_unit: RQ-20261126-874f-01
+  decision_rule_id: RULE-TPL-LEG-TWIN-SYMBOL-STAGE0
+  discovery: unconfirmed
+  evidence:
+  - research/results/RQ-20261126-050/45784808036.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'single-window PASS selected from an unrecorded number of cell(s): a discovery, not a confirmation.
+    RQ-20261126-874f-01 re-asks on a disjoint window; no Tier-3 proposal from this unit until it CONFIRMS'
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  selected_from_cells: null
+  verdict: pass

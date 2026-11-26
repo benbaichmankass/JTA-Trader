@@ -4,7 +4,7 @@
 id: RQ-20261118-f7c1-06
 title: 'Deep tabular learner on a MONEY label (D3 Foxhound): does an FT-Transformer on the same features and raw net-R target, trained on a Kaggle GPU,
   beat LightGBM on the trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -122,3 +122,17 @@ lands:
   store: research/results/
   assert_field: read_state
   min_rows: 1
+grading:
+  attested: RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  auto: true
+  decision_rule_id: RULE-RQ20261118-f7c1-06-FTT-ENTRY
+  evidence:
+  - research/results/RQ-20261118-f7c1-06/45771042469.jsonl
+  - research/results/RQ-20261118-f7c1-06/45802782002.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (2 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail
