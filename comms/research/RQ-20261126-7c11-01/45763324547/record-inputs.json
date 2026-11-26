@@ -1,0 +1,18 @@
+{
+  "artifact_locator": "comms/research/RQ-20261126-7c11-01/45763324547/ (run-manifest.json + verdict.json + logs/)",
+  "artifact_store": "comms/research/RQ-20261126-7c11-01/45763324547",
+  "data_fingerprint": "{\"state\": \"not_established\", \"why\": \"the run named no existing input file or directory in its argv or in verdict.json data_inputs\"}",
+  "decision_rule_id": "RULE-EQ-POOL-TICKER-REUSE-20261126",
+  "decision_rule_registered_at": "2026-11-26",
+  "measurement_file": "",
+  "min_rows": "7",
+  "n": "6",
+  "note": "two securities inside the training window under ticker(s) ['FB', 'INFO'] | DEV window scored the old security for ['FB', 'INFO', 'NFX', 'ULTI', 'UN', 'SIX'] | early (pre-2022-07) training bars for ['FB', 'INFO', 'SIX']",
+  "population": "ml_entry_eq pool tickers ['FB', 'INFO', 'NFX', 'ULTI', 'UN', 'SIX'] (+ control ['META']); Alpaca 1Day 2019-01-01..2025-07-01 and 1Hour 2021-01-01..2025-07-01, adjustment=split, feed=sip; gap rule >= 30 days",
+  "power_state": "not_applicable",
+  "read_state": "measured",
+  "records_file": "comms/research/RQ-20261126-7c11-01/45763324547/records.jsonl",
+  "research_unit": "RQ-20261126-7c11-01",
+  "tool": "python3 scripts/research/pool_ticker_reuse_audit.py",
+  "verdict": "fail"
+}
