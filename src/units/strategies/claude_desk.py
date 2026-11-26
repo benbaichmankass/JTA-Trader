@@ -345,7 +345,11 @@ def max_hold_verdict(open_pkg: Any, now: datetime) -> Optional[Dict[str, Any]]:
     mh = meta.get("max_hold_min")
     if not isinstance(mh, int) or isinstance(mh, bool) or mh < 1:
         return None
-    opened = _ts(meta.get("entry_time") or pkg.get("created_at"))
+    # LTR-FUNCTION-CORRECTNESS-AUDIT (2026-11-26): the LATEST of entry_time and created_at. ml_entry (which reuses this
+    # verdict) stamps entry_time = the decision bar's OPEN, so its 24h time stop fired ~1 bar before the horizon the
+    # model was scored on (from the bar close / fill). For the desk entry_time is ~created_at: unchanged.
+    _cands = [t for t in (_ts(meta.get("entry_time")), _ts(pkg.get("created_at"))) if t is not None]
+    opened = max(_cands) if _cands else None
     if opened is None or now - opened < timedelta(minutes=mh):
         return None
     return {"action": "close", "reason": R_MAX_HOLD}
