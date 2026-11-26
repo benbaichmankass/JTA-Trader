@@ -441,6 +441,33 @@ def _free_gpu() -> None:
         pass
 
 
+def _gpu_peak_reset() -> None:
+    """Reset the CUDA peak-memory counter before a GPU window (no-op without torch/cuda)."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:  # noqa: BLE001  # allow-silent: a missing counter is reported as peak_gpu_mb null
+        pass
+
+
+def _gpu_peak_mb() -> float | None:
+    """Peak CUDA memory allocated since the last reset, in MB; None when torch/cuda is absent (never 0)."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return round(torch.cuda.max_memory_allocated() / 2 ** 20, 1)
+    except Exception:  # noqa: BLE001  # allow-silent: None means could not look, printed as such
+        pass
+    return None
+
+
+#: BUDGET_SAFETY x the previous GPU window's wall time must fit before the deadline, or the window is skipped (dbf8-03 run
+#: 45818155714: the deadline was only checked at a window's START, so one window ran past the 290-min budget into the
+#: 330-min runner timeout and the whole command landed producer_failed with nothing measured).
+BUDGET_SAFETY = 1.2
+
+
 def fit_gpu_arm(train: pd.DataFrame, arm: str, device: str = "auto", **kw) -> dict:
     out, info = {}, {}
     for side in ("long", "short"):
@@ -574,14 +601,21 @@ def decide_vs_raw(p: dict, pooled_arm: dict) -> str:
 
 
 def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str = START, end: str = END,
-           step_days: int = STEP_DAYS, fit=None, arms: tuple = ARMS, deadline: float | None = None) -> dict:
+           step_days: int = STEP_DAYS, fit=None, arms: tuple = ARMS, deadline: float | None = None,
+           max_windows: int | None = None) -> dict:
     """``deadline`` (time.time() seconds, optional): once passed, GPU arms are recorded unavailable for the remaining windows
-    so the run still lands a row (INDETERMINATE by the guard below) instead of dying at the backend's wall clock."""
+    so the run still lands a row (INDETERMINATE by the guard below) instead of dying at the backend's wall clock. A GPU window
+    is also skipped when BUDGET_SAFETY x the previous GPU window's wall time would cross the deadline. Every GPU window prints
+    one FLUSHED ``WINDOW_TIMING`` line (fit / predict seconds, peak GPU MB, train / window n) so a killed run still leaves its
+    per-window cost on stdout. ``max_windows`` (probe mode) stops after that many non-empty windows."""
     import time as _time
     fit = fit or fit_arm
     ts0, ts1 = pd.Timestamp(start, tz="UTC"), pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
     rows, alls = [], {a: [] for a in tuple(arms) + ("frozen",)}
+    last_gpu_s: dict[str, float] = {}
     for k in range(int((ts1 - ts0).days // step_days)):
+        if max_windows is not None and len(rows) >= max_windows:
+            break
         a0 = ts0 + pd.Timedelta(days=k * step_days)
         a1 = a0 + pd.Timedelta(days=step_days)
         win = tab[(tab.ts >= a0) & (tab.ts < a1)].reset_index(drop=True)
@@ -595,19 +629,47 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
                 row[f"{arm}_info"] = {"status": "unavailable", "reason": "gpu-arm wall-clock budget spent before this window"}
                 alls[arm].append(None)
                 continue
+            if (arm in GPU_ARMS and deadline is not None and arm in last_gpu_s
+                    and _time.time() + BUDGET_SAFETY * last_gpu_s[arm] > deadline):
+                row[arm] = _stats(None)
+                row[f"{arm}_info"] = {"status": "unavailable", "reason": (
+                    f"gpu-arm budget: {BUDGET_SAFETY} x the previous window ({last_gpu_s[arm]:.0f}s) would cross the deadline")}
+                alls[arm].append(None)
+                print(f"WINDOW_SKIP arm={arm} start={row['start']} prev_window_s={last_gpu_s[arm]:.1f}", flush=True)
+                continue
             if arm in GPU_ARMS:
                 # fit AND predict are contained: TabICL is in-context, so its forward (and an OOM) happens in predict()
                 # (dbf8-02 run 45797062321 crashed the whole command on a predict-time OOM before this).
+                _gpu_peak_reset()
+                t0 = _time.time()
+                t_fit = None
                 try:
                     m = fit(train, arm)
+                    t_fit = _time.time() - t0
                     # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
                     taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
                 except Exception as exc:  # noqa: BLE001  # allow-silent: recorded as status=unavailable; forces INDETERMINATE below
                     row[arm] = _stats(None)
-                    row[f"{arm}_info"] = {"status": "unavailable", "reason": f"{type(exc).__name__}: {exc}"[:500]}
+                    last_gpu_s[arm] = _time.time() - t0
+                    row[f"{arm}_info"] = {"status": "unavailable", "reason": f"{type(exc).__name__}: {exc}"[:500],
+                                          "timing": {"fit_s": None if t_fit is None else round(t_fit, 1),
+                                                     "total_s": round(last_gpu_s[arm], 1), "peak_gpu_mb": _gpu_peak_mb(),
+                                                     "n_train": int(len(train)), "n_win": int(len(win)), "failed": True}}
                     alls[arm].append(None)
+                    print(f"WINDOW_TIMING arm={arm} start={row['start']} status=unavailable fit_s={t_fit} "
+                          f"total_s={last_gpu_s[arm]:.1f} peak_gpu_mb={_gpu_peak_mb()} n_train={len(train)} n_win={len(win)}",
+                          flush=True)
                     _free_gpu()
                     continue
+                last_gpu_s[arm] = _time.time() - t0
+                timing = {"fit_s": round(t_fit, 1), "predict_s": round(last_gpu_s[arm] - t_fit, 1),
+                          "total_s": round(last_gpu_s[arm], 1), "peak_gpu_mb": _gpu_peak_mb(),
+                          "n_train": int(len(train)), "n_win": int(len(win))}
+                m.setdefault(f"_{arm}", {})
+                if isinstance(m[f"_{arm}"], dict):
+                    m[f"_{arm}"]["timing"] = timing
+                print(f"WINDOW_TIMING arm={arm} start={row['start']} status=ok " +
+                      " ".join(f"{k}={v}" for k, v in timing.items()), flush=True)
             else:
                 m = fit(train, arm, tau=tau) if arm in TAU_ARMS else fit(train, arm)
                 # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
@@ -703,8 +765,34 @@ def run(a) -> int:
         raise SystemExit(f"--arms must include raw and only {ARMS + EXTRA_ARMS}; got {arms}")
     import time as _time
     deadline = _time.time() + 60.0 * a.gpu_arm_budget_min if a.gpu_arm_budget_min > 0 else None
-    d = replay(tab, float(meta["tau"]), frozen=frozen, arms=arms, deadline=deadline)
-    v = d["verdict"]
+    d = replay(tab, float(meta["tau"]), frozen=frozen, arms=arms, deadline=deadline,
+               max_windows=a.max_windows if a.max_windows and a.max_windows > 0 else None)
+    v = d["verdict"] if not a.max_windows else "INDETERMINATE"   # a probe never grades the edge rule (set below if probing)
+    if a.max_windows:
+        ts0, ts1 = pd.Timestamp(START, tz="UTC"), pd.Timestamp(END, tz="UTC") + pd.Timedelta(days=1)
+        n_full = int((ts1 - ts0).days // STEP_DAYS)
+        tim = {g: [w[f"{g}_info"]["timing"] for w in d["windows"] if isinstance(w.get(f"{g}_info"), dict)
+                   and "timing" in w[f"{g}_info"]] for g in arms if g in GPU_ARMS}
+        d["probe"] = {"max_windows": a.max_windows, "windows_full_run": n_full, "timings": tim,
+                      "projected_full_gpu_s": {g: (round(max(x["total_s"] for x in ts) * n_full, 1) if ts else None)
+                                               for g, ts in tim.items()},
+                      "peak_gpu_mb": {g: (max((x["peak_gpu_mb"] or 0) for x in ts) if ts and any(x["peak_gpu_mb"] for x in ts)
+                                          else None) for g, ts in tim.items()},
+                      "basis": "projection = the slowest probed window x the full run's window count (later windows train on more rows, so it is a LOWER bound)"}
+        g0 = next((g for g in arms if g in GPU_ARMS), None)
+        proj, peak = d["probe"]["projected_full_gpu_s"].get(g0), d["probe"]["peak_gpu_mb"].get(g0)
+        # FEASIBILITY verdict (the probe unit's registered rule): fits iff the projected full GPU time is within the budget AND
+        # the peak GPU memory is within --probe-peak-mb; a missing timing or memory read is INDETERMINATE, never a pass.
+        oom = any("out of memory" in str((w.get(f"{g0}_info") or {}).get("reason", "")).lower() for w in d["windows"])
+        if oom:
+            v = "FAIL"           # the probed window ran out of GPU memory: infeasible as configured
+        elif proj is None or peak is None or any(x.get("failed") for x in tim.get(g0, [])):
+            v = "INDETERMINATE"
+        elif proj <= 60.0 * a.probe_budget_min and peak <= a.probe_peak_mb:
+            v = "PASS"
+        else:
+            v = "FAIL"
+        d["probe"].update(arm=g0, budget_s=60.0 * a.probe_budget_min, peak_cap_mb=a.probe_peak_mb, feasible=v, oom=oom)
     verdict = {"PASS": "pass", "FAIL": "fail"}.get(v, "indeterminate")
     pr = d["paired_resid_vs_raw"]
     if "resid" in arms:
@@ -712,7 +800,8 @@ def run(a) -> int:
                 f"placebo-raw mean {d['paired_placebo_vs_raw']['mean']} | pooled n raw/resid/placebo "
                 f"{d['pooled']['raw']['n']}/{d['pooled']['resid']['n']}/{d['pooled']['placebo']['n']}")
     else:
-        note = f"EXTRA-ARM: {v} | " + " | ".join(f"paired {k}-raw mean {p['mean']} k={p['k']} ci95 {p['ci95']} n={d['pooled'][k]['n']}"
+        note = ("PROBE " + json.dumps(d.get("probe", {}).get("projected_full_gpu_s")) + " | " if a.max_windows else "") + \
+            f"EXTRA-ARM: {v} | " + " | ".join(f"paired {k}-raw mean {p['mean']} k={p['k']} ci95 {p['ci95']} n={d['pooled'][k]['n']}"
                                                   for k, p in d["paired_extra_vs_raw"].items())
     head_arm = "resid" if "resid" in arms else next(x for x in arms if x != "raw")
     row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": verdict,
@@ -860,6 +949,26 @@ def self_test() -> int:
     assert d10["verdict"] == "INDETERMINATE" and all(
         w["tabicl_info"]["status"] == "unavailable" and "out of memory" in w["tabicl_info"]["reason"] for w in d10["windows"])
     assert all(w["raw"] is not None for w in d10["windows"]), "the RAW arm must still be measured beside a failed GPU arm"
+    # PROBE + budget-aware skip (dbf8-03 run 45818155714 timed out with no per-window record): a slow GPU window is timed and
+    # printed, the next window is skipped when BUDGET_SAFETY x its time would cross the deadline, and max_windows caps the run.
+    import time as _t
+
+    class _Slow:
+        def predict(self, x):
+            return np.zeros(len(x))   # provenance: predict -- a zero score stub (nothing passes tau); timing-only self-test
+
+    def fit_slow(t, arm, **kw):  # inert: t, kw — a timing stub; only the GPU arm's wall time matters here
+        if arm in GPU_ARMS:
+            _t.sleep(0.3)
+            return {"long": _Slow(), "short": _Slow(), f"_{arm}": {}}
+        return {"long": _Slow(), "short": _Slow()}    # a cheap RAW stub so only the GPU window's time counts
+
+    d11 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_slow, arms=("raw", "tabicl"),
+                 deadline=_t.time() + 0.5)
+    assert d11["windows"][0]["tabicl_info"]["timing"]["fit_s"] >= 0.3, d11["windows"][0]["tabicl_info"]
+    assert "previous window" in d11["windows"][1]["tabicl_info"]["reason"], d11["windows"][1]["tabicl_info"]
+    d12 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_slow, arms=("raw", "tabicl"), max_windows=1)
+    assert len(d12["windows"]) == 1 and d12["windows"][0]["tabicl_info"]["timing"]["n_win"] > 0
     i_ok = {"long": {"status": "ok", "device": "cuda", "full_n": True}, "short": {"status": "ok", "device": "cuda", "full_n": True}}
     assert gpu_arm_complete(i_ok, "tabicl") and not gpu_arm_complete({**i_ok, "short": {**i_ok["short"], "full_n": False}}, "tabicl")
     # the published-cache route writes the same pkl schema from market_raw JSONL
@@ -893,6 +1002,12 @@ def main(argv=None) -> int:
     ap.add_argument("--run-date", dest="run_date", default="2026-11-12")
     ap.add_argument("--gpu-arm-budget-min", dest="gpu_arm_budget_min", type=float, default=0.0,
                     help="wall-clock minutes after which ftt/tabicl are recorded unavailable for the remaining windows (0 = none)")
+    ap.add_argument("--max-windows", dest="max_windows", type=int, default=0,
+                    help="PROBE: stop after N non-empty windows; the verdict is then the FEASIBILITY rule below, never the edge rule")
+    ap.add_argument("--probe-budget-min", dest="probe_budget_min", type=float, default=290.0,
+                    help="PROBE: feasible iff the slowest probed window x the full window count <= this many GPU minutes")
+    ap.add_argument("--probe-peak-mb", dest="probe_peak_mb", type=float, default=14500.0,
+                    help="PROBE: feasible iff peak GPU memory <= this (a 16 GB T4 less headroom)")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
                     help="fetch = data.binance.vision at run time (runner); published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")
     ap.add_argument("--rule-id", dest="rule_id", default="")
