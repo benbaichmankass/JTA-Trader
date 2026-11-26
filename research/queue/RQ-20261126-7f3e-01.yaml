@@ -4,7 +4,7 @@
 id: RQ-20261126-7f3e-01
 title: 'Stride-phase confirmation on SOL: per-COLUMN diff of the LIVE per-bar feature rows of sol-regime-15m-lgbm-fc-pcv-v2 (shadow_predictions
   snapshot, 217 rows 11-24..11-26) vs the offline market_features SOLUSDT/15m/v002 rows of the same bars'
-status: queued
+status: done
 cadence: once
 theme: regime
 priority: 1
@@ -123,3 +123,16 @@ related:
 - REGIME-LIVE-VETO-COUNTERFACTUAL
 - comms/live_parity/vol_featdiff_20261126/
 last_dispatched_at: '2026-11-26T08:37:37+00:00'
+grading:
+  attested: RULE-RQ-20261126-7f3e-01-FEATDIFF-SOL
+  auto: true
+  decision_rule_id: RULE-RQ-20261126-7f3e-01-FEATDIFF-SOL
+  evidence:
+  - research/results/RQ-20261126-7f3e-01/45783911125.jsonl
+  graded_at: '2026-11-26'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
