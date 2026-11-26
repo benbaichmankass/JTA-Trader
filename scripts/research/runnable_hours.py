@@ -66,7 +66,7 @@ def measure(queue_dir: Path, cfg: Optional[Dict[str, Any]] = None, cr: Any = Non
     for p in sorted(glob.glob(str(queue_dir / "RQ-*.yaml"))):
         try:
             entry = yaml.safe_load(open(p, encoding="utf-8")) or {}
-        except Exception as exc:  # noqa: BLE001 -- a unit we cannot read is COUNTED, never silently skipped
+        except (yaml.YAMLError, OSError, UnicodeDecodeError) as exc:  # a unit we cannot read is COUNTED under `unreadable`, never skipped
             unreadable.append(f"{Path(p).name}: {type(exc).__name__}")
             continue
         seen += 1
