@@ -1,0 +1,52 @@
+{
+ "read_state": "read",
+ "rule": "RQ-20261127-c25a-01 rule (registered before any run). ONE arm, P25 (F2c+F5c) vs N8, on the 12 PREDEV_FOLDS (2021,\n    monthly, disjoint from the dev folds that chose P25), LOFO tau as 26ac-01:\n      PASS iff pooled delta (P25 - N8) >= +0.010 R/decision AND the one-sided t on the 12 per-fold deltas >= PREDEV_T_BAR\n           (2.2010, df 11) AND delta > 0 in >= 8 of 12 folds AND the families are present on >= 40 percent of the window's rows;\n      FAIL iff mean(fold deltas) + PREDEV_T_BAR x se < +0.010;\n      INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 12 folds carry both means.\n    Baseline A is reported, never graded.",
+ "t_bar": 2.201,
+ "window": [
+  "2021-01-01",
+  "2022-01-01"
+ ],
+ "baseline_A": {
+  "n": 15688,
+  "mean_net_r": 0.11546398431882815
+ },
+ "arms": {
+  "P25": {
+   "families": [
+    "F2c",
+    "F5c"
+   ],
+   "placebo": "N8",
+   "n": 15469,
+   "mean_net_r": 0.12430310655151408,
+   "placebo_n": 15445,
+   "placebo_mean_net_r": 0.12202101098512301,
+   "pooled_delta_vs_placebo": 0.002282095566391071,
+   "fold_deltas": {
+    "2021-01-01": 0.0085761457761791,
+    "2021-02-01": -0.050069889384205646,
+    "2021-03-01": 0.03582762831290262,
+    "2021-04-01": 0.07401703939861153,
+    "2021-05-01": -0.00923968802605142,
+    "2021-06-01": 0.025258339072188926,
+    "2021-07-01": -0.01991139004053627,
+    "2021-08-01": -0.08584000174766282,
+    "2021-09-01": -0.1648220822729151,
+    "2021-10-01": 0.09463900321724578,
+    "2021-11-01": 0.02933397544389238,
+    "2021-12-01": 0.04289794179494686
+   },
+   "fold_mean_delta": -0.001611081537950339,
+   "se": 0.02071148091579216,
+   "folds_positive": 7,
+   "t_fold": -0.07778688276809391,
+   "upper_bound": 0.04397488795770821,
+   "window_coverage": 0.948701506893235,
+   "verdict": "indeterminate"
+  }
+ },
+ "verdict": "indeterminate",
+ "best_arm": null,
+ "variants_read_on_sealed_window": 0,
+ "dev_rows_read_as_test": 0
+}
