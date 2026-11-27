@@ -1,0 +1,151 @@
+{
+ "schema": "ml_structure_unit/1",
+ "unit": "RQ-20261101-5e01-10",
+ "population": "ml_entry_v2",
+ "sealed_windows_read": 0,
+ "unobservable_rows_dropped": {
+  "rule": "manager ruling 2026-11-23, option (a): a row whose outcome is unobservable at ANY bracket the unit uses (the bracket does not resolve before a data hole, so its later bars are NaN) is dropped from EVERY arm, so all arms compare the same rows; the count is reported",
+  "brackets": [
+   [
+    2.0,
+    4.0
+   ]
+  ],
+  "n_dropped": 46,
+  "n_total": 660652
+ },
+ "leg_symbols": {
+  "symbols": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "XRPUSDT",
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "source": "config/strategies.yaml::ml_entry_v2.symbols"
+ },
+ "bracket": {
+  "sl_atr": 2.0,
+  "tp_r": 2.0,
+  "tp_atr": 4.0,
+  "table_relabelled": true,
+  "decisions": "R2 members, base decision share, cost gate 0.06 (stack_unit S3_R2_gate_24)"
+ },
+ "per_seed": {
+  "7": {
+   "n": 2107,
+   "pivots": [
+    3,
+    5,
+    8
+   ],
+   "read_state": "ok",
+   "mean_net_r_A": 0.012171741265599115,
+   "mean_net_r_S": -0.026067753140658748,
+   "mean_diff": -0.03823949440625786,
+   "week_bootstrap_lb": -0.07741614165661413,
+   "bins_S_better": 2,
+   "pivot_chosen_per_bin": {
+    "0": 8,
+    "1": 8,
+    "2": 8,
+    "3": 5,
+    "4": 8,
+    "5": 8
+   },
+   "control_p95_mean_net_r": 0.004459452348362299,
+   "control_mean": -0.014808745519259663,
+   "R4": false,
+   "R2": false,
+   "maxdd_A": 51.317328923348434,
+   "maxdd_S": 91.29169000443915,
+   "weekly_q5_A": -7.824971028949833,
+   "weekly_q5_S": -7.186966450922521,
+   "fallback_share": {
+    "3": 0.00047460844803037496,
+    "5": 0.00047460844803037496,
+    "8": 0.0009492168960607499
+   },
+   "verdict": "FAIL",
+   "n_pool_decisions": 36507
+  },
+  "11": {
+   "n": 2107,
+   "pivots": [
+    3,
+    5,
+    8
+   ],
+   "read_state": "ok",
+   "mean_net_r_A": 0.02888744414324114,
+   "mean_net_r_S": -0.014356986016491389,
+   "mean_diff": -0.04324443015973253,
+   "week_bootstrap_lb": -0.08334804903714102,
+   "bins_S_better": 1,
+   "pivot_chosen_per_bin": {
+    "0": 8,
+    "1": 8,
+    "2": 8,
+    "3": 8,
+    "4": 8,
+    "5": 8
+   },
+   "control_p95_mean_net_r": 0.014704576907427021,
+   "control_mean": -0.007976508416279044,
+   "R4": false,
+   "R2": false,
+   "maxdd_A": 52.64100527208538,
+   "maxdd_S": 72.28412993787478,
+   "weekly_q5_A": -7.885906181932871,
+   "weekly_q5_S": -7.009486625406459,
+   "fallback_share": {
+    "3": 0.00047460844803037496,
+    "5": 0.00047460844803037496,
+    "8": 0.0009492168960607499
+   },
+   "verdict": "FAIL",
+   "n_pool_decisions": 36549
+  },
+  "13": {
+   "n": 2093,
+   "pivots": [
+    3,
+    5,
+    8
+   ],
+   "read_state": "ok",
+   "mean_net_r_A": 0.039194315049891675,
+   "mean_net_r_S": -0.016718131696318535,
+   "mean_diff": -0.05591244674621021,
+   "week_bootstrap_lb": -0.09690004652453416,
+   "bins_S_better": 2,
+   "pivot_chosen_per_bin": {
+    "0": 8,
+    "1": 5,
+    "2": 5,
+    "3": 5,
+    "4": 5,
+    "5": 5
+   },
+   "control_p95_mean_net_r": 0.019105842511022986,
+   "control_mean": -0.0031541446083421876,
+   "R4": false,
+   "R2": false,
+   "maxdd_A": 42.071311274399896,
+   "maxdd_S": 71.35984105623955,
+   "weekly_q5_A": -7.122519320158206,
+   "weekly_q5_S": -6.599814482830511,
+   "fallback_share": {
+    "3": 0.0009555661729574773,
+    "5": 0.0009555661729574773,
+    "8": 0.001433349259436216
+   },
+   "verdict": "FAIL",
+   "n_pool_decisions": 36531
+  }
+ },
+ "verdict_seed": "7",
+ "verdict": "FAIL",
+ "n": 2107,
+ "result": "FAIL (first seed decides; other seeds in per_seed)"
+}
