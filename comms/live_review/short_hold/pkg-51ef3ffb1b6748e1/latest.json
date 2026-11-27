@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-27T17:55:00Z",
- "bar_close": "2026-11-27T18:00:00Z",
- "built_at": "2026-11-27T18:11:21Z",
+ "bar": "2026-11-27T18:15:00Z",
+ "bar_close": "2026-11-27T18:20:00Z",
+ "built_at": "2026-11-27T18:21:24Z",
  "closed": false,
  "order_package_id": "pkg-51ef3ffb1b6748e1",
  "packet": {
@@ -9,27 +9,35 @@
    {
     "account_class": "paper",
     "account_id": "alpaca_paper",
-    "evidence": "alpaca_orders read failed: diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP",
+    "apply_paths": [
+     "close",
+     "move_tp",
+     "tighten"
+    ],
+    "evidence": "alpaca_orders: SL 707.0 / TP 745.0, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
     "mechanics": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
+    "own_position": true,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "unknown"
+    "read_if_amend": "would_apply"
    },
    {
     "account_class": "paper",
     "account_id": "ib_paper",
-    "evidence": "ib_orders read failed: diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and",
+    "apply_paths": [],
+    "evidence": "ib_orders: SL 707.0 / TP 745.0, position True, matched by symbol; no apply path for interactive_brokers (live_review_apply.py ACTION_PATHS / tighten dispatch: none)",
     "mechanics": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
+    "own_position": true,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
     "read_if_amend": "unknown"
@@ -59,11 +67,6 @@
     },
     {
      "direction": "long",
-     "order_package_id": "pkg-60e30a0a4d934c30",
-     "symbol": "ADAUSDT"
-    },
-    {
-     "direction": "long",
      "order_package_id": "pkg-76ee0d87ff404bcb",
      "symbol": "SOLUSDT"
     },
@@ -71,11 +74,6 @@
      "direction": "long",
      "order_package_id": "pkg-7ab00d12ee524219",
      "symbol": "MGC"
-    },
-    {
-     "direction": "long",
-     "order_package_id": "pkg-93634c477319483d",
-     "symbol": "XRPUSDT"
     },
     {
      "direction": "long",
@@ -97,12 +95,7 @@
    "funding": {
     "state": "not_applicable"
    },
-   "news": {
-    "adjustment": -0.027358,
-    "decision": "neutral",
-    "ts": "2026-11-27T14:39:13.102686+00:00",
-    "veto": false
-   },
+   "news": null,
    "previous_review": null,
    "symbol": "SPY"
   },
@@ -118,13 +111,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     -0.123
+     -0.11
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_prop",
-     -0.426
+     -0.436
     ],
     [
      "TLT",
@@ -133,34 +126,22 @@
      0.936
     ],
     [
-     "ADAUSDT",
-     "long",
-     "ml_entry",
-     0.195
-    ],
-    [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     -0.103
+     -0.116
     ],
     [
      "SOLUSDT",
      "long",
      "ml_entry",
-     -0.0469
+     null
     ],
     [
      "MGC",
      "long",
      "ict_scalp_mgc_15m",
-     0.0
-    ],
-    [
-     "XRPUSDT",
-     "long",
-     "ml_entry",
-     -0.142
+     0.133
     ],
     [
      "BTCUSDT",
@@ -476,7 +457,31 @@
     "timeframe": "1w",
     "trend_now": "transitional"
    },
-   "live_vs_backtest": null
+   "live_vs_backtest": {
+    "read_state": "read",
+    "rows": [
+     {
+      "backtest_expectancy_r": null,
+      "backtest_n": 0,
+      "book": "realMoney",
+      "closed": 0,
+      "live_r": null,
+      "r_trades": 0,
+      "verdict": "NO_BACKTEST",
+      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+     },
+     {
+      "backtest_expectancy_r": null,
+      "backtest_n": 0,
+      "book": "mirror",
+      "closed": 0,
+      "live_r": null,
+      "r_trades": 0,
+      "verdict": "NO_BACKTEST",
+      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+     }
+    ]
+   }
   },
   "cost": {
    "basis": null
@@ -503,42 +508,30 @@
    "r_to_target": null
   },
   "generator": {
-   "head": "e611ff7260",
+   "head": "d566523212",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T18:12:37Z",
+  "info_cutoff_at": "2026-11-27T18:21:52Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "2 account(s) could not be read",
+   "evidence": "package sl 707.0 / tp 745.0 agree with every readable account",
    "per_account": {
     "alpaca_paper": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
     "ib_paper": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     }
    },
-   "verdict": "could_not_look"
+   "verdict": "match"
   },
   "missing_inputs": [
-   {
-    "field": "read:alpaca_orders",
-    "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
-   },
-   {
-    "field": "read:ib_orders",
-    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
-   },
-   {
-    "field": "read:perf_recent",
-    "reason": "timed out"
-   },
    {
     "field": "regime.atr_now_over_entry",
     "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
@@ -560,16 +553,12 @@
     "reason": "evidence_missing: no committed Stage-0 evidence record comms/strategy_evidence/claude_desk.json (build: scripts/ops/build_strategy_evidence.py --strategy <leg>)"
    },
    {
+    "field": "context.news",
+    "reason": "no news decision for this symbol in the last 60 records (or news read failed)"
+   },
+   {
     "field": "context_v3.chart.since_entry",
     "reason": "no bar has opened since the fill yet: no in-trade excursion is measurable (REVIEWER-BRIEF step 0)"
-   },
-   {
-    "field": "context_v3.live_vs_backtest",
-    "reason": "api/bot/performance/recent not read"
-   },
-   {
-    "field": "context.live_vs_backtest",
-    "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
    },
    {
     "field": "desk_handoff",
@@ -586,25 +575,13 @@
      "reason": "could_not_price"
     },
     {
-     "count": 2,
-     "denominator": 2,
-     "field": "mechanics",
-     "reason": "venue_read_unreachable"
-    },
-    {
-     "count": 1,
-     "denominator": 1,
-     "field": "context_v3.live_vs_backtest",
-     "reason": "context_null:live_vs_backtest"
-    },
-    {
      "count": 1,
      "denominator": 1,
      "field": "state.open_r",
      "reason": "context_null:state.open_r"
     }
    ],
-   "status": "could_not_look"
+   "status": "degraded"
   },
   "packet_version": 3,
   "priced_options": null,
@@ -618,25 +595,18 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T1811Z-pkg-51ef3ffb1b6748e1",
+  "review_id": "LR-20261127T1821Z-pkg-51ef3ffb1b6748e1",
   "short_hold": {
-   "atr": 1.0560714285714101,
-   "bar": "2026-11-27T17:55:00Z",
-   "bar_close": "2026-11-27T18:00:00Z",
+   "atr": 1.022142857142837,
+   "bar": "2026-11-27T18:15:00Z",
+   "bar_close": "2026-11-27T18:20:00Z",
    "entry": 721.93,
-   "mark": 728.86,
-   "minutes_held": 211.7,
-   "open_r_at_mark": 0.4642,
+   "mark": 728.35,
+   "minutes_held": 221.8,
+   "open_r_at_mark": 0.43,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 726.085,
-     "high": 727.04,
-     "low": 725.875,
-     "open": 726.33,
-     "t": "2026-11-27T17:00:00Z"
-    },
     {
      "close": 726.34,
      "high": 726.54,
@@ -713,6 +683,13 @@
      "low": 726.21,
      "open": 726.52,
      "t": "2026-11-27T17:55:00Z"
+    },
+    {
+     "close": 728.35,
+     "high": 728.35,
+     "low": 728.35,
+     "open": 728.35,
+     "t": "2026-11-27T18:15:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -743,25 +720,18 @@
    }
   ]
  },
- "packet_sha": "323d473e0dc6254afb4b553239d4df06d35e4e2468e86b2713f2f02193cf55b9",
+ "packet_sha": "996377953cf7df013060eda1466698f9e979035034ef81eec704b4cfe38df669",
  "short_hold": {
-  "atr": 1.0560714285714101,
-  "bar": "2026-11-27T17:55:00Z",
-  "bar_close": "2026-11-27T18:00:00Z",
+  "atr": 1.022142857142837,
+  "bar": "2026-11-27T18:15:00Z",
+  "bar_close": "2026-11-27T18:20:00Z",
   "entry": 721.93,
-  "mark": 728.86,
-  "minutes_held": 211.7,
-  "open_r_at_mark": 0.4642,
+  "mark": 728.35,
+  "minutes_held": 221.8,
+  "open_r_at_mark": 0.43,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 726.085,
-    "high": 727.04,
-    "low": 725.875,
-    "open": 726.33,
-    "t": "2026-11-27T17:00:00Z"
-   },
    {
     "close": 726.34,
     "high": 726.54,
@@ -838,6 +808,13 @@
     "low": 726.21,
     "open": 726.52,
     "t": "2026-11-27T17:55:00Z"
+   },
+   {
+    "close": 728.35,
+    "high": 728.35,
+    "low": 728.35,
+    "open": 728.35,
+    "t": "2026-11-27T18:15:00Z"
    }
   ],
   "risk_per_unit": null,
