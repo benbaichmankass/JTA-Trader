@@ -1,0 +1,197 @@
+{
+ "schema_version": 1,
+ "review_id": "LR-20261127T0801Z-pkg-4bdb9a7790ab4abe",
+ "reviewed_at": "2026-11-27T08:03:00Z",
+ "order_package_id": "pkg-4bdb9a7790ab4abe",
+ "trade_id": null,
+ "leg": "trend_donchian_sol_prop",
+ "accounts": [
+  "bybit_2",
+  "bybit_portfolio"
+ ],
+ "trigger": {
+  "event": "judgement_cadence",
+  "level": "2026-11-27T08:00:00Z",
+  "l0_snapshot_at": "2026-11-27T08:00:00Z"
+ },
+ "info_cutoff_at": "2026-11-27T08:01:18Z",
+ "state": {
+  "atr_now_over_entry": 0.9593,
+  "bars_held": 5,
+  "giveback_r": 0.1575,
+  "open_r": 0.5184,
+  "peak_provenance": "estimated",
+  "peak_r": 0.6759,
+  "regime_cell_entry": null,
+  "regime_cell_now": null,
+  "sl": 70.93607143,
+  "tp": 79.64453
+ },
+ "features_at_review": {
+  "atr_now_over_entry": 0.9593,
+  "bars_since_peak": 2,
+  "giveback_r": 0.1575,
+  "open_r": 0.5184,
+  "peak_r": 0.6759,
+  "r_to_stop": 1.5184,
+  "r_to_target": 4.1961
+ },
+ "mechanics": {
+  "verdict": "match",
+  "evidence": "package sl 70.93607143 / tp 79.64453 agree with every readable account",
+  "per_account": {
+   "bybit_2": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   },
+   "bybit_portfolio": {
+    "by_design": null,
+    "evidence": null,
+    "level_only": false,
+    "verdict": "match"
+   }
+  }
+ },
+ "options": [
+  {
+   "action": "hold",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.3057,
+   "sd_r": 1.1761,
+   "worst_r": -0.79,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.2776,
+   "sd_r": 0.2169,
+   "worst_r": -0.4593,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.2677,
+   "sd_r": 0.3151,
+   "worst_r": -0.4593,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.2753,
+   "sd_r": 0.6147,
+   "worst_r": -0.4593,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.2935,
+   "sd_r": 0.8961,
+   "worst_r": -0.4593,
+   "net": true
+  },
+  {
+   "action": "tighten",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.3211,
+   "sd_r": 0.7142,
+   "worst_r": -0.4593,
+   "net": true
+  },
+  {
+   "action": "close",
+   "level": null,
+   "n": 230,
+   "mean_r": 0.4681,
+   "sd_r": 0.0247,
+   "worst_r": 0.3681,
+   "net": true
+  }
+ ],
+ "outcome_table_source": "comms/live_review/tables/LR-20261127T0801Z-pkg-4bdb9a7790ab4abe.json",
+ "recommendation": {
+  "action": "hold",
+  "level": null,
+  "level_atr": null,
+  "ev_delta_r": null,
+  "worst_case_delta_r": null,
+  "basis": "judgement",
+  "confidence": "anecdote",
+  "evidence_source": "judgement",
+  "judgement_confidence": 0.6,
+  "reason": "Prev forecast (target 75.0, inv 70.94, 16 bars from 04:35Z): not yet resolved, 4 bars in, high 73.49 < 75.0, low 72.32 > 70.94, price rising (close 73.26 vs 72.71), so carried forward. Since_entry measured (5 bars): open +0.52R, peak +0.68R, giveback 0.16R, held above 1h swing 71.81 with 4h close 73.26 at its high. Table hold n=230 mean +0.31R vs best tighten r:0.26 +0.32R (diff within SE ~0.06, worst -0.46 vs -0.79 only); tail tie-break not met (worst gain 0.33 < 1R). Strategy's SL/TP/trail already expresses the view; no lever beats hold."
+ },
+ "judge_prior": null,
+ "applied": false,
+ "apply_policy": {
+  "bound_r": 0.25,
+  "within_bound": null,
+  "tighten_r": null
+ },
+ "shadow_policy": {
+  "bound_r": 0.5,
+  "within_bound": null,
+  "would_apply": null,
+  "tighten_r": null
+ },
+ "context_flags": [
+  "table: hold n=230 mean +0.3057 sd 1.1761 worst -0.79 (measured); tighten r:0.26 n=230 mean +0.3211; close mean +0.4681 (peak-conditioned, not a fresh edge)",
+  "book: 12 other open packages, 9 long crypto-beta/metal/bond; SOL long correlated with BTC/ETH/XRP longs",
+  "4h trend_now chop, adx 13.3; 1h regime trending adx 25.5",
+  "missing_input: regime.vol_now, regime.cell_entry, context.funding, context.news (could-not-look)",
+  "live_vs_backtest: 6 closed, live -4.58R, p7.8, CONSISTENT"
+ ],
+ "account_reads": [
+  {
+   "account_id": "bybit_2",
+   "account_class": "real_money",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  },
+  {
+   "account_id": "bybit_portfolio",
+   "account_class": "paper",
+   "read": "no_action",
+   "evidence": "hold: no action"
+  }
+ ],
+ "disposition": {
+  "route": "none",
+  "mandate": null,
+  "action_issue": null,
+  "applied_at": null,
+  "verified_readback": null
+ },
+ "model": "sonnet-tier (repo-less reviewer)",
+ "session": "session_01AFoLuL1484W1Fq2EeUzoQb",
+ "prompt_sha": null,
+ "skill_sha": null,
+ "packet_defects": [],
+ "packet_sha": "682f650952c48e9d58e109612c088343a888709264f6f8e353fb2acc04901a5b",
+ "forecast": {
+  "thesis": "1h breakout above 71.8 held five bars, higher lows (72.32), 4h closed at its high; continuation toward 75 before 4h chop supply near 78.47, with the strategy trail protecting.",
+  "direction": "with_trade",
+  "target_px": 75.0,
+  "p_target": 0.35,
+  "invalidation_px": 70.94,
+  "horizon_bars": 12,
+  "timeframe": "1h",
+  "evidence": [
+   "chart.since_entry: 5 bars, high 73.49 low 72.32",
+   "chart.swings: highs 71.81/71.60 below price",
+   "chart.htf: 4h chop, swing 78.47",
+   "exit_plan: SL 70.94 TP 79.64"
+  ]
+ }
+}
