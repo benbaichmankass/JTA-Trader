@@ -2290,6 +2290,9 @@ jobs:
             # reached the script (#27025 asked for 60 s and sampled 30 s).
             for _kv in "window_s:${ACTION_CPU_WINDOW_S:-}:^[0-9]{0,3}$" "align_minute:${ACTION_CPU_ALIGN_MINUTE:-}:^[0-9]{0,2}$"; do
               _k="${_kv%%:*}"; _rest="${_kv#*:}"; _v="${_rest%%:*}"; _re="${_rest#*:}"
+              # Both are optional: empty means the script's default, not a bad shape. `printf '%s' ''` feeds grep no
+              # line, so before this every dispatch that omitted either one failed here (run 46070322138).
+              [ -z "${_v}" ] && continue
               if ! printf '%s' "${_v}" | grep -Eq "${_re}"; then
                 echo "::error::vm-cpu-sample '${_k}:' must be a whole number (got '${_v}')."; exit 1
               fi
