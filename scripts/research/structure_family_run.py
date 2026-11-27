@@ -38,7 +38,7 @@ sys.path.insert(0, str(REPO / "scripts" / "research"))
 sys.path.insert(0, str(REPO))
 
 FAMILIES = ("trend_donchian", "pullback", "ict_scalp", "remaining")
-ARMS_HARNESS = ("trend", "pullback")      # the harnesses that carry --structure-exit
+ARMS_HARNESS = ("trend", "pullback", "ict_scalp")  # the harnesses that carry --structure-exit (ict_scalp: #29318)
 CRYPTO_WINDOW = ("2020-07-01", "2026-10-15 23:59")
 NONCRYPTO_WINDOW = ("2021-07-01", "2026-10-15 23:59")
 

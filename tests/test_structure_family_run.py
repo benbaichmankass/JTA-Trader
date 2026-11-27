@@ -32,7 +32,7 @@ def test_the_leg_list_comes_from_the_rosters_and_strategies_not_from_a_quoted_li
 
 def test_a_harness_without_the_structure_arm_is_listed_not_dropped():
     p = _plan("ict_scalp", ["bybit_1"])
-    assert p["covered"] == [] and p["not_covered"] == [{"leg": "ict_scalp_5m", "harness": "ict_scalp"}]
+    assert p["covered"] == [{"leg": "ict_scalp_5m", "harness": "ict_scalp"}] and p["not_covered"] == []
     p = _plan("remaining", ["bybit_1"])
     assert p["not_covered"] == [{"leg": "turtle_soup", "harness": "turtle_soup"}]
     p = _plan("trend_donchian", ["bybit_1"])
