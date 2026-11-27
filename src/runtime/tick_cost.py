@@ -160,6 +160,14 @@ _offloop_hooks: Dict[str, Dict[str, Any]] = {}
 # actual execution — so it cannot serialise the two loops it exists to support.
 _hooks_lock = threading.Lock()
 
+# Per-STRATEGY builder time (TICK-BUILDER-TIMING, 2026-11-27). `pipeline.signal_build` is one wrap around the whole multiplexed
+# builder fan-out (MEASURED after #29455: 984 calls / 24 ticks, mean 556 ms = ~22.8 s/tick, ~11 s of it attributed fetches), so
+# nothing could say WHICH strategy spends it. Kept OUT of `_hooks` on purpose: one name per strategy would exhaust
+# `_MAX_HOOK_NAMES` and refuse real hooks. Bounded separately; refused names are counted, never silently dropped. Measurement only.
+_MAX_BUILDER_NAMES = 160
+_builders: Dict[str, Dict[str, Any]] = {}
+_builder_overflow = 0
+
 
 def write_cadence_seconds() -> float:
     """Resolve the persist cadence. Unparseable → default, never 'off'.
@@ -239,6 +247,36 @@ def record_hook(name: str, elapsed_ms: float) -> None:
                 slot["max_at_utc"] = datetime.now(timezone.utc).isoformat()
     except Exception:  # noqa: BLE001 — measurement must never break the tick
         return
+
+
+def record_builder(name: str, elapsed_ms: float) -> None:
+    """Fold one strategy builder call's duration into the per-strategy table. Never raises."""
+    global _builder_overflow
+    try:
+        with _hooks_lock:
+            slot = _builders.get(name)
+            if slot is None:
+                if len(_builders) >= _MAX_BUILDER_NAMES:
+                    _builder_overflow += 1
+                    return
+                slot = {"n": 0, "sum_ms": 0.0, "max_ms": None}
+                _builders[name] = slot
+            slot["n"] += 1
+            slot["sum_ms"] += elapsed_ms
+            if slot["max_ms"] is None or elapsed_ms > slot["max_ms"]:
+                slot["max_ms"] = elapsed_ms
+    except Exception:  # noqa: BLE001 -- measurement must never break the tick
+        return
+
+
+def _builders_view() -> Dict[str, Any]:
+    """Per-strategy builder time, sorted by total, with its per-tick share (``per_tick_ms``)."""
+    with _hooks_lock:
+        rows = [(n, dict(sl)) for n, sl in _builders.items()]
+    rows.sort(key=lambda kv: -kv[1]["sum_ms"])
+    return {n: {"n": sl["n"], "mean_ms": round(sl["sum_ms"] / sl["n"], 1) if sl["n"] else None,
+                "max_ms": round(sl["max_ms"], 1) if sl["max_ms"] is not None else None,
+                "per_tick_ms": round(sl["sum_ms"] / _ticks, 1) if _ticks else None} for n, sl in rows}
 
 
 @contextlib.contextmanager
@@ -384,6 +422,10 @@ def snapshot() -> Dict[str, Any]:
         # Non-zero means a caller generated hook names dynamically and the split
         # is PARTIAL. Shipped always so a truncated view cannot read as complete.
         "hook_names_refused": _hook_overflow,
+        # Per-strategy builder time inside `pipeline.signal_build` (TICK-BUILDER-TIMING): children of that phase, so never part
+        # of `attributed_pct`. `builder_names_refused` > 0 means the table is PARTIAL.
+        "builders": _builders_view(),
+        "builder_names_refused": _builder_overflow,
         "ticks_measured": _ticks,
         "last_ms": round(_last_ms, 1) if _last_ms is not None else None,
         # The load-bearing statistic. A mean that looks fine while the peak
@@ -461,5 +503,8 @@ def _reset_for_tests() -> None:
     with _hooks_lock:
         _hooks.clear()
         _offloop_hooks.clear()
+        _builders.clear()
+    global _builder_overflow
     _hook_overflow = 0
+    _builder_overflow = 0
     _tick_thread = None
