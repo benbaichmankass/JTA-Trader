@@ -1542,9 +1542,69 @@ def _self_test() -> None:
     print("self-test ok")
 
 
+# ----------------------------------------------------------------------------------------------- live-gap decomposition
+def _cut(taken: pd.DataFrame, by: str) -> dict:
+    if taken.empty:
+        return {}
+    return {str(k): {"n": len(g), "mean_net_r": float(g.net_r.mean()), "sum_net_r": float(g.net_r.sum()),
+                     "se_net_r": float(g.net_r.std(ddof=1) / np.sqrt(len(g))) if len(g) > 1 else None}
+            for k, g in taken.groupby(by)}
+
+
+def live_gap_cmd(args) -> int:
+    """DESCRIPTIVE decomposition (drift-remediation skill step 2, row IPW/ML-ENTRY real-money work, 2026-11-27): the SERVED
+    ml_entry model (``--served``, default the frozen v1) replayed on ``--fwd-start..--fwd-end`` with the harness bracket and cost stack,
+    cut by side, symbol, the bybit_2 traded population, week and exit reason. It grades NOTHING: each cut is a diagnosis input for a
+    lever unit registered separately. The window is post-training, so the read is recorded through holdout_lock BEFORE any outcome is
+    touched (``--model-id``, ``--reader``, ``--ledger``)."""
+    from datetime import date
+
+    import holdout_lock
+    import ml_entry_retrain as R
+    cache, out = Path(args.cache), Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    meta, models = _frozen_models(Path(args.served))
+    feats = meta["features"]
+    feats = feats if isinstance(feats, list) else json.loads(feats.replace("'", '"'))
+    tau = float(meta["tau"])
+    train_end = str(pd.Timestamp(meta["train_end_exclusive"]).date())
+    claim = holdout_lock.claim_read(args.model_id, args.fwd_start, args.fwd_end, args.unit or "live-gap", args.reader,
+                                    Path(args.ledger) if args.ledger else holdout_lock.LEDGER, train_end=train_end)
+    if args.fetch:
+        R.fetch_through(cache, universe(), R.plan(date.fromisoformat(args.run_date)))
+    tab = build_table(cache, universe())
+    a, b = pd.Timestamp(args.fwd_start, tz="UTC"), pd.Timestamp(args.fwd_end, tz="UTC") + pd.Timedelta(days=1)
+    win = tab[(tab.ts >= a) & (tab.ts < b)].reset_index(drop=True)
+    # provenance: predict -- the served booster's regressed net R of each side (policy() thresholds at tau), not a probability
+    pl, ps = models["long"].predict(win[feats]), models["short"].predict(win[feats])
+    taken = policy(win, pl, ps, tau)
+    traded = traded_symbols()
+    taken = taken.assign(week=pd.to_datetime(taken.ts, utc=True).dt.strftime("%G-W%V"),
+                         exit=taken.reason.map({0: "time", 1: "sl", 2: "tp"}),
+                         population=np.where(taken.symbol.isin(traded), "traded", "other"))
+    tr = taken[taken.population == "traded"]
+    meas = {"schema": "ml_decision_entry_live_gap/1", "served": str(args.served), "model_id": meta.get("model_id"), "tau": tau,
+            "window": [args.fwd_start, args.fwd_end], "traded_symbols": traded, "holdout_claim": claim,
+            "all": summarize(taken), "traded": summarize(tr),
+            "by_side": _cut(taken, "side"), "traded_by_side": _cut(tr, "side"), "by_symbol": _cut(taken, "symbol"),
+            "by_week": _cut(taken, "week"), "traded_by_week": _cut(tr, "week"), "by_exit": _cut(taken, "exit"),
+            "traded_by_exit": _cut(tr, "exit"), "git_sha": _git_sha(), "elapsed_s": round(time.time() - t0)}
+    (out / "summary.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
+    n = int(len(taken))
+    vj = {"verdict": "indeterminate", "read_state": "measured", "n": n, "measurement": meas,
+          "note": (f"DESCRIPTIVE (grades nothing): served {meta.get('model_id')} on {args.fwd_start}..{args.fwd_end}: all n={n} "
+                   f"mean {meas['all'].get('mean_net_r')}; traded n={len(tr)} mean {meas['traded'].get('mean_net_r')}"),
+            "population": f"served {meta.get('model_id')} (tau {tau}) decisions {args.fwd_start}..{args.fwd_end}, 60-perp universe; "
+                          f"traded = the bybit_2 symbols {traded}"}
+    (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
+    print(vj["note"], flush=True)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "side-by-fold", "lever-arms"])
+    ap.add_argument("cmd", nargs="?", default="run", choices=["run", "universe-arms", "traded-subset", "universe-costed", "side-by-fold", "lever-arms", "live-gap"])
     ap.add_argument("--cache", default="/tmp/ml_decision_klines")
     ap.add_argument("--out", default="/tmp/ml_decision_entry_out")
     ap.add_argument("--unit", default="")
@@ -1579,6 +1639,8 @@ def main(argv=None) -> int:
         return side_by_fold_cmd(a)
     if a.cmd == "lever-arms":
         return lever_arms_cmd(a)
+    if a.cmd == "live-gap":
+        return live_gap_cmd(a)
     return universe_arms(a) if a.cmd == "universe-arms" else run(a)
 
 
