@@ -2602,7 +2602,6 @@ nodes:
       books. evidence_class {holdout: holdout_window, claim: edge}.
   - id: P2-MPA1126-d3-ftt-matched-coverage
     goal: G4
-    authoring_blocked: 'BUILD-GATED on the fttmc arm (row ML-ENTRY-FINETUNE note 2026-11-26); not authorable until it lands.'
     theme: ml_health
     roadmap: [L-ML-LIVE]
     value: {usd_at_stake_per_month: 150, confidence: 0.05}
@@ -2620,7 +2619,8 @@ nodes:
       learner. Decision it changes: whether any deep learner stays on the D3 lever list (PASS -> a disjoint-window confirmation and a
       Tier-3 note on ML-ENTRY-FINETUNE; FAIL -> deep_tabular is recorded flat on this label at matched coverage). Pre-mortem: if it
       FAILs, the likely reason is that the booster already extracts what the 20 decision-time features hold (finding (1) above).
-    needs_authoring: >-
+    authoring_closed: '2026-11-27 ML-PRIMARY (manager order 18:21Z): kill: answered by a hand-authored unit -- the fttmc arm was built in scripts/research/ml_entry_residual.py (lrank-pattern matched coverage on CAL-B, GPU completeness guard as ftt) and RQ-20261127-fc31-01 carries this question under the node''s decide_vs_raw rule'
+    authoring_closed_ask: >-
       BUILD-GATED (row ML-ENTRY-FINETUNE, note 2026-11-26): an opt-in ``fttmc`` arm in scripts/research/ml_entry_residual.py: per
       side, FTT and a RAW LightGBM fit on PROPER + CAL-A (_slices), s* matched on CAL-B so FTT admits as many rows as RAW (the
       _match_threshold path lrank uses), test score ftt - s* + tau; GPU completeness guard as ftt. Then ONE unit, compute gpu, the
