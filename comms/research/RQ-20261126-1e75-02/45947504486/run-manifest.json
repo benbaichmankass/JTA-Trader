@@ -1,0 +1,93 @@
+{
+  "unit": "RQ-20261126-1e75-02",
+  "run_id": "45947504486",
+  "commit_sha": "476cc11ce6aee91c11c6a8dd2e15ddce4e06cefb",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/45947504486",
+  "timeout_minutes": 120,
+  "runner": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261116.202.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "d5aeef1fabd2",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/exit_lever_ablation.py",
+        "--leg",
+        "trend_donchian_eth_4h",
+        "--symbol",
+        "BTCUSDT",
+        "--arm",
+        "B=",
+        "--arm",
+        "S10T4=atr_stop_mult=1.0;tp_r=4.0",
+        "--days",
+        "2330",
+        "--start",
+        "2020-07-01",
+        "--end",
+        "2026-10-15 23:59",
+        "--grade",
+        "paired",
+        "--baseline",
+        "B",
+        "--candidate",
+        "S10T4",
+        "--paired-min-mean",
+        "0.03",
+        "--paired-t-bar",
+        "2.0",
+        "--paired-min-match",
+        "0.8",
+        "--folds",
+        "6",
+        "--fold-majority",
+        "5",
+        "--n-floor",
+        "39",
+        "--delta-r",
+        "0",
+        "--research-unit",
+        "RQ-20261126-1e75-02",
+        "--out",
+        "comms/research/RQ-20261126-1e75-02/45947504486"
+      ],
+      "log": "comms/research/RQ-20261126-1e75-02/45947504486/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 115.1,
+      "seconds": 34.5
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
