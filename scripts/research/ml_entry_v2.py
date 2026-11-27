@@ -44,7 +44,12 @@ COMPACT = {
     "F5c": ["f5_semivar_ratio24", "f5_er24", "f5_dist_hi168_atr", "f5_dist_lo168_atr"],   # path shape
 }
 ARMS.update({"P2": ["F2c"], "P5": ["F5c"], "P25": ["F2c", "F5c"], "N4": [], "N8": []})
-PLACEBO_WIDTH = {"N4": 4, "N8": 8}
+ARMS.update({"V": ["F9"], "N3": []})   # DVOL (unit RQ-20261127-26ac-02): BTC implied vol, 3 columns, vs a 3-column placebo
+PLACEBO_WIDTH = {"N4": 4, "N8": 8, "N3": 3}
+PLACEBO_FOR_DVOL = {"V": "N3"}
+#: one-sided alpha 0.025 (the house LEVER_RULE level; Manager 26a review 15:25Z) on the K = 8 per-fold deltas (df 7), a single
+#: arm: t_{0.975, 7} = 2.3646
+DVOL_T_BAR = 2.3646
 PLACEBO_FOR = {"P2": "N4", "P5": "N4", "P25": "N8"}
 PLACEBO_SEED = 20261127
 COMPACT_DELTA, COMPACT_FOLDS, COMPACT_YEARS = 0.010, 6, 3
@@ -70,7 +75,8 @@ def _cat(frames):
     return pd.concat(frames, ignore_index=True) if frames else None
 
 
-def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str], macro_dir: Path | None = None) -> pd.DataFrame:
+def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str], macro_dir: Path | None = None,
+                dvol_dir: Path | None = None) -> pd.DataFrame:
     cache = out / "klines"
     cache.mkdir(parents=True, exist_ok=True)
     fam, frames = [], {}
@@ -106,6 +112,10 @@ def build_table(streams: Path, oct_dir: Path | None, out: Path, syms: list[str],
         # F8 is market-wide: computed once per decision ts, then joined to every symbol's row at that ts
         uts = pd.Series(tab["ts"].drop_duplicates().sort_values().to_numpy())
         tab = tab.merge(F.f8(uts, F.load_macro_daily(macro_dir)), on="ts", how="left")
+    if dvol_dir is not None:
+        # F9 is market-wide too: one value per decision ts, joined to every symbol's row at that ts
+        uts = pd.Series(tab["ts"].drop_duplicates().sort_values().to_numpy())
+        tab = tab.merge(F.f9(uts, F.load_dvol(dvol_dir)), on="ts", how="left")
     for c in ALL_FAM_COLS:
         if c not in tab.columns:
             tab[c] = np.nan
@@ -224,10 +234,11 @@ def combine(tab: pd.DataFrame, out: Path) -> dict:
 
 def compact_coverage(tab: pd.DataFrame, fams: list[str], end: str = E.HOLDOUT_START) -> float:
     dev = tab[tab.ts < pd.Timestamp(end, tz="UTC")]
-    return float(min(dev[COMPACT[f][0]].notna().mean() for f in fams))
+    return float(min(dev[_fam_cols(f)[0]].notna().mean() for f in fams))
 
 
-def combine_placebo(tab: pd.DataFrame, out: Path) -> dict:
+def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_bar: float | None = None,
+                    need: tuple = ("A", "A2", "N4", "N8"), result_name: str = "compact.json") -> dict:
     """RQ-20261127-26ac-01 rule (registered before any run). Per arm X in P2 / P5 / P25 against its matched-width placebo
     N = PLACEBO_FOR[X], on the LOFO per-fold means (tau chosen on the other folds, as fs01-01):
       PASS iff pooled delta (X - N) >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the one-sided t on the 8
@@ -238,18 +249,20 @@ def combine_placebo(tab: pd.DataFrame, out: Path) -> dict:
       INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 8 folds carry both means.
     The unit's verdict is PASS if any arm passes (the largest pooled delta is named), FAIL if every arm fails, else
     INDETERMINATE. Baseline A and seed-noise A2 are reported, never graded."""
-    t_bar = COMPACT_T_BAR
+    pairs = PLACEBO_FOR if pairs is None else pairs
+    t_bar = COMPACT_T_BAR if t_bar is None else t_bar
     arms = {p.stem[4:]: json.loads(p.read_text()) for p in sorted(out.glob("arm_*.json"))}
-    for need in ("A", "A2", "N4", "N8"):
-        if need not in arms:
-            raise SystemExit(f"arm {need} is required by the registered rule")
+    for nd in need:
+        if nd not in arms:
+            raise SystemExit(f"arm {nd} is required by the registered rule")
     res = {"read_state": "read", "rule": combine_placebo.__doc__, "t_bar": t_bar, "arms": {},
            "baseline_A": {"n": arms["A"]["lofo"]["n"], "mean_net_r": arms["A"]["lofo"]["mean_net_r"]},
            "seed_noise_abs_A_minus_A2": (abs(arms["A2"]["lofo"]["mean_net_r"] - arms["A"]["lofo"]["mean_net_r"])
                                         if None not in (arms["A2"]["lofo"]["mean_net_r"], arms["A"]["lofo"]["mean_net_r"]) else None),
-           "placebos": {k: {"n": arms[k]["lofo"]["n"], "mean_net_r": arms[k]["lofo"]["mean_net_r"]} for k in PLACEBO_WIDTH},
+           "placebos": {k: {"n": arms[k]["lofo"]["n"], "mean_net_r": arms[k]["lofo"]["mean_net_r"]}
+                        for k in sorted(set(pairs.values())) if k in arms},
            "variants_read_on_sealed_window": 0}
-    for arm, pl in PLACEBO_FOR.items():
+    for arm, pl in pairs.items():
         if arm not in arms:
             res["arms"][arm] = {"verdict": "indeterminate", "why": "arm did not run"}
             continue
@@ -279,7 +292,7 @@ def combine_placebo(tab: pd.DataFrame, out: Path) -> dict:
             verdict = "fail"
         else:
             verdict = "indeterminate"
-        res["arms"][arm] = {"families": ARMS[arm], "columns": [c for f in ARMS[arm] for c in COMPACT[f]], "placebo": pl,
+        res["arms"][arm] = {"families": ARMS[arm], "columns": [c for f in ARMS[arm] for c in _fam_cols(f)], "placebo": pl,
                             "n": x["n"], "mean_net_r": x["mean_net_r"], "pooled_delta_vs_placebo": pooled,
                             "fold_deltas": dict(pairs), "folds_positive": pos, "t_fold": t, "upper_bound": upper, "yearly_delta": yearly,
                             "years_positive": ypos, "dev_coverage": cov, "verdict": verdict,
@@ -289,8 +302,15 @@ def combine_placebo(tab: pd.DataFrame, out: Path) -> dict:
     passed = [a for a, r in res["arms"].items() if r["verdict"] == "pass"]
     res["verdict"] = "pass" if passed else ("fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
     res["best_arm"] = max(passed, key=lambda a: res["arms"][a]["pooled_delta_vs_placebo"]) if passed else None
-    (out / "compact.json").write_text(json.dumps(res, indent=1, default=str))
+    (out / result_name).write_text(json.dumps(res, indent=1, default=str))
     return res
+
+
+def combine_dvol(tab: pd.DataFrame, out: Path) -> dict:
+    """RQ-20261127-26ac-02 rule (registered before any run): combine_placebo's clauses for the single arm V (F9, BTC DVOL, 3
+    columns) against N3, with the single-arm bar t >= DVOL_T_BAR (one-sided 0.025, df 7); FAIL iff mean + t_bar x se < +0.010,
+    else INDETERMINATE. Baseline A / A2 reported only."""
+    return combine_placebo(tab, out, pairs=PLACEBO_FOR_DVOL, t_bar=DVOL_T_BAR, need=("A", "A2", "N3"), result_name="dvol.json")
 
 
 # ----------------------------------------------------------------------------------------------- forward (fs02-01)
@@ -433,6 +453,13 @@ def _self_test_compact() -> None:
         assert combine_placebo(low, out)["arms"]["P2"]["verdict"] == "indeterminate"   # coverage < 40 percent
         (out / "arm_P2.json").write_text(json.dumps(arm([0.03] * 7 + [-0.2])))       # one bad fold kills the t / mean
         assert combine_placebo(cov_tab, out)["arms"]["P2"]["verdict"] != "pass"
+        (out / "arm_P2.json").write_text(json.dumps(arm(good)))
+        (out / "arm_N3.json").write_text(json.dumps(arm(base)))
+        (out / "arm_V.json").write_text(json.dumps(arm([0.016, 0.012, 0.015, 0.011, 0.014, 0.013, 0.012, 0.015])))
+        dv_tab = cov_tab.assign(**{c: [1.0, 1.0, np.nan] for c in F.FAMILIES["F9"]})
+        rv = combine_dvol(dv_tab, out)
+        assert rv["arms"]["V"]["verdict"] == "pass" and rv["t_bar"] == DVOL_T_BAR and list(rv["arms"]) == ["V"]
+        assert (out / "dvol.json").exists() and combine_placebo(cov_tab, out)["t_bar"] == COMPACT_T_BAR   # 26ac-01 unchanged
         (out / "arm_N8.json").unlink()
         try:
             combine_placebo(cov_tab, out)
@@ -443,10 +470,11 @@ def _self_test_compact() -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["build-table", "arm", "combine", "combine-compact", "forward"])
+    ap.add_argument("cmd", nargs="?", choices=["build-table", "arm", "combine", "combine-compact", "combine-dvol", "forward"])
     ap.add_argument("--streams", default="")
     ap.add_argument("--oct-dir", default="")
     ap.add_argument("--macro-dir", default="", help="F8: the <TICKER>.csv daily closes ml_entry_families.fetch_macro_daily wrote")
+    ap.add_argument("--dvol-dir", default="", help="F9: the BTC.csv hourly DVOL ml_entry_families.fetch_dvol wrote")
     ap.add_argument("--out", default="/tmp/ml_entry_v2")
     ap.add_argument("--arm", default="A")
     ap.add_argument("--n-jobs", type=int, default=2)
@@ -463,7 +491,8 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     if a.cmd == "build-table":
         tab = build_table(Path(a.streams), Path(a.oct_dir) if a.oct_dir else None, out, E.universe(),
-                          macro_dir=Path(a.macro_dir) if a.macro_dir else None)
+                          macro_dir=Path(a.macro_dir) if a.macro_dir else None,
+                          dvol_dir=Path(a.dvol_dir) if a.dvol_dir else None)
         print(f"table rows={len(tab)} symbols={tab.symbol.nunique()}", flush=True)
         return 0
     tab = pd.read_pickle(out / "table.pkl")
@@ -475,6 +504,8 @@ def main() -> int:
         print(json.dumps(combine(tab, out), indent=1, default=str))
     elif a.cmd == "combine-compact":
         print(json.dumps(combine_placebo(tab, out), indent=1, default=str)[:4000])
+    elif a.cmd == "combine-dvol":
+        print(json.dumps(combine_dvol(tab, out), indent=1, default=str)[:4000])
     elif a.cmd == "forward":
         print(json.dumps(forward(tab, out, Path(a.ablation), a.unit, a.reader, a.n_jobs, Path(a.ledger)), indent=1, default=str)[:3000])
     else:
