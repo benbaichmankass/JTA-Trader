@@ -3305,6 +3305,41 @@ def mgc_trend_1h_signal_builder(settings: dict) -> Dict[str, Any]:
 #: leg -> open (epoch s) of the stale last bar this process already logged.
 _SESSION_BAR_LOGGED: dict[str, float] = {}
 
+#: (venue, symbol, timeframe) -> epoch s of the last cache-bypassing re-read made while the
+#: session read CLOSED. TICK-SESSION-REREAD (Manager 26a ruling 2026-11-27 13:35Z): outside the
+#: session that re-read can only return the previous session's bar again. Since GATE-MARKET-HOURS
+#: went report-only (2026-11-12) it ran on every tick from the US close to the next open. Measured
+#: over 19 ticks after the 12:58Z restart (pre-open): fetch.1d 279 venue calls, ~5.4 s/tick.
+_SESSION_REREAD_AT: dict[tuple, float] = {}
+
+#: At most one bypass re-read per (venue, symbol, timeframe) per this many seconds while the
+#: session reads closed. This is a RATE LIMIT, not a gate. If the calendar is wrong (a special
+#: open, a misread half day), the bar is picked up on the next re-read, at most this late, and a
+#: whole session is never missed. Inside the session the re-read runs on every tick, as before.
+_SESSION_REREAD_CLOSED_INTERVAL_S = 300.0
+
+
+def _session_reads_closed(now_s: float) -> bool:
+    """True only when market_hours positively reads the US equity session as CLOSED at ``now_s``.
+
+    Any error reads OPEN, so the re-read runs on every tick (today's behaviour) and is never
+    rate-limited on a guess."""
+    try:
+        from datetime import datetime as _dt, timezone as _tz
+        from src.runtime.market_hours import is_market_open
+        return not is_market_open("us_equity", _dt.fromtimestamp(now_s, tz=_tz.utc))
+    except Exception:  # noqa: BLE001  # allow-silent: fail-open to today's every-tick re-read
+        return False
+
+
+def _session_reread_key(exchange: Any, symbol: str, timeframe: str) -> tuple:
+    try:
+        from src.runtime.market_data import _venue_of_client
+        venue = _venue_of_client(exchange)
+    except Exception:  # noqa: BLE001  # allow-silent: an unnamed venue keeps its own bucket
+        venue = "unknown"
+    return (venue, str(symbol).upper(), str(timeframe))
+
 
 def _fetch_session_frame(name: str, symbol: str, timeframe: str, exchange: Any,
                          *, now: float | None = None) -> tuple[Any, str | None]:
@@ -3338,6 +3373,13 @@ def _fetch_session_frame(name: str, symbol: str, timeframe: str, exchange: Any,
     now_s = _time.time() if now is None else float(now)
     if last_bar_is_forming(frame, timeframe, now=now_s) or _epoch_seconds(_last_timestamp(frame)) is None:
         return frame, None
+    if _session_reads_closed(now_s):
+        # TICK-SESSION-REREAD: closed session, so the re-read is rate-limited, not skipped.
+        key = _session_reread_key(exchange, symbol, timeframe)
+        last = _SESSION_REREAD_AT.get(key)
+        if last is not None and 0 <= now_s - last < _SESSION_REREAD_CLOSED_INTERVAL_S:
+            return frame, "session_bar_not_published"
+        _SESSION_REREAD_AT[key] = now_s
     frame = fetch_candles(symbol, timeframe, exchange_client=exchange, limit=200,
                           bypass_cache=True)
     if frame is None or last_bar_is_forming(frame, timeframe, now=now_s):
@@ -6558,6 +6600,36 @@ for _builder, _monitor_unit in (
     _builder.monitor_unit = _monitor_unit
 
 
+#: (tick token, what) -> value: the claude_desk builder's per-tick reads (Manager 26a 2026-11-27
+#: 13:35Z, cache-only). The builder runs once per tick SYMBOL (779 calls / 19 ticks, ~61 ms each,
+#: measured after the 12:58Z restart), and each call re-read the strategies config and the queue
+#: file. Only those two are memoised. The journal read that yields the CONSUMED decision ids is NOT:
+#: a package minted for a symbol earlier in the tick must be visible to that symbol's next call on
+#: another account, or a second package could be minted.
+_DESK_TICK_MEMO: dict[tuple, Any] = {}
+
+
+def _desk_tick_read(what: Any, read):
+    """``read()`` once per tick per ``what``; fresh on every call outside a tick. ``what`` names the
+    source (the queue PATH, the config loader's identity), so a different source is never served."""
+    try:
+        from src.runtime.tick_cost import current_tick_token
+        token = current_tick_token()
+    except Exception:  # noqa: BLE001  # allow-silent: no token means read fresh (today's behaviour)
+        token = None
+    if token is None:
+        return read()
+    key = (token, what)
+    if key in _DESK_TICK_MEMO:
+        return _DESK_TICK_MEMO[key]
+    value = read()
+    # Keep only this tick's entries: a stale token can never be read again.
+    for k in [k for k in _DESK_TICK_MEMO if k[0] != token]:
+        _DESK_TICK_MEMO.pop(k, None)
+    _DESK_TICK_MEMO[key] = value
+    return value
+
+
 def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
     """The Claude trading desk's leg (DESK-17, design § 3.7) — accepted proposals, not candles.
 
@@ -6583,12 +6655,12 @@ def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
                                            "meta": {"strategy_name": name, "reason": reason}})
 
     try:
-        cfg = (load_strategy_config() or {}).get(name) or {}
+        cfg = (_desk_tick_read(("config", id(load_strategy_config)), load_strategy_config) or {}).get(name) or {}
     except Exception as exc:  # noqa: BLE001
         return _none(f"config_unreadable: {exc}")
     if not bool(cfg.get("enabled", False)):
         return _none("disabled")
-    rows = cd.read_queue()
+    rows = _desk_tick_read(("queue", str(cd.queue_path())), cd.read_queue)
     if not rows:
         return _none("no_accepted_proposals")
     try:
