@@ -1,0 +1,5 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "why": "Order-path change (src/units/accounts/alpaca_client.py place_protective + src/runtime/order_monitor.py naked re-arm sweep) on real-money Alpaca books. Operator decision on PI-20261117-LSFHBH4A-0002, relayed by Manager 26a 2026-11-27 ~08:35Z, verbatim: \"Build now (Recommended)\". Fixes the TP-doctrine gap where a re-arm that succeeds only after releasing a sibling row's standalone take-profit left that sibling with NO target: the released targets are now restored after the new OCO rests, every placed order is read back, both packages' resting state is reported, and a sibling target that cannot be restored raises ONE latched alert (no halting). Place-first is documented as impossible on Alpaca (the sibling legs reserve the shares). Held for the operator's Tier-3 OK per the row; revert = git revert."
+}
