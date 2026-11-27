@@ -657,10 +657,38 @@ levers:
         max_drawdown_r: 9.6248
         verdict: fail
         joint_change: false
+      - value: '1.875'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_hi
+        unit: RQ-20261126-171
+        window: 2024-01-16..2026-11-25
+        n: 124
+        net_r: -6.6854
+        baseline_n: 155
+        baseline_net_r: -19.3563
+        delta_net_r: 12.6709
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 27.6423
+        verdict: pass
+        joint_change: false
+      - value: '1.125'
+        baseline_value: '1.5'
+        arm: atr_stop_mult_lo
+        unit: RQ-20261126-171
+        window: 2024-01-16..2026-11-25
+        n: 161
+        net_r: -4.0028
+        baseline_n: 155
+        baseline_net_r: -19.3563
+        delta_net_r: 15.3535
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 37.0329
+        verdict: pass
+        joint_change: false
       shape: noisy
-      points: 7
+      points: 9
       best_delta_r_per_trade: 0.1989
-      fold_stability: 0.452
+      fold_stability: 0.491
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     tp_r:
       tests:
@@ -678,10 +706,38 @@ levers:
         max_drawdown_r: 34.2471
         verdict: fail
         joint_change: false
-      shape: single_point
-      points: 1
-      best_delta_r_per_trade: -0.196
-      fold_stability: 0.25
+      - value: '62.5'
+        baseline_value: '50.0'
+        arm: tp_r_hi
+        unit: RQ-20261126-171
+        window: 2024-01-16..2026-11-25
+        n: 155
+        net_r: -19.3563
+        baseline_n: 155
+        baseline_net_r: -19.3563
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 45.8067
+        verdict: pass
+        joint_change: false
+      - value: '37.5'
+        baseline_value: '50.0'
+        arm: tp_r_lo
+        unit: RQ-20261126-171
+        window: 2024-01-16..2026-11-25
+        n: 155
+        net_r: -19.3563
+        baseline_n: 155
+        baseline_net_r: -19.3563
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 45.8067
+        verdict: pass
+        joint_change: false
+      shape: monotone
+      points: 3
+      best_delta_r_per_trade: 0.0
+      fold_stability: 0.75
       reading: every tested value is worse than the baseline
     be_floor_r:
       tests:

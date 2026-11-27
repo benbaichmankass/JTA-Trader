@@ -1513,6 +1513,111 @@ levers:
       best_delta_r_per_trade: 0.0471
       fold_stability: 0.65
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+    adx_min:
+      tests:
+      - value: '22'
+        baseline_value: '30'
+        arm: A22
+        unit: RQ-20261014-f0e2-04
+        window: 2024-10-05..2026-10-04
+        n: 72
+        net_r: -12.4766
+        baseline_n: 36
+        baseline_net_r: -1.552
+        delta_net_r: -10.9246
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 14.1389
+        verdict: indeterminate
+        joint_change: false
+      - value: '32'
+        baseline_value: '30'
+        arm: A32
+        unit: RQ-20261014-f0e2-04
+        window: 2024-10-05..2026-10-04
+        n: 35
+        net_r: 1.6312
+        baseline_n: 36
+        baseline_net_r: -1.552
+        delta_net_r: 3.1832
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 6.808
+        verdict: indeterminate
+        joint_change: false
+      - value: '35'
+        baseline_value: '30'
+        arm: A35
+        unit: RQ-20261014-f0e2-04
+        window: 2024-10-05..2026-10-04
+        n: 30
+        net_r: 3.6863
+        baseline_n: 36
+        baseline_net_r: -1.552
+        delta_net_r: 5.2383
+        folds_ge_baseline: 3/4
+        max_drawdown_r: 4.2783
+        verdict: indeterminate
+        joint_change: false
+      - value: '38'
+        baseline_value: '30'
+        arm: adx_min_hi
+        unit: RQ-20261126-169
+        window: 2021-11-14..2026-11-17
+        n: 87
+        net_r: 11.2789
+        baseline_n: 127
+        baseline_net_r: 13.2635
+        delta_net_r: -1.9846
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.2732
+        verdict: fail
+        joint_change: false
+      - value: '38'
+        baseline_value: '30'
+        arm: adx_min_hi
+        unit: RQ-20261126-169
+        window: 2021-11-14..2026-11-17
+        n: 87
+        net_r: 11.2789
+        baseline_n: 127
+        baseline_net_r: 13.2635
+        delta_net_r: -1.9846
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 7.2732
+        verdict: fail
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: adx_min_lo
+        unit: RQ-20261126-169
+        window: 2021-11-14..2026-11-17
+        n: 203
+        net_r: -1.3288
+        baseline_n: 127
+        baseline_net_r: 13.2635
+        delta_net_r: -14.5923
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 23.2917
+        verdict: fail
+        joint_change: false
+      - value: '22'
+        baseline_value: '30'
+        arm: adx_min_lo
+        unit: RQ-20261126-169
+        window: 2021-11-14..2026-11-17
+        n: 203
+        net_r: -1.3288
+        baseline_n: 127
+        baseline_net_r: 13.2635
+        delta_net_r: -14.5923
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 23.2917
+        verdict: fail
+        joint_change: false
+      shape: peaked
+      points: 7
+      best_delta_r_per_trade: 0.1455
+      fold_stability: 0.5
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     vol_skip_above_pctl:
       tests:
       - value: '0.8'
@@ -1695,55 +1800,6 @@ levers:
       best_delta_r_per_trade: 0.0
       fold_stability: 0.833
       reading: no response at the tested values
-    adx_min:
-      tests:
-      - value: '22'
-        baseline_value: '30'
-        arm: A22
-        unit: RQ-20261014-f0e2-04
-        window: 2024-10-05..2026-10-04
-        n: 72
-        net_r: -12.4766
-        baseline_n: 36
-        baseline_net_r: -1.552
-        delta_net_r: -10.9246
-        folds_ge_baseline: 1/4
-        max_drawdown_r: 14.1389
-        verdict: indeterminate
-        joint_change: false
-      - value: '32'
-        baseline_value: '30'
-        arm: A32
-        unit: RQ-20261014-f0e2-04
-        window: 2024-10-05..2026-10-04
-        n: 35
-        net_r: 1.6312
-        baseline_n: 36
-        baseline_net_r: -1.552
-        delta_net_r: 3.1832
-        folds_ge_baseline: 4/4
-        max_drawdown_r: 6.808
-        verdict: indeterminate
-        joint_change: false
-      - value: '35'
-        baseline_value: '30'
-        arm: A35
-        unit: RQ-20261014-f0e2-04
-        window: 2024-10-05..2026-10-04
-        n: 30
-        net_r: 3.6863
-        baseline_n: 36
-        baseline_net_r: -1.552
-        delta_net_r: 5.2383
-        folds_ge_baseline: 3/4
-        max_drawdown_r: 4.2783
-        verdict: indeterminate
-        joint_change: false
-      shape: monotone
-      points: 3
-      best_delta_r_per_trade: 0.1455
-      fold_stability: 0.667
-      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     vol_skip_below_pctl:
       tests:
       - value: '0.1'
@@ -1824,6 +1880,48 @@ levers:
   other:
     structure_exit:
       tests:
+      - value: pivot=3
+        baseline_value: 'off'
+        arm: S3
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 205
+        net_r: 0.1
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: -7.0958
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 10.3696
+        verdict: fail
+        joint_change: false
+      - value: pivot=5
+        baseline_value: 'off'
+        arm: S5
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 159
+        net_r: -2.1959
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: -9.3917
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 5.8722
+        verdict: fail
+        joint_change: false
+      - value: pivot=8
+        baseline_value: 'off'
+        arm: S8
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 132
+        net_r: 1.6387
+        baseline_n: 147
+        baseline_net_r: 7.1958
+        delta_net_r: -5.5571
+        folds_ge_baseline: 3/6
+        max_drawdown_r: 6.3039
+        verdict: fail
+        joint_change: false
       - value: 'off'
         baseline_value: pivot=5
         arm: N0
@@ -1866,10 +1964,10 @@ levers:
         max_drawdown_r: 6.3039
         verdict: fail
         joint_change: false
-      shape: monotone
-      points: 3
+      shape: noisy
+      points: 6
       best_delta_r_per_trade: 0.0591
-      fold_stability: 0.722
+      fold_stability: 0.583
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
     momentum_stale_bars:
       tests:
