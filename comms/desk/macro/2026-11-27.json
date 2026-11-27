@@ -1,0 +1,1033 @@
+{
+ "schema": "desk_macro_brief/1",
+ "brief_id": "DMB-20261127T1350Z",
+ "judged_at": "2026-11-27T13:50:00Z",
+ "info_cutoff_at": "2026-11-27T13:43:00Z",
+ "model": "sonnet-tier",
+ "skill_sha": "trading-desk-7b",
+ "supersedes": "DMB-20261126T2319Z",
+ "packet_path": "comms/desk/macro/packets/20261127T1337Z.json",
+ "packet_sha": "98368c04213a97b6ec9271d5f0e379f363a32f24568a0cc0c59c4b9c506ebd97",
+ "fetch_paths": [],
+ "analysis_paths": [
+  "comms/desk/macro/packets/analysis-20261127T134232Z.json"
+ ],
+ "sources": [
+  {
+   "source_id": "S1",
+   "kind": "packet",
+   "ref": "comms/desk/macro/packets/20261127T1337Z.json",
+   "retrieved_at": "2026-11-27T13:37:30Z",
+   "content_sha256": "98368c04213a97b6ec9271d5f0e379f363a32f24568a0cc0c59c4b9c506ebd97",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S2",
+   "kind": "analysis",
+   "ref": "comms/desk/macro/packets/analysis-20261127T134232Z.json",
+   "retrieved_at": "2026-11-27T13:42:32Z",
+   "content_sha256": "b87c74b33eaea6f6b86f5fe31367bb46f4634ecc9aaada383af492a3306d92b0",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S3",
+   "kind": "news_fxstreet_dxy_fed_priced",
+   "ref": "https://app.bigdata.com/documents/844B4FD6B82421567EB3E824266BE5F6",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "4e3a0178c0e23ac24bddb0c599131ea85e87a5bb1211bd923987c8a375ae010e",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S4",
+   "kind": "news_benzinga_futures_blackfriday",
+   "ref": "https://app.bigdata.com/documents/1BDBFE72E811D8FF961407D283763DAE",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "418f52baff6704b336bb4cdb18e9c6f9c59978990067381dc501e4822c5cc201",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S5",
+   "kind": "news_alliance_fed_hikes",
+   "ref": "https://app.bigdata.com/documents/494D1DD7C12EEFC5A258F63FC7DACBDF",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "ea7fbe013c6038209779cfc3d4517c0de0710f535ed877a8b7a0837cbaaa80f8",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S6",
+   "kind": "news_commerzbank_nfp_100k",
+   "ref": "https://app.bigdata.com/documents/4ABFF1123811C4FC95CA46ED1A63C0C3",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "113a7e122e92392bb6fdc7deb40b0262e1b7e49f3f2597054e4135bd7427f13c",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S7",
+   "kind": "news_wells_nfp_80k_ahe",
+   "ref": "https://app.bigdata.com/documents/6634725E22BAC6920322898CA14D0F66",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "c920cc07e4fff3755450e2204848acfe5c0dffbf66cba1f9a8c2093d83a433b8",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S8",
+   "kind": "news_cnbc_yields_nfp90k",
+   "ref": "https://app.bigdata.com/documents/56CE67E9ECD47BF3AD6E28EA1B9AFF5C",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "1585db758ab37c7bfc2354992d53830769277c8ceb730e149acc8ac0a1278165",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S9",
+   "kind": "news_lseg_poll_nfp90k",
+   "ref": "https://app.bigdata.com/documents/034D10EAC64CC0DDC5DA30DF4AA35785",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "52912e941888615f5ba8b4aeeea100206e984a4572751897bc648a81803690a9",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S10",
+   "kind": "news_thefly_silver_rebound",
+   "ref": "https://app.bigdata.com/documents/2C4D2D62CD7A8FDF44A3070BE1C07D30",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "a0906f6dd0649b9f691e7890f697840508dce4e414a0f482740085392dfed426",
+   "influence": "decisive"
+  },
+  {
+   "source_id": "S11",
+   "kind": "news_fxstreet_silver",
+   "ref": "https://app.bigdata.com/documents/6DB281FFC927176D9137470F021F1AAA",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "e48686f5e159cb6021de40b4976d2adce02975890808eb1a3bd9c2d6006181cf",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S12",
+   "kind": "news_yahoo_gold_fed",
+   "ref": "https://app.bigdata.com/documents/8CCF029F0E85697263040533264D1BCA",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "1486c4fe36f75ea317091486f182c9b955b97e2915707bb3252862fc057beffd",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S13",
+   "kind": "news_btc_etf_outflows",
+   "ref": "https://app.bigdata.com/documents/41B3599E86DA8CB5119C8B569FB6637F",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "6a5a39556a148297b3a96347779387637ca716018f704907b63d86ff6de01cc0",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S14",
+   "kind": "news_btc_weekly",
+   "ref": "https://app.bigdata.com/documents/B97D22ED49F1B60FC55DB9E0E08B7547",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "2a1e2bdb7acdf5af8eda795a1b40af78d224e1ee9e03f9032cd5f55a1942dec4",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S15",
+   "kind": "news_mtnews_futures",
+   "ref": "https://app.bigdata.com/documents/9660F6E4A44256F57D728AD69927C798",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "6d41f6900bb02d9de5bf47de85a0958d4e1932706ee1d540b40470b5ebf65b16",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S16",
+   "kind": "news_benzinga_wed_close",
+   "ref": "https://app.bigdata.com/documents/654308E0E1D4F79FC3C358978DE67136",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "aaa39f9e268630bcdd6c87f93861caea966460b88678f1541388647b4567ae08",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S17",
+   "kind": "news_bi_futures_oil",
+   "ref": "https://app.bigdata.com/documents/DAEE5F420780043ED9256046E01D7BCF",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "481791814da7699601ead3b063b0337a29c3224618a9a10b5151f0b12251bd3d",
+   "influence": "supporting"
+  },
+  {
+   "source_id": "S18",
+   "kind": "news_mblock_btc_fear",
+   "ref": "https://app.bigdata.com/documents/52913624E6246EED3A96D33162C7C070",
+   "retrieved_at": "2026-11-27T13:42:05Z",
+   "content_sha256": "4265f5cbecd8a149d77391938d721a20693579e3183e04a702448f908375b65c",
+   "influence": "supporting"
+  }
+ ],
+ "regime": {
+  "call": "risk_off",
+  "axes": {
+   "growth": 1,
+   "inflation": 1,
+   "liquidity": -1,
+   "vol": 1
+  },
+  "confidence": 0.55,
+  "basis": "S5,S3: Fed in a hiking cycle, Dec 9 25bp hike ~96-99% priced after core PCE 3.3% y/y vs 3.2% (S5) and Q3 GDP 4.3%; S4,S15: Friday premarket relief rally (Nasdaq-100 +2.4-2.8%, S&P +1.7-2.0%) on an AI rebound after Wednesday's tech washout; S6: 10y back near 4.90% from 4.80%, DXY ~103.8; S17: Brent ~94-97 on Hormuz supply risk."
+ },
+ "tilts": [
+  {
+   "asset": "SLV",
+   "tilt": 0,
+   "horizon_days": 5,
+   "confidence": 0.3,
+   "source_ids": [
+    "S10",
+    "S11",
+    "S2"
+   ],
+   "basis": "S10,S11 silver +7-9% premarket erases the washout-bounce entry I proposed yesterday (SLV 36.8 limit now unreachable); fading the gap measures negative (SLV short conditional TP 21%, n=19, mean gross R -0.32): no trade"
+  },
+  {
+   "asset": "GLD",
+   "tilt": 0,
+   "horizon_days": 5,
+   "confidence": 0.3,
+   "source_ids": [
+    "S10",
+    "S12",
+    "S2"
+   ],
+   "basis": "S10 gold +3% premarket; GLD short conditional TP 19% (n=16): no trade"
+  },
+  {
+   "asset": "TLT",
+   "tilt": -1,
+   "horizon_days": 5,
+   "confidence": 0.3,
+   "source_ids": [
+    "S8",
+    "S3",
+    "S2"
+   ],
+   "basis": "S8 yields +5bp to 4.90% as risk returns; Dec hike priced ~99%; low conviction"
+  },
+  {
+   "asset": "BTCUSDT",
+   "tilt": 1,
+   "horizon_days": 5,
+   "confidence": 0.3,
+   "source_ids": [
+    "S13",
+    "S14",
+    "S18",
+    "S2"
+   ],
+   "basis": "S13,S14 record ETF outflows and S18 fear index 11 vs conditional long TP 27% (n=26, mean gross R +0.19): capitulation bounce candidate, weak n"
+  }
+ ],
+ "calendar": [
+  {
+   "event_key": "US_ISM_MFG_2026-12-01",
+   "at": "2026-12-01T15:00:00Z",
+   "class": "scheduled.macro.pmi",
+   "source_ids": [
+    "S1"
+   ]
+  },
+  {
+   "event_key": "US_NFP_2026-12-04",
+   "at": "2026-12-04T13:30:00Z",
+   "class": "scheduled.macro.nfp",
+   "source_ids": [
+    "S1",
+    "S9"
+   ]
+  },
+  {
+   "event_key": "US_FOMC_2026-12-09",
+   "at": "2026-12-09T19:00:00Z",
+   "class": "scheduled.macro.rate_decision",
+   "source_ids": [
+    "S1",
+    "S4"
+   ]
+  },
+  {
+   "event_key": "US_CPI_2026-12-10",
+   "at": "2026-12-10T13:30:00Z",
+   "class": "scheduled.macro.cpi",
+   "source_ids": [
+    "S1"
+   ]
+  }
+ ],
+ "events": [
+  {
+   "event_id": "EV-20261127-GAP",
+   "published_at": "2026-11-27T13:30:02Z",
+   "class": "unscheduled.crypto.etf_flow",
+   "source_ids": [
+    "S13",
+    "S14"
+   ],
+   "direction": -1,
+   "magnitude": "large",
+   "horizon_days": 5,
+   "confidence": 0.5,
+   "affected": [
+    "BTCUSDT"
+   ],
+   "summary": "Spot BTC ETFs: record $5.39B November outflows, -$453M on 11-25; BTC ~61.7k premarket after a 57.3k low; Fear&Greed 11"
+  },
+  {
+   "event_id": "EV-20261125-HORMUZ",
+   "published_at": "2026-11-25T22:04:38Z",
+   "class": "unscheduled.geopolitical.conflict",
+   "source_ids": [
+    "S17"
+   ],
+   "direction": 1,
+   "magnitude": "medium",
+   "horizon_days": 5,
+   "confidence": 0.5,
+   "affected": [
+    "USO"
+   ],
+   "summary": "Hormuz/Saudi site attacks keep Brent ~94-97; OPEC+ meets Sunday 11-29"
+  }
+ ],
+ "trades": [
+  {
+   "proposal": {
+    "symbol": "FXI",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 31.2,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 30.7,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 31.96,
+     "basis": "1.5 ATR above entry, inside the venue cap",
+     "p_hit": 0.35
+    },
+    "expected_r_net": 0.1,
+    "thesis": "Oversold bounce: FXI -2.1 ATR in 5d, -3.6 ATR from SMA20; own-history same 1.0/1.5 ATR geometry hit TP before SL 34% unconditionally and 41% (n=27) when this oversold; mean gross R +0.15 / +0.57. Global risk-on premarket (S4,S15) is a tailwind; the tariff proposal is known and was muted. Packet bars end 11-25 close 31.30; no FXI premarket read, so entry stays a limit near the last close.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.35,
+   "catalyst": "regime: global de-risking washout with a Friday AI-led risk rebound; US tariff proposal on China already known",
+   "invalidation": "FXI closes below 30.7 or a formal tariff escalation beyond the proposal",
+   "forecast_ids": [
+    "F-FXI-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S4",
+    "S15",
+    "S17"
+   ],
+   "management": {
+    "design": "Oversold bounce in a name with a known, partly priced negative (tariff proposal). Not a China view; one-week rebound.",
+    "expected_path": "Two-day base, then drift to 31.9-32.0.",
+    "watch_for": [
+     {
+      "signal": "formal tariff announcement beyond the proposal on China",
+      "source_ids": [
+       "S15"
+      ]
+     },
+     {
+      "signal": "daily close below the stop",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 30.7
+      }
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM manufacturing",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close above 31.7: trail to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 31.7
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 30.7",
+      "check": {
+       "kind": "close_below",
+       "level": 30.7
+      }
+     }
+    ],
+    "do_not": [
+     "do not average down",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "formal escalation of US tariffs/export controls on China"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "BTCUSDT",
+    "venue_class": "perp",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 60500,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 57500,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 65000,
+     "basis": "1.5 ATR above entry",
+     "p_hit": 0.25
+    },
+    "expected_r_net": 0.0,
+    "thesis": "Capitulation-bounce candidate: BTC -20% in 20d, -1.8 ATR from SMA20, Fear&Greed 11 (S18), record spot-ETF outflows $5.39B in November (S14) with the BTC ~$57.3k low on 11-25. Own-history long geometry 1.0/1.5 ATR hit TP 23% unconditionally (mean gross R -0.03) and 27% conditional (n=26, mean +0.19): thin n, so judge_prior stays near the unconditional rate. Expected net R is about zero.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.25,
+   "catalyst": "regime: record ETF outflows and extreme fear as an oversold-contrarian setup; risk-on equity rebound Friday (S4)",
+   "invalidation": "BTC closes below 57,300 (the 11-26 low) or ETF outflows keep exceeding $1B/week with the $55.1k yearly low breaking",
+   "forecast_ids": [
+    "F-BTCUSDT-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S13",
+    "S14",
+    "S18",
+    "S4"
+   ],
+   "management": {
+    "design": "Contrarian 1-5 day bounce off washed-out positioning; the edge is the extreme state, not a view on flows. Limit at the last close so a pullback fills us; stop 1 ATR; TP 1.5 ATR.",
+    "expected_path": "Chop 57.5-62k, then retest 64-65k if equities hold the AI rebound.",
+    "watch_for": [
+     {
+      "signal": "spot ETF net flows turn positive for 2 days (squeeze fuel)",
+      "source_ids": [
+       "S13",
+       "S14"
+      ]
+     },
+     {
+      "signal": "daily close below 57,500",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 57500
+      }
+     },
+     {
+      "signal": "Dec 4 NFP hot: hike-path repricing hits risk",
+      "source_ids": [
+       "S6",
+       "S7"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM manufacturing",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close above 63,000: trail stop to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 63000
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 57,500",
+      "check": {
+       "kind": "close_below",
+       "level": 57500
+      }
+     }
+    ],
+    "do_not": [
+     "do not add on a lower low",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "daily close below the 55,100 yearly low"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "TLT",
+    "venue_class": "etf",
+    "side": "short",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 82.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 82.8,
+     "basis": "1.0 ATR above entry"
+    },
+    "tp": {
+     "level": 80.8,
+     "basis": "1.5 ATR below entry",
+     "p_hit": 0.27
+    },
+    "expected_r_net": 0.0,
+    "thesis": "Fade the bond bid: TLT +2.6 ATR in 5d to 1.5 ATR above SMA20 on a flight-to-quality from the tech washout; Friday the 10y is back +5-6bp to ~4.90% (S6,S8) as risk returns and a Dec hike is ~99% priced (S4). Own-history short geometry 29% unconditional, 27% conditional (n=145), mean gross R +0.02: no real edge, expected net R about zero. Packet close 82.23; premarket yields imply TLT near 81.5, so the 82.0 limit is a bounce entry.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.27,
+   "catalyst": "regime: Fed hiking cycle (core PCE 3.3% vs 3.2%); bond rally was risk-off driven and is reversing on the AI rebound",
+   "invalidation": "TLT closes above 82.8 or NFP/ISM soften enough to price an early end to hikes",
+   "forecast_ids": [
+    "F-TLT-ptp",
+    "F-core_cpi_mom"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S3",
+    "S5",
+    "S8"
+   ],
+   "management": {
+    "design": "Mean-reversion short on the risk-off bond bid; thin edge, kept as a hedge-style expression against the long equity/BTC rebounds.",
+    "expected_path": "Yields grind 4.90-5.00% into NFP; TLT 80.8-81.5.",
+    "watch_for": [
+     {
+      "signal": "10y yield back below 4.80% (bid returns)",
+      "source_ids": [
+       "S8"
+      ]
+     },
+     {
+      "signal": "close above the stop",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_above",
+       "level": 82.8
+      }
+     },
+     {
+      "signal": "Dec 4 NFP soft (< +50K) or AHE < 0.2%",
+      "source_ids": [
+       "S6",
+       "S7"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM manufacturing",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close below 81.2: trail stop to entry",
+      "check": {
+       "kind": "close_below",
+       "level": 81.2
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close above 82.8",
+      "check": {
+       "kind": "close_above",
+       "level": 82.8
+      }
+     }
+    ],
+    "do_not": [
+     "do not add into NFP",
+     "do not hold through FOMC at a loss"
+    ],
+    "thesis_invalidated_by": "core data softening enough to price the end of hikes"
+   }
+  },
+  {
+   "proposal": {
+    "symbol": "SPY",
+    "venue_class": "etf",
+    "side": "long",
+    "timeframe": "1d",
+    "horizon_bars": 5,
+    "entry": {
+     "type": "limit",
+     "level": 722.0,
+     "good_till_bars": 3
+    },
+    "stop": {
+     "level": 707.0,
+     "basis": "1.0 ATR below entry"
+    },
+    "tp": {
+     "level": 745.0,
+     "basis": "1.5 ATR above entry",
+     "p_hit": 0.27
+    },
+    "expected_r_net": 0.0,
+    "thesis": "Pullback-to-gap buy: SPY -7.2% in 20d, -1.5 ATR from SMA20; Friday premarket SPY ~729 (+1.7-2.0%, S4,S15), so a 722 limit needs a ~1% give-back of the gap. Own-history long geometry 26% unconditional (mean gross R +0.05), 31% conditional (n=110, mean -0.13): no demonstrated edge, expected net R about zero.",
+    "novelty": "unverifiable",
+    "onboarding": "onboarded"
+   },
+   "judge_prior": 0.27,
+   "catalyst": "regime: AI-led correction with a Friday relief rally; Dec hike ~99% priced, so the NFP/FOMC tail risk is a hawkish surprise",
+   "invalidation": "SPY closes below 707 or a hot NFP forces a 50bp-hike repricing",
+   "forecast_ids": [
+    "F-SPY-ptp"
+   ],
+   "source_ids": [
+    "S1",
+    "S2",
+    "S4",
+    "S15",
+    "S16"
+   ],
+   "management": {
+    "design": "Dip-buy of the correction using the relief gap as the entry anchor; it exists to keep an equity-beta expression in the book on a thesis-free day, not because the edge is measured.",
+    "expected_path": "Half-day gap fade to 722-725, then a drift toward 740 if yields stay near 4.9%.",
+    "watch_for": [
+     {
+      "signal": "Dec 4 NFP > +150K with AHE > 0.4%: hike-path repricing",
+      "source_ids": [
+       "S6",
+       "S7"
+      ]
+     },
+     {
+      "signal": "daily close below 707",
+      "source_ids": [
+       "S1"
+      ],
+      "check": {
+       "kind": "close_below",
+       "level": 707.0
+      }
+     },
+     {
+      "signal": "Waller-style 50bp hike talk resurfacing",
+      "source_ids": [
+       "S9"
+      ]
+     }
+    ],
+    "catalyst_timing": [
+     "2026-12-01T15:00:00Z ISM manufacturing",
+     "2026-12-04T13:30:00Z NFP",
+     "2026-12-09T19:00:00Z FOMC"
+    ],
+    "tighten_if": [
+     {
+      "signal": "daily close above 734: trail stop to entry",
+      "check": {
+       "kind": "close_above",
+       "level": 734.0
+      }
+     }
+    ],
+    "exit_early_if": [
+     {
+      "signal": "daily close below 707",
+      "check": {
+       "kind": "close_below",
+       "level": 707.0
+      }
+     }
+    ],
+    "do_not": [
+     "do not add on a lower low",
+     "do not hold through FOMC if not at breakeven"
+    ],
+    "thesis_invalidated_by": "daily close below the 686.75 20-day low"
+   }
+  }
+ ],
+ "forecasts": [
+  {
+   "forecast_id": "F-continuing_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-continuing-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "CCSA",
+    "transform": "level",
+    "period": "2026-11-21",
+    "naive_point": 1697000.0,
+    "unit": "claims"
+   },
+   "own_point": 1694291.772653,
+   "interval": {
+    "lo": 1655747.183317,
+    "hi": 1732836.361989,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CCSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com (S6-S9) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-initial_jobless_claims",
+   "target": {
+    "kind": "release",
+    "key": "evt-initial-jobless-claims-2026-12-03-us",
+    "resolves_at": "2026-12-03T13:30:00Z",
+    "series": "ICSA",
+    "transform": "level",
+    "period": "2026-11-28",
+    "naive_point": 189000.0,
+    "unit": "claims"
+   },
+   "own_point": 187470.748599,
+   "interval": {
+    "lo": 176152.0744,
+    "hi": 198789.422797,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED ICSA (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com (S6-S9) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-average_hourly_earnings_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-average-hourly-earnings-mom-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "CES0500000003",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.369783,
+    "unit": "% m/m"
+   },
+   "own_point": 0.25054,
+   "interval": {
+    "lo": 0.085989,
+    "hi": 0.415091,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CES0500000003 (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com (S6-S9): only Wells Fargo's single 0.3% m/m (S7), not a consensus",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-nfp",
+   "target": {
+    "kind": "release",
+    "key": "evt-nfp-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "PAYEMS",
+    "transform": "diff",
+    "period": "2026-11-01",
+    "naive_point": 165.0,
+    "unit": "thousands, m/m change"
+   },
+   "own_point": 138.718948,
+   "interval": {
+    "lo": -11.702296,
+    "hi": 289.140193,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED PAYEMS (diff), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": 90.0,
+   "own_minus_consensus": 48.71894800000001,
+   "consensus_read_state": "measured",
+   "consensus_source": "S9",
+   "consensus_reason": null,
+   "gap_z": 0.415,
+   "consensus_note": "LSEG and Reuters polls both 90K (S8,S9); single-forecaster: Commerzbank 100K (S6), Wells Fargo 80K (S7)"
+  },
+  {
+   "forecast_id": "F-unemployment_rate",
+   "target": {
+    "kind": "release",
+    "key": "evt-unemployment-rate-2026-12-04-us",
+    "resolves_at": "2026-12-04T13:30:00Z",
+    "series": "UNRATE",
+    "transform": "level",
+    "period": "2026-11-01",
+    "naive_point": 4.1,
+    "unit": "%"
+   },
+   "own_point": 4.149111,
+   "interval": {
+    "lo": 3.987974,
+    "hi": 4.310248,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED UNRATE (level), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": 4.1,
+   "own_minus_consensus": 0.04911100000000079,
+   "consensus_read_state": "measured",
+   "consensus_source": "S9",
+   "consensus_reason": null,
+   "gap_z": 0.391
+  },
+  {
+   "forecast_id": "F-core_cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-core-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPILFESL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.296256,
+    "unit": "% m/m"
+   },
+   "own_point": 0.273985,
+   "interval": {
+    "lo": 0.149771,
+    "hi": 0.398199,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPILFESL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com (S6-S9) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-cpi_mom",
+   "target": {
+    "kind": "release",
+    "key": "evt-cpi-mom-2026-12-10-us",
+    "resolves_at": "2026-12-10T13:30:00Z",
+    "series": "CPIAUCSL",
+    "transform": "pct",
+    "period": "2026-11-01",
+    "naive_point": 0.350285,
+    "unit": "% m/m"
+   },
+   "own_point": 0.300926,
+   "interval": {
+    "lo": 0.036715,
+    "hi": 0.565137,
+    "level": 0.8
+   },
+   "method": "seasonal_ar_ols_v1 on FRED CPIAUCSL (pct), walk-forward RMSE interval",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "consensus_source": null,
+   "consensus_reason": "Searched Bigdata.com (S6-S9) for a published consensus; none found",
+   "gap_z": null
+  },
+  {
+   "forecast_id": "F-FXI-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "FXI_long_31.2",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.35,
+   "interval": {
+    "lo": 0.24,
+    "hi": 0.47,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-BTCUSDT-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "BTCUSDT_long_60500",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.25,
+   "interval": {
+    "lo": 0.15,
+    "hi": 0.36,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-TLT-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "TLT_short_82.0",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.27,
+   "interval": {
+    "lo": 0.17,
+    "hi": 0.38,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  },
+  {
+   "forecast_id": "F-SPY-ptp",
+   "target": {
+    "kind": "asset_p_tp",
+    "key": "SPY_long_722.0",
+    "resolves_at": "2026-12-04T21:00:00Z"
+   },
+   "own_point": 0.27,
+   "interval": {
+    "lo": 0.17,
+    "hi": 0.38,
+    "level": 0.8
+   },
+   "method": "empirical TP-before-SL rate of the identical ATR geometry on the symbol's own daily history (desk_macro_analysis priors), shrunk toward unconditional; conditional on today's state where n>=27",
+   "inputs": {
+    "analysis_ref": "DMA-20261127T134232Z",
+    "source_ids": [
+     "S2"
+    ]
+   },
+   "consensus": null,
+   "own_minus_consensus": null,
+   "consensus_read_state": "could_not_look",
+   "gap_z": null,
+   "consensus_reason": "no external market consensus exists for a trade's TP-before-SL probability; benchmark is the unconditional own-history rate in S2"
+  }
+ ],
+ "informs": [],
+ "no_trade_reason": null,
+ "notes": {
+  "parts_not_measured": {
+   "prices": "partial: 192/193 symbols measured; bars end 2026-11-25 (US closed 11-26), so ATR levels pre-date today's premarket gap"
+  },
+  "data_gaps": [
+   "Packet bars do not include today's premarket gap (SPY +1.7-2%, silver +7-9%, gold +3%): yesterday's SLV/GLD/SPY longs are dropped or re-levelled; SLV/GLD shorts measured negative on conditional history and are not proposed",
+   "no AHE, unemployment or claims consensus beyond single forecasters; NFP 90K and UR 4.1% are LSEG/Reuters polls (S8,S9)",
+   "calendar feed carries consensus on only 5 events; none for NFP/AHE (taken from S8,S9 instead)",
+   "no per-symbol news searches for SOL/XRP/ADA/AVAX/MES/MGC/MHG/IWM/QQQ; no copper-specific search this run",
+   "Outcome record empty (n=0 graded, no outcomes file): judge_priors are not calibrated on desk history; they are own-history geometry rates",
+   "source content_sha256 for web sources is sha256 of '<document id>|<headline>' as retrieved (full chunk text not stored)"
+  ],
+  "nowcast_vs_consensus": "NFP own 138.7K [-11.7, 289.1] vs poll 90K: gap +48.7K, gap_z +0.41, within noise; model RMSE 117K vs naive 136K. Unemployment own 4.15 vs poll 4.1, gap_z +0.39; model RMSE 0.126 is WORSE than naive 0.113 so no weight.",
+  "sunday_rerun": "Fresh packet 20261127T1337Z (calendar measured, COT/valuation measured, crypto OI measured, tradability measured)."
+ },
+ "training": {
+  "train_eligible": true,
+  "gate_eligible": false,
+  "label_clean_from": "2026-06-30"
+ }
+}
