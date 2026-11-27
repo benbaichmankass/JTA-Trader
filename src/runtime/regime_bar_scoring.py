@@ -283,6 +283,40 @@ def _discover_advisory_stage_model_ids(registry: Any) -> list:
     return sorted(ids)
 
 
+# Per-process minimum interval between LIVE passes (TICK-REGIME-BAR-ONCE,
+# 2026-11-27). ``pipeline.run_pipeline`` calls this once per SYMBOL pass, so a
+# 41-symbol tick ran the whole symbol-agnostic pass 41x (registry rebuild +
+# discovery + fingerprint glob each time): 656 calls / 16 ticks, mean 1.06 s =
+# ~43 s of a ~125 s tick (/api/diag tick_cost, 2026-11-27 08:55-09:30Z). The
+# pass scores every head on its own closed-bar cadence and dedups per bar, so
+# running it at most once per interval loses nothing but, at worst, scores a
+# bar one interval later (observe-only path). Only the live path (no injected
+# predictors / clock) is throttled. ``REGIME_BAR_MIN_INTERVAL_S``; ``0`` = off.
+_DEFAULT_MIN_INTERVAL_S: float = 30.0
+_LAST_LIVE_PASS: list[float] = [float("-inf")]
+
+
+def _min_interval_seconds() -> float:
+    raw = os.environ.get("REGIME_BAR_MIN_INTERVAL_S")
+    if raw is None or str(raw).strip() == "":
+        return _DEFAULT_MIN_INTERVAL_S
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        return _DEFAULT_MIN_INTERVAL_S
+    return val if val > 0 else 0.0
+
+
+def _live_pass_due() -> bool:
+    """True (and arms the interval) when a live pass may run now."""
+    interval = _min_interval_seconds()
+    t = time.monotonic()
+    if interval and t - _LAST_LIVE_PASS[0] < interval:
+        return False
+    _LAST_LIVE_PASS[0] = t
+    return True
+
+
 def _resolve_regime_predictors(registry_root: Any, log_path: Any) -> list:
     """Resolve the cached list of shadow- AND advisory-stage predictors.
 
@@ -379,6 +413,8 @@ def emit_regime_bar_predictions(
         from src.runtime.shadow_adapter import with_shadow_preds
 
         if predictors is None:
+            if now is None and not _live_pass_due():
+                return 0
             from pathlib import Path
 
             from ml.shadow.factory import DEFAULT_REGISTRY_ROOT

@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Runtime change on the live trader's main loop (src/runtime/regime_bar_scoring.py, an observe-only shadow/advisory scoring path called from pipeline.py once per symbol pass). Throttles the symbol-agnostic live pass to at most once per 30 s (REGIME_BAR_MIN_INTERVAL_S, 0 = old behaviour), cutting ~40 s from a ~125 s tick (measured 2026-11-27 /api/diag tick_cost: pipeline.regime_bar_scoring n=656 over 16 ticks, mean 1.06 s). No order path, no strategy config, no risk caps. Held for the manager's Tier-2 OK and merge."
+}
