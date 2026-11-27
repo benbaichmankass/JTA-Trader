@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-27T15:00:00Z",
- "bar_close": "2026-11-27T15:05:00Z",
- "built_at": "2026-11-27T15:06:06Z",
+ "bar": "2026-11-27T15:05:00Z",
+ "bar_close": "2026-11-27T15:10:00Z",
+ "built_at": "2026-11-27T15:12:43Z",
  "closed": false,
  "order_package_id": "pkg-e9983a4846504cb6",
  "packet": {
@@ -62,9 +62,9 @@
    "direction": "long",
    "funding": null,
    "news": {
-    "adjustment": -0.000104,
+    "adjustment": 0.000735,
     "decision": "neutral",
-    "ts": "2026-11-27T15:05:38.477443+00:00",
+    "ts": "2026-11-27T15:10:08.200082+00:00",
     "veto": false
    },
    "previous_review": null,
@@ -82,13 +82,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     -0.637
+     -0.462
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_prop",
-     0.217
+     0.0382
     ],
     [
      "SPY",
@@ -100,19 +100,19 @@
      "TLT",
      "long",
      "tlt_pullback_1d",
-     1.13
+     1.08
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.7
+     0.477
     ],
     [
      "MGC",
      "long",
      "mgc_trend_1h",
-     0.228
+     0.0411
     ],
     [
      "BTCUSDT",
@@ -124,7 +124,7 @@
      "IEF",
      "long",
      "ief_pullback_1d",
-     1.2
+     1.15
     ]
    ],
    "book_note": "[symbol, direction, leg, open_r (null = not measured)] per OTHER open package, either side",
@@ -416,31 +416,7 @@
     "timeframe": "1w",
     "trend_now": null
    },
-   "live_vs_backtest": {
-    "read_state": "read",
-    "rows": [
-     {
-      "backtest_expectancy_r": null,
-      "backtest_n": 0,
-      "book": "realMoney",
-      "closed": 0,
-      "live_r": null,
-      "r_trades": 0,
-      "verdict": "NO_BACKTEST",
-      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
-     },
-     {
-      "backtest_expectancy_r": null,
-      "backtest_n": 0,
-      "book": "mirror",
-      "closed": 0,
-      "live_r": null,
-      "r_trades": 0,
-      "verdict": "NO_BACKTEST",
-      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
-     }
-    ]
-   }
+   "live_vs_backtest": null
   },
   "cost": {
    "basis": null
@@ -470,7 +446,7 @@
    "head": "2e6343e259",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T15:06:36Z",
+  "info_cutoff_at": "2026-11-27T15:13:46Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: BTCUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-2e227e58c3f7424d, pkg-ba1ffcf8ed9b498e); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
@@ -485,6 +461,22 @@
    "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:ib_orders",
+    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
+   },
+   {
+    "field": "read:alpaca_orders",
+    "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+   },
+   {
+    "field": "read:perf_recent",
+    "reason": "timed out"
+   },
+   {
+    "field": "read:bybit_history:bybit_1:BTCUSDT",
+    "reason": "diag bybit_raw_order_history?account_id=bybit_1&symbol=BTCUSDT&start_ms=1795790279114&end_ms=1795792486445: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is "
+   },
    {
     "field": "regime.atr_now_over_entry",
     "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
@@ -514,6 +506,14 @@
     "reason": "no bar has opened since the fill yet: no in-trade excursion is measurable (REVIEWER-BRIEF step 0)"
    },
    {
+    "field": "context_v3.live_vs_backtest",
+    "reason": "api/bot/performance/recent not read"
+   },
+   {
+    "field": "context.live_vs_backtest",
+    "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
+   },
+   {
     "field": "desk_handoff",
     "reason": "opening desk row 'DMB-20261127T1350Z/T2' not found"
    }
@@ -536,6 +536,12 @@
     {
      "count": 1,
      "denominator": 1,
+     "field": "context_v3.live_vs_backtest",
+     "reason": "context_null:live_vs_backtest"
+    },
+    {
+     "count": 1,
+     "denominator": 1,
      "field": "state.open_r",
      "reason": "context_null:state.open_r"
     }
@@ -554,25 +560,18 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T1506Z-pkg-e9983a4846504cb6",
+  "review_id": "LR-20261127T1512Z-pkg-e9983a4846504cb6",
   "short_hold": {
-   "atr": 360.6071428571413,
-   "bar": "2026-11-27T15:00:00Z",
-   "bar_close": "2026-11-27T15:05:00Z",
+   "atr": 384.4071428571416,
+   "bar": "2026-11-27T15:05:00Z",
+   "bar_close": "2026-11-27T15:10:00Z",
    "entry": 60497.5,
-   "mark": 59055.9,
-   "minutes_held": 27.6,
-   "open_r_at_mark": -0.4809,
+   "mark": 59131.8,
+   "minutes_held": 34.2,
+   "open_r_at_mark": -0.4556,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 61413.0,
-     "high": 61495.1,
-     "low": 61388.4,
-     "open": 61437.7,
-     "t": "2026-11-27T14:05:00Z"
-    },
     {
      "close": 61454.4,
      "high": 61482.9,
@@ -649,6 +648,13 @@
      "low": 58766.8,
      "open": 59174.4,
      "t": "2026-11-27T15:00:00Z"
+    },
+    {
+     "close": 59131.8,
+     "high": 59187.5,
+     "low": 58745.7,
+     "open": 59055.9,
+     "t": "2026-11-27T15:05:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -674,25 +680,18 @@
    }
   ]
  },
- "packet_sha": "f842aa8443beb1d39c38acc8a26dd144842a1ec4d89a94bbb4553fff6c3350da",
+ "packet_sha": "8f40baa3916c3c245f09d128b3ef711a960354b68e65e757cfc2cf4ad90e4fa7",
  "short_hold": {
-  "atr": 360.6071428571413,
-  "bar": "2026-11-27T15:00:00Z",
-  "bar_close": "2026-11-27T15:05:00Z",
+  "atr": 384.4071428571416,
+  "bar": "2026-11-27T15:05:00Z",
+  "bar_close": "2026-11-27T15:10:00Z",
   "entry": 60497.5,
-  "mark": 59055.9,
-  "minutes_held": 27.6,
-  "open_r_at_mark": -0.4809,
+  "mark": 59131.8,
+  "minutes_held": 34.2,
+  "open_r_at_mark": -0.4556,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 61413.0,
-    "high": 61495.1,
-    "low": 61388.4,
-    "open": 61437.7,
-    "t": "2026-11-27T14:05:00Z"
-   },
    {
     "close": 61454.4,
     "high": 61482.9,
@@ -769,6 +768,13 @@
     "low": 58766.8,
     "open": 59174.4,
     "t": "2026-11-27T15:00:00Z"
+   },
+   {
+    "close": 59131.8,
+    "high": 59187.5,
+    "low": 58745.7,
+    "open": 59055.9,
+    "t": "2026-11-27T15:05:00Z"
    }
   ],
   "risk_per_unit": null,
