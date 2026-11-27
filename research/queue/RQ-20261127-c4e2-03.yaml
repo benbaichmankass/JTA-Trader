@@ -3,7 +3,7 @@
 id: RQ-20261127-c4e2-03
 title: 'ml_entry CAPACITY / FAMILY lever: on the registered dev folds, does a BIGGER learner (LightGBM 2000 trees / 127 leaves, or XGBoost on GPU at
   depth 6 / 8 / 10) beat the registered 300-tree LightGBM recipe, net of cost?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -137,3 +137,16 @@ related:
 population: The registered ml_entry recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, tau 0.10,
   net R after fee 11 bps rt + slippage 3 bps + funding 1 bps/8h.
 last_dispatched_at: '2026-11-27T12:30:08+00:00'
+grading:
+  attested: RULE-RQ20261127-c4e2-03-CAPACITY-ARMS
+  auto: true
+  decision_rule_id: RULE-RQ20261127-c4e2-03-CAPACITY-ARMS
+  evidence:
+  - research/results/RQ-20261127-c4e2-03/45990110825.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
