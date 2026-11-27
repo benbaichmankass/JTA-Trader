@@ -49,6 +49,11 @@ on:
         type: boolean
         required: false
         default: true
+      diagnose:
+        description: 'READ-ONLY census: print queued runs bucketed by age (<1h, 1-24h, >24h) x attempt x status, the top workflows per bucket, how many pass the delete filter, and event/branch/PR facts for the oldest >24h runs. Changes nothing. Default false.'
+        type: boolean
+        required: false
+        default: false
       throttle_seconds:
         description: 'With delete_zombies and dry_run=false: seconds to wait between deletes (default 2), so the run cannot exhaust the hourly API budget of the installation token.'
         type: string
@@ -88,9 +93,43 @@ jobs:
       # `queued` in the list but never started (282 of 283 on 2026-11-26). The only API path left is DELETE /actions/runs/{id},
       # which removes the run. Scope is deliberately narrow: queued, older than MIN_AGE_HOURS, run_attempt 1, and NO job
       # in_progress or completed. A run that ran is never touched. dry_run defaults TRUE: it lists, deletes nothing.
+      - name: Census of queued runs (read-only)
+        id: diagnose
+        if: github.event_name == 'workflow_dispatch' && inputs.diagnose
+        run: |
+          set -uo pipefail
+          # ACTIONS-ZOMBIE-QUEUED-RUNS (manager 26a, 2026-11-26): the 20:49Z re-delete saw 243 queued runs but only 11 candidates
+          # (queued, attempt 1, older than 24 h), against 284 at 17:33Z. Either most of the old zombies left the queue, or the
+          # candidate filter read from `gh run list --json` excludes them. This prints the numbers that tell the two apart. READ-ONLY.
+          tmp=$(mktemp)
+          gh run list --repo "$REPO" --status queued --limit 1000 \
+            --json databaseId,createdAt,attempt,status,workflowName,event,headBranch > "$tmp" || { echo "could not list queued runs"; exit 0; }
+          now=$(date -u +%s); cut=$(( MIN_AGE_HOURS * 3600 ))
+          echo "queued runs listed: $(jq 'length' "$tmp")  (min age for the delete filter: ${MIN_AGE_HOURS} h)"
+          echo "--- by age bucket x attempt x status"
+          jq -r --argjson now "$now" 'map(. + {age: ($now - (.createdAt | fromdateiso8601))})
+            | map(. + {bucket: (if .age < 3600 then "a <1h" elif .age < 86400 then "b 1-24h" else "c >24h" end)})
+            | group_by([.bucket, .attempt, .status]) | .[] | "\(.[0].bucket)  attempt=\(.[0].attempt)  status=\(.[0].status)  n=\(length)"' "$tmp"
+          echo "--- top workflows per bucket"
+          jq -r --argjson now "$now" 'map(. + {age: ($now - (.createdAt | fromdateiso8601))})
+            | map(. + {bucket: (if .age < 3600 then "a <1h" elif .age < 86400 then "b 1-24h" else "c >24h" end)})
+            | group_by(.bucket) | .[] | (.[0].bucket) as $b | (group_by(.workflowName) | map({w: .[0].workflowName, n: length}) | sort_by(-.n) | .[0:6][] | "\($b)  \(.n)  \(.w)")' "$tmp"
+          echo "--- the delete filter (queued, attempt 1, older than ${MIN_AGE_HOURS} h)"
+          jq -r --argjson now "$now" --argjson cut "$cut" '
+            "older than min age, any attempt/status: \([.[] | select(($now - (.createdAt | fromdateiso8601)) >= $cut)] | length)",
+            "  of those, status==queued and attempt==1 (the filter): \([.[] | select(($now - (.createdAt | fromdateiso8601)) >= $cut and .status == "queued" and .attempt == 1)] | length)"' "$tmp"
+          echo "--- oldest runs over the min age (id, created, event, branch, workflow, attempt)"
+          jq -r --argjson now "$now" --argjson cut "$cut" '[.[] | select(($now - (.createdAt | fromdateiso8601)) >= $cut)] | sort_by(.databaseId) | .[0:40][]
+            | "\(.databaseId)  \(.createdAt)  event=\(.event)  branch=\(.headBranch)  wf=\(.workflowName)  attempt=\(.attempt)"' "$tmp"
+          echo "--- REST facts for the 15 oldest over the min age (pull_requests, actor, path)"
+          for id in $(jq -r --argjson now "$now" --argjson cut "$cut" '[.[] | select(($now - (.createdAt | fromdateiso8601)) >= $cut)] | sort_by(.databaseId) | .[0:15][] | .databaseId' "$tmp"); do
+            echo "$id  $(gh api "repos/$REPO/actions/runs/$id" --jq '"pr_count=\(.pull_requests | length) head_repo_fork=\(.head_repository.fork) actor=\(.actor.login) trigger=\(.triggering_actor.login) path=\(.path) status=\(.status) conclusion=\(.conclusion)"' 2>&1 | head -c 220)"
+          done
+          rm -f "$tmp"
+
       - name: Delete never-started zombie runs
         id: zombies
-        if: github.event_name == 'workflow_dispatch' && inputs.delete_zombies
+        if: github.event_name == 'workflow_dispatch' && inputs.delete_zombies && !inputs.diagnose
         run: |
           set -uo pipefail
           # GH-API-RATE-LIMIT-1126 (manager 26a, 2026-11-26): the first live delete (run 45868657356) was refused 247 times (HTTP 403,
@@ -106,6 +145,9 @@ jobs:
           cutoff=$(date -u -d "${MIN_AGE_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
           ids=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId,createdAt,attempt,status \
                   --jq ".[] | select(.createdAt < \"$cutoff\" and .status == \"queued\" and .attempt == 1) | .databaseId" | sort -n || true)
+          # `total` is every run the filter selected; `cand` is how many the loop had PROCESSED when it ended. They differ whenever a
+          # stop condition fires (the 20:49Z run read "candidates=11" after 10 refusals in a row while the filter selected 242).
+          total=$(printf '%s\n' "$ids" | grep -c . || true)
           cand=0; elig=0; done_n=0; kept=0; refused=0; consec=0; stopped="none"
           for id in $ids; do
             cand=$((cand+1))
@@ -132,13 +174,13 @@ jobs:
             sleep "$THROTTLE"
           done
           after=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')
-          echo "SUMMARY: candidates(older than ${MIN_AGE_HOURS} h, queued, attempt 1)=$cand eligible=$elig deleted=$done_n refused=$refused kept=$kept stopped=$stopped dry_run=$DRY_RUN"
+          echo "SUMMARY: selected_by_filter=$total processed=$cand (older than ${MIN_AGE_HOURS} h, queued, attempt 1) eligible=$elig deleted=$done_n refused=$refused kept=$kept stopped=$stopped dry_run=$DRY_RUN"
           echo "queued runs AFTER: $after (before: $before)"
           echo "rate limit AFTER: $(rl)"
 
       - name: Cancel all queued workflow runs
         id: cancel
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.delete_zombies) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.delete_zombies || inputs.diagnose)) }}
         run: |
           set -euo pipefail
           before=$(gh run list --repo "$REPO" --status queued --limit 1000 --json databaseId --jq 'length' || echo '?')

@@ -55,6 +55,8 @@ if str(_REPO_ROOT) in sys.path:
 sys.path.insert(0, str(_REPO_ROOT))
 
 from src.runtime import execution_costs  # noqa: E402  (the ONE shared cost model)
+from src.runtime.structure_levels import (  # noqa: E402  (STRUCTURE-ARM-OTHER-HARNESSES: the ONE causal detector, as backtest_trend.py)
+    StructureExit as _StructureExit, StructureLevels as _StructureLevels, parse_structure_exit as _parse_structure_exit)
 import capital_efficiency  # noqa: E402  (the ONE capital-efficiency definition)
 import target_basis  # noqa: E402  (the ONE take-profit-basis definition)
 sys.path.insert(0, str(_REPO_ROOT / "scripts" / "research"))  # noqa: E402
@@ -398,6 +400,7 @@ def _simulate_exit(
     tp_thesis_fn: Optional[Any] = None,
     tp_atr: Optional[Any] = None,
     flat_bar: Optional[Any] = None,
+    structure_exit: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Walk forward from start_idx checking SL/TP hits against bar
     extremes. Assumes intra-bar SL/TP fills are at the level (no slippage).
@@ -572,6 +575,10 @@ def _simulate_exit(
             elif direction == "short" and trigger <= entry - risk_1r:
                 cur_sl = entry * (1 - be_offset_bps / 10000.0)
                 be_armed = True
+        # STRUCTURE EXIT (--structure-exit; None = off, byte-identical): bar j has CLOSED, so newly confirmed swing / FVG levels bind from bar
+        # j+1 (SL only ratchets toward price, TP is extend-only; src/runtime/structure_levels.py, the same object backtest_trend.py uses).
+        if structure_exit is not None:
+            cur_sl, tp = structure_exit.on_bar_close(j, float(df["close"].iloc[j]), cur_sl, tp, entry)
         # GEOM-B1 target revision (off unless --tp-extend-r / --tp-retarget-mode).
         # On the bar's CLOSE, after its own stop/target/lever tests; the revised
         # level binds from the next bar. Native thesis = the scalp's own setup, as
@@ -834,6 +841,10 @@ def run_backtest(
     skip_hours: str = "",
     decision_bar: str = "closed",
     decision_1m: Optional[pd.DataFrame] = None,
+    structure_exit: str = "",
+    structure_buffer_atr: float = 0.25,
+    structure_min_r: float = 1.0,
+    structure_fvg: bool = True,
 ) -> Dict[str, Any]:
     if be_floor_r < 0.0:
         raise ValueError(f"be_floor_r must be >= 0 (0 = off), got {be_floor_r!r}")
@@ -890,6 +901,21 @@ def run_backtest(
     tp_atr_arr = None
     if tp_geom.retarget_mode == "atr_rescale":
         tp_atr_arr = _tpg.atr_series(df, int(cfg.get("atr_period", 14))).to_numpy()
+    # STRUCTURE EXIT (--structure-exit pivot=N; "" = off, byte-identical): the swing / FVG detector is built ONCE over the whole frame and read
+    # causally (levels confirmed as of the signal bar). It replaces the unit's own SL and TP (the declared 1.5R bracket) per trade; a signal with no
+    # confirmed adverse swing keeps the declared bracket and is COUNTED (`structure_no_swing_fallbacks`), never dropped.
+    _sx_n = _parse_structure_exit(structure_exit)
+    _sx_levels = None
+    _sx_fallback = 0
+    _sx_atr = None
+    if _sx_n:
+        if forming:
+            raise ValueError("--structure-exit is not implemented with decision_bar='forming' (the same-bar replay has no structure walk)")
+        if tp_geom.armed or no_tp or tp_cap_pct > 0.0:
+            raise ValueError("--structure-exit replaces the unit's target: do not combine it with the TP geometry flags, --no-tp or --tp-cap-pct "
+                             "(the harness refuses two TP movers in one run)")
+        _sx_levels = _StructureLevels(df["high"].to_numpy(float), df["low"].to_numpy(float), _sx_n)
+        _sx_atr = _tpg.atr_series(df, int(cfg.get("atr_period", 14))).to_numpy()
     if n < warmup_bars + 5:
         raise ValueError(
             f"Not enough candles: have {n}, need at least {warmup_bars + 5}"
@@ -1031,6 +1057,19 @@ def run_backtest(
                 def _thesis_fn(_j, _long=(direction == "long"), _mid=_mid):
                     _c = float(df["close"].iloc[_j])
                     return (_c > _mid) if _long else (_c < _mid)
+        # STRUCTURE EXIT: SL / risk / TP from the last CONFIRMED swing and the nearest opposing level as of the signal bar (None = no
+        # confirmed adverse swing: the declared bracket stands for this trade and it is counted).
+        _sx = None
+        if _sx_levels is not None:
+            _a0 = float(_sx_atr[i]) if _sx_atr is not None else float("nan")
+            if _a0 == _a0 and _a0 > 0:
+                _sx = _StructureExit.start(_sx_levels, i, entry, direction == "long", _a0, risk,
+                                           buffer_atr=structure_buffer_atr, min_r=structure_min_r, fvg=structure_fvg)
+            if _sx is None:
+                _sx_fallback += 1
+            else:
+                sl, risk, tp = _sx.sl, _sx.risk, _sx.tp
+                tp_basis = "structure_exit"
         # ENTRY MODE. `market` (default, byte-identical): filled at `entry` and the
         # exit walk starts on the next bar. `limit` (RQ-20260930-502): a post-only limit
         # at `entry` rests for `limit_expire_bars` bars and fills ONLY if a bar's LOW is
@@ -1080,6 +1119,7 @@ def run_backtest(
             first_bar_no_tp=(entry_mode == "limit"),
             tp_tracker=_tpt, tp_thesis_fn=_thesis_fn, tp_atr=tp_atr_arr,
             flat_bar=flat_bar,
+            structure_exit=_sx,
         )
         exit_price = float(result["exit_price"])
         if direction == "long":
@@ -1293,6 +1333,12 @@ def run_backtest(
         summary["tp_geometry"] = _tpg.summarize_geometry([
             {**_tpg_row(t), "outcome": t.outcome} for t in trades])
         summary["tp_geometry"]["params"] = tp_geom.params()
+    if _sx_n:
+        summary["structure_exit"] = {"pivot": _sx_n, "buffer_atr": structure_buffer_atr, "min_r": structure_min_r, "fvg": structure_fvg,
+                                     "no_swing_fallbacks": _sx_fallback,
+                                     "rule": "SL beyond the last confirmed swing minus buffer x ATR (distance clamped to [0.5, 3.0] x the declared stop), "
+                                             "ratcheting toward price; TP the nearest opposing swing / unfilled FVG edge >= min_r R, extend-only; "
+                                             "a signal with no confirmed adverse swing keeps the declared bracket"}
     if session_flat_et:
         summary["session_flat"] = {
             "flat_et": session_flat_et, "reopen_et": "18:00",
@@ -1828,6 +1874,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--giveback-r", type=float, default=1.0, metavar="R",
                    help="Once armed, exit when >= this many R has been surrendered "
                         "from the peak (default 1.0).")
+    p.add_argument("--structure-exit", default="", metavar="pivot=N",
+                   help="STRUCTURE-ARM-OTHER-HARNESSES (default off = byte-identical): replace the unit's SL and TP per trade with the causal "
+                        "structure bracket (src/runtime/structure_levels.py, the detector backtest_trend.py uses): SL beyond the last CONFIRMED "
+                        "N-bar swing minus --structure-buffer-atr x ATR (clamped to [0.5, 3.0] x the declared stop), ratcheting; TP the "
+                        "nearest opposing swing / unfilled FVG edge >= --structure-min-r R, extend-only.")
+    p.add_argument("--structure-buffer-atr", type=float, default=0.25,
+                   help="ATR buffer beyond the swing for the structure stop (arm: 0 = no buffer).")
+    p.add_argument("--structure-min-r", type=float, default=1.0,
+                   help="Minimum distance of the structure TP from entry, in R.")
+    p.add_argument("--structure-no-fvg", action="store_true",
+                   help="Structure arm: swing levels only (no FVG edges as TP candidates).")
     p.add_argument("--session-flat-et", default=None, metavar="HH:MM",
                    help="session-flat account overlay (default off): close any open position at the last "
                         "bar closing at/before HH:MM America/New_York and take no entry from then to 18:00 ET "
@@ -1941,6 +1998,11 @@ def main(argv: List[str]) -> int:
     if _tpg_refusal:
         print(f"ERROR: {_tpg_refusal}", file=sys.stderr)
         return 2
+    try:
+        _parse_structure_exit(args.structure_exit)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     FEE_BPS_ROUNDTRIP = execution_costs.resolve_fee_bps_roundtrip(args.symbol, args.fee_bps_roundtrip)
     SLIPPAGE_BPS_ROUNDTRIP = (
         execution_costs.slippage_bps_roundtrip_for(args.symbol)
@@ -2041,6 +2103,10 @@ def main(argv: List[str]) -> int:
         taker_fee_bps=float(args.taker_fee_bps),
         tp_geometry=args.tp_geometry,
         session_flat_et=args.session_flat_et,
+        structure_exit=args.structure_exit,
+        structure_buffer_atr=args.structure_buffer_atr,
+        structure_min_r=args.structure_min_r,
+        structure_fvg=not args.structure_no_fvg,
     )
 
     try:

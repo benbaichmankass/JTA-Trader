@@ -1,0 +1,6 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "changes_landing_machinery",
+  "why": "queue_replenish.node_state reads a unit-less prerequisite node that can never materialise (authoring_closed, or itself moot) as moot instead of 'open (not materialised yet)'. Research-tooling read path only; no runtime, config or order path. 9 nodes move waiting to moot. Held only because queue_replenish.py is on the landing-machinery list (R12); the manager merges after reading it once."
+}
