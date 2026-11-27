@@ -613,7 +613,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     bundles = attach_packets(p) if (p["kind"] == "wake" and args.live) else None
     if bundles:
         # LTR-PACKET-ECHO: packet + table land on the rows branch by machine BEFORE the wake is posted.
-        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        # VM-CONTROL-1127: the job's GITHUB_TOKEN was refused on every evidence ref update (patch_ref 403 "Resource
+        # not accessible by integration"; MEASURED on every sampled wake run 2026-11-26 16:32Z..11-27 21:32Z, 26/26),
+        # so this fallback never landed a packet. EVIDENCE_TOKEN is the token the rows mirrors already push with.
+        token = (os.environ.get("EVIDENCE_TOKEN") or os.environ.get("GH_TOKEN")
+                 or os.environ.get("GITHUB_TOKEN") or "")
         ev = land_evidence(p, bundles, f"token {token}")
         print(f"ltr-wake: evidence {json.dumps(ev, sort_keys=True)}")
     dropped = apply_toggles(p, bundles) if (p["kind"] == "wake" and args.live) else []
