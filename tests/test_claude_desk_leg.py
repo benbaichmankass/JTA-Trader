@@ -194,9 +194,11 @@ def test_registered_once_and_rostered_only_on_soak_accounts():
     # trades what its venue can trade (no per-account map).
     from src.config.symbol_sets import leg_symbols
     scope = {a: leg_symbols(strategies["claude_desk"], a, leg="claude_desk") for a in ("bybit_1", "alpaca_paper", "ib_paper")}
-    assert scope == {"bybit_1": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"],
-                     "alpaca_paper": ["SPY", "QQQ", "IWM", "GLD", "TLT"],
-                     "ib_paper": ["SPY", "QQQ", "IWM", "GLD", "TLT", "MES", "MGC", "MHG"]}
+    # DESK-MACRO v2 (c): the desk declares every instrument-profiled paper-venue symbol (queue_scored); the original core stays.
+    assert set(["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"]) <= set(scope["bybit_1"])
+    assert set(["SPY", "QQQ", "IWM", "GLD", "TLT"]) <= set(scope["alpaca_paper"])
+    assert set(["SPY", "QQQ", "IWM", "GLD", "TLT", "MES", "MGC", "MHG"]) <= set(scope["ib_paper"])
+    assert strategies["claude_desk"].get("queue_scored") is True
     assert set(strategies["claude_desk"]["symbols"]) == {s for a in scope.values() for s in a}
     assert "risk_pct" not in strategies["claude_desk"]
     accounts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]

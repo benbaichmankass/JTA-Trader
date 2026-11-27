@@ -47,7 +47,7 @@ def test_yaml_declares_the_desk_slice_and_the_leg_scope_is_all_six():
     assert raw["declared_slices"] == {"bybit_1": {"claude_desk": 0.5, "e4_oi_shock_1h": 0.5}}
     strat = yaml.safe_load((REPO / "config/strategies.yaml").read_text())["strategies"]["claude_desk"]
     from src.config.symbol_sets import leg_symbols
-    assert strat["symbols"][:6] == SIX and leg_symbols(strat, "bybit_1", leg="claude_desk") == SIX
+    assert strat["symbols"][:6] == SIX and set(SIX) <= set(leg_symbols(strat, "bybit_1", leg="claude_desk"))
     acc = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     # the declared slice is bybit_1's only: the other two desk books (DESK-PAPER-ACCOUNTS) have no slice support
     assert sorted(a for a, c in acc.items() if "claude_desk" in (c.get("strategies") or [])) == [

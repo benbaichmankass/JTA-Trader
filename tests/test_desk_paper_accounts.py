@@ -31,7 +31,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts" / "ops"))
 
-from src.config.symbol_sets import UNION, leg_symbols, resolve_symbols  # noqa: E402
+from src.config.symbol_sets import leg_symbols  # noqa: E402
 from src.core.coordinator import Coordinator, OrderPackage  # noqa: E402
 from src.runtime.market_hours import asset_class_for_symbol, is_market_open  # noqa: E402
 from src.units.strategies import claude_desk as cd  # noqa: E402
@@ -47,16 +47,14 @@ MICROS = ["MES", "MGC", "MHG"]
 # ----------------------------------------------------------------------------- 1. the scope (real config)
 
 def test_each_rostering_account_resolves_to_its_own_venue_slice():
-    assert leg_symbols(DESK, "bybit_1") == CRYPTO
-    assert leg_symbols(DESK, "alpaca_paper") == ETFS
-    assert leg_symbols(DESK, "ib_paper") == ETFS + MICROS   # IB trades US ETFs and CME micros
-    assert leg_symbols(DESK) == CRYPTO + ETFS + MICROS  # no account: the union the builder evaluates
-    for acct, syms in (("bybit_1", CRYPTO), ("alpaca_paper", ETFS), ("ib_paper", ETFS + MICROS)):
-        got = resolve_symbols(declared=ACCTS[acct]["symbols"], roster=ACCTS[acct]["strategies"], mode=UNION,
-                              strategies_cfg=STRATS, account_id=acct)
-        assert set(syms) <= set(got)
-        others = set(CRYPTO + ETFS + MICROS) - set(syms) - set(ACCTS[acct]["symbols"])
-        assert not others & set(got), f"{acct} would pull another venue's desk symbols: {others & set(got)}"
+    # DESK-MACRO v2 (c): the desk declares every instrument-profiled paper-venue symbol; each account keeps its core and gets
+    # only what its venue can trade (crypto never on alpaca/IB, equities never on bybit, futures only on IB).
+    from src.config.venue_capability import venue_can_trade
+    for acct, core, venue in (("bybit_1", CRYPTO, "bybit"), ("alpaca_paper", ETFS, "alpaca"), ("ib_paper", ETFS + MICROS, "interactive_brokers")):
+        got = leg_symbols(DESK, acct)
+        assert set(core) <= set(got), (acct, core, got)
+        assert all(venue_can_trade(s, venue) for s in got), acct
+    assert leg_symbols(DESK)[:len(CRYPTO + ETFS + MICROS)] == CRYPTO + ETFS + MICROS  # the union starts with the original core
 
 
 def test_each_venue_slice_is_on_that_venue_and_pulled_there():
