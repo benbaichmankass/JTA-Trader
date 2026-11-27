@@ -209,6 +209,70 @@ levers:
       best_delta_r_per_trade: 0.0584
       fold_stability: 0.75
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
+  other:
+    cfg_set:
+      tests:
+      - value: displacement_atr_mult=1.625
+        baseline_value: 'off'
+        arm: displacement_atr_mult_hi
+        unit: RQ-20261105-031
+        window: 2021-11-23..2026-11-27
+        n: 181
+        net_r: -47.8836
+        baseline_n: 363
+        baseline_net_r: -121.9531
+        delta_net_r: 74.0695
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 48.46
+        verdict: pass
+        joint_change: false
+      - value: displacement_atr_mult=0.975
+        baseline_value: 'off'
+        arm: displacement_atr_mult_lo
+        unit: RQ-20261105-031
+        window: 2021-11-23..2026-11-27
+        n: 643
+        net_r: -246.7711
+        baseline_n: 363
+        baseline_net_r: -121.9531
+        delta_net_r: -124.818
+        folds_ge_baseline: 0/4
+        max_drawdown_r: 249.3459
+        verdict: pass
+        joint_change: false
+      - value: min_displacement_body_to_range=0.6875
+        baseline_value: 'off'
+        arm: min_displacement_body_to_range_hi
+        unit: RQ-20261105-031
+        window: 2021-11-23..2026-11-27
+        n: 322
+        net_r: -104.0517
+        baseline_n: 363
+        baseline_net_r: -121.9531
+        delta_net_r: 17.9014
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 104.6281
+        verdict: pass
+        joint_change: false
+      - value: min_displacement_body_to_range=0.4125
+        baseline_value: 'off'
+        arm: min_displacement_body_to_range_lo
+        unit: RQ-20261105-031
+        window: 2021-11-23..2026-11-27
+        n: 369
+        net_r: -123.9654
+        baseline_n: 363
+        baseline_net_r: -121.9531
+        delta_net_r: -2.0123
+        folds_ge_baseline: 1/4
+        max_drawdown_r: 125.7543
+        verdict: pass
+        joint_change: false
+      shape: noisy
+      points: 4
+      best_delta_r_per_trade: 0.204
+      fold_stability: 0.562
+      reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   session:
     skip_hours:
       tests:

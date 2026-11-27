@@ -93,10 +93,74 @@ manifest:
   regime_gating: untested
   timeframe: untested
   symbol_set: untested
-  direction: untested
+  direction: tested
   session: untested
   sizing_vs_cost: tested
 levers:
+  direction:
+    side_filter:
+      tests:
+      - value: long
+        baseline_value: 'off'
+        arm: side_long
+        unit: RQ-20261126-175
+        window: 2019-08-16..2026-11-25
+        n: 64
+        net_r: 14.2528
+        baseline_n: 64
+        baseline_net_r: 14.2528
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 4.2039
+        verdict: fail
+        joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: side_long
+        unit: RQ-20261126-175
+        window: 2019-08-16..2026-11-25
+        n: 64
+        net_r: 14.2528
+        baseline_n: 64
+        baseline_net_r: 14.2528
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 4.2039
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: side_short
+        unit: RQ-20261126-175
+        window: 2019-08-16..2026-11-25
+        n: 64
+        net_r: 14.2528
+        baseline_n: 64
+        baseline_net_r: 14.2528
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 4.2039
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: side_short
+        unit: RQ-20261126-175
+        window: 2019-08-16..2026-11-25
+        n: 64
+        net_r: 14.2528
+        baseline_n: 64
+        baseline_net_r: 14.2528
+        delta_net_r: 0.0
+        folds_ge_baseline: 4/4
+        max_drawdown_r: 4.2039
+        verdict: fail
+        joint_change: false
+      shape: flat
+      points: 4
+      best_delta_r_per_trade: 0.0
+      fold_stability: 1.0
+      reading: no response at the tested values
   entry:
     donchian:
       tests:
