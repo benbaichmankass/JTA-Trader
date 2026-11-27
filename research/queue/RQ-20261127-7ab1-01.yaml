@@ -1,0 +1,124 @@
+# Hand-authored 2026-11-27T05:52Z by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV) on Manager 26a's ruling 2026-11-27 05:43Z: "TabICL 1e75-04: grade it
+# INDETERMINATE as you said. Register a fresh subsampled-n probe on Kaggle (free), with the n and timing bar fixed before the run. No RunPod
+# spend." A FEASIBILITY probe at CAPPED n: it grades no edge. Rule registered before the run. Gates this adds or changes: none.
+id: RQ-20261127-7ab1-01
+title: 'D3 TabICL CAPPED-n FEASIBILITY PROBE on a Kaggle T4: does ONE TabICLv2 window fit in-context on the most recent 50,000 training rows, and does
+  the slowest probed window x 13 fit the 290-min GPU budget and peak GPU memory fit 14,500 MB?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'T2 (docs/reference/trading-and-model-practice-principles.md): measure the cost of an experiment before committing the budget; a
+  1-window probe at a fixed reduced n after the full-n probe could not finish one window.'
+question: On the Kaggle T4, with RQ-20261126-1e75-04's command unchanged except --tabicl-max-rows 50000 (TabICL fit in-context on only the most recent
+  50,000 training rows of the window; the raw LightGBM arm unchanged), what are the first window's TabICL fit / predict seconds and peak GPU memory,
+  and does the projection fit a 13-window run?
+why_this_matters: 'RQ-20261126-1e75-04 (run 45888080690) was killed at its 180-min timeout INSIDE its first full-n TabICL window (no timing line was
+  printed; graded INDETERMINATE, a lower bound of about 170 min per window). Full-n TabICL is therefore impractical on a free T4. This probe asks
+  whether a CAPPED-n TabICL is feasible at all; only then is a capped-n edge unit worth registering (a different, weaker model than full n).'
+evidence_class:
+  holdout: none
+  claim: measurement
+power:
+  expected_n: 1
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'A cost measurement on one window, not a statistical test; n = 1 probed window by design.'
+  feasibility:
+    source: none
+    accrual_basis: Replays published Binance history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261127-7ab1-01-TABICL-CAPPED-T4-FEASIBILITY
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: none (a feasibility measurement)
+  statistic: 'verdict.json measurement.probe (tabicl_max_rows = 50000): projected_full_gpu_s[tabicl] = the slowest probed window''s total_s x 13 (a
+    LOWER bound: later windows have more rows to cap from, but the cap holds n_train at 50,000, so later windows cost about the same), peak_gpu_mb[tabicl]
+    (torch.cuda.max_memory_allocated), oom. If the run is killed inside the window: elapsed = the kill time minus the flushed WINDOW_START t= value in
+    the run log.'
+  rule: 'PASS (fits) iff the probed window completed AND projected_full_gpu_s <= 17,400 s (290 min) AND peak_gpu_mb <= 14,500. FAIL (infeasible on a T4
+    at n = 50,000) iff the window ran out of GPU memory, OR the projection or the peak exceeds its bound, OR the run was killed inside the window with
+    elapsed x 13 > 17,400 s (graded by a session from the run log''s WINDOW_START line). INDETERMINATE iff the window failed for another reason or a
+    timing / memory read is missing (including a kill with no WINDOW_START line); producer_failed is a route fault. The cap, thresholds and window count
+    are not changed after a result.'
+  pass_action: register a capped-n EDGE unit (dbf8-03's edge rule word for word, with --tabicl-max-rows 50000 and a matched-n LightGBM control so the
+    cap is not confounded with the learner), these per-window numbers in routing.basis.
+  fail_action: close TabICL on a free T4 (families.tabular_foundation_model history, with both probes' numbers); the family is NOT retired; no paid GPU
+    spend without a new operator decision.
+  what_it_does_not_do: Grades no edge. Changes no model or config. A capped fit is flagged full_n=False and is never accepted by the full-n edge rule.
+  min_n: 1 probed window
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.05
+  basis: as dbf8-03 (stand-in); the probe decides whether a capped-n TabICL unit can run at all.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
+  peak_memory_gb: 16.0
+  est_minutes: 45
+  why_runner: Kaggle GPU (free); the kernel has no internet, so the klines come from the published metis-market-bp2 market_raw (--cache-source published).
+  basis: 'ESTIMATE: table build a few minutes (1e75-04 finished it: 60 per-symbol lines before the window) + one TabICL window at n_train 50,000 (what
+    this measures). --gpu-arm-budget-min 150 keeps the command inside the 180-min timeout; WINDOW_START (before) and WINDOW_TIMING (after) are flushed.'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,tabicl
+  - --cache
+  - /tmp/ml_entry_klines
+  - --cache-source
+  - published
+  - --gpu-arm-budget-min
+  - '150'
+  - --max-windows
+  - '1'
+  - --tabicl-max-rows
+  - '50000'
+  - --probe-budget-min
+  - '290'
+  - --probe-peak-mb
+  - '14500'
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - kaggle
+  - --rule-id
+  - RULE-RQ20261127-7ab1-01-TABICL-CAPPED-T4-FEASIBILITY
+  - --registered-at
+  - '2026-11-27'
+  bundle_paths:
+  - comms/research/broad_paths/bp2-f4271084b120
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261127-7ab1-01
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether a capped-n TabICL edge unit can run on a free T4 at all; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261126-1e75-04
+- RQ-20261126-dbf8-03
+population: The first non-empty 28-day window of RQ-20261118-dbf8-01's 13 monthly refits; TabICL fit on the most recent 50,000 of its training rows.
