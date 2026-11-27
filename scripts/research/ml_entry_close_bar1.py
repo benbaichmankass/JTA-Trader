@@ -154,7 +154,7 @@ def run(a) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     c = collect(Path(a.db))
-    if c["read_state"] != "measured":
+    if c["read_state"] != "measured":  # collapsed-state: measured — this script's own read_state (measured | no_data), not position_telemetry.peak_state
         row = {"schema_version": 1, "research_unit": a.unit, "read_state": c["read_state"], "verdict": "no_data",
                "note": c.get("why"), "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     else:
@@ -191,10 +191,10 @@ def self_test() -> int:
     root = Path(tempfile.mkdtemp())
     db = root / "tj.db"
     conn = sqlite3.connect(db)
-    conn.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, order_package_id TEXT, strategy_name TEXT, account_class TEXT, "
+    conn.execute("CREATE TABLE trades (id INTEGER PRIMARY KEY, order_package_id TEXT, strategy_name TEXT, account_class TEXT, "  # data-wiring: self-test fixture (temp dir); the truth is the canonical trade_journal.db, read mode=ro
                  "direction TEXT, entry_price REAL, exit_price REAL, stop_loss REAL, timestamp TEXT, exit_reason TEXT, "
                  "status TEXT, is_backtest INTEGER)")
-    conn.execute("CREATE TABLE position_path_history (order_package_id TEXT, bar_ts TEXT, bars_held INTEGER, open_r REAL)")
+    conn.execute("CREATE TABLE position_path_history (order_package_id TEXT, bar_ts TEXT, bars_held INTEGER, open_r REAL)")  # data-wiring: self-test fixture (temp dir); the truth is the canonical trade_journal.db, read mode=ro
     tid = 0
     for i in range(60):
         pkg = f"p{i}"
@@ -204,23 +204,23 @@ def self_test() -> int:
         x = 98.0 if long else 102.0                 # every trade stopped out: R_hold = -1
         for acct in (("real_money", "paper") if i % 3 == 0 else ("paper",)):   # duplicated package -> one representative
             tid += 1
-            conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",  # writer-conformance: allow self-test fixture in a temp dir, never the journal
                          (tid, pkg, "ml_entry" if i % 4 else "ml_entry_v2", acct, "long" if long else "short", e, x, sl,
                           day + "T01:00:00", "sl_hit", "closed", 0))
         if i < 56:                                   # bars_held 1 = the entry bar; 2 = first row after one full bar
-            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T01:30:00", 1, 0.3))
-            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T02:00:00", 2, -0.2 + 0.01 * (i % 5)))
-            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T03:00:00", 3, -0.5))
+            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T01:30:00", 1, 0.3))  # writer-conformance: allow self-test fixture in a temp dir, never the journal
+            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T02:00:00", 2, -0.2 + 0.01 * (i % 5)))  # writer-conformance: allow self-test fixture in a temp dir, never the journal
+            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T03:00:00", 3, -0.5))  # writer-conformance: allow self-test fixture in a temp dir, never the journal
         elif i == 56:                                # closed inside the first bars: path never reached 2 -> delta 0
-            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T01:30:00", 1, -0.4))
+            conn.execute("INSERT INTO position_path_history VALUES (?,?,?,?)", (pkg, day + "T01:30:00", 1, -0.4))  # writer-conformance: allow self-test fixture in a temp dir, never the journal
         # i 57..59: no path rows at all -> excluded (not assumed delta 0), coverage 57/60
     tid += 1                                         # a backtest row and an open row are never read
-    conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+    conn.execute("INSERT INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",  # writer-conformance: allow self-test fixture in a temp dir, never the journal
                  (tid, "bt", "ml_entry", "paper", "long", 100, 110, 98, "2026-11-02T00:00:00", "tp", "closed", 1))
     conn.commit()
     conn.close()
     c = collect(db)
-    assert c["read_state"] == "measured" and c["eligible"] == 60, c["eligible"]
+    assert c["read_state"] == "measured" and c["eligible"] == 60, c["eligible"]  # collapsed-state: measured — this script's own read_state (measured | no_data), not position_telemetry.peak_state
     assert c["excluded"]["no_bar1_path_row"] == 3 and len(c["packages"]) == 57, c["excluded"]
     assert all(abs(p["r_hold"] + 1.0) < 1e-9 for p in c["packages"])
     cb = [p for p in c["packages"] if p["how"] == "closed_before_bar1"]
