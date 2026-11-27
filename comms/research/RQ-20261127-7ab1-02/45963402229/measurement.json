@@ -1,0 +1,1342 @@
+{
+  "verdict": "FAIL",
+  "gpu_arm_complete": {
+    "tabicl": true
+  },
+  "paired_resid_vs_raw": {
+    "k": 0,
+    "mean": null,
+    "sd": null,
+    "ci95": null
+  },
+  "paired_placebo_vs_raw": {
+    "k": 0,
+    "mean": null,
+    "sd": null,
+    "ci95": null
+  },
+  "paired_extra_vs_raw": {
+    "tabicl": {
+      "k": 13,
+      "mean": -0.0016128137406804383,
+      "sd": 0.08478120941207258,
+      "ci95": [
+        -0.052845585838099354,
+        0.04961995835673848
+      ]
+    }
+  },
+  "baseline_arm": "rawcap",
+  "arms": [
+    "raw",
+    "rawcap",
+    "tabicl"
+  ],
+  "pooled": {
+    "raw": {
+      "n": 10810,
+      "mean_net_r": 1.1020881735345377e-06,
+      "se": 0.01063947881768435,
+      "by_side": {
+        "long": {
+          "n": 2934,
+          "mean_net_r": 0.03764822184564568
+        },
+        "short": {
+          "n": 7876,
+          "mean_net_r": -0.014023358217619162
+        }
+      }
+    },
+    "rawcap": {
+      "n": 22780,
+      "mean_net_r": -0.04246138106123208,
+      "se": 0.0072184103497609994,
+      "by_side": {
+        "long": {
+          "n": 9486,
+          "mean_net_r": -0.09312829663089274
+        },
+        "short": {
+          "n": 13294,
+          "mean_net_r": -0.0063077507698374
+        }
+      }
+    },
+    "tabicl": {
+      "n": 22518,
+      "mean_net_r": -0.04606104237413181,
+      "se": 0.007237066937680808,
+      "by_side": {
+        "long": {
+          "n": 9526,
+          "mean_net_r": -0.08960517817018206
+        },
+        "short": {
+          "n": 12992,
+          "mean_net_r": -0.014133591820469985
+        }
+      }
+    },
+    "frozen": {
+      "n": 11191,
+      "mean_net_r": 0.008424347281927144,
+      "se": 0.01039642186939344,
+      "by_side": {
+        "long": {
+          "n": 3456,
+          "mean_net_r": 0.03260066173491458
+        },
+        "short": {
+          "n": 7735,
+          "mean_net_r": -0.0023776362668155226
+        }
+      }
+    }
+  },
+  "windows": [
+    {
+      "start": "2025-10-01",
+      "raw": {
+        "n": 1015,
+        "mean_net_r": -0.06948485703709177,
+        "se": 0.03427750571456161,
+        "by_side": {
+          "long": {
+            "n": 228,
+            "mean_net_r": -0.4161452318544838
+          },
+          "short": {
+            "n": 787,
+            "mean_net_r": 0.030945340495774007
+          }
+        }
+      },
+      "rawcap": {
+        "n": 2033,
+        "mean_net_r": 0.10643188689030067,
+        "se": 0.025222338147430752,
+        "by_side": {
+          "long": {
+            "n": 1132,
+            "mean_net_r": 0.11379612817367166
+          },
+          "short": {
+            "n": 901,
+            "mean_net_r": 0.0971795881857769
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1954,
+        "mean_net_r": -0.06261634875962802,
+        "se": 0.025085186541223103,
+        "by_side": {
+          "long": {
+            "n": 1044,
+            "mean_net_r": -0.044598157731063376
+          },
+          "short": {
+            "n": 910,
+            "mean_net_r": -0.08328776791767363
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 4.9,
+          "predict_s": 117.9,
+          "total_s": 122.7,
+          "peak_gpu_mb": 4681.2,
+          "n_train": 646766,
+          "n_win": 8736
+        }
+      },
+      "frozen": {
+        "n": 1098,
+        "mean_net_r": -0.0804248289481511,
+        "se": 0.03312569591784364,
+        "by_side": {
+          "long": {
+            "n": 238,
+            "mean_net_r": -0.3731850310333098
+          },
+          "short": {
+            "n": 860,
+            "mean_net_r": 0.0005948548847184168
+          }
+        }
+      },
+      "btc_ret24_mean": 5.106092135307544e-05
+    },
+    {
+      "start": "2025-10-29",
+      "raw": {
+        "n": 954,
+        "mean_net_r": -0.06379462676097913,
+        "se": 0.03514999472478158,
+        "by_side": {
+          "long": {
+            "n": 332,
+            "mean_net_r": -0.029532888510379756
+          },
+          "short": {
+            "n": 622,
+            "mean_net_r": -0.08208224267609006
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1900,
+        "mean_net_r": -0.05733718309231401,
+        "se": 0.024710212870470573,
+        "by_side": {
+          "long": {
+            "n": 1363,
+            "mean_net_r": -0.1157249764588124
+          },
+          "short": {
+            "n": 537,
+            "mean_net_r": 0.09086125705393794
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1884,
+        "mean_net_r": -0.06598605012200816,
+        "se": 0.024901561052629893,
+        "by_side": {
+          "long": {
+            "n": 1399,
+            "mean_net_r": -0.11623766451481048
+          },
+          "short": {
+            "n": 485,
+            "mean_net_r": 0.07896654479661137
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.7,
+          "predict_s": 125.0,
+          "total_s": 128.7,
+          "peak_gpu_mb": 4678.2,
+          "n_train": 655502,
+          "n_win": 8711
+        }
+      },
+      "frozen": {
+        "n": 968,
+        "mean_net_r": 0.02973989400957529,
+        "se": 0.03509102454001416,
+        "by_side": {
+          "long": {
+            "n": 364,
+            "mean_net_r": 0.15706298952885347
+          },
+          "short": {
+            "n": 604,
+            "mean_net_r": -0.04699124302522149
+          }
+        }
+      },
+      "btc_ret24_mean": -0.00951115409585259
+    },
+    {
+      "start": "2025-11-26",
+      "raw": {
+        "n": 826,
+        "mean_net_r": 0.02022671929312822,
+        "se": 0.03877509020768723,
+        "by_side": {
+          "long": {
+            "n": 240,
+            "mean_net_r": -0.25023371299794983
+          },
+          "short": {
+            "n": 586,
+            "mean_net_r": 0.13099549702326255
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1797,
+        "mean_net_r": -0.08551610180356528,
+        "se": 0.0254380816553303,
+        "by_side": {
+          "long": {
+            "n": 883,
+            "mean_net_r": -0.18752915902797182
+          },
+          "short": {
+            "n": 914,
+            "mean_net_r": 0.013036993961370149
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1768,
+        "mean_net_r": 0.021539298337644612,
+        "se": 0.026071384601324545,
+        "by_side": {
+          "long": {
+            "n": 1080,
+            "mean_net_r": -0.0941933266528709
+          },
+          "short": {
+            "n": 688,
+            "mean_net_r": 0.20321260500880267
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.7,
+          "predict_s": 124.5,
+          "total_s": 128.2,
+          "peak_gpu_mb": 4668.6,
+          "n_train": 664238,
+          "n_win": 8568
+        }
+      },
+      "frozen": {
+        "n": 788,
+        "mean_net_r": -0.10556141336808073,
+        "se": 0.03949588796587435,
+        "by_side": {
+          "long": {
+            "n": 287,
+            "mean_net_r": -0.17513966179246782
+          },
+          "short": {
+            "n": 501,
+            "mean_net_r": -0.0657032151688809
+          }
+        }
+      },
+      "btc_ret24_mean": 0.00017096327544509547
+    },
+    {
+      "start": "2025-12-24",
+      "raw": {
+        "n": 875,
+        "mean_net_r": 0.05397010854841013,
+        "se": 0.03817352393339582,
+        "by_side": {
+          "long": {
+            "n": 161,
+            "mean_net_r": 0.34342669954356264
+          },
+          "short": {
+            "n": 714,
+            "mean_net_r": -0.011299514911281124
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1855,
+        "mean_net_r": -0.013344502568424597,
+        "se": 0.025410747445588883,
+        "by_side": {
+          "long": {
+            "n": 589,
+            "mean_net_r": 0.04466215382139997
+          },
+          "short": {
+            "n": 1266,
+            "mean_net_r": -0.04033180163130507
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1742,
+        "mean_net_r": 0.012176529928810692,
+        "se": 0.025813372431670183,
+        "by_side": {
+          "long": {
+            "n": 745,
+            "mean_net_r": 0.04462871882087924
+          },
+          "short": {
+            "n": 997,
+            "mean_net_r": -0.012073099684620678
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.7,
+          "predict_s": 124.4,
+          "total_s": 128.1,
+          "peak_gpu_mb": 4668.6,
+          "n_train": 672830,
+          "n_win": 8568
+        }
+      },
+      "frozen": {
+        "n": 959,
+        "mean_net_r": 0.019196683182327784,
+        "se": 0.03549725296064273,
+        "by_side": {
+          "long": {
+            "n": 204,
+            "mean_net_r": 0.2823161758578989
+          },
+          "short": {
+            "n": 755,
+            "mean_net_r": -0.05189785523597225
+          }
+        }
+      },
+      "btc_ret24_mean": 0.0011576301928982048
+    },
+    {
+      "start": "2026-01-21",
+      "raw": {
+        "n": 1075,
+        "mean_net_r": 0.22616682966303236,
+        "se": 0.03332295182735536,
+        "by_side": {
+          "long": {
+            "n": 541,
+            "mean_net_r": -0.0075480784458541155
+          },
+          "short": {
+            "n": 534,
+            "mean_net_r": 0.4629454163426346
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1831,
+        "mean_net_r": -0.013930632738019927,
+        "se": 0.025287891929321325,
+        "by_side": {
+          "long": {
+            "n": 728,
+            "mean_net_r": -0.38140327261443785
+          },
+          "short": {
+            "n": 1103,
+            "mean_net_r": 0.22860797272891775
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1616,
+        "mean_net_r": 0.025776246212118614,
+        "se": 0.026663052264473863,
+        "by_side": {
+          "long": {
+            "n": 568,
+            "mean_net_r": -0.38900017710602874
+          },
+          "short": {
+            "n": 1048,
+            "mean_net_r": 0.2505787351860763
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.5,
+          "predict_s": 124.4,
+          "total_s": 127.9,
+          "peak_gpu_mb": 4668.6,
+          "n_train": 681398,
+          "n_win": 8568
+        }
+      },
+      "frozen": {
+        "n": 1088,
+        "mean_net_r": 0.1962406372290661,
+        "se": 0.03278671858835118,
+        "by_side": {
+          "long": {
+            "n": 569,
+            "mean_net_r": -0.05285142551791736
+          },
+          "short": {
+            "n": 519,
+            "mean_net_r": 0.46933000852585527
+          }
+        }
+      },
+      "btc_ret24_mean": -0.01030290303547993
+    },
+    {
+      "start": "2026-02-18",
+      "raw": {
+        "n": 759,
+        "mean_net_r": -0.03176837672995108,
+        "se": 0.04031134800420893,
+        "by_side": {
+          "long": {
+            "n": 269,
+            "mean_net_r": 0.1149305853974094
+          },
+          "short": {
+            "n": 490,
+            "mean_net_r": -0.112303113081502
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1829,
+        "mean_net_r": -0.12748759111605915,
+        "se": 0.025311099156739326,
+        "by_side": {
+          "long": {
+            "n": 571,
+            "mean_net_r": -0.16638123030379529
+          },
+          "short": {
+            "n": 1258,
+            "mean_net_r": -0.10983395997440785
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1731,
+        "mean_net_r": -0.018757077942144623,
+        "se": 0.02649826618407223,
+        "by_side": {
+          "long": {
+            "n": 491,
+            "mean_net_r": -0.10988413690155764
+          },
+          "short": {
+            "n": 1240,
+            "mean_net_r": 0.017326297823235852
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.6,
+          "predict_s": 124.3,
+          "total_s": 127.9,
+          "peak_gpu_mb": 4668.6,
+          "n_train": 689966,
+          "n_win": 8568
+        }
+      },
+      "frozen": {
+        "n": 863,
+        "mean_net_r": -0.12207876337695536,
+        "se": 0.03748160454006931,
+        "by_side": {
+          "long": {
+            "n": 383,
+            "mean_net_r": -0.1932051901290074
+          },
+          "short": {
+            "n": 480,
+            "mean_net_r": -0.06532580203104718
+          }
+        }
+      },
+      "btc_ret24_mean": 0.0031560306812110214
+    },
+    {
+      "start": "2026-03-18",
+      "raw": {
+        "n": 849,
+        "mean_net_r": 0.1082304691562798,
+        "se": 0.03869931411198091,
+        "by_side": {
+          "long": {
+            "n": 98,
+            "mean_net_r": -0.11575177940503246
+          },
+          "short": {
+            "n": 751,
+            "mean_net_r": 0.13745851224417407
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1790,
+        "mean_net_r": 0.07807523804151591,
+        "se": 0.02620155564483911,
+        "by_side": {
+          "long": {
+            "n": 547,
+            "mean_net_r": -0.08982920051992645
+          },
+          "short": {
+            "n": 1243,
+            "mean_net_r": 0.15196399740845795
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1808,
+        "mean_net_r": 0.006076378333907852,
+        "se": 0.025919548601150727,
+        "by_side": {
+          "long": {
+            "n": 524,
+            "mean_net_r": -0.11629897967064272
+          },
+          "short": {
+            "n": 1284,
+            "mean_net_r": 0.05601772381240045
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.6,
+          "predict_s": 124.1,
+          "total_s": 127.7,
+          "peak_gpu_mb": 4658.9,
+          "n_train": 698534,
+          "n_win": 8441
+        }
+      },
+      "frozen": {
+        "n": 693,
+        "mean_net_r": 0.10595217451359516,
+        "se": 0.04219013324683572,
+        "by_side": {
+          "long": {
+            "n": 100,
+            "mean_net_r": 0.032321399398572134
+          },
+          "short": {
+            "n": 593,
+            "mean_net_r": 0.11836883136267157
+          }
+        }
+      },
+      "btc_ret24_mean": 0.00015750014189717216
+    },
+    {
+      "start": "2026-04-15",
+      "raw": {
+        "n": 757,
+        "mean_net_r": 0.06661160351099393,
+        "se": 0.03992241643029614,
+        "by_side": {
+          "long": {
+            "n": 266,
+            "mean_net_r": 0.32831756458353606
+          },
+          "short": {
+            "n": 491,
+            "mean_net_r": -0.07516800065457879
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1674,
+        "mean_net_r": -0.12369164694522135,
+        "se": 0.02646026613838443,
+        "by_side": {
+          "long": {
+            "n": 700,
+            "mean_net_r": 0.021693661406784633
+          },
+          "short": {
+            "n": 974,
+            "mean_net_r": -0.22817800818382938
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1672,
+        "mean_net_r": -0.07123532645803768,
+        "se": 0.02646925851743738,
+        "by_side": {
+          "long": {
+            "n": 580,
+            "mean_net_r": 0.16490266042643348
+          },
+          "short": {
+            "n": 1092,
+            "mean_net_r": -0.19665660154319636
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.7,
+          "predict_s": 123.9,
+          "total_s": 127.6,
+          "peak_gpu_mb": 4656.0,
+          "n_train": 707024,
+          "n_win": 8400
+        }
+      },
+      "frozen": {
+        "n": 741,
+        "mean_net_r": 0.12438206319304047,
+        "se": 0.03977770220376418,
+        "by_side": {
+          "long": {
+            "n": 257,
+            "mean_net_r": 0.4167515458445596
+          },
+          "short": {
+            "n": 484,
+            "mean_net_r": -0.030863715818200053
+          }
+        }
+      },
+      "btc_ret24_mean": 0.002865738339116884
+    },
+    {
+      "start": "2026-05-13",
+      "raw": {
+        "n": 931,
+        "mean_net_r": -0.23733173874645128,
+        "se": 0.03479112690932188,
+        "by_side": {
+          "long": {
+            "n": 228,
+            "mean_net_r": -0.803798018565087
+          },
+          "short": {
+            "n": 703,
+            "mean_net_r": -0.05361294529175862
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1682,
+        "mean_net_r": -0.036203862883241025,
+        "se": 0.0266812628749737,
+        "by_side": {
+          "long": {
+            "n": 727,
+            "mean_net_r": -0.2731402344853982
+          },
+          "short": {
+            "n": 955,
+            "mean_net_r": 0.14416550062960537
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1638,
+        "mean_net_r": 0.038937140522106915,
+        "se": 0.027349743433220594,
+        "by_side": {
+          "long": {
+            "n": 692,
+            "mean_net_r": -0.23776005918514923
+          },
+          "short": {
+            "n": 946,
+            "mean_net_r": 0.24134143459971927
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.7,
+          "predict_s": 124.0,
+          "total_s": 127.7,
+          "peak_gpu_mb": 4656.0,
+          "n_train": 715424,
+          "n_win": 8400
+        }
+      },
+      "frozen": {
+        "n": 947,
+        "mean_net_r": -0.17580981715592803,
+        "se": 0.03470243827921087,
+        "by_side": {
+          "long": {
+            "n": 227,
+            "mean_net_r": -0.7880598421808779
+          },
+          "short": {
+            "n": 720,
+            "mean_net_r": 0.01721901017832698
+          }
+        }
+      },
+      "btc_ret24_mean": -0.00926331767650431
+    },
+    {
+      "start": "2026-06-10",
+      "raw": {
+        "n": 666,
+        "mean_net_r": -0.13396735964065876,
+        "se": 0.04116654658731926,
+        "by_side": {
+          "long": {
+            "n": 96,
+            "mean_net_r": 0.3694012852960509
+          },
+          "short": {
+            "n": 570,
+            "mean_net_r": -0.21874523668263085
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1699,
+        "mean_net_r": -0.13561392810055897,
+        "se": 0.025737874401584416,
+        "by_side": {
+          "long": {
+            "n": 654,
+            "mean_net_r": -0.2743050393789259
+          },
+          "short": {
+            "n": 1045,
+            "mean_net_r": -0.04881585463065277
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1743,
+        "mean_net_r": -0.13651537110348244,
+        "se": 0.025503733380765732,
+        "by_side": {
+          "long": {
+            "n": 598,
+            "mean_net_r": -0.25162797871621007
+          },
+          "short": {
+            "n": 1145,
+            "mean_net_r": -0.07639542407080892
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.8,
+          "predict_s": 124.2,
+          "total_s": 128.0,
+          "peak_gpu_mb": 4656.0,
+          "n_train": 723824,
+          "n_win": 8400
+        }
+      },
+      "frozen": {
+        "n": 840,
+        "mean_net_r": -0.06835718084995432,
+        "se": 0.037593434301568085,
+        "by_side": {
+          "long": {
+            "n": 124,
+            "mean_net_r": 0.30564822260528923
+          },
+          "short": {
+            "n": 716,
+            "mean_net_r": -0.13312906636454955
+          }
+        }
+      },
+      "btc_ret24_mean": 0.0006734012240428868
+    },
+    {
+      "start": "2026-07-08",
+      "raw": {
+        "n": 589,
+        "mean_net_r": -0.16264194689916547,
+        "se": 0.043514777422926434,
+        "by_side": {
+          "long": {
+            "n": 55,
+            "mean_net_r": -0.3291875391198458
+          },
+          "short": {
+            "n": 534,
+            "mean_net_r": -0.14548837466669845
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1549,
+        "mean_net_r": -0.061584881347021884,
+        "se": 0.027266963652567356,
+        "by_side": {
+          "long": {
+            "n": 668,
+            "mean_net_r": -0.1334234596838907
+          },
+          "short": {
+            "n": 881,
+            "mean_net_r": -0.0071147674661724515
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1526,
+        "mean_net_r": -0.1171742146168419,
+        "se": 0.02726366605018201,
+        "by_side": {
+          "long": {
+            "n": 725,
+            "mean_net_r": -0.14836600899412056
+          },
+          "short": {
+            "n": 801,
+            "mean_net_r": -0.08894194130407405
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.8,
+          "predict_s": 123.8,
+          "total_s": 127.6,
+          "peak_gpu_mb": 4656.0,
+          "n_train": 732224,
+          "n_win": 8400
+        }
+      },
+      "frozen": {
+        "n": 625,
+        "mean_net_r": -0.07585179818799836,
+        "se": 0.04188579603506122,
+        "by_side": {
+          "long": {
+            "n": 128,
+            "mean_net_r": -0.20932325164244092
+          },
+          "short": {
+            "n": 497,
+            "mean_net_r": -0.04147685645325257
+          }
+        }
+      },
+      "btc_ret24_mean": 0.0002856092696172401
+    },
+    {
+      "start": "2026-08-05",
+      "raw": {
+        "n": 786,
+        "mean_net_r": 0.04795284435342476,
+        "se": 0.039823208848688695,
+        "by_side": {
+          "long": {
+            "n": 167,
+            "mean_net_r": 0.6719597686235107
+          },
+          "short": {
+            "n": 619,
+            "mean_net_r": -0.12039797366451443
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1606,
+        "mean_net_r": -0.16646238429241486,
+        "se": 0.026251755463127968,
+        "by_side": {
+          "long": {
+            "n": 376,
+            "mean_net_r": -0.017723495031740803
+          },
+          "short": {
+            "n": 1230,
+            "mean_net_r": -0.21193053255421446
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1652,
+        "mean_net_r": -0.1655500554090061,
+        "se": 0.025867115801091838,
+        "by_side": {
+          "long": {
+            "n": 379,
+            "mean_net_r": -0.08043731398132872
+          },
+          "short": {
+            "n": 1273,
+            "mean_net_r": -0.19088998392518025
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.8,
+          "predict_s": 124.1,
+          "total_s": 127.9,
+          "peak_gpu_mb": 4653.4,
+          "n_train": 740624,
+          "n_win": 8326
+        }
+      },
+      "frozen": {
+        "n": 785,
+        "mean_net_r": 0.04220902033636294,
+        "se": 0.0402525230813546,
+        "by_side": {
+          "long": {
+            "n": 259,
+            "mean_net_r": 0.5195253313017327
+          },
+          "short": {
+            "n": 526,
+            "mean_net_r": -0.19281935331388567
+          }
+        }
+      },
+      "btc_ret24_mean": 0.007082953746387359
+    },
+    {
+      "start": "2026-09-02",
+      "raw": {
+        "n": 728,
+        "mean_net_r": 0.10222731801374445,
+        "se": 0.04225338071768172,
+        "by_side": {
+          "long": {
+            "n": 253,
+            "mean_net_r": 0.6750203578737068
+          },
+          "short": {
+            "n": 475,
+            "mean_net_r": -0.2028603432169303
+          }
+        }
+      },
+      "rawcap": {
+        "n": 1535,
+        "mean_net_r": 0.05455655611542211,
+        "se": 0.027754531336263166,
+        "by_side": {
+          "long": {
+            "n": 548,
+            "mean_net_r": 0.301384614768093
+          },
+          "short": {
+            "n": 987,
+            "mean_net_r": -0.0824867834404681
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1784,
+        "mean_net_r": -0.06974676139188782,
+        "se": 0.025544161572549722,
+        "by_side": {
+          "long": {
+            "n": 701,
+            "mean_net_r": 0.16738283053479863
+          },
+          "short": {
+            "n": 1083,
+            "mean_net_r": -0.22323507527979847
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload",
+          "max_rows": 50000
+        },
+        "timing": {
+          "fit_s": 3.8,
+          "predict_s": 123.2,
+          "total_s": 127.1,
+          "peak_gpu_mb": 4632.2,
+          "n_train": 749024,
+          "n_win": 8064
+        }
+      },
+      "frozen": {
+        "n": 796,
+        "mean_net_r": 0.22990616227041033,
+        "se": 0.03917941122725106,
+        "by_side": {
+          "long": {
+            "n": 316,
+            "mean_net_r": 0.5188160155221505
+          },
+          "short": {
+            "n": 480,
+            "mean_net_r": 0.0397071755463481
+          }
+        }
+      },
+      "btc_ret24_mean": 0.00248028318069675
+    }
+  ],
+  "tau": 0.1,
+  "window": {
+    "start": "2025-10-01",
+    "end": "2026-09-30",
+    "step_days": 28
+  },
+  "thresholds": {
+    "win_n": 30,
+    "min_windows": 10,
+    "pool_n": 300,
+    "delta": 0.06,
+    "beta_win": 720,
+    "beta_clip": [
+      -1.0,
+      3.0
+    ],
+    "placebo_seed": 20261112
+  },
+  "latest_bar": "2026-11-24 23:00:00+00:00",
+  "cache_source": "published",
+  "symbols_absent": []
+}

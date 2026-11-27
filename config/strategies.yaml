@@ -1506,8 +1506,10 @@ strategies:
     enabled: true
     execution: live
     timeframe: "1h"
-    # STRUCTURE-EXITS-DEFAULT (Tier 3, manager 2026-11-03 on the operator rule "the new default until we prove something else works better"): pivot 5 = middle arm of the measured S3/S5/S8 grid. Revert: delete this line.
-    structure_exit: "pivot=5"
+    # STRUCTURE-EXITS-DEFAULT REVERTED on this leg's own evidence (Tier 3, data-backed; Manager 26a 2026-11-27 07:26Z "revert it"): RQ-20261101-5e01-10
+    # (research/results/RQ-20261101-5e01-10/45947501095.jsonl, RULE-STRUCTURE-EXITS-V1) FAIL: n 2,107, structure SL+TP -0.0261 vs declared +0.0122
+    # R/trade, paired week-bootstrap lower bound -0.077, structure better in 2/6 bins, R4 and R2 false, 4/4 seeds FAIL. The declared ATR 2 / 2R
+    # bracket (a real TP, below) is the exit. Re-add `structure_exit: "pivot=5"` only on a fresh PASS.
     decision_bar: closed
     # MAKER TIME-STOP EXIT, DEMO-FLOOR MECHANICS CHECK (row D9-MAKER-EXIT-BUILD, data-backed Tier 3 under the standing
     # rule; manager 2026-11-19 "keep the ml_entry_v2 line"): the 24h max_hold close is worked post-only at the passive mid
