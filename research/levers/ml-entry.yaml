@@ -212,3 +212,34 @@ declared:
     range: bar 5m, 15m, 1h, 4h x scaling bar-count or clock-time
     hypothesis: 'unknown: the cost share of R rises at short bars, so a short-bar edge needs a gross edge large enough to pay it; the features
       that keep their role across bar sizes are the transferable ones'
+levers_tested:
+- family: recipe
+  varied: recency weighting / rolling window (rec90/180/365/730, win12/24/36)
+  response:
+    verdict: indeterminate
+    best_arm: rec730
+    best_delta_vs_base: 0.0059
+    rec90_delta: -0.0262
+    rec90_t: -1.74
+    rec90_vs_placebo_t: -2.97
+    note: no arm beats base; short half-lives/windows (rec90, rec180, win12) are worse than base and than their shuffled-weight placebos; rule
+      says report se and stop
+  shape: flat
+  tested_at_power: false
+  unit: RQ-20261127-c4e2-02
+- family: recipe
+  varied: learner capacity (lgb_big 2000x127, xgb_d6/8/10)
+  response:
+    verdict: fail
+    best_arm: xgb_d6
+    lgb_big_delta: -0.027
+    lgb_big_t: -2.7
+    folds_better: 1
+    years_positive: 0
+    note: 'more capacity overfits: every bigger learner is worse than the registered recipe; lever closed, next family frozen TS encoder (c4e2-04)'
+  shape: monotone
+  tested_at_power: false
+  unit: RQ-20261127-c4e2-03
+units:
+- RQ-20261127-c4e2-02
+- RQ-20261127-c4e2-03
