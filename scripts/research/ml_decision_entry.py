@@ -1417,8 +1417,111 @@ def sidak_t(k: int, alpha: float = 0.025) -> float:
     return NormalDist().inv_cdf(1.0 - (1.0 - (1.0 - alpha) ** (1.0 / max(1, k))))
 
 
+# PRETRAINED TIME-SERIES ENCODER arm (MLP-F-COVARIATE-TSFM, RQ-20261127-c4e2-04; the next family c4e2-03's fail_action names).
+# A FROZEN Chronos (amazon/chronos-t5-small, Apache-2.0) encodes each decision row's trailing TSFM_CONTEXT hourly closes; the
+# mean-pooled encoder state is reduced per dev fold to TSFM_K principal components fitted on that fold's TRAIN rows only, and those
+# columns are added to the registered 20 features. Control: the same recipe + TSFM_K N(0,1) columns (prices the extra-column overfit).
+# Point-in-time: a context ends at bar t's close, the same bar every registered feature reads. Nothing is fine-tuned.
+TSFM_K = 8
+TSFM_CONTEXT = 256
+TSFM_FEATURES = [f"tsfm_{k}" for k in range(TSFM_K)]
+TSFM_NOISE = [f"tsfm_noise_{k}" for k in range(TSFM_K)]
+TSFM_PREFIX = "chronos-t5-small__"      # how the model files travel flat in the Kaggle bundle (sub-directories are skipped)
+
+
+def chronos_model_dir() -> str | None:
+    """$CHRONOS_MODEL_DIR, else the flat bundle files under $CHRONOS_BUNDLE_DIR re-assembled as a model dir; None = unavailable."""
+    import os
+    if os.environ.get("CHRONOS_MODEL_DIR"):
+        return os.environ["CHRONOS_MODEL_DIR"]
+    src = os.environ.get("CHRONOS_BUNDLE_DIR")
+    if not src:
+        return None
+    files = sorted(Path(src).glob(TSFM_PREFIX + "*"))
+    if not any(f.name.endswith("config.json") for f in files):
+        return None
+    dst = Path("/tmp/chronos-t5-small")
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in files:
+        link = dst / f.name[len(TSFM_PREFIX):]
+        if not link.exists():
+            link.symlink_to(f)
+    return str(dst)
+
+
+def tsfm_contexts(closes: np.ndarray, idx: np.ndarray, context: int = TSFM_CONTEXT) -> tuple[np.ndarray, np.ndarray]:
+    """(contexts [n_ok, context], ok mask over idx): closes[i-context+1 .. i] for every row index i with a full window."""
+    ok = idx >= context - 1
+    rows = idx[ok]
+    win = np.lib.stride_tricks.sliding_window_view(closes, context)
+    return win[rows - context + 1].astype(np.float32), ok
+
+
+def tsfm_embeddings(cache: Path, tab: pd.DataFrame, model_dir: str | None = None, context: int = TSFM_CONTEXT, batch: int = 512,
+                    device: str = "cuda", embed_fn=None, hole_safe: bool = True) -> tuple[np.ndarray, dict]:
+    """Mean-pooled frozen-encoder state per row of ``tab`` (float32 [len(tab), d]); NaN rows lack a full context. ``embed_fn``
+    (tests) maps a float32 [b, context] array to [b, d]; otherwise a Chronos pipeline from ``model_dir`` is used (fp16 on CUDA,
+    a batch with any non-finite value is recomputed in fp32)."""
+    info = {"context": context, "device": device, "batches": 0, "fp32_retries": 0, "rows_no_context": 0}
+    if embed_fn is None:
+        import torch
+        from chronos import ChronosPipeline
+        dt = torch.float16 if device == "cuda" else torch.float32
+        pipe = ChronosPipeline.from_pretrained(model_dir, device_map=device, torch_dtype=dt)
+        pipe32 = []
+
+        def embed_fn(x: np.ndarray) -> np.ndarray:
+            with torch.no_grad():
+                e, _ = pipe.embed(torch.from_numpy(x))
+                out = e.float().mean(dim=1).cpu().numpy()
+            if not np.isfinite(out).all():
+                if not pipe32:
+                    pipe32.append(ChronosPipeline.from_pretrained(model_dir, device_map=device, torch_dtype=torch.float32))
+                info["fp32_retries"] += 1
+                with torch.no_grad():
+                    e, _ = pipe32[0].embed(torch.from_numpy(x))
+                    out = e.float().mean(dim=1).cpu().numpy()
+            return out
+    out = None
+    for sym, g in tab.groupby("symbol", sort=False):
+        df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if hole_safe:
+            df = regrid_hourly(df)
+        closes = df["close"].astype(float).to_numpy()
+        ctx, ok = tsfm_contexts(closes, g["i"].to_numpy().astype(int), context)
+        info["rows_no_context"] += int((~ok).sum())
+        pos = g.index.to_numpy()[ok]
+        for a in range(0, len(ctx), batch):
+            e = embed_fn(ctx[a:a + batch])
+            info["batches"] += 1
+            if out is None:
+                out = np.full((len(tab), e.shape[1]), np.nan, dtype=np.float32)
+            out[pos[a:a + batch]] = e
+    return (out if out is not None else np.full((len(tab), 1), np.nan, dtype=np.float32)), info
+
+
+def pca_fit_project(train_x: np.ndarray, test_x: np.ndarray, k: int = TSFM_K, max_fit_rows: int = 100_000,
+                    seed: int = SEED) -> tuple[np.ndarray, np.ndarray]:
+    """Top-k principal components fitted on finite TRAIN rows only (a seeded subsample above ``max_fit_rows``); rows with no
+    embedding project to NaN (LightGBM's missing value)."""
+    fin = np.isfinite(train_x).all(axis=1)
+    fit = train_x[fin]
+    if len(fit) > max_fit_rows:
+        fit = fit[np.random.default_rng(seed).choice(len(fit), max_fit_rows, replace=False)]
+    mu = fit.mean(axis=0)
+    _, _, vt = np.linalg.svd(fit - mu, full_matrices=False)
+    comp = vt[:k].T
+
+    def proj(x: np.ndarray) -> np.ndarray:
+        y = np.full((len(x), k), np.nan)
+        m = np.isfinite(x).all(axis=1)
+        y[m] = (x[m] - mu) @ comp
+        return y
+    return proj(train_x), proj(test_x)
+
+
 def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | None = None, rule: dict = LEVER_RULE,
-               xgb_device: str = "cpu") -> dict:
+               xgb_device: str = "cpu", tsfm_emb: np.ndarray | None = None) -> dict:
     """Dev folds only (DEV_FOLDS .. HOLDOUT_START), registered recipe refit per fold, same tau / cost stack / sequencing."""
     d_bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < d_bounds[-1]]
@@ -1441,6 +1544,16 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             rng = np.random.default_rng(SEED + int(a.timestamp()) % 9973)   # RANDOM_DRAWS seeded draws, pooled: the control's mean
             tk["random1"] = pd.concat([policy_bar_topk(test, pl, ps, tau, 1, rng=rng).assign(draw=k) for k in range(RANDOM_DRAWS)],
                                       ignore_index=True)
+        if "tsfm" in arms and tsfm_emb is not None:
+            ptr, pte = pca_fit_project(tsfm_emb[train.index.to_numpy()], tsfm_emb[test.index.to_numpy()])
+            rng_t = np.random.default_rng(SEED + 1127 + int(a.timestamp()) % 9973)
+            tr2 = train.assign(**{c: ptr[:, k] for k, c in enumerate(TSFM_FEATURES)},
+                               **{c: rng_t.standard_normal(len(train)) for c in TSFM_NOISE})
+            te2 = test.assign(**{c: pte[:, k] for k, c in enumerate(TSFM_FEATURES)},
+                              **{c: rng_t.standard_normal(len(test)) for c in TSFM_NOISE})
+            tl, ts_ = fit_predict(tr2, te2, FEATURES + TSFM_FEATURES, n_jobs)
+            nl, ns = fit_predict(tr2, te2, FEATURES + TSFM_NOISE, n_jobs)
+            tk["tsfm"], tk["placebo_tsfm"] = policy(test, tl, ts_, tau), policy(test, nl, ns, tau)
         for arm in (x for x in arms if x in ARM_SPECS):
             spec = ARM_SPECS[arm]
             al, as_ = fit_predict_spec(train, test, spec, a, n_jobs, xgb_device=xgb_device)
@@ -1455,7 +1568,8 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
         print(json.dumps({"fold": rec["test_start"]} | {k: (rec[k]["all"]["n"], rec[k]["all"]["mean_net_r"]) for k in tk}), flush=True)
     cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items() if v}
     res = {"folds": folds, "pooled": {k: split_by_side(v) | {"bar_risk": bar_risk(v)} for k, v in cat.items()}, "arms": {}}
-    pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"}}
+    pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"},
+             "tsfm": {"vs_base": "base", "vs_placebo": "placebo_tsfm"}}
     for arm in (x for x in arms if x in ARM_SPECS):
         pairs[arm] = ({"vs_base": "base", "vs_placebo": f"placebo_{arm}"} if ARM_SPECS[arm]["kind"] == "recency"
                       else {"vs_base": "base"})
@@ -1501,13 +1615,39 @@ def lever_arms_cmd(args) -> int:
     if k_new > 1:   # several arms graded in one unit: the family bar (Sidak) applies to each arm's t
         rule |= {"min_t": round(max(LEVER_RULE["min_t"], sidak_t(k_new)), 4), "n_arms": k_new}
     xgb_device = getattr(args, "xgb_device", "cpu")
+    tsfm_emb, tsfm_info = None, None
+    if "tsfm" in arms:
+        mdir = chronos_model_dir()
+        try:
+            import torch
+            dev = "cuda" if torch.cuda.is_available() else None
+        except Exception:  # noqa: BLE001  # allow-silent: no torch = the arm is unavailable; recorded as verdict could_not_look below, never a FAIL
+            dev = None
+        if mdir is None or dev is None:
+            why = f"tsfm arm unavailable: model_dir={mdir} cuda={dev} (the Chronos weights / GPU did not reach this run)"
+            (out / "verdict.json").write_text(json.dumps({"verdict": "indeterminate", "read_state": "could_not_look", "n": 0,
+                                                          "note": why, "rule": rule, "arm": "tsfm"}, indent=1) + "\n")
+            print(why, flush=True)
+            return 0
+        t_e = time.time()
+        try:
+            tsfm_emb, tsfm_info = tsfm_embeddings(cache, tab, mdir, device=dev)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the encoder failure is written to verdict.json (could_not_look, with the exception) and printed
+            why = f"tsfm arm unavailable: the Chronos encoder failed to load or run ({type(exc).__name__}: {str(exc)[:300]})"
+            (out / "verdict.json").write_text(json.dumps({"verdict": "indeterminate", "read_state": "could_not_look", "n": 0,
+                                                          "note": why, "rule": rule, "arm": "tsfm"}, indent=1) + "\n")
+            print(why, flush=True)
+            return 0
+        tsfm_info |= {"elapsed_s": round(time.time() - t_e), "dim": int(tsfm_emb.shape[1]), "model": "amazon/chronos-t5-small",
+                      "k": TSFM_K, "rows_with_embedding": int(np.isfinite(tsfm_emb).all(axis=1).sum()), "rows": len(tab)}
+        print(json.dumps({"tsfm_embeddings": tsfm_info}), flush=True)
     if "regime" in arms:
         tab = pd.concat([tab.reset_index(drop=True), regime_columns(cache, universe(), tab)], axis=1)
         tab = tab.dropna(subset=REGIME_FEATURES).reset_index(drop=True)
     tau = float(args.tau) if args.tau is not None else 0.10
-    res = lever_arms(tab, tau, arms, getattr(args, "n_jobs", None), rule=rule, xgb_device=xgb_device)
+    res = lever_arms(tab, tau, arms, getattr(args, "n_jobs", None), rule=rule, xgb_device=xgb_device, tsfm_emb=tsfm_emb)
     res |= {"schema": "ml_decision_entry_lever_arms/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(), "rule": rule,
-            "xgb_device": xgb_device, "cache_source": getattr(args, "cache_source", "fetch"), "cache_report": cache_report,
+            "xgb_device": xgb_device, "tsfm": tsfm_info, "cache_source": getattr(args, "cache_source", "fetch"), "cache_report": cache_report,
             "arm_specs": {k: ARM_SPECS[k] for k in arms if k in ARM_SPECS},
             "table_rows": len(tab), "table_min_ts": str(tab.ts.min()), "table_max_ts": str(tab.ts.max()), "n_symbols": int(tab.symbol.nunique()),
             "regime_features": REGIME_FEATURES, "cost_stack": f"fee {FEE_BPS} bps rt + slippage 3.0 bps + funding 1.0 bps/8h (label_symbol net R)",
@@ -1551,6 +1691,20 @@ def _self_test_staleness_capacity() -> None:
         assert len(pl) == len(te) == len(ps) and np.isfinite(pl).all()
     a, b = fit_predict_spec(tr, te, ARM_SPECS["rec90"], ts[-1], n_jobs=1, placebo=True), fit_predict_spec(tr, te, ARM_SPECS["rec90"], ts[-1], n_jobs=1)
     assert not np.allclose(a[0], b[0]), "the placebo must fit different (shuffled) weights"
+
+
+def _self_test_tsfm() -> None:
+    closes = np.arange(10, dtype=float)
+    ctx, ok = tsfm_contexts(closes, np.array([1, 3, 9]), context=4)
+    assert list(ok) == [False, True, True] and ctx.tolist() == [[0, 1, 2, 3], [6, 7, 8, 9]], (ok, ctx)
+    rng = np.random.default_rng(1)
+    tr = rng.normal(size=(500, 16))
+    tr[:, 0] *= 10
+    te = rng.normal(size=(20, 16))
+    te[3] = np.nan
+    a, b = pca_fit_project(tr, te, k=3)
+    assert a.shape == (500, 3) and b.shape == (20, 3) and np.isnan(b[3]).all() and np.isfinite(b[[0, 1, 2, 4]]).all()
+    assert abs(a[:, 0].var() - tr[:, 0].var()) / tr[:, 0].var() < 0.05      # PC1 is the inflated column
 
 
 def _self_test_lever_arms() -> None:
@@ -1643,6 +1797,7 @@ def _self_test() -> None:
     _self_test_side_by_fold()
     _self_test_lever_arms()
     _self_test_staleness_capacity()
+    _self_test_tsfm()
     print("self-test ok")
 
 
@@ -1729,7 +1884,7 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
     ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
     ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
-    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", *ARM_SPECS],
+    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", "tsfm", *ARM_SPECS],
                     help="lever-arms: which arm(s); default regime + top1")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
                     help="lever-arms: published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")
