@@ -1,0 +1,66 @@
+{
+  "unit": "RQ-20261127-cb1a-01",
+  "run_id": "46066294478",
+  "commit_sha": null,
+  "run_url": null,
+  "timeout_minutes": 15,
+  "runner": {
+    "cpu_model": null,
+    "cpu_simd": [
+      "asimd"
+    ],
+    "cores_logical": 1,
+    "cores_usable": 1,
+    "machine": "aarch64",
+    "os": "Ubuntu 22.04.5 LTS",
+    "kernel": "6.8.0-1060-oracle",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.11.0rc1",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.4",
+      "pandas": "3.0.3",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.8.0"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [
+      "cpu_model"
+    ],
+    "class_id": "8b8eea7d004b",
+    "read_state": "partial"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_close_bar1.py",
+        "--db",
+        "data/trade_journal.db",
+        "--unit",
+        "RQ-20261127-cb1a-01",
+        "--rule-id",
+        "RULE-RQ20261127-cb1a-01-CLOSE-BAR1",
+        "--registered-at",
+        "2026-11-27",
+        "--where",
+        "trainer",
+        "--out",
+        "comms/research/RQ-20261127-cb1a-01/46066294478"
+      ],
+      "log": "comms/research/RQ-20261127-cb1a-01/46066294478/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 16.4,
+      "seconds": 1.0
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
