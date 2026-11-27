@@ -8,7 +8,7 @@
 id: RQ-20261126-1e75-02
 title: 'D6 Pointer CEILING CONFIRMATION on a SYMBOL TWIN (BTCUSDT): with trend_donchian_eth_4h''s config unchanged except symbols[0] = BTCUSDT, does the
   selected static bracket S10T4 (atr_stop_mult 1.0, tp_r 4.0) beat the declared bracket (1.5 ATR / 4R) per paired trade, 2020-07..2026-10, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -165,9 +165,11 @@ grading:
   decision_rule_id: RULE-RQ20261126-1e75-02-D6-CEILING-TWIN
   evidence:
   - research/results/RQ-20261126-1e75-02/45876210648.jsonl
-  graded_at: '2026-11-26'
+  - research/results/RQ-20261126-1e75-02/45947504486.jsonl
+  graded_at: '2026-11-27'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

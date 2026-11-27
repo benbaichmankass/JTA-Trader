@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-12
 title: 'Structure-based SL+TP (swing / FVG / liquidity, ratcheting) vs the declared exit on trend_donchian family on bybit_1 (all trend_donchian* rostered
   legs) (testing legs (Stage 1)): does it beat the current exit net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 2
@@ -118,3 +118,16 @@ related:
 - docs/research/structure-exits-default-scope-2026-11-01.md
 - config/accounts.yaml
 last_dispatched_at: '2026-11-27T03:08:09+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-V1
+  auto: true
+  decision_rule_id: RULE-STRUCTURE-EXITS-V1
+  evidence:
+  - research/results/RQ-20261101-5e01-12/45932409166.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 9 row(s), all measured, all fail
+  rows: 9
+  verdict: fail

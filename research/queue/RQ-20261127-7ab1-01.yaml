@@ -4,7 +4,7 @@
 id: RQ-20261127-7ab1-01
 title: 'D3 TabICL CAPPED-n FEASIBILITY PROBE on a Kaggle T4: does ONE TabICLv2 window fit in-context on the most recent 50,000 training rows, and does
   the slowest probed window x 13 fit the 290-min GPU budget and peak GPU memory fit 14,500 MB?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -123,3 +123,14 @@ related:
 - RQ-20261126-dbf8-03
 population: The first non-empty 28-day window of RQ-20261118-dbf8-01's 13 monthly refits; TabICL fit on the most recent 50,000 of its training rows.
 last_dispatched_at: '2026-11-27T06:41:14+00:00'
+grading:
+  attested: RULE-RQ20261127-7ab1-01-TABICL-CAPPED-T4-FEASIBILITY
+  auto: true
+  decision_rule_id: RULE-RQ20261127-7ab1-01-TABICL-CAPPED-T4-FEASIBILITY
+  evidence:
+  - research/results/RQ-20261127-7ab1-01/45951414824.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass
+  rows: 1
+  verdict: pass
