@@ -182,10 +182,17 @@ def resolve(item: Mapping[str, Any], ticket: Optional[Mapping[str, Any]],
 
 
 def _read_prop(item: Mapping[str, Any]) -> tuple:
-    """(ticket, newest fill) for the item's package on its account, from the prop journal on this VM."""
-    from src.prop import prop_journal
+    """(ticket, newest fill) for the item's package on its account, from the prop journal on this VM (``prop_tickets`` /
+    ``prop_fills`` in the trade journal), opened READ-ONLY through the one path resolver. Not via ``src.prop.prop_journal``:
+    importing it pulls the prop executor chain (vm_close -> prop_trail -> market_data -> exchange) into the trader's runtime
+    import graph, which the layer contract refuses for this read."""
+    import sqlite3
 
-    conn = prop_journal._connect()
+    from src.utils.paths import trade_journal_db_path
+
+    conn = sqlite3.connect(f"file:{trade_journal_db_path()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=3000")
     try:
         t = conn.execute("SELECT * FROM prop_tickets WHERE order_package_id = ? AND account_id = ? "
                          "ORDER BY created_at DESC LIMIT 1",
