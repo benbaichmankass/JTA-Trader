@@ -6630,6 +6630,28 @@ def _desk_tick_read(what: Any, read):
     return value
 
 
+#: (journal path, Database class) -> one Database for the claude_desk builder's consumed-ids read (DESK-JOURNAL-DB-ONCE,
+#: 2026-11-27). ``Database()`` runs ``create_tables()`` -- ~58 CREATE ... IF NOT EXISTS statements and a commit -- on every
+#: construction, and the builder constructed one on every call (~42 calls/tick). MEASURED after the 18:18Z restart
+#: (tick_cost 19:23Z, 41 ticks): claude_desk 1,722 calls, mean 118.7 ms, max 3,090.6 ms (= the connection's 3 s
+#: busy_timeout, i.e. a schema read waited on another writer), 4.98 s/tick, the largest builder. Only the CONSTRUCTION is
+#: shared: ``get_order_packages_by_strategy`` opens a fresh connection and re-reads on every call, so a package minted for
+#: a symbol earlier in the tick is still seen by that symbol's next call (the reason that read is not memoised).
+_DESK_JOURNAL_DB: dict[tuple, Any] = {}
+
+
+def _desk_journal_db():
+    """The Database the claude_desk builder reads consumed decision ids from: built once per (path, class)."""
+    from src.units.db.database import Database
+    from src.utils.paths import trade_journal_db_path
+    key = (str(trade_journal_db_path()), id(Database))
+    db = _DESK_JOURNAL_DB.get(key)
+    if db is None:
+        db = Database(db_path=key[0])
+        _DESK_JOURNAL_DB[key] = db
+    return db
+
+
 def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
     """The Claude trading desk's leg (DESK-17, design § 3.7) — accepted proposals, not candles.
 
@@ -6664,9 +6686,7 @@ def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
     if not rows:
         return _none("no_accepted_proposals")
     try:
-        from src.units.db.database import Database
-        from src.utils.paths import trade_journal_db_path
-        pkgs = Database(db_path=trade_journal_db_path()).get_order_packages_by_strategy(name)
+        pkgs = _desk_journal_db().get_order_packages_by_strategy(name)
     except Exception as exc:  # noqa: BLE001 -- fail closed: never mint a second package
         return _none(f"journal_unreadable: {type(exc).__name__}")
     now = datetime.now(timezone.utc)

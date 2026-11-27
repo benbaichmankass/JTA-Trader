@@ -203,11 +203,11 @@ def _desk_seams(monkeypatch, tmp_path, counts):
 
     class _DB:
         def __init__(self, *a, **k):
-            pass
+            counts["db_init"] = counts.get("db_init", 0) + 1
 
         def get_order_packages_by_strategy(self, name, **k):
             counts["journal"] += 1
-            return []
+            return list(counts.get("pkgs", []))
     monkeypatch.setattr(dbm, "Database", _DB)
 
 
@@ -247,3 +247,22 @@ def test_desk_memo_does_not_cross_ticks(monkeypatch, tmp_path):
     _run_tick(memo_on=True)
     assert counts["config"] == 2                           # one read per tick, never carried over
     assert len(sb._DESK_TICK_MEMO) == 2                    # only the latest tick's two entries kept
+
+
+def test_desk_journal_database_is_built_once_but_read_fresh_every_call(monkeypatch, tmp_path):
+    # DESK-JOURNAL-DB-ONCE (2026-11-27): Database() runs create_tables() on construction; the builder built one per call
+    # (1,722 calls / 41 ticks, mean 118.7 ms, max 3,090.6 ms = the 3 s busy_timeout). Build it once per (path, class);
+    # the consumed-ids read must still run, and see new packages, on EVERY call.
+    counts = {"queue": 0, "config": 0, "journal": 0}
+    _desk_seams(monkeypatch, tmp_path, counts)
+    _run_tick(memo_on=True)
+    _run_tick(memo_on=True)
+    assert counts["db_init"] == 1                           # once, across calls and ticks
+    assert counts["journal"] == 2 * len(SYMS)               # the query itself: every call
+    # a package minted between calls is seen by the very next call (no stale consumed set)
+    before = json.loads(json.dumps(sb.claude_desk_signal_builder({"SYMBOL": "BTCUSDT"}), default=str))
+    assert before.get("side") == "buy"
+    counts["pkgs"] = [{"meta": json.dumps({"decision_id": "d-1"})}]
+    after = sb.claude_desk_signal_builder({"SYMBOL": "BTCUSDT"})
+    assert after.get("side") == "none"
+    assert counts["db_init"] == 1
