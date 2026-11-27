@@ -1,7 +1,7 @@
 {
  "bar": "2026-11-27T22:35:00Z",
  "bar_close": "2026-11-27T22:40:00Z",
- "built_at": "2026-11-27T22:41:00Z",
+ "built_at": "2026-11-27T22:44:03Z",
  "closed": false,
  "order_package_id": "pkg-e9983a4846504cb6",
  "packet": {
@@ -91,7 +91,7 @@
      "SOLUSDT",
      "short",
      "ict_scalp_sol_5m",
-     1.09
+     1.13
     ],
     [
      "USO",
@@ -103,13 +103,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     -0.222
+     -0.227
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_prop",
-     -0.162
+     -0.123
     ],
     [
      "SPY",
@@ -127,7 +127,7 @@
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     0.226
+     0.275
     ],
     [
      "MGC",
@@ -139,13 +139,13 @@
      "SOLUSDT",
      "long",
      "ml_entry",
-     -0.345
+     -0.333
     ],
     [
      "XRPUSDT",
      "long",
      "ml_entry",
-     -0.366
+     -0.357
     ],
     [
      "BTCUSDT",
@@ -455,7 +455,31 @@
     "timeframe": "1w",
     "trend_now": null
    },
-   "live_vs_backtest": null
+   "live_vs_backtest": {
+    "read_state": "read",
+    "rows": [
+     {
+      "backtest_expectancy_r": null,
+      "backtest_n": 0,
+      "book": "realMoney",
+      "closed": 0,
+      "live_r": null,
+      "r_trades": 0,
+      "verdict": "NO_BACKTEST",
+      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+     },
+     {
+      "backtest_expectancy_r": null,
+      "backtest_n": 0,
+      "book": "mirror",
+      "closed": 0,
+      "live_r": null,
+      "r_trades": 0,
+      "verdict": "NO_BACKTEST",
+      "why": "no committed Stage-0 evidence record at comms/strategy_evidence/claude_desk.json"
+     }
+    ]
+   }
   },
   "cost": {
    "basis": null
@@ -485,7 +509,7 @@
    "head": "c219ac9adc",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T22:42:03Z",
+  "info_cutoff_at": "2026-11-27T22:45:04Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: BTCUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-2e227e58c3f7424d, pkg-ba1ffcf8ed9b498e); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
@@ -501,20 +525,16 @@
   },
   "missing_inputs": [
    {
-    "field": "read:ib_orders",
-    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
-   },
-   {
     "field": "read:alpaca_orders",
     "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
    },
    {
-    "field": "read:perf_recent",
-    "reason": "timed out"
+    "field": "read:ib_orders",
+    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
    },
    {
     "field": "read:bybit_history:bybit_1:BTCUSDT",
-    "reason": "diag bybit_raw_order_history?account_id=bybit_1&symbol=BTCUSDT&start_ms=1795790279114&end_ms=1795819383011: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is "
+    "reason": "diag bybit_raw_order_history?account_id=bybit_1&symbol=BTCUSDT&start_ms=1795790279114&end_ms=1795819564299: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is "
    },
    {
     "field": "regime.atr_now_over_entry",
@@ -545,14 +565,6 @@
     "reason": "no bar has opened since the fill yet: no in-trade excursion is measurable (REVIEWER-BRIEF step 0)"
    },
    {
-    "field": "context_v3.live_vs_backtest",
-    "reason": "api/bot/performance/recent not read"
-   },
-   {
-    "field": "context.live_vs_backtest",
-    "reason": "per-leg live-vs-backtest read failed (api/bot/performance/recent); see context_v3"
-   },
-   {
     "field": "desk_handoff",
     "reason": "opening desk row 'DMB-20261127T1350Z/T2' not found"
    }
@@ -575,12 +587,6 @@
     {
      "count": 1,
      "denominator": 1,
-     "field": "context_v3.live_vs_backtest",
-     "reason": "context_null:live_vs_backtest"
-    },
-    {
-     "count": 1,
-     "denominator": 1,
      "field": "state.open_r",
      "reason": "context_null:state.open_r"
     }
@@ -599,14 +605,14 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T2241Z-pkg-e9983a4846504cb6",
+  "review_id": "LR-20261127T2244Z-pkg-e9983a4846504cb6",
   "short_hold": {
    "atr": 79.29285714285652,
    "bar": "2026-11-27T22:35:00Z",
    "bar_close": "2026-11-27T22:40:00Z",
    "entry": 60497.5,
    "mark": 59712.4,
-   "minutes_held": 482.5,
+   "minutes_held": 485.5,
    "open_r_at_mark": -0.2619,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
@@ -719,14 +725,14 @@
    }
   ]
  },
- "packet_sha": "89d642f9b4eec2aeac3b43096d69b56cc37f63b4bb08a1c43b18041cde8c488d",
+ "packet_sha": "a3f6441f63f70de455a303be71ced9d051f6672871d7ebd989ba25380f353611",
  "short_hold": {
   "atr": 79.29285714285652,
   "bar": "2026-11-27T22:35:00Z",
   "bar_close": "2026-11-27T22:40:00Z",
   "entry": 60497.5,
   "mark": 59712.4,
-  "minutes_held": 482.5,
+  "minutes_held": 485.5,
   "open_r_at_mark": -0.2619,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
