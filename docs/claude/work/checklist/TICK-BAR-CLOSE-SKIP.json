@@ -1,0 +1,22 @@
+{
+  "id": "TICK-BAR-CLOSE-SKIP",
+  "title": "Skip _1d/_1h builder evaluation between bar closes, only for legs proven not to read the forming bar",
+  "state": "queued",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "tick-latency hygiene; no milestone",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-11",
+  "note": "Split out of TICK-BUILDER-TIMING by Manager 26a 2026-11-27 13:32Z: NOT caching, because builders may read the forming bar (forming catch-up, intrabar stops), so a skip can change signals. Step 1: list, per builder, whether it reads the last (forming) row: decision_bar forming vs closed, _fetch_session_frame users, intrabar stop logic. Step 2: only closed-bar-only legs qualify; they already skip via _closed_window_skip. Measured basis (19 ticks after the 12:58Z restart): 16 _1d legs 5.84 s/tick, 9 _1h legs 3.22 s/tick of builder time.",
+  "phase": null,
+  "updated_at": "2026-11-27T13:35:11Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

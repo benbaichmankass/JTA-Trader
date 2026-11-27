@@ -1,0 +1,17 @@
+{
+  "based_on": "work_store:v1",
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "PI-20261127-QK3EBUEV-0001",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "session",
+    "ref": "lane ML-PRIMARY session_01AFoLuLpCY5gABbqk3EBUeV 2026-11-27 ~10:45Z, found while observing #29431",
+    "rerun": "GET /api/diag/ml_pool_snapshots: list the snapshot bars; every US trading day must have its 16:00Z and 20:00Z (decision-close) snapshot. Then journalctl ict-trader-live 15:58-16:20Z and 19:58-20:20Z on the day: refresher poll lines, HTTP 429s, and ml_entry_eq_struct 'refused ... pool_snapshot_stale' lines."
+  },
+  "state": "killed",
+  "terminal_reason": "FALSE ALARM (filer's own error): Thu 2026-11-26 was the US Thanksgiving market holiday, so no 11-26 16:00Z/20:00Z snapshot is the correct behaviour -- SPY had no RTH bars ('spy_fetch_none_or_empty'), and the 19:50-20:06Z silence is by design (poll_state logs only when its token changes). Snapshots exist for every trading day through Wed 11-25 16:00 + 20:00 (/api/diag/ml_pool_snapshots read 2026-11-27 ~10:40Z). Caught by Manager 26a's date check. Next exposure (Fri 11-27 half day, 16:00Z decision close) is verified by lane ML-PRIMARY at ~16:06Z; 'no package since 11-17' stays under row ML-EQ-NOPKG-AUDIT.",
+  "what": "ml_entry_eq_struct (alpaca_live, REAL MONEY) and ml_entry_eq (alpaca_paper) missed BOTH 2026-11-26 decision closes. /api/diag/ml_pool_snapshots (read 2026-11-27 ~10:40Z): newest snapshot 20261125T2000Z, none for 20261126T1600Z or T2000Z. 16:00Z: the ml-entry-eq-refresher thread hit Alpaca HTTP 429 on SPY repeatedly 16:00-16:14Z ('ml_entry_eq_refresher poll: spy_fetch_none_or_empty'), no snapshot built, every pool symbol refused pool_snapshot_stale. 20:00Z: zero refresher log lines 19:50-20:06Z and no snapshot (silent skip or dead poll -- not yet known). Row ML-ENTRY-EQ-REFRESHER-SILENT is 'done' (11-09): recurrence or a new mode. Likely contributor: the shared Alpaca rate budget (fetchvenue.alpaca ~8 s/tick on 11-27, slow tick after #29307; #29455 addresses the tick). Separately: no ml_entry_eq_struct order_package since 11-17 -- possibly legitimate no-signal closes; ML-EQ-NOPKG-AUDIT is the row that would prove it. Next exposure: the 2026-11-28 16:00Z close (11-27 is a US holiday). Fix: the refresher must retry the SPY probe past a 429 (back off and keep trying until the close's snapshot is built, never give up silently: Prime Directive no-halting) and log every poll outcome so a silent 20:00Z cannot recur; owner per Manager 26a."
+}

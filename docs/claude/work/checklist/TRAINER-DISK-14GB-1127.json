@@ -1,0 +1,21 @@
+{
+  "id": "TRAINER-DISK-14GB-1127",
+  "title": "Trainer disk 14 GB free (86%) on 11-27: the etf-history refresh is skipped (15 GB start floor), so ETF 1m history goes stale; free space before the 90% training-failure line",
+  "state": "done",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-29",
+  "note": "MEASURED run 45985635128 10:54Z 11-27: df / 14G avail of 97G (86%); etf_history store 23,544 MB; fetch=skipped lowdisk=1 (DISK_GO 0). Prior: 18.95 GB free on 11-11 (HEALTH-20261104-TRAINER-DISK, closed on a plateau). Fix path: dry-run scripts/ops/trainer_dataset_gc.py (DATA-STORE-PARQUET-GC tooling; operator 10-15 'Go, dry-run first'), du the top dirs via trainer-vm-diag, GC one-off dataset versions/datasets-out, then re-fire etf-history. Re-entry test: etf-history run green with fetch=success and trainer_free_gb >= 15. 2026-11-27 11:15Z ML-PRIMARY:\n- Measured (trainer-vm-diag run 45986444760, HEAD 482026186e): / 97G, 83G used, 14G free.\n  - ict-trading-bot 65G: data 28G (etf_history 23G, trade_journal.db 3.3G), datasets-out 12G, ml/experiments-runs 9.9G, comms/research 5.9G, runtime_logs 2.2G, .git pack 2.4G.\n  - Also ~/.cache 1.6G (tabpfn weights 0.88G), journal 368M.\n- GC slice 1 APPLIED with manager OK (run 45987964024): trainer_dataset_gc.py removed 15 unreferenced datasets-out versions, 2.61 GB.\n  - 6 market_features 15m versions at 119 d; BTCUSDT 1h v003; forecasts c2-v001/v002; setup_candidates v020/v021.\n  - df after: 81G used, 17G free (84%).\n- etf-history-pipeline refresh re-fired 11:15Z; green when fetch=success.\n- Slice 2 dry-run in progress: ml/experiments-runs reference check (registry-store, served, configs, candidates, promotion, trainer_mirror), plus ~ scratch dirs. The list goes to the manager before any delete. 2026-11-27 11:57Z CLOSE (ML-PRIMARY):\n- etf-history GREEN: run 45988835996 refresh fetch=success, verify=success, remaining=0, failed 0, 59 fetched / 960 skipped_fresh of 1019.\n- Measured after (trainer-vm-diag 45993836478): / 99,049M total, 82,633M used, 16,400M free (84%). etf_history 23,544 MB, the same as the refresh's start reading at MB resolution: a daily 1m refresh adds well under 1 MB/series, so the ~0.03 GB/symbol is a BACKFILL (new-symbol) rate, not the daily one.\n- Growth projection: the disk went 19G free (11-11) to 14G (11-27), about 0.31 GB/day, driven by ml/experiments-runs daily retrain dirs and logs, not the ETF store. At that rate 16.4G crosses the 15 GB floor in ~4.5 days (~12-01/12-02).\n- Growth fix: TRAINER-REGISTRY-RETENTION. Interim if needed: the <=1.4 GB slice-2 GC (unreferenced run dirs plus landed scratch), held per the manager unless free < 15 GB.",
+  "phase": null,
+  "updated_at": "2026-11-27T11:56:45Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

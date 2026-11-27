@@ -1,0 +1,23 @@
+{
+  "due_when": {
+    "clears_when": "the operator has granted, amended or refused an ml_entry demotion trigger, and RULE-ENTRY-PROMOTE-20261106 is either covered by the 11-25 promotion-rule fix or recorded as exempt",
+    "due_date": "2026-11-30",
+    "kind": "date"
+  },
+  "id": "PI-20261125-PREP1125-0003",
+  "next_action": "ask_operator",
+  "origin": {
+    "kind": "review",
+    "ref": "performance-review 2026-11-25 (lane PERF-REVIEW-PREP-20261125, manager session_01AFoLuKKEyjyRMDSxQ1prHf); docs/reviews/2026-11-25-weekly-walkthrough.md PERFORMANCE section 3",
+    "rerun": "python3 scripts/research/live_vs_backtest.py --leg ml_entry --block-by-entry-bar && python3 scripts/research/live_bar.py --json"
+  },
+  "owner": "operator (via manager)",
+  "roadmap": [
+    "L-ML-LIVE"
+  ],
+  "routed_to": "PERF-F1-DEMOTION-SIGNAL",
+  "state": "killed",
+  "terminal_reason": "killed: operator 2026-11-27 (popup, relayed by Manager 26a ~08:35Z), verbatim: \"Don't grant, stop asking, get it working\". The per-bar demotion rule is refused; ml_entry is fixed toward real-money performance under the drift-remediation skill instead (ML-PRIMARY queue, ahead of new ML plan work).",
+  "tier": 3,
+  "what": "[performance][real-money][operator decision] ml_entry has NO demotion trigger. C2 (live_vs_backtest) cannot fire for it: its record is +0.037 R/trade (n 907, clustered 2-5 per bar), so the entry-bar block band at n=27 is p5 -12.42 R and live -6.51 R reads CONSISTENT pct 19.7. Real money bybit_2, declared-initial R: 58 trades / 24 entry bars, sumR -10.90, per-bar mean -0.454, lcb80 -0.81; pooled live bar (all accounts) n141 sumR -19.48 lcb80 -0.20 FAIL. 2026-11-24: 8 real-money closes from 3 entry bars, 8 of 8 losers (4 sl, 4 live_review_close), -2.78 R declared basis. PROPOSAL for the operator (a decision rule, not an execution gate; the operator grants it): ml_entry leaves real money for the demo floor when, counted per ENTRY BAR on real money since the served model's promotion, n_bars >= 20 and sumR < 0 and lcb80 < 0. On today's numbers it would fire (24 bars, -10.90, lcb -0.81). Second half: the model swap rule RULE-ENTRY-PROMOTE-20261106 promotes a retrain on a 14-day grade window (v1r20261122: aggregate +0.146, long side -0.526 n220) -- a number measured only over the grading window, in scope of the operator's 2026-11-25 rule fix."
+}

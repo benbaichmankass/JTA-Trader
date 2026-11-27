@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261126-BYBIT-10006-BOUNDARY-RESIDUAL",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-28",
+    "how_to_check": "the next export's summary no longer lists BYBIT-10006-BOUNDARY-RESIDUAL as held",
+    "what": "BYBIT-10006-BOUNDARY-RESIDUAL lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45838676017; held item BYBIT-10006-BOUNDARY-RESIDUAL",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [BYBIT-10006-BOUNDARY-RESIDUAL] held back from the work-store export of 2026-11-26: the store row fails the guard row check -- docs/claude/work/MANAGER-CHECKLIST.json: NEW row 'BYBIT-10006-BOUNDARY-RESIDUAL' asserts quantitative evidence (86%, 86%) with NO parseable basis — state the population/denominator/window in the row (canonical rule: 'Always state the population'). A number without its basis is not a finding."
+}

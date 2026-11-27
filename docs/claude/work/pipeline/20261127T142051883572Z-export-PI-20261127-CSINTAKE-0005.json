@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 8453's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261127-CSINTAKE-0005",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8453 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8453"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 8453 (alpaca_paper/spy_pullback_1h SPY, exit_reason='sl_cross'): bracket_real_at_venue: TP 24R from entry is a sentinel, not a prediction; management_no_fault: naked_rearm"
+}

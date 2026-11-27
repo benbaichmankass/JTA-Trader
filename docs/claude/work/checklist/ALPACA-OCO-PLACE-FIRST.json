@@ -1,0 +1,23 @@
+{
+  "id": "ALPACA-OCO-PLACE-FIRST",
+  "title": "Alpaca netted-symbol OCO: place first or restore on refusal; read back; never delete a sibling's TP",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV)",
+  "lane": null,
+  "model": null,
+  "tier": 3,
+  "roadmap": [
+    "L-DESK-V1"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    29479
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-04",
+  "note": "Filed 2026-11-27 by ML-PRIMARY on Manager 26a's relay (~08:35Z) of the operator popup decision on PI-20261117-LSFHBH4A-0002, verbatim: \"Build now (Recommended)\". DEFECT: Alpaca nets per symbol; when a re-arm OCO for one journal row is refused while a SIBLING row's standalone take-profit rests on the same reducing side ('insufficient qty available'), AlpacaClient.place_protective DELETEs that sibling target and retries once; on a successful retry the sibling is left with NO take-profit (TP-doctrine gap; #26611 restores it only when the retry is also refused). BUILD (Tier 3, order path): (1) never delete a sibling's TP to arm another package -- place the new protection FIRST where the venue allows, else restore the released sibling target on ANY outcome; (2) read back both packages' resting orders after every attempt (venue state, not the request); (3) a refusal that cannot hold both packages' protection is ONE red flag, retried (no halting); per-package OCO invariant per ALPACA-NETTED-PER-PACKAGE-OCO design (merged-net OCO rejected as strategy-semantic). Sequencing: after the first ml_entry real-money deliverable. PR comes back HELD for the operator's Tier-3 OK. Done when a netted two-package symbol on alpaca_paper shows both packages' SL+TP resting after a refused re-arm, with tests for place-first, restore-on-refusal and read-back. Gates this adds or changes: none.",
+  "phase": null,
+  "updated_at": "2026-11-27T12:15:46Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

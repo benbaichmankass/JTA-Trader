@@ -1,0 +1,23 @@
+{
+  "id": "ECON-CAL-CONSENSUS-AND-STALE-ROWS",
+  "title": "Econ calendar: consensus null on ~all upcoming rows; schedule rows never re-observed after a release moves (phantom 11-27 PCE)",
+  "state": "queued",
+  "owner": "ML-PRIMARY lane (session_01AFoLuLpCY5gABbqk3EBUeV) until reassigned",
+  "lane": null,
+  "model": null,
+  "tier": 1,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "data-quality defect found building DESK-MACRO-DAILY; feeds the desk brief and event-study priors",
+  "priority_rank": 3,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-11-27",
+  "note": "Found 2026-11-26 15:45Z reading comms/macro/econ_calendar_upcoming.json (generated 11-26T04:30Z) for the desk packet. (1) expected.consensus is null on 118 of 120 events in the 11-26..12-10 window (the desk packet now publishes n_with_consensus; scope: that window). (2) evt-core-pce-{mom,yoy}-2026-11-27-us and the headline PCE pair are status scheduled, observed_at 2026-11-09T01:55Z, while the October PCE was RELEASED 2026-11-25 13:30Z (Alliance News 11-25, Bigdata.com doc 494D1DD7...; the 11-25 rows exist too): a schedule observed once and never re-observed survives after the release moves. The packet flags rows observed >7d ago as schedule_unconfirmed (17 such rows in the window). Fix: (a) populate consensus from the FXStreet/Bigdata.com source or mark consensus read_state could_not_look per row; (b) on refresh, drop or mark superseded a scheduled row whose kind+period has a newer observed row at another date. Re-entry test: the next calendar snapshot shows n_with_consensus > 0 for the HIGH events in the 14-day window and no scheduled PCE row on 11-27.",
+  "phase": "build",
+  "updated_at": "2026-11-26T15:46:36Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

@@ -18,8 +18,8 @@
   ],
   "blocked_on": [],
   "due_by": "2026-12-02T00:00:00Z",
-  "note": "CLOSED 2026-11-26: --entry-at {close,next_open} merged on trend + pullback harnesses (#28955, default byte-identical, 9 tests); the MG1 audit units RQ-20261126-11d7-03..15 (13 rostered 1d legs, paired CLOSE vs NEXT, rule registered first) merged in #28997 and are queued, NOT yet run.",
+  "note": "CLOSED 2026-11-26: --entry-at {close,next_open} merged on trend + pullback harnesses (#28955, default byte-identical, 9 tests); the MG1 audit units RQ-20261126-11d7-03..15 (13 rostered 1d legs, paired CLOSE vs NEXT, rule registered first) merged in #28997 and are queued, NOT yet run. 2026-11-26T14:52Z ML-PRIMARY research-ops pass: MG1 execution-convention audit READ BY LABEL (RQ-20261126-11d7-03..15; harness verdict 'fail' = label incumbent_beats_candidate OR tie, so the label is what counts). Population: 13 rostered 1d ETF/futures legs, paired per-trade dR, same signals, same-bar CLOSE fill vs t+1 NEXT-open fill. pullback_1d family (gld, mgc, mhg, iaum, ief, gdx, slv): 7 of 7 tie_keep_incumbent (|t| <= 1.11), no detectable convention effect. trend_long_1d family: 3 of 6 OVERSTATED by the same-bar convention at |t| >= 2: iwm (mean dR -0.082 R/trade, t -2.61, n 34; net R 10.41 -> 7.63, -27%), qld (-0.050, t -2.27, n 42; 18.25 -> 16.15, -12%), qqq (-0.061, t -2.02, n 38; 24.79 -> 22.49, -9%). scha and splg tie; mes_trend_long_1d underpowered (n 23 < 30). NO SIGN FLIP: the NEXT-open net R stays positive on all three, so no leg is flagged to the manager under the rule. Meaning: daily breakout entries on index ETFs lose ~0.05-0.08 R/trade to the next-open gap that the same-bar backtest does not see; pullback entries don't. So Stage-0 records for iwm/qld/qqq trend_long_1d overstate by 9-27%. They still pass their sign but the size of the edge should be quoted at the next-open figure. Next test: none authored; the decision it would change (keep the legs) does not move on either branch. Feed to TRADING: a re-grade of those three legs' Stage-0 records on the NEXT convention belongs to their next routine re-measure, not a new unit.",
   "phase": null,
-  "updated_at": "2026-11-26T02:56:52Z",
-  "updated_by": "QUEUE-FILL-STANDING-W49"
+  "updated_at": "2026-11-26T14:52:03Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
 }
