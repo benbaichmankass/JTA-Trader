@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "the daily live-replay-parity run reports 0 of this class for this leg, with the cause root-caused, or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261127-LRP-EB67EFB8",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "live-replay-parity:trend_donchian_eth:candle_mismatch",
+    "rerun": "python3 scripts/ops/live_replay_parity.py --base-url <tunnel to the live web-api> --days 7  (or label an issue `live-replay-parity`; the workflow .github/workflows/live-replay-parity.yml runs it daily and commits comms/live_parity/latest.json)"
+  },
+  "state": "queued",
+  "what": "Live-vs-replay parity: leg `trend_donchian_eth` — candle_mismatch ×5 (paper roster) in window 2026-11-20T06:45:00+00:00..2026-11-27T06:45:00+00:00. MEASURED by scripts/ops/live_replay_parity.py; artifact comms/live_parity/2026-11-27.json. Examples: [{\"class\": \"candle_mismatch\", \"bar\": \"2026-11-26T15:00:00+00:00\", \"t\": \"2026-11-26T15:05:26+00:00\", \"live\": {\"side\": \"none\", \"adx\": 24.2793, \"close\": 1682.22, \"reason\": \"Strategy 'trend_donchian_eth': no breakout on the latest bar (close=1682.22 within channel [1678.21, 1729.69]) \\u2014 non-actionable.\"}, \"replay\": {\"sides\": [\"none\"], \"adx_range\": [24.8663, 25.8598], \"candidates\": [\"2026-11-26T15:00:00+00:00\", \"2026-11-26T14:45:00+00:00\"], \"diag_adx\": {\"final_bar_200\": 24.8663, \"closed_only_199\": 25.8048, \"closed_only_200\": 25.8048, \"next_bar_200\": 23.9515}, \"fine_candle\": {\"time\": 1795705200, \"low\": 1666.91, \"high\": 1697.08}}}, {\"class\": \"candle_mismatch\", \"bar\": \"2026-11-26T15:00:00+00:00\", \"t\": \"2026-11-26T15:06:46+00:00\", \"live\": {\"side\": \"none\", \"adx\": 24.2793, \"close\": 1682.22, \"reason\": \"Strategy 'trend_donchian_eth': no breakout on the latest bar (close=1682.22 within channel [16"
+}

@@ -1,0 +1,16 @@
+{
+  "due_when": {
+    "check_every_days": 1,
+    "clears_when": "trade 8628's fault is root-caused and fixed (or the grader rule is corrected); or killed with a stated reason",
+    "kind": "observation"
+  },
+  "id": "PI-20261127-CSINTAKE-0003",
+  "next_action": "dispatch_lane",
+  "origin": {
+    "kind": "audit",
+    "ref": "mechanics-fault:8628 (mechanics monitoring)",
+    "rerun": "python3 scripts/ops/mechanics_fault_intake.py  # grades closed trades; trade 8628"
+  },
+  "state": "queued",
+  "what": "mechanics fault on trade 8628 (bybit_1/ict_scalp_xrp_15m XRPUSDT, exit_reason='tp'): bracket_real_at_venue: TP 33R from entry is a sentinel, not a prediction"
+}

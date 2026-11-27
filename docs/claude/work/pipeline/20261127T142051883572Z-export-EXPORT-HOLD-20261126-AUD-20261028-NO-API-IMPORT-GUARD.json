@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261126-AUD-20261028-NO-API-IMPORT-GUARD",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-28",
+    "how_to_check": "the next export's summary no longer lists AUD-20261028-NO-API-IMPORT-GUARD as held",
+    "what": "AUD-20261028-NO-API-IMPORT-GUARD lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45838676017; held item AUD-20261028-NO-API-IMPORT-GUARD",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [AUD-20261028-NO-API-IMPORT-GUARD] held back from the work-store export of 2026-11-26: the store row fails the guard row check -- row AUD-20261028-NO-API-IMPORT-GUARD: closing to done needs `writeback` = {\"roadmap\": \"<milestone line you updated | none: reason>\", \"arch\": \"<ARCHITECTURE section you updated | none: reason>\"}"
+}

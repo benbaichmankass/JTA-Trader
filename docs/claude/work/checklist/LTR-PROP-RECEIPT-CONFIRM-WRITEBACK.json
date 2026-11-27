@@ -1,0 +1,23 @@
+{
+  "id": "LTR-PROP-RECEIPT-CONFIRM-WRITEBACK",
+  "title": "Live-review receipts: write the prop-VM / phone executor's venue confirmation back onto the receipt, so a venue_unconfirmed receipt always resolves (confirmed / failed / still pending + flagged)",
+  "state": "in_flight",
+  "owner": "ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-DESK-V1"
+  ],
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [
+    29369
+  ],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26 by ML-PRIMARY at Manager 26a's request (18:00Z: 'Without it, venue_unconfirmed receipts never resolve, and an unresolved receipt is a silent state'). Follows #29266 (LTR-PROP-CLOSE-FALSE-APPLIED), which marks the 7 async prop-VM / phone executor results venue_confirmed=false and lists them in disposition.venue_unconfirmed, but nothing later records the outcome on the receipt. MOTIVATING CASE: LR-20261115T1141Z-pkg-ec406687dc6d449f, tradeify_1 SOL close: receipt 'applied, verified_readback true' at 11:43Z; the executor refused the close modal every tick (vm_close vmc-a2ad1dce4531 retrying, 12+ attempts); the terminal still held the position at 12:48Z; the venue close came 204 min after the apply (prop fill closed_at 15:08Z). Needs: a VM sweep (rows-watch tick or the executor tick) that reads each venue_unconfirmed entry's named confirmation (vm_close_done.json outcome by close_id; the trail amend report for sl_floor / tp_target; the phone's record_amend_result / close report by id) plus the venue terminal positions, and appends a confirmation record (confirmed / apply_failed / refused-nothing-to-close / pending) keyed by review_id to runtime_logs/live_review/applied.jsonl and the rows-watch receipt; ONE flag when still pending after a stated age (no halting; the executor keeps retrying). Data: 13 prop applies 11-14..11-26: 9 confirmed within 5 min, 1 at 204 min, 2 on never-filled tickets, 1 tighten without a venue level. Done when a prop live-review apply's receipt shows venue_unconfirmed and then a confirmation record within one executor cycle, with a test for each outcome. Gates this adds or changes: none (a report, never a refusal).",
+  "phase": null,
+  "updated_at": "2026-11-27T03:30:40Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

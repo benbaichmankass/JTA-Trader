@@ -1,0 +1,22 @@
+{
+  "id": "REGIME-BAR-5M-SKIP",
+  "title": "Per-bar regime scoring skips an occasional 5m bar when the tick gap spans its close (data-path gap; observe-only shadow rows)",
+  "state": "queued",
+  "owner": "ML-PRIMARY",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "data-path hygiene for shadow regime heads; no milestone owns per-bar scoring cadence",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-11",
+  "note": "Filed 2026-11-27 by ML-PRIMARY on Manager 26a's instruction (after #29455).\n- MEASURED from /api/diag/log_file shadow_predictions grep=per_bar (5000-line tail, 2026-11-27 02:50-11:40Z, ~8.8 h), distinct scored bar closes vs expected per head:\n  - mes-regime-5m-baseline-v1 and mes-regime-5m-lgbm-v2: 104/107 (3 missed, 2.8%)\n  - sol-regime-5m-lgbm-v1: 106/107 (1, 0.9%)\n  - btc/eth 5m heads: 107/107\n  - every 15m head 36/36; every 1h head 9/9\n- Rough per day: ~8 MES 5m bars and ~3 SOL 5m bars of 288. Present before AND after #29455 (10:55Z pre-restart, 11:30Z post).\n- Cause hypothesis (untested): emit scores only the LAST closed bar per call, so when two 5m closes fall inside one call gap (tick ~85-95 s plus the fetch gate at bar - 30 s, plus slower IBKR fetches for MES) the earlier bar is never scored.\n- Fix direction: score every closed bar since the head's last-scored bar (bounded backfill, per-bar dedup unchanged).\n- Queue: after the signal_build profile (#29477). Gates this adds or changes: none.",
+  "phase": null,
+  "updated_at": "2026-11-27T11:50:28Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}
