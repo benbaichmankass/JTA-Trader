@@ -220,6 +220,7 @@ class TestLiveConfigIsUnchangedByThisPR:
     def test_union_adds_nothing_and_removes_nothing_today(self):
         import yaml
 
+        from src.config.symbol_sets import tick_strategies_cfg
         from src.main import _EXCHANGE_DEFAULT_SYMBOL, _symbols_for_account
 
         accounts = (yaml.safe_load(open("config/accounts.yaml", encoding="utf-8"))
@@ -244,9 +245,10 @@ class TestLiveConfigIsUnchangedByThisPR:
                 syms = [d] if d else []
             a = _A()
             a.strategies = roster
-            # POOL-SCORED legs (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) are NOT in the static fetch set: their pool-only
-            # symbols get a pass only when they hold a package at a decision close (src/main.py::_resolve_tick_symbols), so they are excluded here too.
-            implied = _symbols_for_account(a, {n: (dict(c, symbols=[]) if (c or {}).get("pool_scored") else c) for n, c in strategies.items()})
+            # POOL-SCORED legs (row ML-ENTRY-EQ-STRUCT-FULL-POOL, src/runtime/ml_pool_scoring.py) and QUEUE-SCORED legs (claude_desk, #29307) are
+            # NOT in the static fetch set: their symbols get a pass only when they hold a package / a queued proposal
+            # (src/main.py::_resolve_tick_symbols), so they are excluded here through the one definition, tick_strategies_cfg.
+            implied = _symbols_for_account(a, tick_strategies_cfg(strategies))
             for s in syms:
                 if s not in before:
                     before.append(s)

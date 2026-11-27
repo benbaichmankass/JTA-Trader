@@ -65,6 +65,13 @@ R_SIDE = "side_invalid"
 R_ENTRY_TYPE = "entry_type_unsupported"
 R_SYMBOL = "symbol_missing"
 R_EXPIRED = "expired_unfilled"
+#: DESK-MACRO v2 (b1, manager 26a 2026-11-26): a ``limit`` entry is HELD BY THE LEG -- the proposal waits in the queue until a
+#: tick's price reaches the limit (long: price <= level; short: price >= level) while still inside the bracket, then the
+#: package goes out as today's market bracket with the proposal's own stop and TP. Not touched by ``good_till_bars`` ->
+#: ``expired_unfilled`` (the existing outcome). The venue sees a market order, so every venue path is unchanged; the fill vs
+#: the limit level is recorded on the package (``limit_level`` / ``touch_price``).
+ENTRY_TYPES = ("market", "limit")
+R_LIMIT_WAIT = "limit_waiting"
 
 _TF = re.compile(r"^\s*(\d+)\s*([mhdw])\s*$", re.I)
 _TF_S = {"m": 60, "h": 3600, "d": 86400, "w": 604800}
@@ -119,7 +126,7 @@ def proposal_problem(proposal: Any) -> Optional[str]:
         return f"{R_SIDE}:{side}"
     entry = p.get("entry") if isinstance(p.get("entry"), dict) else {}
     etype = entry.get("type")
-    if etype != "market":
+    if etype not in ENTRY_TYPES:
         return f"{R_ENTRY_TYPE}:{etype}"
     level = _num(entry.get("level"))
     if level is None or level <= 0:
@@ -178,12 +185,64 @@ def order_package(cfg: dict, row: Dict[str, Any]) -> Dict[str, Any]:
             "novelty": p.get("novelty"),
             "venue_class": p.get("venue_class"),
             "max_hold_min": p.get("max_hold_min"),
+            "entry_type": p["entry"].get("type"),
+            "limit_level": float(p["entry"]["level"]) if p["entry"].get("type") == "limit" else None,
+            "source": row.get("source") or "desk",
             "mechanics_probe": probe,
             # peak-R / open-R telemetry reads these (position_telemetry.build_record); without them peak_state=no_risk
             "risk_per_unit": abs(float(p["entry"]["level"]) - float(p["stop"]["level"])),
             "entry_time": datetime.now(timezone.utc).isoformat(),
         },
     }
+
+
+def tick_symbols(rows: Optional[List[Dict[str, Any]]] = None, now: Optional[datetime] = None) -> List[str]:
+    """DESK-MACRO v2 (queue_scored): the symbols the tick must fetch for this leg -- every queued proposal still inside its
+    good_till window, or inside good_till + max_hold_min (the leg's own max-hold close needs the symbol ticked). A row whose
+    expiry cannot be read is kept for a day from acceptance (never silently dropped). Order kept, de-duplicated."""
+    now = now or datetime.now(timezone.utc)
+    out: List[str] = []
+    for r in (read_queue() if rows is None else rows):
+        sym = norm_symbol((r.get("proposal") or {}).get("symbol")) if isinstance(r, dict) else None
+        if not sym or sym in out:
+            continue
+        exp = expires_at(r)
+        if exp is None:
+            at = _ts(r.get("at"))
+            exp = at + timedelta(days=1) if at else None
+        mh = (r.get("proposal") or {}).get("max_hold_min")
+        if exp is not None and isinstance(mh, int) and not isinstance(mh, bool) and mh > 0:
+            exp = exp + timedelta(minutes=mh)
+        if exp is not None and now < exp:
+            out.append(sym)
+    return out
+
+
+def limit_touch(pkg: Dict[str, Any], price: Optional[float], now: Optional[datetime] = None) -> Tuple[Optional[Dict[str, Any]], str]:
+    """(package ready to send, "touched") or (None, why it still waits). Pure.
+
+    A ``limit`` package goes out only when ``price`` has reached its limit AND is still strictly inside the proposal's
+    bracket (stop < price < tp for a long; tp < price < stop for a short) -- a price through the stop or past the TP waits
+    (it never enters a trade the bracket would close at once); ``good_till_bars`` ends it as ``expired_unfilled``. The sent
+    package enters at ``price`` (a market order) with the proposal's own stop and TP; risk is re-measured from that price."""
+    meta = pkg.get("meta") or {}
+    if meta.get("entry_type") != "limit":
+        return pkg, "market"
+    px = _num(price)
+    if px is None or px <= 0:
+        return None, f"{R_LIMIT_WAIT}:price_could_not_look"
+    lvl, sl, tp, d = _num(meta.get("limit_level")), float(pkg["sl"]), float(pkg["tp"]), pkg.get("direction")
+    if lvl is None:
+        return None, f"{R_LIMIT_WAIT}:limit_level_missing"
+    reached = px <= lvl if d == "long" else px >= lvl
+    if not reached:
+        return None, f"{R_LIMIT_WAIT}:{d} limit {lvl} not reached (price {px})"
+    inside = sl < px < tp if d == "long" else tp < px < sl
+    if not inside:
+        return None, f"{R_LIMIT_WAIT}:price {px} outside bracket stop={sl} tp={tp}"
+    out = dict(pkg, entry=px, meta=dict(meta, touch_price=px, risk_per_unit=abs(px - sl),
+                                        touched_at=(now or datetime.now(timezone.utc)).isoformat()))
+    return out, "touched"
 
 
 def read_queue(path: Optional[Path] = None) -> List[Dict[str, Any]]:

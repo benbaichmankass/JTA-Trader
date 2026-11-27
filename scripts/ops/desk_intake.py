@@ -467,14 +467,128 @@ def run_pass(ref: str, *, apply: bool = True, git: Git = _git,
     return status
 
 
+# --------------------------------------------------------------------------- the macro brief source (DESK-MACRO v2)
+#: DESK-MACRO-DAILY v2 paper routing (operator 2026-11-26: "we know how to turn the trade recommendation from the macro
+#: briefing into an order on a broker"; manager 26a: "(a) and (b) now"). The daily macro brief (comms/desk/macro/<day>.json
+#: on main, written by desk_macro_write.py, which already refused a rule-breaking brief) is a SECOND source for the same
+#: queue: each trade of a HEAD brief (one no later brief supersedes) is checked by THIS file's own rules -- both brackets,
+#: the demo-floor entry_gate, the leg rostered, the symbol on the leg -- and an accepted one is queued for the claude_desk
+#: leg exactly like a desk propose_entry. No new order path and no new gate: the leg, the coordinator and each account's
+#: RiskManager decide everything after this, as for a desk proposal.
+MACRO_DIR = ROOT / "comms" / "desk" / "macro"
+#: The VM pulls main every ~5 min, so a brief is normally picked up minutes after it lands; a trade first seen more than
+#: this long after its brief was judged is refused stale (the brief's prices are a day's close, its entries rest for days).
+MACRO_STALE_S = 6 * 3600
+MACRO_SOURCE = "desk_macro"
+
+
+def macro_briefs(root: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """Every readable desk_macro_brief on disk, minus any another brief supersedes (only the head of a day trades)."""
+    out: List[Dict[str, Any]] = []
+    for f in sorted((root or MACRO_DIR).glob("*.json")):
+        try:
+            b = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(b, dict) and str(b.get("schema") or "").startswith("desk_macro_brief") and b.get("brief_id"):
+            out.append(dict(b, _path=_rel(f)))
+    superseded = {str(b.get("supersedes")) for b in out if b.get("supersedes")}
+    return [b for b in out if str(b["brief_id"]) not in superseded]
+
+
+def macro_decision_id(brief_id: str, i: int) -> str:
+    return f"{brief_id}/T{i + 1}"
+
+
+def macro_classify(trade: Dict[str, Any], *, gate: Optional[str], leg_rostered: bool,
+                   leg_symbols: Optional[List[str]]) -> Tuple[str, str]:
+    """(verdict, detail) for one brief trade, by the same rules as a desk propose_entry. Pure."""
+    prop = trade.get("proposal") if isinstance(trade, dict) else None
+    why = brackets_problem(prop)
+    if why:
+        return "refused", why
+    if gate:
+        return "refused", gate
+    if not leg_rostered:
+        return "refused", f"desk_leg_not_rostered:{DESK_LEG}"
+    sym = str((prop or {}).get("symbol") or "")
+    if leg_symbols is None or sym not in leg_symbols:
+        return "refused", f"{R_SYMBOL}:{sym} (leg trades {leg_symbols})"
+    return "accepted", f"queued for {DESK_LEG} ({MACRO_SOURCE})"
+
+
+def run_macro_pass(*, apply: bool = True, root: Optional[Path] = None,
+                   now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None,
+                   mandates_fn: Callable[[], Optional[Dict[str, Any]]] = lambda: _load_yaml("config/mandates.yaml"),
+                   leg_fn: Callable[[], bool] = _leg_rostered,
+                   accounts_fn: Callable[[], Any] = lambda: _load_yaml("config/accounts.yaml"),
+                   symbols_fn: Callable[[], Optional[List[str]]] = _leg_symbols) -> Dict[str, Any]:
+    """Every new trade of every head macro brief -> one recorded disposition in intake.jsonl (source desk_macro).
+    First start SEEDS every trade already on disk as seen, so no old brief ever trades. Returns the status written."""
+    d = logs or log_dir()
+    state_path, status_path = d / "intake_macro_state.json", d / "intake_macro_status.json"
+    log_path, accepted_path = d / "intake.jsonl", d / "accepted_proposals.jsonl"
+    seen_at = now_fn()
+    briefs = macro_briefs(root)
+    ids = [(b, i, macro_decision_id(str(b["brief_id"]), i)) for b in briefs for i, _ in enumerate(b.get("trades") or [])]
+    status: Dict[str, Any] = {"pass_at": seen_at.isoformat(), "source": MACRO_SOURCE, "apply": apply,
+                              "briefs": len(briefs), "trades": len(ids)}
+    state = _load(state_path)
+    if state is None and not apply:
+        state = {"seen": []}
+    if state is None:
+        _write_json(state_path, {"seeded_at": seen_at.isoformat(), "seen": sorted(t[2] for t in ids)})
+        status.update(new=0, seeded=len(ids), exit=0)
+        _write_json(status_path, status)
+        return status
+    seen = set(state.get("seen") or [])
+    new = [t for t in ids if t[2] not in seen]
+    status["new"] = len(new)
+    accounts_doc = accounts_fn()
+    gate = entry_gate(mandates_fn(), accounts_doc)
+    leg, leg_syms = (leg_fn(), symbols_fn()) if new else (None, None)
+    counts: Dict[str, int] = {}
+    for b, i, did in new:
+        trade = (b.get("trades") or [])[i]
+        judged = _ts(b.get("judged_at"))
+        if judged and (seen_at - judged).total_seconds() > MACRO_STALE_S:
+            verdict, detail = "refused", f"stale_decision: judged {b.get('judged_at')}, first seen {seen_at.isoformat()}"
+        else:
+            verdict, detail = macro_classify(trade, gate=gate, leg_rostered=bool(leg), leg_symbols=leg_syms)
+        intent = f"MI-{b['brief_id']}-T{i + 1}"
+        rec = {"decision_id": did, "source": MACRO_SOURCE, "role": "entry_generation", "action": "propose_entry",
+               "order_package_id": None, "intent_id": intent, "ref": b.get("_path"), "judged_at": b.get("judged_at"),
+               "seen_at": seen_at.isoformat(), "verdict": verdict, "detail": detail}
+        if verdict == "accepted":
+            if apply:
+                _append(accepted_path, {"at": seen_at.isoformat(), "decision_id": did, "intent_id": intent,
+                                        "packet_id": b.get("packet_path"), "packet_sha": b.get("packet_sha"),
+                                        "ref": b.get("_path"), "source": MACRO_SOURCE, "brief_id": b.get("brief_id"),
+                                        "proposal": trade.get("proposal"), "management": trade.get("management")})
+            else:
+                rec["verdict"] = "would_accept"
+        counts[rec["verdict"]] = counts.get(rec["verdict"], 0) + 1
+        if apply:
+            _append(log_path, rec)
+            seen.add(did)
+    if apply:
+        _write_json(state_path, dict(state, seen=sorted(seen)))
+    status.update(verdicts=counts, exit=0)
+    _write_json(status_path, status)
+    return status
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    ap.add_argument("--ref", required=True, help="the pinned desk/decisions commit to read")
+    ap.add_argument("--ref", help="the pinned desk/decisions commit to read")
+    ap.add_argument("--macro", action="store_true", help="read the macro briefs on disk instead of a desk/decisions ref")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--apply", action="store_true")
     g.add_argument("--dry-run", action="store_true", help="classify only: no apply, no state change")
     a = ap.parse_args(argv)
-    st = run_pass(a.ref, apply=bool(a.apply))
+    if a.macro == bool(a.ref):
+        ap.error("exactly one of --ref or --macro")
+    st = run_macro_pass(apply=bool(a.apply)) if a.macro else run_pass(a.ref, apply=bool(a.apply))
     print(json.dumps(st, default=str))
     return int(st.get("exit") or 0)
 

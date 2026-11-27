@@ -3496,7 +3496,7 @@ strategies:
                              # execution: shadow (was shadow 2026-10-26..27, DESK-17).
     decision_bar: closed     # the builder decides from the proposal queue, not a forming bar: no catch-up
     confidence: 0.5          # the package confidence (RiskManager's scalar only sizes DOWN from the account basis)
-    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT, SPY, QQQ, IWM, GLD, TLT, MES, MGC, MHG]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager
+    symbols: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, ADAUSDT, AVAXUSDT, SPY, QQQ, IWM, GLD, TLT, MES, MGC, MHG, AAXJ, ACWI, ACWX, AGG, AMLP, ASHR, BIL, BIV, BKLN, BNBUSDT, BND, BNDX, BSV, DGRO, DIA, DUST, DVY, EEM, EFA, EFAV, EMB, EMLC, EWA, EWC, EWG, EWH, EWJ, EWL, EWP, EWQ, EWS, EWT, EWU, EWW, EWY, EWZ, EZU, FAS, FB, FDN, FEZ, FLOT, FXI, GDX, GDXJ, GOVT, GUSH, HYG, IAU, IAUM, IBB, IEF, IEFA, IEI, IEMG, IGIB, IGSB, IGV, IJH, IJR, INDA, INFO, ITB, ITOT, IVE, IVV, IVW, IWB, IWD, IWF, IWN, IWO, IWR, IXUS, IYR, IYT, JDST, JNK, JNUG, JPST, KBE, KRE, KWEB, LABU, LQD, MBB, MCHI, MDY, MINT, MTUM, MUB, NFX, NUGT, OIH, PFF, PSQ, QID, QLD, QUAL, RSP, SCHA, SCHB, SCHD, SCHF, SCHX, SCZ, SDOW, SDS, SDY, SH, SHV, SHY, SIX, SJNK, SLV, SMH, SOXL, SOXS, SOXX, SPLV, SPXL, SPXS, SPXU, SPYG, SPYM, SQQQ, SSO, SVXY, TECL, TIP, TNA, TQQQ, TZA, UCO, UDOW, ULTI, UN, UNG, UPRO, USMV, USO, UVXY, VB, VCIT, VCSH, VEA, VEU, VGK, VGSH, VGT, VIG, VIXY, VNQ, VO, VOO, VT, VTI, VTV, VUG, VWO, VXUS, VYM, XBI, XHB, XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, XME, XOP, XRT]  # 2026-10-27 DESK-WIDEN (Tier-3, bybit_1 DEMO only, manager
                              # dispatch under MD-DEMO-FLOOR-BUILD; operator vision: the desk scans all markets). Was [AVAXUSDT]:
                              # the one bybit_1 symbol no other leg trades. The same-symbol-allocation-guard concern is met by
                              # bybit_1's slice support (SLICE_SUPPORT_ACCOUNTS) PLUS claude_desk's DECLARED slice
@@ -3513,6 +3513,12 @@ strategies:
                              # futures AND the five ETFs (IB trades US ETFs; the one set that widened, paper only).
                              # alpaca_paper / ib_paper have NO slice support: a desk entry and a strategy leg never
                              # share a symbol's position there (claude_desk.exclusive_hold_refusal, journalled).
+    queue_scored: true       # 2026-11-26 DESK-MACRO v2 (c), Tier 2 (manager 26a): the leg trades only proposals in its queue, so its
+                             # symbols are fetched on demand (src/config/symbol_sets.py::QUEUE_SCORED_KEY; the tick adds back a
+                             # symbol only while a proposal on it is live), and symbols: is every instrument-profiled symbol the
+                             # paper venues trade (192: alpaca 182, bybit 7, IB 3; config/instruments.yaml + the alpaca profile
+                             # set). Operator 2026-11-26: "any symbols that we are able to trade if it has the data to support it".
+                             # Remaining gap: a venue-listed symbol with NO instrument profile (venue-fetched profiles, v2).
     entry_order: post_only_touch  # DESK-MAKER-FILLS probe (b), Tier 3, PENDING OPERATOR YES (PR held): enter as a
                              # post-only limit at the near touch with the bracket attached; unfilled after 5 min (or
                              # rejected as post-only) -> the Market entry. Effective ONLY on a demo + account_class
