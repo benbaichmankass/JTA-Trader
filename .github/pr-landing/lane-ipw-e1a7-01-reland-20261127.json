@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "why": "Re-lands RQ-20261124-e1a7-01 run 45496523516 from its OWN measured output: the run (commit caef2f75, before 05fac2936f's lever-arms verdict.json contract) wrote verdict_regime.json but no verdict.json, so it landed producer_failed. verdict.json = a byte copy of verdict_regime.json; the record is re-emitted by collect_runner_results.py --recollect-orphans and the unit graded by queue_grade.py (indeterminate, measured, n 78,909). Same procedure as e1a7-02 in 05fac2936f. No new run, no code, no runtime.",
+  "hold_text": "A hand-touched result + pre-registered unit file may not self-land; the manager merges after reading the diff."
+}
