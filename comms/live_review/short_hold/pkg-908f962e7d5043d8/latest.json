@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-27T09:45:00Z",
- "bar_close": "2026-11-27T09:50:00Z",
- "built_at": "2026-11-27T09:50:37Z",
+ "bar": "2026-11-27T09:50:00Z",
+ "bar_close": "2026-11-27T09:55:00Z",
+ "built_at": "2026-11-27T09:57:11Z",
  "closed": false,
  "order_package_id": "pkg-908f962e7d5043d8",
  "packet": {
@@ -92,13 +92,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     0.861
+     0.806
     ],
     [
      "SOLUSDT",
      "long",
      "trend_donchian_sol_prop",
-     0.715
+     0.643
     ],
     [
      "TLT",
@@ -110,13 +110,13 @@
      "ETHUSDT",
      "long",
      "e4_oi_shock_1h",
-     -0.21
+     -0.272
     ],
     [
      "ETHUSDT",
      "long",
      "trend_donchian_eth",
-     0.132
+     0.0837
     ],
     [
      "SPY",
@@ -128,7 +128,7 @@
      "SOLUSDT",
      "long",
      "trend_donchian_sol",
-     0.693
+     0.622
     ],
     [
      "QQQ",
@@ -140,7 +140,7 @@
      "MGC",
      "long",
      "mgc_trend_1h",
-     1.11
+     1.14
     ],
     [
      "BTCUSDT",
@@ -483,17 +483,17 @@
   "features_at_review": {
    "atr_now_over_entry": 0.9549,
    "bars_since_peak": 17,
-   "giveback_r": 0.7344,
-   "open_r": 0.3321,
+   "giveback_r": 0.7139,
+   "open_r": 0.3526,
    "peak_r": 1.0665,
-   "r_to_stop": 1.3321,
-   "r_to_target": 1.2083
+   "r_to_stop": 1.3526,
+   "r_to_target": 1.1878
   },
   "generator": {
    "head": "196135b896",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T09:51:34Z",
+  "info_cutoff_at": "2026-11-27T09:57:31Z",
   "leg": "ict_scalp_eth_15m",
   "mechanics": {
    "evidence": "bybit_1: ETHUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-66b47f931d594c33, pkg-6ab3f5da21314f1e); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
@@ -508,10 +508,6 @@
    "verdict": "could_not_look"
   },
   "missing_inputs": [
-   {
-    "field": "read:alpaca_orders",
-    "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
-   },
    {
     "field": "regime.vol_now",
     "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
@@ -655,9 +651,9 @@
      "p05_r": null,
      "p_giveback_gt_half": null,
      "sd_r": null,
-     "spec": "r:0.17",
+     "spec": "r:0.18",
      "state": "insufficient_n",
-     "stop_at_r_now": 0.17,
+     "stop_at_r_now": 0.18,
      "within_auto_bound": null,
      "within_shadow_bound": null,
      "worst_case_gain_r": null,
@@ -698,7 +694,7 @@
     ]
    },
    "read_state": "insufficient_n",
-   "source": "comms/live_review/tables/LR-20261127T0950Z-pkg-908f962e7d5043d8.json"
+   "source": "comms/live_review/tables/LR-20261127T0957Z-pkg-908f962e7d5043d8.json"
   },
   "priced_options_state": "priced",
   "regime": {
@@ -710,25 +706,18 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T0950Z-pkg-908f962e7d5043d8",
+  "review_id": "LR-20261127T0957Z-pkg-908f962e7d5043d8",
   "short_hold": {
-   "atr": 3.003571428571409,
-   "bar": "2026-11-27T09:45:00Z",
-   "bar_close": "2026-11-27T09:50:00Z",
+   "atr": 2.9307142857142674,
+   "bar": "2026-11-27T09:50:00Z",
+   "bar_close": "2026-11-27T09:55:00Z",
    "entry": 1717.62,
-   "mark": 1730.41,
-   "minutes_held": 454.5,
-   "open_r_at_mark": 0.3628,
+   "mark": 1729.06,
+   "minutes_held": 461.1,
+   "open_r_at_mark": 0.3245,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 1730.26,
-     "high": 1732.05,
-     "low": 1730.0,
-     "open": 1730.53,
-     "t": "2026-11-27T08:50:00Z"
-    },
     {
      "close": 1730.54,
      "high": 1731.17,
@@ -805,6 +794,13 @@
      "low": 1727.4,
      "open": 1729.6,
      "t": "2026-11-27T09:45:00Z"
+    },
+    {
+     "close": 1729.06,
+     "high": 1731.85,
+     "low": 1729.05,
+     "open": 1730.41,
+     "t": "2026-11-27T09:50:00Z"
     }
    ],
    "risk_per_unit": 35.25542857,
@@ -813,8 +809,8 @@
   "state": {
    "atr_now_over_entry": 0.9549,
    "bars_held": 30,
-   "giveback_r": 0.7344,
-   "open_r": 0.3321,
+   "giveback_r": 0.7139,
+   "open_r": 0.3526,
    "peak_provenance": "estimated",
    "peak_r": 1.0665,
    "regime_cell_entry": "transitional/volatile",
@@ -830,25 +826,18 @@
    }
   ]
  },
- "packet_sha": "fa691988fbc039f3718dad770787c2cb9501dd4caea14b8119d1c4cabbbeffcf",
+ "packet_sha": "10dc5a49cad2030578e4fd378e8d0a92b61ae7db765aedfec3844b575ee423fe",
  "short_hold": {
-  "atr": 3.003571428571409,
-  "bar": "2026-11-27T09:45:00Z",
-  "bar_close": "2026-11-27T09:50:00Z",
+  "atr": 2.9307142857142674,
+  "bar": "2026-11-27T09:50:00Z",
+  "bar_close": "2026-11-27T09:55:00Z",
   "entry": 1717.62,
-  "mark": 1730.41,
-  "minutes_held": 454.5,
-  "open_r_at_mark": 0.3628,
+  "mark": 1729.06,
+  "minutes_held": 461.1,
+  "open_r_at_mark": 0.3245,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 1730.26,
-    "high": 1732.05,
-    "low": 1730.0,
-    "open": 1730.53,
-    "t": "2026-11-27T08:50:00Z"
-   },
    {
     "close": 1730.54,
     "high": 1731.17,
@@ -925,6 +914,13 @@
     "low": 1727.4,
     "open": 1729.6,
     "t": "2026-11-27T09:45:00Z"
+   },
+   {
+    "close": 1729.06,
+    "high": 1731.85,
+    "low": 1729.05,
+    "open": 1730.41,
+    "t": "2026-11-27T09:50:00Z"
    }
   ],
   "risk_per_unit": 35.25542857,
@@ -1039,9 +1035,9 @@
     "p05_r": null,
     "p_giveback_gt_half": null,
     "sd_r": null,
-    "spec": "r:0.17",
+    "spec": "r:0.18",
     "state": "insufficient_n",
-    "stop_at_r_now": 0.17,
+    "stop_at_r_now": 0.18,
     "within_auto_bound": null,
     "within_shadow_bound": null,
     "worst_case_gain_r": null,
@@ -1089,10 +1085,10 @@
    "condition_asked": "state",
    "dist_to_stop_atr": null,
    "dist_to_target_atr": null,
-   "open_r": 0.3321,
+   "open_r": 0.3526,
    "peak_r": 1.0665,
    "side": "long"
   }
  },
- "table_path": "comms/live_review/tables/LR-20261127T0950Z-pkg-908f962e7d5043d8.json"
+ "table_path": "comms/live_review/tables/LR-20261127T0957Z-pkg-908f962e7d5043d8.json"
 }
