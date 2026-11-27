@@ -1,6 +1,6 @@
 # ml_entry: the next lever is a new information class, not a new learner (plan, 2026-11-27)
 
-> **Doc status:** `live` · category `research-plan` · written 2026-11-27 by ML-PRIMARY for Manager 26a (14:53Z ask) · drives the units named in § 4
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md) · written 2026-11-27 by ML-PRIMARY for Manager 26a (14:53Z ask) · drives the units named in § 4
 
 **Gates this adds or changes:** none.
 
