@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-27T05:00:00Z",
- "bar_close": "2026-11-27T05:05:00Z",
- "built_at": "2026-11-27T05:07:13Z",
+ "bar": "2026-11-27T05:05:00Z",
+ "bar_close": "2026-11-27T05:10:00Z",
+ "built_at": "2026-11-27T05:12:17Z",
  "closed": false,
  "order_package_id": "pkg-0d286000bb444843",
  "packet": {
@@ -97,13 +97,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     0.854
+     0.855
     ],
     [
      "SOLUSDT",
      "long",
      "trend_donchian_sol_prop",
-     0.223
+     0.4
     ],
     [
      "TLT",
@@ -115,19 +115,19 @@
      "ETHUSDT",
      "long",
      "e4_oi_shock_1h",
-     0.283
+     0.305
     ],
     [
      "ETHUSDT",
      "long",
      "trend_donchian_eth",
-     0.514
+     0.531
     ],
     [
      "ETHUSDT",
      "long",
      "ict_scalp_eth_15m",
-     0.752
+     0.749
     ],
     [
      "SPY",
@@ -139,7 +139,7 @@
      "SOLUSDT",
      "long",
      "trend_donchian_sol",
-     0.207
+     0.382
     ],
     [
      "QQQ",
@@ -151,7 +151,7 @@
      "MGC",
      "long",
      "mgc_trend_1h",
-     -0.0539
+     -0.0873
     ],
     [
      "IEF",
@@ -488,17 +488,17 @@
   "features_at_review": {
    "atr_now_over_entry": 1.3701,
    "bars_since_peak": 11,
-   "giveback_r": 0.1504,
-   "open_r": 0.3818,
+   "giveback_r": 0.1273,
+   "open_r": 0.4049,
    "peak_r": 0.5322,
-   "r_to_stop": 1.3818,
-   "r_to_target": 1.017
+   "r_to_stop": 1.4049,
+   "r_to_target": 0.9938
   },
   "generator": {
    "head": "524f6cb057",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T05:07:31Z",
+  "info_cutoff_at": "2026-11-27T05:12:55Z",
   "leg": "ict_scalp_xrp_15m",
   "mechanics": {
    "evidence": "1 account(s) could not be read",
@@ -513,6 +513,10 @@
    "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:bybit_history:bybit_1:XRPUSDT",
+    "reason": "diag bybit_raw_order_history?account_id=bybit_1&symbol=XRPUSDT&start_ms=1795745317804&end_ms=1795756435244: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is "
+   },
    {
     "field": "regime.vol_now",
     "reason": "calm/volatile buckets use frozen edges held only in the VM model registry; not reachable read-only from a session"
@@ -655,9 +659,9 @@
      "p05_r": null,
      "p_giveback_gt_half": null,
      "sd_r": null,
-     "spec": "r:0.19",
+     "spec": "r:0.2",
      "state": "insufficient_n",
-     "stop_at_r_now": 0.19,
+     "stop_at_r_now": 0.2,
      "within_auto_bound": null,
      "within_shadow_bound": null,
      "worst_case_gain_r": null,
@@ -698,7 +702,7 @@
     ]
    },
    "read_state": "insufficient_n",
-   "source": "comms/live_review/tables/LR-20261127T0507Z-pkg-0d286000bb444843.json"
+   "source": "comms/live_review/tables/LR-20261127T0512Z-pkg-0d286000bb444843.json"
   },
   "priced_options_state": "priced",
   "regime": {
@@ -710,25 +714,18 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T0507Z-pkg-0d286000bb444843",
+  "review_id": "LR-20261127T0512Z-pkg-0d286000bb444843",
   "short_hold": {
-   "atr": 0.0017214285714285563,
-   "bar": "2026-11-27T05:00:00Z",
-   "bar_close": "2026-11-27T05:05:00Z",
+   "atr": 0.0019928571428571218,
+   "bar": "2026-11-27T05:05:00Z",
+   "bar_close": "2026-11-27T05:10:00Z",
    "entry": 0.9569,
-   "mark": 0.9608,
-   "minutes_held": 177.7,
-   "open_r_at_mark": 0.2256,
+   "mark": 0.9656,
+   "minutes_held": 182.8,
+   "open_r_at_mark": 0.5033,
    "r_unit": "risk_per_unit",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 0.9592,
-     "high": 0.9597,
-     "low": 0.9574,
-     "open": 0.959,
-     "t": "2026-11-27T04:05:00Z"
-    },
     {
      "close": 0.96,
      "high": 0.9607,
@@ -805,6 +802,13 @@
      "low": 0.9592,
      "open": 0.9598,
      "t": "2026-11-27T05:00:00Z"
+    },
+    {
+     "close": 0.9656,
+     "high": 0.9661,
+     "low": 0.9608,
+     "open": 0.9608,
+     "t": "2026-11-27T05:05:00Z"
     }
    ],
    "risk_per_unit": 0.01728714,
@@ -813,8 +817,8 @@
   "state": {
    "atr_now_over_entry": 1.3701,
    "bars_held": 12,
-   "giveback_r": 0.1504,
-   "open_r": 0.3818,
+   "giveback_r": 0.1273,
+   "open_r": 0.4049,
    "peak_provenance": "estimated",
    "peak_r": 0.5322,
    "regime_cell_entry": null,
@@ -830,25 +834,18 @@
    }
   ]
  },
- "packet_sha": "fb4a814c21431afef0be460d291eb36b157fdf8283ea0951fdd31a9839f89ba5",
+ "packet_sha": "e430c90be01c287e9403f1cf686f9fc604b07fc3837a650660f2359a250f675c",
  "short_hold": {
-  "atr": 0.0017214285714285563,
-  "bar": "2026-11-27T05:00:00Z",
-  "bar_close": "2026-11-27T05:05:00Z",
+  "atr": 0.0019928571428571218,
+  "bar": "2026-11-27T05:05:00Z",
+  "bar_close": "2026-11-27T05:10:00Z",
   "entry": 0.9569,
-  "mark": 0.9608,
-  "minutes_held": 177.7,
-  "open_r_at_mark": 0.2256,
+  "mark": 0.9656,
+  "minutes_held": 182.8,
+  "open_r_at_mark": 0.5033,
   "r_unit": "risk_per_unit",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 0.9592,
-    "high": 0.9597,
-    "low": 0.9574,
-    "open": 0.959,
-    "t": "2026-11-27T04:05:00Z"
-   },
    {
     "close": 0.96,
     "high": 0.9607,
@@ -925,6 +922,13 @@
     "low": 0.9592,
     "open": 0.9598,
     "t": "2026-11-27T05:00:00Z"
+   },
+   {
+    "close": 0.9656,
+    "high": 0.9661,
+    "low": 0.9608,
+    "open": 0.9608,
+    "t": "2026-11-27T05:05:00Z"
    }
   ],
   "risk_per_unit": 0.01728714,
@@ -1039,9 +1043,9 @@
     "p05_r": null,
     "p_giveback_gt_half": null,
     "sd_r": null,
-    "spec": "r:0.19",
+    "spec": "r:0.2",
     "state": "insufficient_n",
-    "stop_at_r_now": 0.19,
+    "stop_at_r_now": 0.2,
     "within_auto_bound": null,
     "within_shadow_bound": null,
     "worst_case_gain_r": null,
@@ -1089,10 +1093,10 @@
    "condition_asked": "state",
    "dist_to_stop_atr": null,
    "dist_to_target_atr": null,
-   "open_r": 0.3818,
+   "open_r": 0.4049,
    "peak_r": 0.5322,
    "side": "long"
   }
  },
- "table_path": "comms/live_review/tables/LR-20261127T0507Z-pkg-0d286000bb444843.json"
+ "table_path": "comms/live_review/tables/LR-20261127T0512Z-pkg-0d286000bb444843.json"
 }
