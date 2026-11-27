@@ -691,6 +691,15 @@ def _run_forming_catchup(name: str, builder: IntentBuilder, settings: dict, *,
     return intent
 
 
+def _record_builder_ms(name: str, t0: float) -> None:
+    """Per-strategy builder time into tick_cost (TICK-BUILDER-TIMING). Measurement only; never raises."""
+    try:
+        from src.runtime.tick_cost import record_builder
+        record_builder(name, (time.monotonic() - t0) * 1000.0)
+    except Exception:  # noqa: BLE001 -- measurement must never break the tick
+        return
+
+
 def _collect_intents(
     settings: dict,
     *,
@@ -768,9 +777,12 @@ def _collect_intents(
                         intents.append(caught)
             except Exception:  # noqa: BLE001 — never let catch-up break the tick
                 logger.exception("intent_multiplexer: '%s' catch-up failed", name)
+        _t_build = time.monotonic()
         try:
             signal = builder(settings)
+            _record_builder_ms(name, _t_build)
         except Exception as exc:  # noqa: BLE001
+            _record_builder_ms(name, _t_build)
             logger.warning(
                 "intent_multiplexer: strategy '%s' raised %s — skipping this tick",
                 name, exc,

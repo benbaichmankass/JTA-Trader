@@ -106,6 +106,10 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         # travel the same way; kernel_main.py exports TABICL_MODEL_DIR when one is present.
         for w in sorted(Path(wheels).glob("*.ckpt")):
             shutil.copy2(w, out / w.name)
+        # MLP-F-COVARIATE-TSFM: a frozen Chronos encoder's files (config + weights), flat and prefixed `chronos-*__`; kernel_main.py
+        # exports CHRONOS_BUNDLE_DIR and ml_decision_entry.chronos_model_dir() re-assembles them as a model dir.
+        for w in sorted(Path(wheels).glob("chronos-*__*")):
+            shutil.copy2(w, out / w.name)
     (out / "spec.json").write_text(json.dumps({"unit": unit, "run_id": run_id, "commit_sha": sha}) + "\n")
     (out / "dataset-metadata.json").write_text(json.dumps({
         "title": dataset_slug, "id": f"{username}/{dataset_slug}", "licenses": [{"name": "CC0-1.0"}],
