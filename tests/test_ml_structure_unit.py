@@ -135,3 +135,37 @@ def test_the_unit_verdict_is_mapped_to_the_script_run_contract(tmp_path):
     (tmp_path / "verdict.json").unlink()
     (tmp_path / "5e01_result.json").write_text(json.dumps({"schema": "ml_structure_unit/1", "verdict": "SOMETHING_ELSE"}))
     assert not RUN.write_verdict("RQ-X-5e01-09", tmp_path) and not (tmp_path / "verdict.json").exists()   # an unmapped word writes nothing
+
+
+# --------------------------------------------------------------------------- ml_entry_v2 population (row ML-STRUCTURE-ENTRY-V2-POPULATION)
+def test_each_unit_maps_to_the_population_it_registered():
+    assert U.population_of("RQ-20261101-5e01-09") == "c692"
+    assert U.population_of("RQ-20261101-5e01-10") == "ml_entry_v2"
+    assert U.population_of("5e01") == "c692"
+
+
+def test_the_v2_leg_symbols_are_re_parsed_from_the_roster():
+    syms, src = U.leg_symbols("ml_entry_v2", ["X"])
+    assert src == "config/strategies.yaml::ml_entry_v2.symbols" and syms and "X" not in syms
+    assert U.leg_symbols("no_such_leg", ["X"]) == (["X"], "fallback:ml_entry_levers.TRADED")
+
+
+def test_the_v2_registered_bracket_is_sl2_tp4_atr():
+    assert (U.V2_SL_ATR, U.V2_SL_ATR * U.V2_TP_R) == (2.0, 4.0)
+
+
+def test_the_v2_unit_scores_only_the_legs_own_symbols_on_the_v2_decisions(world, tmp_path, monkeypatch):
+    tab, cache, trades = world
+    seen = {}
+    monkeypatch.setattr(U, "v2_trades", lambda t, c, o, n, seeds: ({sd: trades for sd in seeds}, t))
+    monkeypatch.setattr(U, "leg_symbols", lambda leg, fb: (["AAAUSDT"], "test"))
+
+    def fake_score(tr, t24, c, sl_atr, tp_atr):
+        seen["symbols"], seen["bracket"] = set(tr.symbol), (sl_atr, tp_atr)
+        return {"verdict": "INDETERMINATE", "n": int(len(tr))}
+
+    monkeypatch.setattr(U, "score_structure", fake_score)
+    res = U.structure_unit(tab, tmp_path, 1, cache, unit="RQ-20261101-5e01-10")
+    assert res["population"] == "ml_entry_v2" and seen["symbols"] == {"AAAUSDT"} and seen["bracket"] == (2.0, 4.0)
+    first = res["per_seed"][res["verdict_seed"]]
+    assert first["n"] == int((trades.symbol == "AAAUSDT").sum()) and first["n_pool_decisions"] == len(trades)

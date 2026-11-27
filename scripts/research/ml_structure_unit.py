@@ -36,6 +36,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as E  # noqa: E402
+import ml_entry_recipe as R  # noqa: E402
 import ml_structure_bracket as SB  # noqa: E402
 
 PIVOTS = (3, 5, 8)
@@ -225,6 +226,82 @@ def score_structure(base_trades: pd.DataFrame, tab: pd.DataFrame, cache: Path, d
     return judge_structure(a, per, controls)
 
 
+# ------------------------------------------------------------------------------------------ populations (row ML-STRUCTURE-ENTRY-V2-POPULATION)
+#: Which ML entry population each unit registered. ``c692`` = the frozen v1 base (``base_members``, tau 0.10). ``ml_entry_v2`` = the
+#: served bybit_1 leg ``ml-decision-entry-v2`` (config/strategies.yaml::ml_entry_v2): the b608 winning stack S3 -- R2 recipe members,
+#: thresholded at the base's decision share (set before the gate), the cost-per-R gate 0.06, scored at SL 2 / TP 4 ATR, on the leg's
+#: own symbols (the wider pool only feeds the cross-section features). Unit 5e01-10 registered "ATR stop 2.0, TP 2.0R" = that bracket.
+POPULATIONS = {"5e01-09": "c692", "5e01-10": "ml_entry_v2"}
+V2_SL_ATR, V2_TP_R = 2.0, 2.0
+
+
+def population_of(unit: str) -> str:
+    """The population a unit id registered; ``c692`` for an unlisted id (the runner's original population)."""
+    for k, v in POPULATIONS.items():
+        if k in str(unit):
+            return v
+    return "c692"
+
+
+def leg_symbols(leg: str, fallback) -> tuple:
+    """(symbols, source): the leg's declared ``symbols:`` re-parsed from config/strategies.yaml, else ``fallback`` (named)."""
+    import yaml  # noqa: PLC0415
+
+    try:
+        cfg = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "strategies.yaml").read_text())
+        syms = list(((cfg.get("strategies") or cfg).get(leg) or {}).get("symbols") or [])
+    except (OSError, ValueError, AttributeError):
+        syms = []
+    return (syms, f"config/strategies.yaml::{leg}.symbols") if syms else (list(fallback), "fallback:ml_entry_levers.TRADED")
+
+
+def v2_trades(tab: pd.DataFrame, cache: Path, out: Path, n_jobs: int, seeds) -> tuple:
+    """ml_entry_v2's out-of-sample decisions per seed, exactly as ``ml_entry_levers.stack_unit`` level S3_R2_gate_24 makes them: members
+    trained on ``tab`` (its own labels), decisions taken on the table relabelled at SL 2 / TP 4 ATR. Returns (trades by seed, t24)."""
+    import ml_entry_levers as L  # noqa: PLC0415
+
+    base_m = {sd: R.ens_member(tab, "R0", "S0", sd, out, n_jobs) for sd in seeds}
+    r2_m = {sd: R.ens_member(tab, "R2", "S0", sd, out, n_jobs) for sd in seeds}
+    share = {sd: [float((np.maximum(base_m[sd][f"pl{k}"], base_m[sd][f"ps{k}"]) > L.TAU).mean()) for k in range(8)] for sd in seeds}
+    pos = np.concatenate([base_m[seeds[0]][f"pos{k}"] for k in range(8)])
+    fold_of = np.concatenate([np.full(len(base_m[seeds[0]][f"pos{k}"]), k) for k in range(8)])
+    cxa = ((tab.loc[pos, "cost_long"] + tab.loc[pos, "cost_short"]) / 2 * tab.loc[pos, "atr_pct"]).to_numpy()
+    t24 = L.relabel_table(tab, cache, V2_SL_ATR, V2_SL_ATR * V2_TP_R)
+    trades = {sd: L.run_arm(L.fold_frames(t24, base_m[sd]), r2_m[sd], tweak=L._stack_tweak(share[sd], cxa, fold_of, L.GATE_V2))
+              for sd in seeds}
+    return trades, t24
+
+
+def structure_unit_v2(tab: pd.DataFrame, out: Path, n_jobs: int, cache: Path, unit: str) -> dict:
+    """RQ-20261101-5e01-10: the structure arm on ml_entry_v2's own decisions (entries fixed; only the SL/TP source changes)."""
+    import ml_entry_levers as L  # noqa: PLC0415
+
+    sl, tp_atr = V2_SL_ATR, V2_SL_ATR * V2_TP_R
+    tab, dropped = L.drop_unobservable(tab, cache, [(sl, tp_atr)])
+    for p in PIVOTS:                                   # a structure NaN is unobservable too: drop it from EVERY arm, count it
+        m = structure_labels(tab, cache, p, sl_atr=sl, tp_atr=tp_atr)[["net_long", "net_short"]].isna().any(axis=1).to_numpy()
+        if m.any():
+            tab = tab.loc[~m].reset_index(drop=True)
+            dropped["n_dropped"] += int(m.sum())
+    syms, src = leg_symbols("ml_entry_v2", L.TRADED)
+    trades, t24 = v2_trades(tab, cache, out, n_jobs, L.SEEDS)
+    res = {"schema": "ml_structure_unit/1", "unit": unit, "population": "ml_entry_v2", "sealed_windows_read": 0,
+           "unobservable_rows_dropped": dropped, "leg_symbols": {"symbols": syms, "source": src},
+           "bracket": {"sl_atr": sl, "tp_r": V2_TP_R, "tp_atr": tp_atr, "table_relabelled": True,
+                       "decisions": "R2 members, base decision share, cost gate %s (stack_unit S3_R2_gate_24)" % L.GATE_V2},
+           "per_seed": {}}
+    for k, sd in enumerate(L.SEEDS):
+        tr = trades[sd][trades[sd].symbol.isin(syms)].reset_index(drop=True)
+        r = score_structure(tr, t24, cache, sl_atr=sl, tp_atr=tp_atr)
+        r["n_pool_decisions"] = int(len(trades[sd]))
+        res["per_seed"][str(sd)] = r
+        print("seed", sd, r["verdict"], flush=True)
+        if k == 0:
+            res["verdict_seed"], res["verdict"], res["n"] = str(sd), r["verdict"], r["n"]
+    res["result"] = f"{res['verdict']} (first seed decides; other seeds in per_seed)"
+    return res
+
+
 def structure_unit(tab: pd.DataFrame, out: Path, n_jobs: int, cache: Path, unit: str = "5e01", sl_atr: float = REGISTERED_SL_ATR,
                    tp_r: float = REGISTERED_TP_R) -> dict:
     """``sl_atr`` / ``tp_r`` default to the bracket the unit REGISTERED. The table's labels (and so the fold models) are made at that
@@ -232,6 +309,8 @@ def structure_unit(tab: pd.DataFrame, out: Path, n_jobs: int, cache: Path, unit:
     clamp / fallback and controls all share one bracket."""
     import ml_entry_levers as L  # noqa: PLC0415 -- late: ml_entry_levers dispatches to this module
 
+    if population_of(unit) == "ml_entry_v2":
+        return structure_unit_v2(tab, out, n_jobs, cache, unit)
     tp_atr = float(tp_r) * float(sl_atr)
     relabelled = (float(sl_atr), tp_atr) != (E.SL_ATR, E.TP_ATR)
     if relabelled:

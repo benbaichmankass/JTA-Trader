@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-10
 title: 'Structure-based SL+TP (ML bracket) (swing / FVG / liquidity, ratcheting) vs the declared exit on ml_entry_v2 (bybit_1 (demo floor; served)): does
   it beat the current exit net of the full cost stack, held-out?'
-status: blocked
+status: queued
 cadence: once
 theme: live_strategy
 priority: 1
@@ -67,11 +67,12 @@ decision_rule:
     4). Thresholds, grid, seeds and window are not changed after any result.'
   what_it_does_not_do: Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a promotion. Harness fills a stop at the
     stop price (no gap), equally in S, A and the R controls.
-blocked_on:
-- kind: work_item
-  ref: ML-STRUCTURE-ENTRY-V2-POPULATION
-  what: 'Needs ml_entry_v2 population in ml_entry_levers. The structure-exit runner (scripts/research/ml_structure_unit.py, PR 29312) scores the c692 ml_entry population. This unit registered ml_entry_v2 (bybit_1, served model): ml_entry_levers has no table or fold-model path for that population yet, so the runner cannot score it. Needs an ml_entry_v2 population (its served features, folds and tau) in ml_entry_levers, then run.command = ml_entry_v2_run.py levers <unit> {out_dir}.'
-  clears_when: 'ml_entry_levers can build the ml_entry_v2 table and fold models; then git mv to research/queue/, fill run.command, set status queued.'
+amendments:
+- at: '2026-11-27T03:34Z'
+  by: lane ML-PRIMARY (row ML-STRUCTURE-ENTRY-V2-POPULATION, assigned by Manager 26a 2026-11-27 03:18Z)
+  before_any_run: true
+  what: 'HARNESS changed, rule and thresholds unchanged (same amendment shape as 5e01-09). Registered harness: scripts/research/exit_lever_ablation.py --leg ml_entry_v2. Harness actually used: scripts/research/ml_structure_unit.py via ml_entry_v2_run.py levers, population ml_entry_v2 (structure_unit_v2): the decisions are those of the served leg ml-decision-entry-v2 as the b608 winning stack S3_R2_gate_24 makes them -- R2 recipe fold members, thresholded at the c692 base decision share (set before the gate), cost-per-R gate 0.06, decisions on the table relabelled at the registered bracket SL 2.0 ATR / TP 2.0 R = 4.0 ATR; scored on the leg''s own symbols re-parsed from config/strategies.yaml::ml_entry_v2.symbols (the wider pool only feeds cross-section features); the declared arm''s decisions re-scored with ml_structure_bracket.label_cell_structure at pivot 3/5/8 plus 100 seeded random-exit controls.'
+  why: 'exit_lever_ablation replays a leg''s Stage-0 backtest harness; ml_entry_v2''s decisions come from fitted fold models, which only the ML walk-forward can express (the same reason as 5e01-09). Arms A / S3 / S5 / S8, entries fixed, pivot chosen leave-one-bin-out on 5 of 6 calendar bins and scored on the held bin, paired week-bootstrap lower bound, >= 4 of 6 bins, R4 vs 100 random-exit controls, PASS_NONINFERIOR via R2, n >= 39 else INDETERMINATE, net of the full cost stack. No threshold, grid, seed or window changed. Implementation choices the registration did not fix: the 6 bins regroup the out-of-sample trades into equal spans of entry time; the first seed decides (others reported). The unit had not run and no result was seen. Tests: tests/test_ml_structure_unit.py.'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 400
@@ -88,17 +89,14 @@ routing:
   basis: 'Estimate: (3 pivot arms + 1 hold + 100 random controls) x one leg; one 2h-leg arm over the window took about 20 s on a runner (ed1c-17 / 9a7e-01
     logs). The first run replaces it.'
 run:
+  workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/exit_lever_ablation.py
-  - --leg
-  - ml_entry_v2
-  - --arm
-  - A=
-  - --arm
-  - S5=--structure-exit=pivot=5
-  - --out
+  - scripts/research/ml_entry_v2_run.py
+  - levers
+  - '{unit}'
   - '{out_dir}'
+  timeout_minutes: 300
   inputs:
     research_unit: RQ-20261101-5e01-10
 lands:
