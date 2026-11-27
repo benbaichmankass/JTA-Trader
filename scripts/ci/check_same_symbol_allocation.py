@@ -253,14 +253,21 @@ def self_test() -> int:
     check("every grandfather has a unit and a due", all(x.get("unit") and x.get("due") for x in GRANDFATHERED.values()), True)
     SLICE_SUPPORT_ACCOUNTS = saved
     # exclusive-hold legs (DESK-PAPER-ACCOUNTS): out of the group on a non-slice account, in it on a slice account,
-    # per-account scope honoured, and the runtime refusal that justifies leaving them out is really called.
-    sx = yaml.safe_dump({"strategies": {"a": {"symbols": ["X"]}, "claude_desk": {
-        "symbols": ["X", "Y"], "account_symbols": {"acc": ["X"], "bybit_1": ["X"], "other": ["Y"]}}}})
-    check("exclusive leg left out on a non-slice account", groups(acct({"acc": ["a", "claude_desk"]}), sx), {})
-    check("exclusive leg counted on a slice account",
-          groups(acct({"bybit_1": ["a", "claude_desk"]}), sx), {("bybit_1", "X"): ["a", "claude_desk"]})
-    check("per-account scope: the leg's other symbols are not on this account",
-          groups(acct({"other": ["a", "claude_desk"]}), sx), {})
+    # each account's set DERIVED from its venue (ML-UNIVERSE-RULE), and the runtime refusal that justifies leaving
+    # them out is really called.
+    import src.config.symbol_sets as _SS
+    sx = yaml.safe_dump({"strategies": {"a": {"symbols": ["BTCUSDT"]}, "claude_desk": {"symbols": ["BTCUSDT", "SPY"]}}})
+    _venues = {"acc": {"exchange": "bybit"}, "bybit_1": {"exchange": "bybit"}, "other": {"exchange": "alpaca"}}
+    _real_account = _SS._account
+    _SS._account = lambda x: _venues.get(str(x))
+    try:
+        check("exclusive leg left out on a non-slice account", groups(acct({"acc": ["a", "claude_desk"]}), sx), {})
+        check("exclusive leg counted on a slice account",
+              groups(acct({"bybit_1": ["a", "claude_desk"]}), sx), {("bybit_1", "BTCUSDT"): ["a", "claude_desk"]})
+        check("venue scope: a symbol the account's venue cannot trade is not on this account",
+              groups(acct({"other": ["a", "claude_desk"]}), sx), {})
+    finally:
+        _SS._account = _real_account
     coord = (REPO / COORDINATOR_REL).read_text(encoding="utf-8")
     check("the coordinator calls the exclusive-hold refusal", "exclusive_hold_refusal(" in coord, True)
     check("the coordinator walks every exclusive-hold leg", "_cd.EXCLUSIVE_HOLD_LEGS" in coord, True)

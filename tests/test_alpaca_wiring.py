@@ -792,7 +792,7 @@ def test_accounts_yaml_alpaca_paper_ships_inert():
         # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, paper): the Claude desk leg, scoped to SPY/QQQ/IWM/GLD/TLT.
         "claude_desk",
         # 2026-11-01 ALPACA-LIVE-ACTIVITY-ML (Tier-3, paper; operator "Paper now, v2 for live (Rec.)"):
-        # the ONE ml_entry model on 13 ETFs (strategies.yaml::ml_entry.account_symbols.alpaca_paper).
+        # the ONE ml_entry model on 13 ETFs (derived: the ETFs Alpaca can trade, ML-UNIVERSE-RULE).
         "ml_entry",
         # 2026-11-06 ML-ENTRY-ALL-ACCOUNTS (Tier-2 held PR #23715): the equity-native ENTRY model, alpaca_paper only (Stage 1).
         "ml_entry_eq",
