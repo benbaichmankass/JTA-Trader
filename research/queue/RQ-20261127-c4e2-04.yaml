@@ -5,7 +5,7 @@ id: RQ-20261127-c4e2-04
 title: 'ml_entry PRETRAINED TS-ENCODER lever: on the registered dev folds, do 8 principal components of a FROZEN Chronos (chronos-t5-small)
   encoding of each decision row''s trailing 256 hourly closes, added to the 20 registered features, beat the recipe and a matched 8-noise-column
   placebo, net of cost?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -143,3 +143,17 @@ related:
 population: The registered ml_entry recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, tau 0.10,
   net R after fee 11 bps rt + slippage 3 bps + funding 1 bps/8h.
 last_dispatched_at: '2026-11-27T14:14:03+00:00'
+grading:
+  attested: RULE-RQ20261127-c4e2-04-TSFM-COVARIATE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-c4e2-04-TSFM-COVARIATE
+  evidence:
+  - research/results/RQ-20261127-c4e2-04/46002684114.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate
