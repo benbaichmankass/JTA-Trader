@@ -36,8 +36,11 @@ power:
   alpha: 0.05
   power: 0.8
   basis: 'ESTIMATE before any run: fs01-01 arms scored 35k-92k LOFO decisions over the 8 dev folds (C/F2 64,719; F/F5 44,577; N9 52,688);
-    the materiality bar +0.010 R/decision is the fs01-01 / f8a1-01 bar. alpha is the tabulated power-floor level; the family bar for k = 3 arms
-    is in the rule (Sidak t on the 8 per-fold deltas, df 7, 2.6302), so INDETERMINATE-like FAILs on a real +0.01 effect are a stated risk.'
+    the materiality bar +0.010 R/decision is the fs01-01 / f8a1-01 bar. The graded statistic is the one-sided t of the 8 per-fold deltas
+    (df 7) at the house level (one-sided 0.025, Sidak k = 3: t >= 3.1215; Manager 26a review 2026-11-27 15:25Z). POWER, stated honestly:
+    fs01-01 per-fold deltas spread about 0.02-0.05 R, so P(PASS | true effect +0.010) is about 12 / 6 / 3 percent at fold sd 0.02 / 0.03 /
+    0.05 (noncentral t, df 7). A real effect of the materiality size most likely reads INDETERMINATE (upper bound above +0.010), not PASS;
+    FAIL needs the upper bound below +0.010.'
   feasibility:
     source: none
     accrual_basis: Replays public Binance Vision history through 2025-09-30 only (no later date is downloaded); nothing accrues.
@@ -61,11 +64,12 @@ decision_rule:
   statistic: 'ml_entry_v2.combine_placebo: per arm, the pooled LOFO mean net R per decision minus its placebo''s; the 8 per-fold deltas (each
     fold at its own LOFO tau, as fs01-01); folds with delta > 0; the one-sided t of the 8 per-fold deltas; the per-calendar-year mean delta
     (2022..2025); the arm''s dev coverage. Columns, placebo seed (20261127 + width), arms and dev window are fixed now.'
-  rule: 'An arm PASSES iff pooled delta vs its placebo >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the per-fold t >= 2.6302
-    (one-sided Sidak family bar, k = 3, alpha 0.05, df 7) AND the yearly mean delta is positive in >= 3 of 4 years AND its columns are present
-    on >= 40 percent of dev rows. An arm is INDETERMINATE when coverage < 40 percent or fewer than 8 folds carry both means; FAIL otherwise.
-    Unit verdict: pass if any arm passes (the largest pooled delta is named), fail if all three fail, indeterminate otherwise. No threshold,
-    column or seed changes after any result.'
+  rule: 'An arm PASSES iff pooled delta vs its placebo >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the per-fold t >= 3.1215
+    (one-sided Sidak family bar, k = 3, alpha 0.025, df 7) AND the yearly mean delta is positive in >= 3 of 4 years AND its columns are present
+    on >= 40 percent of dev rows. An arm FAILS iff mean(fold deltas) + 3.1215 x se(fold deltas) < +0.010 (the effect is excluded at the bar).
+    INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 8 folds carry both means. Unit verdict: pass if any arm passes
+    (the largest pooled delta is named), fail if all three fail, indeterminate otherwise. No threshold, column or seed changes after any
+    result.'
   pass_action: 'ONE confirming read of the best arm on disjoint out-of-time data (2025-10-01 onward, holdout_lock claimed, the deflated ENTRY
     bar), registered in its own unit before it runs; a pass there makes those columns an input of the next ml_entry_retrain challenger, a
     data-backed Tier-3 replacement packet applied by the manager or a mandate, never by a lane.'

@@ -47,13 +47,15 @@ ARMS.update({"P2": ["F2c"], "P5": ["F5c"], "P25": ["F2c", "F5c"], "N4": [], "N8"
 ARMS.update({"V": ["F9"], "N3": []})   # DVOL (unit RQ-20261127-26ac-02): BTC implied vol, 3 columns, vs a 3-column placebo
 PLACEBO_WIDTH = {"N4": 4, "N8": 8, "N3": 3}
 PLACEBO_FOR_DVOL = {"V": "N3"}
-#: one-sided alpha 0.05 on the K = 8 per-fold deltas (df 7), a single arm: t_{0.95, 7}
-DVOL_T_BAR = 1.8946
+#: one-sided alpha 0.025 (the house LEVER_RULE level; Manager 26a review 15:25Z) on the K = 8 per-fold deltas (df 7), a single
+#: arm: t_{0.975, 7} = 2.3646
+DVOL_T_BAR = 2.3646
 PLACEBO_FOR = {"P2": "N4", "P5": "N4", "P25": "N8"}
 PLACEBO_SEED = 20261127
 COMPACT_DELTA, COMPACT_FOLDS, COMPACT_YEARS = 0.010, 6, 3
-# one-sided Sidak family bar for k = 3 arms at alpha 0.05 on the K = 8 per-fold deltas (df 7): t_{1-0.016952, 7}
-COMPACT_T_BAR = 2.6302
+# one-sided Sidak family bar for k = 3 arms at alpha 0.025 (the house LEVER_RULE level; Manager 26a review 15:25Z) on the K = 8
+# per-fold deltas (df 7): per-arm alpha 1 - 0.975^(1/3) = 0.008404, t_{1-0.008404, 7} = 3.1215
+COMPACT_T_BAR = 3.1215
 FAM_COLS = {k: [c for c in v if c != "f3_present"] if k == "F3" else v for k, v in F.FAMILIES.items()}
 ALL_FAM_COLS = [c for v in F.FAMILIES.values() for c in v]
 EXTRA_DEV_FOLDS = ["2025-10-01", "2026-01-01", "2026-04-01", "2026-07-01"]   # used ONLY by the forward unit (dev through W1 start)
@@ -240,9 +242,11 @@ def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_b
     """RQ-20261127-26ac-01 rule (registered before any run). Per arm X in P2 / P5 / P25 against its matched-width placebo
     N = PLACEBO_FOR[X], on the LOFO per-fold means (tau chosen on the other folds, as fs01-01):
       PASS iff pooled delta (X - N) >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the one-sided t on the 8
-           per-fold deltas >= COMPACT_T_BAR (Sidak, k = 3) AND the per-year mean delta > 0 in >= 3 of 4 years
-           AND the arm's families are present on >= 40 percent of dev rows;
-      INDETERMINATE if coverage < 40 percent or fewer than 8 folds carry both means; FAIL otherwise.
+           per-fold deltas >= the t bar (COMPACT_T_BAR, Sidak k = 3 at one-sided 0.025) AND the per-year mean delta > 0 in
+           >= 3 of 4 years AND the arm's families are present on >= 40 percent of dev rows;
+      FAIL iff the upper bound mean(fold deltas) + t_bar * se(fold deltas) < +0.010 (the effect is excluded at the bar,
+           the house LEVER_RULE shape: FAIL needs evidence against, not merely a missed bar);
+      INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 8 folds carry both means.
     The unit's verdict is PASS if any arm passes (the largest pooled delta is named), FAIL if every arm fails, else
     INDETERMINATE. Baseline A and seed-noise A2 are reported, never graded."""
     pairs = PLACEBO_FOR if pairs is None else pairs
@@ -267,10 +271,11 @@ def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_b
                  if a["mean_net_r"] is not None and b["mean_net_r"] is not None]
         d = [v for _, v in pairs]
         pooled = (x["mean_net_r"] - n["mean_net_r"]) if None not in (x["mean_net_r"], n["mean_net_r"]) else None
-        t = None
+        t, upper = None, None
         if len(d) >= 2:
-            sd = float(np.std(d, ddof=1))
-            t = (float(np.mean(d)) / (sd / np.sqrt(len(d)))) if sd > 0 else None
+            se = float(np.std(d, ddof=1)) / np.sqrt(len(d))
+            t = (float(np.mean(d)) / se) if se > 0 else None
+            upper = float(np.mean(d)) + t_bar * se
         years: dict = {}
         for fold, v in pairs:
             years.setdefault(str(fold)[:4], []).append(v)
@@ -283,11 +288,13 @@ def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_b
         elif (pooled is not None and pooled >= COMPACT_DELTA and pos >= COMPACT_FOLDS and t is not None
               and t >= t_bar and ypos >= COMPACT_YEARS):
             verdict = "pass"
-        else:
+        elif upper is not None and upper < COMPACT_DELTA:
             verdict = "fail"
+        else:
+            verdict = "indeterminate"
         res["arms"][arm] = {"families": ARMS[arm], "columns": [c for f in ARMS[arm] for c in _fam_cols(f)], "placebo": pl,
                             "n": x["n"], "mean_net_r": x["mean_net_r"], "pooled_delta_vs_placebo": pooled,
-                            "fold_deltas": dict(pairs), "folds_positive": pos, "t_fold": t, "yearly_delta": yearly,
+                            "fold_deltas": dict(pairs), "folds_positive": pos, "t_fold": t, "upper_bound": upper, "yearly_delta": yearly,
                             "years_positive": ypos, "dev_coverage": cov, "verdict": verdict,
                             "delta_vs_A": (x["mean_net_r"] - arms["A"]["lofo"]["mean_net_r"])
                             if None not in (x["mean_net_r"], arms["A"]["lofo"]["mean_net_r"]) else None}
@@ -301,7 +308,8 @@ def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_b
 
 def combine_dvol(tab: pd.DataFrame, out: Path) -> dict:
     """RQ-20261127-26ac-02 rule (registered before any run): combine_placebo's clauses for the single arm V (F9, BTC DVOL, 3
-    columns) against N3, with the single-arm bar t >= DVOL_T_BAR (one-sided 0.05, df 7). Baseline A / A2 reported only."""
+    columns) against N3, with the single-arm bar t >= DVOL_T_BAR (one-sided 0.025, df 7); FAIL iff mean + t_bar x se < +0.010,
+    else INDETERMINATE. Baseline A / A2 reported only."""
     return combine_placebo(tab, out, pairs=PLACEBO_FOR_DVOL, t_bar=DVOL_T_BAR, need=("A", "A2", "N3"), result_name="dvol.json")
 
 
@@ -434,12 +442,17 @@ def _self_test_compact() -> None:
         r = combine_placebo(cov_tab, out)
         assert r["arms"]["P2"]["verdict"] == "pass", r["arms"]["P2"]          # graded vs N4, not vs A (A is higher)
         assert r["arms"]["P2"]["delta_vs_A"] < 0
-        assert r["arms"]["P5"]["verdict"] == "fail" and r["verdict"] == "pass" and r["best_arm"] == "P2"
+        assert r["arms"]["P5"]["verdict"] in ("fail", "indeterminate") and r["verdict"] == "pass" and r["best_arm"] == "P2"
+        # FAIL needs the upper bound below +0.010: a tight null fails, a noisy null stays indeterminate
+        (out / "arm_P5.json").write_text(json.dumps(arm([0.001, -0.001, 0.0005, -0.0005, 0.001, -0.001, 0.0005, -0.0005])))
+        assert combine_placebo(cov_tab, out)["arms"]["P5"]["verdict"] == "fail"
+        (out / "arm_P5.json").write_text(json.dumps(arm([0.08, -0.07, 0.06, -0.08, 0.07, -0.06, 0.05, -0.07])))
+        assert combine_placebo(cov_tab, out)["arms"]["P5"]["verdict"] == "indeterminate"
         low = pd.DataFrame({"ts": pd.to_datetime(["2023-01-01"] * 3, utc=True),
                             **{c: [1.0, np.nan, np.nan] for f in COMPACT.values() for c in f}})
         assert combine_placebo(low, out)["arms"]["P2"]["verdict"] == "indeterminate"   # coverage < 40 percent
         (out / "arm_P2.json").write_text(json.dumps(arm([0.03] * 7 + [-0.2])))       # one bad fold kills the t / mean
-        assert combine_placebo(cov_tab, out)["arms"]["P2"]["verdict"] == "fail"
+        assert combine_placebo(cov_tab, out)["arms"]["P2"]["verdict"] != "pass"
         (out / "arm_P2.json").write_text(json.dumps(arm(good)))
         (out / "arm_N3.json").write_text(json.dumps(arm(base)))
         (out / "arm_V.json").write_text(json.dumps(arm([0.016, 0.012, 0.015, 0.011, 0.014, 0.013, 0.012, 0.015])))

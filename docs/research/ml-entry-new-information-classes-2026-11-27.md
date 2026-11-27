@@ -55,9 +55,10 @@ All candidates use the same universe, decision grid, labels, cost stack and dev 
 
 1. **Unit A: compact derivatives state vs matched placebo** (class 1).
    - Arms: `F2c` (4 columns), `F5c` (4 columns) and `F2c+F5c` (8 columns). Each arm has a seeded N(0,1) placebo of the same width.
-   - Rule: an arm qualifies iff its delta vs its matched placebo ≥ +0.010 R per decision, positive in ≥ 6 of 8 folds, the one-sided t clears the Šidák bar for k = 3 arms, and it is net positive in ≥ 3 of 4 calendar years.
+   - Rule: an arm PASSES iff its delta vs its matched placebo ≥ +0.010 R per decision, positive in ≥ 6 of 8 folds, the one-sided t on the 8 per-fold deltas ≥ 3.1215 (Šidák, k = 3, one-sided 0.025: the house level), and it is net positive in ≥ 3 of 4 calendar years. It FAILS only when the upper bound (mean + 3.1215 × se) is below +0.010; otherwise it is INDETERMINATE.
+   - Power, stated honestly: per-fold deltas in fs01-01 spread about 0.02–0.05 R, so a true +0.010 effect passes only about 3–12% of the time. The likely outcome for a real effect of that size is INDETERMINATE, not PASS.
    - Pass → ONE confirming read on the out-of-time window (2025-10-01 onward, `holdout_lock` claimed, deflated bar) in its own unit. That read decides.
    - Fail → compact derivatives state is closed for crypto ENTRY on `research/levers/ml-entry.yaml`.
-2. **Unit B: implied-vol regime vs matched placebo** (class 2). One arm (3 columns) against a 3-column placebo, with the same rule at k = 1 (t ≥ 2.0). Authored after Unit A's builder lands, since it shares the harness change.
+2. **Unit B: implied-vol regime vs matched placebo** (class 2). One arm (3 columns) against a 3-column placebo, with the same rule at k = 1: t ≥ 2.3646 (one-sided 0.025, df 7), FAIL only when mean + 2.3646 × se < +0.010. A true +0.010 effect passes about 7–23% of the time. Authored after Unit A's builder lands, since it shares the harness change.
 
 Neither unit promotes anything. A confirmed pass becomes the next `ml_entry_retrain` challenger through a data-backed Tier-3 packet applied by the manager.
