@@ -10,7 +10,7 @@
 #      for ptrace; says so and skips if either is unavailable). Function names + lines only, no --locals.
 #
 # Writes nothing to the repo, the DB or any service; signals, restarts and places nothing.
-set -uo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/ops/_lib.sh
@@ -18,7 +18,7 @@ source "${SCRIPT_DIR}/_lib.sh"
 load_runtime_secrets  # exchange creds for the timed private call (never printed)
 PY="${REPO_DIR}/.venv/bin/python3"
 
-echo "probe starts: $(date -u +%Y-%m-%dT%H:%M:%SZ)   loadavg: $(cat /proc/loadavg 2>/dev/null)   nproc: $(nproc)"
+echo "probe starts: $(date -u +%Y-%m-%dT%H:%M:%SZ)   loadavg: $(cat /proc/loadavg 2>/dev/null || true)   nproc: $(nproc)"
 echo "--- CPU pressure (PSI) ---"; cat /proc/pressure/cpu 2>/dev/null || echo "(no PSI: could_not_look)"
 
 TRADER_PID="$(systemctl show -p MainPID --value ict-trader-live.service 2>/dev/null || echo 0)"
@@ -26,7 +26,7 @@ API_PID="$(systemctl show -p MainPID --value ict-web-api.service 2>/dev/null || 
 
 echo
 echo "===== 1. thread census + per-thread CPU over 20 s ====="
-python3 - "${TRADER_PID}" "${API_PID}" <<'PY'
+python3 - "${TRADER_PID}" "${API_PID}" <<'PY' || echo "(thread census failed rc=$?)"
 import os, sys, time, collections
 hz = os.sysconf("SC_CLK_TCK")
 pids = {"trader": sys.argv[1], "web-api": sys.argv[2]}
@@ -89,7 +89,7 @@ PYSPY="$(command -v py-spy || true)"
 if [ -z "${PYSPY}" ] && [ -x /tmp/metis-pyspy/bin/py-spy ]; then PYSPY=/tmp/metis-pyspy/bin/py-spy; fi
 if [ -z "${PYSPY}" ]; then
     echo "py-spy absent; installing to /tmp/metis-pyspy (pip --target, outside the venv)"
-    timeout 180 python3 -m pip install --quiet --disable-pip-version-check --target /tmp/metis-pyspy py-spy 2>&1 | tail -3
+    timeout 180 python3 -m pip install --quiet --disable-pip-version-check --target /tmp/metis-pyspy py-spy 2>&1 | tail -3 || echo "(pip install failed)"
     [ -x /tmp/metis-pyspy/bin/py-spy ] && PYSPY=/tmp/metis-pyspy/bin/py-spy
 fi
 if [ -z "${PYSPY}" ]; then
