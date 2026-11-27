@@ -8,7 +8,7 @@
 id: RQ-20261126-1e75-02
 title: 'D6 Pointer CEILING CONFIRMATION on a SYMBOL TWIN (BTCUSDT): with trend_donchian_eth_4h''s config unchanged except symbols[0] = BTCUSDT, does the
   selected static bracket S10T4 (atr_stop_mult 1.0, tp_r 4.0) beat the declared bracket (1.5 ATR / 4R) per paired trade, 2020-07..2026-10, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -85,6 +85,12 @@ ml_consumer:
   - trend_donchian_eth_4h
   book: money
 practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): a selection confirmed on a disjoint window before it is used; entries fixed, net of cost.'
+amendments:
+- at: '2026-11-27T03:41Z'
+  by: lane ML-PRIMARY (author of this unit, #29259)
+  before_any_run: true
+  what: 'ARGV fix only: add --delta-r 0. exit_lever_ablation.py declares --delta-r required for every grade, and the first runs exited 2 at argparse (runs 45876210648 / 45876207193 / 45876964091, cmd-0.log: "the following arguments are required: --delta-r") before any arm ran, so no result exists. Under --grade paired the value is never read (grade_paired takes t_bar / mean_bar / fold_majority / n_floor / min_match only), so 0 is inert; the registered first variant on entries_diverge (--grade replace) states its own bar (0.03 R x n(B)) and is a separate run.'
+  why: 'Rule, arms, window, folds and every threshold unchanged; no arm ever ran.'
 compute: cpu_long
 value:
   bucket: ai_trader
@@ -133,6 +139,8 @@ run:
   - '5'
   - --n-floor
   - '39'
+  - --delta-r
+  - '0'
   - --research-unit
   - RQ-20261126-1e75-02
   - --out
@@ -157,9 +165,11 @@ grading:
   decision_rule_id: RULE-RQ20261126-1e75-02-D6-CEILING-TWIN
   evidence:
   - research/results/RQ-20261126-1e75-02/45876210648.jsonl
-  graded_at: '2026-11-26'
+  - research/results/RQ-20261126-1e75-02/45947504486.jsonl
+  graded_at: '2026-11-27'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
-  rows: 1
-  verdict: null
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 2
+  verdict: fail

@@ -77,6 +77,9 @@ def test_ten_generic_refusals_in_a_row_stop_the_loop_and_the_api_message_is_prin
     assert len(deletes) == 10
     assert "stopped=consecutive_refusals" in p.stdout and "deleted=0" in p.stdout and "refused=10" in p.stdout
     assert "refused 1: gh: Could not delete the workflow run (HTTP 403)" in p.stdout     # the API's own words are in the log
+    # the summary names how many the filter SELECTED (29) apart from how many the loop PROCESSED before it stopped (10):
+    # the 20:49Z run read "candidates=11" for a filter that selected 242
+    assert "selected_by_filter=29 processed=10" in p.stdout
 
 
 def test_a_run_that_started_a_job_is_kept_never_deleted(tmp_path):
@@ -88,3 +91,60 @@ def test_a_run_that_started_a_job_is_kept_never_deleted(tmp_path):
                             "STUB_IDS": "5 6", "STUB_MODE": "ok", "DELETE_CALLS": str(calls)})
     assert calls.read_text() == ""
     assert "kept=2" in p.stdout and "deleted=0" in p.stdout
+
+
+# ── census mode (ACTIONS-ZOMBIE-QUEUED-RUNS, manager 26a 2026-11-26): READ-ONLY ──────────────────────────────────────────
+
+import json  # noqa: E402
+import time  # noqa: E402
+
+
+def _census_step() -> str:
+    steps = yaml.safe_load(WF.read_text(encoding="utf-8"))["jobs"]["cancel"]["steps"]
+    return next(s for s in steps if s.get("id") == "diagnose")["run"]
+
+
+def _iso(age_s: int) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - age_s))
+
+
+def test_the_census_buckets_by_age_attempt_and_filter_and_changes_nothing(tmp_path):
+    runs = [
+        {"databaseId": 1, "createdAt": _iso(100), "attempt": 1, "status": "queued", "workflowName": "pytest-run", "event": "pull_request", "headBranch": "b1"},
+        {"databaseId": 2, "createdAt": _iso(5 * 3600), "attempt": 1, "status": "queued", "workflowName": "pytest-run", "event": "pull_request", "headBranch": "b2"},
+        {"databaseId": 3, "createdAt": _iso(30 * 3600), "attempt": 1, "status": "queued", "workflowName": "guards", "event": "pull_request", "headBranch": "b3"},
+        {"databaseId": 4, "createdAt": _iso(40 * 3600), "attempt": 2, "status": "queued", "workflowName": "guards", "event": "push", "headBranch": "main"},
+        {"databaseId": 5, "createdAt": _iso(50 * 3600), "attempt": 1, "status": "queued", "workflowName": "guards", "event": "pull_request", "headBranch": "b5"},
+    ]
+    fx = tmp_path / "runs.json"
+    fx.write_text(json.dumps(runs))
+    calls = tmp_path / "calls"
+    calls.write_text("")
+    stub = r'''
+gh() {
+  case "$1" in
+    run) cat "$FIXTURE" ;;
+    api) echo "$@" >> "$CALLS"; echo "pr_count=1 head_repo_fork=false actor=x trigger=x path=.github/workflows/y.yml status=queued conclusion=null" ;;
+  esac
+}
+'''
+    p = subprocess.run(["bash", "-c", stub + "\n" + _census_step()], capture_output=True, text=True, timeout=60, check=False,
+                       env={"PATH": "/usr/bin:/bin", "REPO": "o/r", "MIN_AGE_HOURS": "24", "FIXTURE": str(fx), "CALLS": str(calls)})
+    out = p.stdout
+    assert p.returncode == 0, p.stderr
+    assert "queued runs listed: 5" in out
+    assert "a <1h  attempt=1  status=queued  n=1" in out
+    assert "b 1-24h  attempt=1  status=queued  n=1" in out
+    assert "c >24h  attempt=1  status=queued  n=2" in out and "c >24h  attempt=2  status=queued  n=1" in out
+    assert "older than min age, any attempt/status: 3" in out
+    assert "(the filter): 2" in out                                   # ids 3 and 5; id 4 is attempt 2
+    assert "3  " in out and "event=push  branch=main" in out         # the oldest-run listing carries event and branch
+    reads = calls.read_text().splitlines()
+    assert reads and all("--method" not in r for r in reads)          # only GETs: nothing was deleted or cancelled
+
+
+def test_a_diagnose_dispatch_skips_the_delete_and_cancel_steps():
+    steps = yaml.safe_load(WF.read_text(encoding="utf-8"))["jobs"]["cancel"]["steps"]
+    by_id = {s.get("id"): s for s in steps}
+    assert "!inputs.diagnose" in by_id["zombies"]["if"]
+    assert "inputs.diagnose" in by_id["cancel"]["if"]

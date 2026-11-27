@@ -1,7 +1,7 @@
 id: RQ-20261124-e1a7-01
 title: 'ml_entry REGIME-STATE lever: does adding 5 slow market-state columns (BTC 7d / 30d return, BTC vol percentile over 90d, BTC distance from its 50d mean, 7d
   breadth) to the registered recipe beat both the recipe and a 5-column noise placebo by +0.0068 R/decision on the dev folds, net of the full cost stack?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 2
@@ -143,16 +143,14 @@ last_dispatched_at: '2026-11-24T21:59:09+00:00'
 grading:
   attested: RULE-ML-ENTRY-LEVER-ARMS-20261124
   auto: true
+  awaiting: more_data
   decision_rule_id: RULE-ML-ENTRY-LEVER-ARMS-20261124
   evidence:
   - research/results/RQ-20261124-e1a7-01/45496523516.jsonl
-  graded_at: '2026-11-25'
+  graded_at: '2026-11-27'
   grader: scripts/research/queue_grade.py
-  needs_review: true
-  owner: ML-ROADMAP-MECE
-  owner_reason: 'producer_failed: ran but did not grade against RULE-ML-ENTRY-LEVER-ARMS-20261124 (summary.json
-    + verdict_regime.json on main under comms/research/RQ-20261124-e1a7-01/45496523516/). ml_entry lever
-    read belongs to the ML-PRIMARY lane (hand grade or driver verdict emission).'
-  reason: 'read_state not unanimously measured: [''producer_failed'']'
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
   rows: 1
-  verdict: null
+  verdict: indeterminate

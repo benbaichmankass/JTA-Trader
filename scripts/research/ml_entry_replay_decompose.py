@@ -39,7 +39,7 @@ import ml_decision_entry as E  # noqa: E402
 
 WINDOW_START = "2026-10-25"
 WINDOW_END = "2026-11-07"                       # inclusive; the grade's window
-LIVE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]   # config/strategies.yaml ml_entry.account_symbols.bybit_2 (== bybit_portfolio)
+LIVE_SYMBOLS = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]   # leg_symbols(ml_entry, bybit_2) (== bybit_portfolio): the population record on bybit
 LIVE_RECORD = {"account": "bybit_2", "since": "2026-11-02", "n_closed": 5, "sides": "all short", "pnl_usd": 4.93, "winners": 3}
 STRUCT_SPEC = "pivot=5;sl_only"
 SIDE_N, SIDE_LONG_MAX, SIDE_SHORT_MIN = 30, -0.30, -0.05

@@ -70,7 +70,8 @@ def test_one_leg_per_symbol_so_our_own_legs_cannot_hedge():
     assert len(syms) == len(set(syms)), syms
     assert set(syms) <= set(ACCOUNTS["tradeify_1"]["symbols"])
     # ml_entry's tradeify slice is pinned to symbols the account declares, so it can only overlap the trend legs on ETH/SOL
-    assert set(blocks["ml_entry"]["account_symbols"]["tradeify_1"]) <= set(ACCOUNTS["tradeify_1"]["symbols"])
+    from src.config.symbol_sets import leg_symbols
+    assert set(leg_symbols(blocks["ml_entry"], "tradeify_1", leg="ml_entry")) <= set(ACCOUNTS["tradeify_1"]["symbols"])
 
 
 def test_ml_entry_overlap_cannot_hedge_an_open_position():

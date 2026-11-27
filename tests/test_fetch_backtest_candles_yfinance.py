@@ -142,6 +142,24 @@ def test_the_inverse_proxies_resolve_to_themselves(sym):
     assert _DEFAULT_TICKER_MAP[sym] == sym
 
 
+#: The demo floor (OPERATING-PLAN § 2 "Stage 1 is the DEMO FLOOR"): paper books only, no real money.
+_DEMO_FLOOR = frozenset({"bybit_1", "alpaca_paper", "ib_paper"})
+
+
+def _paper_only_desk_allowed(strategies: dict) -> set:
+    """UPDATED DELIBERATELY 2026-11-27 (ML-UNIVERSE-RULE / row DESK-MACRO paper routing, #29307): ``claude_desk`` declares every
+    profiled symbol (``queue_scored``) so the desk can route ANY symbol its macro brief proposes -- but ONLY on demo-floor accounts.
+    It is an allowed namer here exactly while every account rostering it is on the demo floor; the moment a real-money account
+    rosters it, it is not, and these contracts go red again (a real-money widening needs its own population test)."""
+    import yaml
+    desk = strategies.get("claude_desk") or {}
+    if not desk.get("queue_scored"):
+        return set()
+    accounts = (yaml.safe_load((_ROOT / "config" / "accounts.yaml").read_text()) or {}).get("accounts") or {}
+    rostering = {n for n, c in accounts.items() if "claude_desk" in ((c or {}).get("strategies") or [])}
+    return {"claude_desk"} if rostering and rostering <= _DEMO_FLOOR else set()
+
+
 @pytest.mark.parametrize("sym", _INVERSE_PROXIES)
 def test_the_inverse_proxies_are_tradeable_only_as_ml_pool_members(sym):
     """UPDATED DELIBERATELY in the wiring PR (row ML-ENTRY-EQ-STRUCT-FULL-POOL, 2026-11-11; operator verbatim "we want it to be trading everything it
@@ -151,7 +169,8 @@ def test_the_inverse_proxies_are_tradeable_only_as_ml_pool_members(sym):
     import yaml
     strategies = yaml.safe_load((_ROOT / "config" / "strategies.yaml").read_text())
     strategies = strategies.get("strategies") or strategies
-    naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []))
+    allowed = _paper_only_desk_allowed(strategies)
+    naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []) and n not in allowed)
     assert naming == ["ml_entry_eq_struct"], f"{sym} is named by {naming}: only the full-pool ML leg may trade it without its own evidence"
     assert strategies["ml_entry_eq_struct"].get("pool_scored") is True
     ins = yaml.safe_load((_ROOT / "config" / "instruments.yaml").read_text())["instruments"]
@@ -204,11 +223,19 @@ def test_the_affordability_candidates_are_not_yet_tradeable(sym):
         import yaml
         strategies = yaml.safe_load((_ROOT / "config" / "strategies.yaml").read_text())
         strategies = strategies.get("strategies") or strategies
-        naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []))
+        allowed = _paper_only_desk_allowed(strategies)
+        naming = sorted(n for n, c in strategies.items() if isinstance(c, dict) and sym in (c.get("symbols") or []) and n not in allowed)
         assert naming in ([], ["ml_entry_eq_struct"]), f"{sym} is named by {naming}: only the full-pool ML leg may trade it without its own evidence"
         return
+    import yaml
     instruments = (_ROOT / "config" / "instruments.yaml").read_text()
     strategies = (_ROOT / "config" / "strategies.yaml").read_text()
+    cfg = yaml.safe_load(strategies)
+    strats = cfg.get("strategies") or cfg
+    if _paper_only_desk_allowed(strats):
+        # the paper-only desk's declared universe is the one sanctioned namer (see _paper_only_desk_allowed); every OTHER line still counts
+        strats["claude_desk"] = dict(strats["claude_desk"], symbols=[])
+        strategies = yaml.safe_dump(cfg, sort_keys=False)
     for name, text in (("instruments.yaml", instruments), ("strategies.yaml", strategies)):
         for line in text.splitlines():
             bare = line.split("#", 1)[0]

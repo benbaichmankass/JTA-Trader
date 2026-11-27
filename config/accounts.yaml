@@ -1094,8 +1094,8 @@ accounts:
       claude_desk]
                                        # claude_desk added 2026-10-27 (DESK-PAPER-ACCOUNTS, Tier-3, PAPER; operator
                                        # verbatim, chat ~15:58Z: "I do want to have the desk live on the other paper
-                                       # accounts as well, so Alpaca and IB."): scoped to MES / MGC / MHG by
-                                       # strategies.yaml::claude_desk.account_symbols.ib_paper. No slice support here:
+                                       # accounts as well, so Alpaca and IB."): trades the desk symbols IB can trade (MES / MGC /
+                                       # MHG + the five ETFs; ML-UNIVERSE-RULE 2026-11-26, no per-account map). No slice support here:
                                        # a desk entry and a strategy leg never share a contract's position (refused,
                                        # journalled). ROLLBACK: delete claude_desk from this list.
                                        # ict_scalp_mgc_15m added 2026-07-28 (Tier-3,
@@ -1380,14 +1380,14 @@ accounts:
       # comms/same_symbol_allocation/tlt-alpaca_paper.json is refreshed without it. ROLLBACK with alpaca_live's line.
       - spy_pullback_1h
       # 2026-10-27 DESK-PAPER-ACCOUNTS (Tier-3, PAPER; operator verbatim, chat ~15:58Z: "I do want to have the desk
-      # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, scoped to
-      # strategies.yaml::claude_desk.account_symbols.alpaca_paper (SPY, QQQ, IWM, GLD, TLT). This account has no slice
+      # live on the other paper accounts as well, so Alpaca and IB."): the Claude desk leg, trading the desk symbols
+      # Alpaca can trade (SPY, QQQ, IWM, GLD, TLT; ML-UNIVERSE-RULE 2026-11-26, no per-account map). This account has no slice
       # support, so a desk entry and a strategy leg never share a symbol's position (refused, journalled). This roster
       # is NOT mirrored: alpaca_portfolio mirrors alpaca_live, which does not carry claude_desk. ROLLBACK: delete this line.
       - claude_desk
       # 2026-11-01 ML ENTRY v1 on the Stage-1 floor (row ALPACA-LIVE-ACTIVITY-ML, Tier 3; operator popup ~11:47Z,
       # verbatim "Paper now, v2 for live (Rec.)"): the same frozen ml_entry model as bybit_2, paper money, both sides,
-      # on strategies.yaml::ml_entry.account_symbols.alpaca_paper. NOT on alpaca_live / alpaca_portfolio (no real-money
+      # on the 13 ETFs of ml_entry's symbols: Alpaca can trade (ML-UNIVERSE-RULE). NOT on alpaca_live / alpaca_portfolio (no real-money
       # ML on Alpaca until a model passes). ROLLBACK: delete this line.
       - ml_entry
       # 2026-11-06 ML ENTRY equity-native (row ML-ENTRY-EQUITY-NATIVE, Tier 2 held for the manager; ruling: alpaca_paper ONLY, the Stage-1 floor). Its traded
@@ -2347,7 +2347,7 @@ accounts:
                                        # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
       - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
       - trend_donchian_sol_4h          # 2026-11-06 PROBATION (operator ~20:18Z, verbatim "Keep sol_4h on all prop books (Recommended)", via Manager 2026-11-06a; SUPERSEDES the ~19:40Z "Pull sol_4h, keep eth_4h"): V3 FAIL alone (n=103 trades 2023-11-05..2026-11-05, docs/research/prop-retest-2026-11-06/RESULT.md), but the book sim shows it raises every book's p(pass) and EV (docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md); iteration unit RQ-20261106-031.
-      - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3 + deploy, OPERATOR chat ~23:35Z verbatim: "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it"): the SAME served ml_entry leg as bybit_2 (one implementation), ETHUSDT+SOLUSDT only (strategies.yaml::ml_entry.account_symbols). Gate exception: comms/prop_survival/ml_entry.json operator_exception. Size: this account's risk_pct, daily_dd_switch armed. ROLLBACK: delete this line.
+      - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3 + deploy, OPERATOR chat ~23:35Z verbatim: "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it"): the SAME served ml_entry leg as bybit_2 (one implementation), ETHUSDT+SOLUSDT only (the prop gate's scored population, comms/prop_survival/ml_entry.json::symbols; ML-UNIVERSE-RULE). Gate exception: comms/prop_survival/ml_entry.json operator_exception. Size: this account's risk_pct, daily_dd_switch armed. ROLLBACK: delete this line.
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # the memo's B3 book (§ 3.1): one leg per
                                        # symbol, so the no-hedging rule cannot be
@@ -2464,7 +2464,7 @@ accounts:
                                        # Size: sizing.flat.per_leg_risk_usd 10 in the ruleset. REVERT: `strategies: []`.
       - trend_donchian_eth_4h          # 2026-11-06 PROBATION (operator "Pull sol_4h, keep eth_4h (Recommended)"): stays under the 11-05 baseline exception; V3 re-test FAIL_EDGE (n=136 trades 2023-11-05..2026-11-05, edge +0.212 R CI [-0.127,+0.551]; docs/research/prop-retest-2026-11-06/RESULT.md); iteration unit RQ-20261106-028.
       - trend_donchian_sol_4h          # 2026-11-06 PROBATION (operator ~20:18Z, verbatim "Keep sol_4h on all prop books (Recommended)", via Manager 2026-11-06a; SUPERSEDES the ~19:40Z "Pull sol_4h, keep eth_4h"): V3 FAIL alone (n=103 trades 2023-11-05..2026-11-05, docs/research/prop-retest-2026-11-06/RESULT.md), but the book sim shows it raises every book's p(pass) and EV (docs/research/prop-retest-2026-11-06/velotrade_book/RESULT.md); iteration unit RQ-20261106-031.
-      - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3 + deploy, OPERATOR chat ~23:35Z verbatim: "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it"): the SAME served ml_entry leg as bybit_2 (one implementation), ETHUSDT+SOLUSDT only (strategies.yaml::ml_entry.account_symbols). Gate exception: comms/prop_survival/ml_entry.json operator_exception. Size: this account's risk_pct, daily_dd_switch armed. ROLLBACK: delete this line.
+      - ml_entry                       # 2026-11-08 ML-ENTRY-PROP-BASELINE (Tier-3 + deploy, OPERATOR chat ~23:35Z verbatim: "I want the same ml entry model on bybit to be set live on the prop accounts until we build something that beats it"): the SAME served ml_entry leg as bybit_2 (one implementation), ETHUSDT+SOLUSDT only (the prop gate's scored population, comms/prop_survival/ml_entry.json::symbols; ML-UNIVERSE-RULE). Gate exception: comms/prop_survival/ml_entry.json operator_exception. Size: this account's risk_pct, daily_dd_switch armed. ROLLBACK: delete this line.
       # was `strategies: []` 2026-11-05 (PROP-PULL-ETHPROP).
       # VELOTRADE-GOLIVE roster (Tier-3, HELD). Lane VELOTRADE-FIT: unit RQ-20261006-062,
                                        # rule RULE-RQ1006-VELOTRADE-FIT (registered before grading, commit 3769f2b1f):

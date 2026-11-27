@@ -5,7 +5,7 @@
 id: RQ-20261126-1e75-04
 title: 'D3 TabICL FEASIBILITY PROBE on a Kaggle T4: does ONE full-n TabICLv2 window (the first of the 13 dbf8-03 refits) fit, and does the slowest
   probed window x 13 fit the 290-min GPU budget and peak GPU memory fit 14,500 MB?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -116,3 +116,19 @@ related:
 - RQ-20261118-dbf8-02
 population: The first non-empty 28-day window of RQ-20261118-dbf8-01's 13 monthly refits, full training rows.
 last_dispatched_at: '2026-11-26T20:02:12+00:00'
+grading:
+  auto: false
+  attested: RULE-RQ20261126-1e75-04-TABICL-T4-FEASIBILITY
+  decision_rule_id: RULE-RQ20261126-1e75-04-TABICL-T4-FEASIBILITY
+  evidence:
+  - research/results/RQ-20261126-1e75-04/45888080690.jsonl
+  - comms/research/RQ-20261126-1e75-04/45888080690/run-manifest.json
+  graded_at: '2026-11-27'
+  grader: lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV), by hand; Manager 26a 2026-11-27 05:43Z "grade it INDETERMINATE as you said"
+  verdict: indeterminate
+  reason: 'The rule''s INDETERMINATE branch: "a timing / memory read is missing". The command was killed at the 180-min timeout (run-manifest
+    timed_out true, seconds 10802.1) INSIDE the first full-n TabICL window: the table build completed (60 per-symbol lines in cmd-0.log), no
+    WINDOW_TIMING line was printed, so the window took >= about 170 min (a LOWER bound, not a measured window time). That lower bound x 13
+    >= about 132,000 s against the 17,400 s bar -- full-n TabICL is impractical on a free T4 -- but the registered rule needs a timing read and
+    no lower-bound clause was registered, so it is not graded FAIL.'
+  follow_up: RQ-20261127-7ab1-01 (capped-n probe, n_train 50,000, rule registered before its run incl. a kill-time clause)
