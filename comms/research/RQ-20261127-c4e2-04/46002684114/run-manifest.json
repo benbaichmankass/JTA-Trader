@@ -1,0 +1,71 @@
+{
+  "unit": "RQ-20261127-c4e2-04",
+  "run_id": "46002684114",
+  "commit_sha": "29500210c3e6f0a232875e8b8c7f7740bc8d6632",
+  "run_url": null,
+  "timeout_minutes": 300,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.1 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "e82f46504fe7",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_decision_entry.py",
+        "lever-arms",
+        "--cache-source",
+        "published",
+        "--cache",
+        "/tmp/ml_entry_klines",
+        "--tau",
+        "0.10",
+        "--arm",
+        "tsfm",
+        "--unit",
+        "RQ-20261127-c4e2-04",
+        "--out",
+        "comms/research/RQ-20261127-c4e2-04/46002684114"
+      ],
+      "log": "comms/research/RQ-20261127-c4e2-04/46002684114/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 8398.7,
+      "seconds": 3363.6
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
