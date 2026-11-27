@@ -215,6 +215,8 @@ declared:
 units:
 - RQ-20261127-c4e2-02
 - RQ-20261127-c4e2-03
+- RQ-20261127-26ac-01
+- RQ-20261127-26ac-02
 levers_tested:
 - family: recipe
   varied: recency weighting / rolling window (rec90/180/365/730, win12/24/36)
@@ -243,3 +245,41 @@ levers_tested:
   shape: monotone
   tested_at_power: false
   unit: RQ-20261127-c4e2-03
+- family: features
+  varied: 'compact derivatives state vs matched N(0,1) placebo: F2c (4 funding/basis cols), F5c (4 shape cols), F2c+F5c (8); Sidak k=3 house bar
+    t>=3.1215'
+  response:
+    verdict: indeterminate
+    best_arm: P25 (F2c+F5c)
+    p25_fold_mean_delta_vs_placebo: 0.0335
+    p25_t: 1.89
+    p25_folds_positive: 6
+    p25_years_positive: 4
+    p25_upper_bound: 0.0888
+    p2_fold_mean_delta: -0.0085
+    p2_upper_bound: 0.0253
+    p5_fold_mean_delta: -0.0055
+    p5_upper_bound: 0.0181
+    note: 'no arm clears the house t-bar; F2c and F5c alone read negative at the point; only the combined 8 columns read positive (6/8 folds,
+      4/4 years) but t 1.89 vs 3.12 and one fold (2024-01, +0.143) carries much of the mean; power was stated as 3-12% for a true +0.010, so this
+      is the expected underpowered outcome, not a close: the combined compact state stays a candidate for a more powerful read (more folds/disjoint
+      pre-dev windows), never a promotion on this window'
+  shape: flat
+  tested_at_power: false
+  unit: RQ-20261127-26ac-01
+- family: features
+  varied: 'market-wide implied vol (Deribit DVOL BTC/ETH: level, 24h change, z168) vs a 3-col matched placebo; k=1 bar t>=2.3646'
+  response:
+    verdict: indeterminate
+    arm: V
+    fold_mean_delta_vs_placebo: -0.0267
+    t: -1.41
+    folds_positive: 2
+    years_positive: 0
+    upper_bound: 0.0182
+    note: 'point estimate negative in 6/8 folds and 0/4 years; the registered FAIL (upper < +0.010) missed by 0.008, so the rule reads INDETERMINATE;
+      consistent with F8 (market-wide cross-asset) failing at -0.072: market-wide state columns push the recipe into worse entries'
+  shape: flat
+  tested_at_power: false
+  unit: RQ-20261127-26ac-02
+  disposition: 'PARKED 2026-11-27 (Manager Session 2026-11-27a, 20:43Z: park DVOL with the re-entry note). Re-entry test: a PER-SYMBOL implied-vol feature (not market-wide); no free point-in-time per-symbol IV exists for the alt perps today, so effectively parked.'
