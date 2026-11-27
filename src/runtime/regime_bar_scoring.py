@@ -283,38 +283,43 @@ def _discover_advisory_stage_model_ids(registry: Any) -> list:
     return sorted(ids)
 
 
-# Per-process minimum interval between LIVE passes (TICK-REGIME-BAR-ONCE,
-# 2026-11-27). ``pipeline.run_pipeline`` calls this once per SYMBOL pass, so a
-# 41-symbol tick ran the whole symbol-agnostic pass 41x (registry rebuild +
-# discovery + fingerprint glob each time): 656 calls / 16 ticks, mean 1.06 s =
-# ~43 s of a ~125 s tick (/api/diag tick_cost, 2026-11-27 08:55-09:30Z). The
-# pass scores every head on its own closed-bar cadence and dedups per bar, so
-# running it at most once per interval loses nothing but, at worst, scores a
-# bar one interval later (observe-only path). Only the live path (no injected
-# predictors / clock) is throttled. ``REGIME_BAR_MIN_INTERVAL_S``; ``0`` = off.
-_DEFAULT_MIN_INTERVAL_S: float = 30.0
-_LAST_LIVE_PASS: list[float] = [float("-inf")]
+# Per-process memo of the RESOLVED live predictor list (TICK-REGIME-BAR-ONCE,
+# 2026-11-27). ``pipeline.run_pipeline`` calls emit_regime_bar_predictions once
+# per SYMBOL pass, and every call re-ran ``_resolve_regime_predictors`` (a fresh
+# ModelRegistry + shadow/advisory discovery + the fingerprint glob): 656 calls /
+# 16 ticks, mean 1.06 s = ~43 s of a ~125 s tick (/api/diag tick_cost,
+# 2026-11-27 08:55-09:30Z). Only the RESOLVE is memoised: every call still runs
+# the full scoring pass over every (symbol, timeframe) head group, so no symbol
+# and no closed bar is skipped. A registry stage change is picked up on the
+# first resolve after the TTL (<= one tick). ``REGIME_BAR_RESOLVE_TTL_S``;
+# ``0`` = resolve on every call (the old behaviour).
+_DEFAULT_RESOLVE_TTL_S: float = 20.0
+_RESOLVE_MEMO: dict = {}
 
 
-def _min_interval_seconds() -> float:
-    raw = os.environ.get("REGIME_BAR_MIN_INTERVAL_S")
+def _resolve_ttl_seconds() -> float:
+    raw = os.environ.get("REGIME_BAR_RESOLVE_TTL_S")
     if raw is None or str(raw).strip() == "":
-        return _DEFAULT_MIN_INTERVAL_S
+        return _DEFAULT_RESOLVE_TTL_S
     try:
         val = float(raw)
     except (TypeError, ValueError):
-        return _DEFAULT_MIN_INTERVAL_S
+        return _DEFAULT_RESOLVE_TTL_S
     return val if val > 0 else 0.0
 
 
-def _live_pass_due() -> bool:
-    """True (and arms the interval) when a live pass may run now."""
-    interval = _min_interval_seconds()
+def _resolve_live_predictors(registry_root: Any, log_path: Any) -> list:
+    """``_resolve_regime_predictors`` at most once per TTL per (root, log)."""
+    ttl = _resolve_ttl_seconds()
+    key = (str(registry_root), str(log_path))
     t = time.monotonic()
-    if interval and t - _LAST_LIVE_PASS[0] < interval:
-        return False
-    _LAST_LIVE_PASS[0] = t
-    return True
+    hit = _RESOLVE_MEMO.get(key)
+    if ttl and hit is not None and t - hit[0] < ttl:
+        return hit[1]
+    resolved = _resolve_regime_predictors(registry_root, log_path)
+    _RESOLVE_MEMO.clear()
+    _RESOLVE_MEMO[key] = (t, resolved)
+    return resolved
 
 
 def _resolve_regime_predictors(registry_root: Any, log_path: Any) -> list:
@@ -413,8 +418,6 @@ def emit_regime_bar_predictions(
         from src.runtime.shadow_adapter import with_shadow_preds
 
         if predictors is None:
-            if now is None and not _live_pass_due():
-                return 0
             from pathlib import Path
 
             from ml.shadow.factory import DEFAULT_REGISTRY_ROOT
@@ -426,7 +429,7 @@ def emit_regime_bar_predictions(
                 if log_path is not None
                 else runtime_logs_dir() / "shadow_predictions.jsonl"
             )
-            predictors = _resolve_regime_predictors(root, lp)
+            predictors = _resolve_live_predictors(root, lp)
         if not predictors:
             return 0
 
