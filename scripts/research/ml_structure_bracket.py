@@ -36,6 +36,77 @@ import ml_decision_entry as E  # noqa: E402
 from src.runtime.structure_levels import StructureExit, StructureLevels  # noqa: E402
 
 
+class FastStructureLevels(StructureLevels):
+    """``StructureLevels`` with the four causal queries answered WITHOUT copying the level list up to t (row
+    ML-STRUCTURE-UNIT-COST, 2026-11-27). The live class slices ``lst[:bisect(t)]`` on every call -- a copy of every level
+    known so far -- and ``resistance_above`` / ``support_below`` then scan it in Python. Called per candidate AND per bar
+    close, that is O(bars^2 x H): measured 1.6 s / 5.6 s / 24.7 s for 8k / 16k / 32k hourly bars, so a 60-symbol pass
+    over 2020-07..2026-10 took over an hour and unit 5e01-09 hit its 300-min timeout (run 45908325494).
+
+    SAME ANSWERS, same Level objects, same tie-break: the nearest opposing level is the FIRST minimum (maximum) price in
+    the order swings-then-FVGs, exactly as the live strict-``<`` scan picks it; NaN prices never qualify in either.
+    tests/test_ml_structure_bracket.py asserts query-by-query and label-by-label equality with the live class.
+    The live module (src/runtime/structure_levels.py) is untouched."""
+
+    def __init__(self, high, low, n: int = 3):
+        super().__init__(high, low, n)
+        f = lambda lst: (np.array([x.price for x in lst], dtype=float),            # noqa: E731
+                         np.array([x.fill_idx for x in lst], dtype=np.int64))
+        self._sh_p, _ = f(self._sh)
+        self._sl_p, _ = f(self._sl)
+        self._bear_p, self._bear_f = f(self._bear)
+        self._bull_p, self._bull_f = f(self._bull)
+
+    @staticmethod
+    def _k(keys, t: int) -> int:
+        from bisect import bisect_right
+        return bisect_right(keys, t)
+
+    def last_swing_low(self, t: int, below=None):
+        for i in range(self._k(self._sl_c, t) - 1, -1, -1):
+            if below is None or self._sl[i].price < below:
+                return self._sl[i]
+        return None
+
+    def last_swing_high(self, t: int, above=None):
+        for i in range(self._k(self._sh_c, t) - 1, -1, -1):
+            if above is None or self._sh[i].price > above:
+                return self._sh[i]
+        return None
+
+    def _nearest(self, t: int, price: float, fvg: bool, above: bool):
+        sw, sp = (self._sh, self._sh_p) if above else (self._sl, self._sl_p)
+        fl, fp, ff = (self._bear, self._bear_p, self._bear_f) if above else (self._bull, self._bull_p, self._bull_f)
+        best_s = best_f = None
+        k = self._k(self._sh_c if above else self._sl_c, t)
+        if k:
+            pr = sp[:k]
+            m = pr > price if above else pr < price
+            if m.any():
+                ix = np.flatnonzero(m)
+                best_s = int(ix[np.argmin(pr[ix]) if above else np.argmax(pr[ix])])
+        if fvg:
+            k2 = self._k(self._bear_c if above else self._bull_c, t)
+            if k2:
+                pr, fi = fp[:k2], ff[:k2]
+                m = ((pr > price) if above else (pr < price)) & ((fi < 0) | (fi > t))
+                if m.any():
+                    ix = np.flatnonzero(m)
+                    best_f = int(ix[np.argmin(pr[ix]) if above else np.argmax(pr[ix])])
+        if best_s is None:
+            return None if best_f is None else fl[best_f]
+        if best_f is None:
+            return sw[best_s]
+        ps, pf = sp[best_s], fp[best_f]
+        return sw[best_s] if ((ps <= pf) if above else (ps >= pf)) else fl[best_f]
+
+    def resistance_above(self, t: int, price: float, *, fvg: bool = True):
+        return self._nearest(t, price, fvg, True)
+
+    def support_below(self, t: int, price: float, *, fvg: bool = True):
+        return self._nearest(t, price, fvg, False)
+
+
 def structure_outcome(levels: StructureLevels, o, h, lo, c, cand, entry, atr, side: int, *,
                       sl_atr: float, tp_atr: float, buffer_atr: float = 0.25,
                       min_r: float = 1.0, fvg: bool = True, t_map=None):
@@ -106,7 +177,7 @@ def label_cell_structure(df: pd.DataFrame, pivot_n: int, sl: float = E.SL_ATR, t
     win = cand[:, None] + np.arange(1, H + 1)[None, :]
     Ob, Hh, Lb, Cb = o[win], h[win], lo[win], c[win]
     entry, a = Ob[:, 0], atr[cand]
-    levels = StructureLevels(h, lo, pivot_n)
+    levels = FastStructureLevels(h, lo, pivot_n)
     out = {"i": cand}
     t_entry_s = t_ns[cand + 1] / 1e9
     for name, side in (("long", 1), ("short", -1)):

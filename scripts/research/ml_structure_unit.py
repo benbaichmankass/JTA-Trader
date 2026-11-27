@@ -54,16 +54,23 @@ STRUCT_COLS = ("gross", "net", "cost", "reason", "bars", "risk_r_unit", "fallbac
 
 
 # ------------------------------------------------------------------------------------------ structure relabel
+#: (cache dir, symbol, pivot, hole_safe, sl_atr, tp_atr) -> that symbol's structure labels. ML-STRUCTURE-UNIT-COST: the unit
+#: called structure_labels 12x per run (3 pivots in the drop step + 3 seeds x 3 pivots) over the same klines; the labels depend
+#: only on the key, so each is computed once. Pure memoisation: no output changes.
+_LABEL_CACHE: dict = {}
 def structure_labels(tab: pd.DataFrame, cache: Path, pivot_n: int, hole_safe: bool = True, sl_atr: float = E.SL_ATR,
                      tp_atr: float = E.TP_ATR) -> pd.DataFrame:
     """The structure-bracket labels for pivot ``pivot_n`` reindexed onto the table's rows (columns ``<col>_long|short``).
     A row absent from the labelled frame is a keying error and refuses; a NaN net is an unobservable outcome (a data hole)."""
     parts = []
     for sym in tab["symbol"].unique():
-        raw = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
-        lab = SB.label_cell_structure(E.regrid_hourly(raw) if hole_safe else raw, pivot_n, sl_atr, tp_atr)
-        lab["symbol"] = sym
-        parts.append(lab)
+        k = (str(cache), sym, int(pivot_n), bool(hole_safe), float(sl_atr), float(tp_atr))
+        if k not in _LABEL_CACHE:   # one labelling per (symbol, pivot, bracket) per process: the drop step and every seed reuse it
+            raw = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+            lab = SB.label_cell_structure(E.regrid_hourly(raw) if hole_safe else raw, pivot_n, sl_atr, tp_atr)
+            lab["symbol"] = sym
+            _LABEL_CACHE[k] = lab
+        parts.append(_LABEL_CACHE[k])
     lab = pd.concat(parts, ignore_index=True)
     cols = [f"{c}_{s}" for c in STRUCT_COLS for s in ("long", "short")]
     got = lab.set_index(pd.MultiIndex.from_frame(lab[["symbol", "i"]]))[cols]

@@ -169,3 +169,17 @@ def test_the_v2_unit_scores_only_the_legs_own_symbols_on_the_v2_decisions(world,
     assert res["population"] == "ml_entry_v2" and seen["symbols"] == {"AAAUSDT"} and seen["bracket"] == (2.0, 4.0)
     first = res["per_seed"][res["verdict_seed"]]
     assert first["n"] == int((trades.symbol == "AAAUSDT").sum()) and first["n_pool_decisions"] == len(trades)
+
+
+def test_structure_labels_are_computed_once_per_symbol_pivot_and_bracket(world, monkeypatch):
+    tab, cache, _ = world
+    U._LABEL_CACHE.clear()
+    calls = []
+    real = U.SB.label_cell_structure
+    monkeypatch.setattr(U.SB, "label_cell_structure", lambda *a, **k: calls.append(a[1]) or real(*a, **k))
+    first = U.structure_labels(tab, cache, 5)
+    again = U.structure_labels(tab.iloc[::2].reset_index(drop=True), cache, 5)   # a sub-table reuses the same labels
+    assert len(calls) == tab.symbol.nunique()
+    pd.testing.assert_frame_equal(again, first.iloc[::2])
+    U.structure_labels(tab, cache, 3)
+    assert len(calls) == 2 * tab.symbol.nunique()
