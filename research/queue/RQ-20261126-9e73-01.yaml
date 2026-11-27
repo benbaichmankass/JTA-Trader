@@ -3,7 +3,7 @@
 id: RQ-20261126-9e73-01
 title: 'D2/F29 GRU on RAW OHLCV WINDOWS (GPU): the 9e72-01 calibrated recipe fed only per-bar raw inputs from market_raw (return, range, body, gap, relative
   volume) over 64- and 168-bar lookbacks vs LightGBM on the 10 engineered features, 1h regime log-loss on BTC/ETH/SOL, paired block-bootstrap rule'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -245,11 +245,11 @@ grading:
   confirmatory_run: 1
   decision_rule_id: RULE-RQ-20261126-9e73-01
   evidence:
-  - research/results/RQ-20261126-9e73-01/45763508047.jsonl
+  - research/results/RQ-20261126-9e73-01/45912461153.jsonl
   first_fail: 2 row(s), all measured, all fail
-  graded_at: '2026-11-26'
+  graded_at: '2026-11-27'
   grader: scripts/research/queue_grade.py
-  note: 'first FAIL: re-queued for a confirmatory run (last_dispatched_at reset), not killed'
-  reason: 2 row(s), all measured, all fail
-  rows: 2
+  note: two consecutive FAIL passes; closed as fail (never on one pass)
+  reason: 1 row(s), all measured, all fail
+  rows: 1
   verdict: fail

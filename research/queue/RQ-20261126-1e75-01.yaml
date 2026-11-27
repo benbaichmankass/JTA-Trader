@@ -6,7 +6,7 @@ id: RQ-20261126-1e75-01
 title: 'D8 exit-now head CONFIRMATION on a DISJOINT universe: on trend_donchian_eth_4h twins on the NEXT 60 perps by the bp2 listing rule
   (bp2_next60, no symbol shared with the cf48-04 population), does the learned exit-now head again beat the declared exit by >= +0.05 R per
   OOS trade AND beat the causal matched random exit at the 95th percentile?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -161,3 +161,16 @@ related:
 - research/programmes/02-ai-trader.yaml P2-PR1125-D8-exit-now-powered
 - scripts/research/exit_head_kaggle_bakeoff.py (--self-test; universe bp2_next60)
 last_dispatched_at: '2026-11-26T18:28:16+00:00'
+grading:
+  attested: RULE-RQ20261126-1e75-01-D8-EXIT-NOW-DISJOINT
+  auto: true
+  decision_rule_id: RULE-RQ20261126-1e75-01-D8-EXIT-NOW-DISJOINT
+  evidence:
+  - research/results/RQ-20261126-1e75-01/45876213922.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 2 row(s), all measured, all fail
+  rows: 2
+  verdict: fail

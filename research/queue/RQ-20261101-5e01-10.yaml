@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-10
 title: 'Structure-based SL+TP (ML bracket) (swing / FVG / liquidity, ratcheting) vs the declared exit on ml_entry_v2 (bybit_1 (demo floor; served)): does
   it beat the current exit net of the full cost stack, held-out?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -117,3 +117,16 @@ ml_consumer:
   - ml_entry_v2
   book: demo_floor
 last_dispatched_at: '2026-11-27T06:27:35+00:00'
+grading:
+  attested: RULE-STRUCTURE-EXITS-V1
+  auto: true
+  decision_rule_id: RULE-STRUCTURE-EXITS-V1
+  evidence:
+  - research/results/RQ-20261101-5e01-10/45947501095.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
