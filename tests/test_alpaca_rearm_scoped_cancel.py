@@ -98,7 +98,11 @@ def test_venue_refusal_releases_sibling_targets_but_never_a_sibling_stop():
     r = _rearm(v, 8, sibling_qtys=[11])
     assert r["retCode"] == 0 and r["result"]["orderId"] == "oco-new"
     assert v.deletes() == [sibling_tp["id"]]
-    assert sum(1 for m, *_ in v.calls if m == "POST") == 2
+    # OCO refused, retry armed, then the released sibling target is RESTORED (ALPACA-OCO-PLACE-FIRST, 2026-11-27; it used
+    # to stay released, leaving the sibling with no take-profit).
+    posts = [b for m, p, b in v.calls if m == "POST"]
+    assert len(posts) == 3 and posts[2]["type"] == "limit" and posts[2]["qty"] == "11"
+    assert posts[2]["limit_price"] == "830.43"
 
 
 def test_refusal_with_only_a_sibling_stop_resting_is_reported_not_stripped():

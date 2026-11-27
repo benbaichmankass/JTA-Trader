@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 observability fix (manager 26a order, incident dispatcher_fires@20261127T1813Z). research_watchdog's dispatcher_fires check graded on queue_replenish.runnable() (a 6 h refill lookahead), so recurring units due later read as owed a fire: MEASURED 18:13Z, 15 'runnable' (13 github_runner + 2 unmanaged, all due later), due now 0, while the dispatcher fired every 5-10 min with due_total 0. It now grades on the due-now count (queue_facts by_backend_due_now, the rule check_backend already uses); the queue floor keeps the horizon. Read path only: no dispatch, routing, unit or order-path change. Test added (fails on the old code, passes on the new). Gates this adds or changes: none (an alarm stops firing falsely; no new gate)."
+}
