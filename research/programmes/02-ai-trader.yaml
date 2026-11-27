@@ -1307,7 +1307,8 @@ nodes:
     - unit: RQ-20261016-65ff-04
       verdict: any
     authoring_blocked: '2026-11-17 lane ML-ITERATION-REFILL-20261117 (docs/research/authoring-queue-triage-2026-11-17.md): blocked on `IR-VOL-TARGET-SIZING-STAGE0` -- per-trade sizing is the RiskManager’s (MECE § 2.1)'
-    needs_authoring: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
+    authoring_closed: '2026-11-27 ML-PRIMARY: kill: answered -- IR-VOL-TARGET-SIZING-STAGE0 landed (vol_target_verdict.py) and the per-leg units ran: RQ-20261120-8ef8-01/02/03 (pinned-multiplier design defect), then RQ-20261120-7d49-03/04/05 and RQ-20261120-c3a7-01 (unit-free target: eth_4h FAIL, sol_prop PASS discovery, eth_prop FAIL); confirmation PI-20261120-H58PIBEE-0004'
+    authoring_closed_ask: Per-leg continuous vol-TARGET SIZING on the real-money trend legs is the regime question the
       skip units cannot answer. Its build is row IR-VOL-TARGET-SIZING-STAGE0 (vol_target_verdict.py over backtest_vol_target.py;
       rule PASS iff dSharpe >= +0.10 net AND maxDD no worse AND dSharpe > 0 in >= 3/4 blocks, n >= 100/leg). Once
       that row lands, author one unit per real-money trend leg (trend_donchian_eth_4h, _xrp_4h, _sol_prop, _eth_prop),
@@ -2481,7 +2482,8 @@ nodes:
     value: {usd_at_stake_per_month: 100, confidence: 0.15}
     after:
     - {unit: RQ-20261122-b18a-03, verdict: fail}
-    needs_authoring: 'D6 (Pointer): the static-bracket ceiling failed on ada_pullback_2h (b18a-03): no static bracket beats the
+    authoring_closed: '2026-11-27 ML-PRIMARY (idle-compute order, Manager 26a 18:17Z): kill: answered by hand-authored units -- RQ-20261127-d6c2-01 (trend_donchian_eth_4h, declared SL 1.5 / TP 4.0) and RQ-20261127-d6c2-02 (xrp_pullback_2h, SL 2.5 / TP 3.0) carry this question; the rule keeps the node''s +4 R and adds b18a-03''s multiplicity bars (0.03 R/trade, 5 of 6 folds) for 19 cells per leg; the held-out-window variant is the registered confirmation on a PASS'
+    authoring_closed_ask: 'D6 (Pointer): the static-bracket ceiling failed on ada_pullback_2h (b18a-03): no static bracket beats the
       configured one, so a learned bracket has no headroom there. Read the same ceiling on one trend leg (trend_donchian_eth_4h) and one
       more pullback leg (xrp_pullback_2h), atr_stop_mult x tp_r grid, net of cost, 4 calendar folds. Decision it changes: whether any
       learned-bracket unit is worth authoring (headroom exists) or D6 stays parked with this re-entry test. PASS iff some static cell
@@ -2510,7 +2512,8 @@ nodes:
     value: {usd_at_stake_per_month: 120, confidence: 0.15}
     after: []
     authoring_blocked: 'BUILD-GATED on ML-EXITHEAD-ROWS-KAGGLE (widened exit-head corpus); author only if the recount powers MDE <= 0.05 R.'
-    needs_authoring: 'D8 (Labrador exit): one exit-now unit on the widened pooled donchian-4h corpus with a matched-random-exit control,
+    authoring_closed: '2026-11-27 ML-PRIMARY: kill: answered -- RQ-20261125-cf48-04 (pooled donchian-4h exit-now vs matched-random, graded PASS 2026-11-26, research/results/RQ-20261125-cf48-04/45732327300.jsonl); follow-up RQ-20261126-1e75-01 carries the next step'
+    authoring_closed_ask: 'D8 (Labrador exit): one exit-now unit on the widened pooled donchian-4h corpus with a matched-random-exit control,
       out of sample, net of cost. Decision it changes: whether a learned exit-now head replaces Labrador-2 on the demo leg and becomes a
       Tier-3 candidate. PASS iff delta net R per trade >= 0.05 R vs the declared exit and beats matched-random at the 95th percentile;
       FAIL keeps D8 riding D7 Stage B. Pre-mortem: FAIL most likely because exits on trend legs give back little before the trail
