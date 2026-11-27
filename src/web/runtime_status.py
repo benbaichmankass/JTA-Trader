@@ -98,12 +98,26 @@ def _resolve_git_sha() -> str:
 _RUNNING_GIT_SHA: str = _resolve_git_sha()
 
 
+# (path, mtime_ns, size) of the last parsed strategies file and its enabled names; see _read_strategy_names.
+_STRATEGY_NAMES_CACHE: dict = {}
+
+
 def _read_strategy_names(strategies_yaml: Path) -> List[str]:
     """Enabled strategy names AS THE FILE DECLARES THEM.
 
     A FILE read, not a process read — see the module docstring. The roster the
     process holds is in the ``process`` block.
     """
+    # VM-CONTROL-1127: parse once per file version. MEASURED 2026-11-27: 163 ms per parse of the 244 KB file (x86),
+    # and write_status runs it on every run_pipeline call (once per symbol per tick); py-spy caught the live trader's
+    # MainThread inside this safe_load. Keyed on (path, mtime_ns, size): an edit is read on the next call.
+    try:
+        st = strategies_yaml.stat()
+        key = (str(strategies_yaml), st.st_mtime_ns, st.st_size)
+    except OSError:
+        key = None
+    if key is not None and _STRATEGY_NAMES_CACHE.get("key") == key:
+        return list(_STRATEGY_NAMES_CACHE["value"])
     try:
         import yaml
         with strategies_yaml.open(encoding="utf-8") as fh:
@@ -112,11 +126,14 @@ def _read_strategy_names(strategies_yaml: Path) -> List[str]:
         _swallow_runtime_status("strategies_yaml_read_failed", exc,
                                 path=str(strategies_yaml))
         return []
-    return [
+    names = [
         name
         for name, cfg in (raw.get("strategies") or {}).items()
         if (cfg or {}).get("enabled")
     ]
+    if key is not None:
+        _STRATEGY_NAMES_CACHE["key"], _STRATEGY_NAMES_CACHE["value"] = key, list(names)
+    return names
 
 
 def _read_live_per_account(accounts_yaml: Path) -> Dict[str, bool]:

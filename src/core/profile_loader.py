@@ -47,6 +47,10 @@ def load_account_profiles(
     }
 
 
+# (path, mtime_ns, size) of the last parsed instruments file and its profiles; see load_instrument_profiles.
+_PROFILES_CACHE: dict = {}
+
+
 def load_instrument_profiles(
     path: str | None = None,
 ) -> dict[str, "InstrumentProfile"]:
@@ -66,6 +70,18 @@ def load_instrument_profiles(
     from src.core.instrument_profile import InstrumentProfile
 
     resolved = path or _DEFAULT_INSTRUMENTS_PATH
+    # VM-CONTROL-1127: parse once per file version. MEASURED 2026-11-27: one parse of the 77 KB file is ~130 ms
+    # (x86) and symbols_for_account_id('bybit_1') parsed it 29 times per call (3.85 s), via
+    # venue_capability._profiles on every account_open_positions read; py-spy on the live VM caught the trader's
+    # reconciliation-loop and the web-api's account-read threads inside this safe_load. Keyed on (path, mtime_ns,
+    # size) so an edited file is re-read on the next call; profiles are frozen, and each caller gets its own dict.
+    try:
+        st = os.stat(resolved)
+        key = (str(resolved), st.st_mtime_ns, st.st_size)
+    except OSError:
+        key = None
+    if key is not None and _PROFILES_CACHE.get("key") == key:
+        return dict(_PROFILES_CACHE["value"])
     try:
         with open(resolved, "r") as f:
             raw = yaml.safe_load(f) or {}
@@ -98,6 +114,8 @@ def load_instrument_profiles(
                     else None
                 ),
             )
+        if key is not None:
+            _PROFILES_CACHE["key"], _PROFILES_CACHE["value"] = key, dict(profiles)
         return profiles
     except FileNotFoundError:
         btc = InstrumentProfile.btcusdt_bybit_linear()

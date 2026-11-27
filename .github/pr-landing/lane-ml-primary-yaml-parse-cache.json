@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Data-backed Tier-2 (VM-CONTROL-1127). EVIDENCE: py-spy on the live VM 2026-11-27 22:26Z (system-actions run 46076577214) caught the trader's reconciliation-loop (43.8% of a CPU) and MainThread (34.7%) and the web-api's account-read threads inside yaml.safe_load: load_instrument_profiles via venue_capability._profiles on every account_open_positions, and runtime_status._read_strategy_names on every run_pipeline. Measured: symbols_for_account_id('bybit_1') parsed the 77 KB instruments.yaml 29x per call = 3.85 s (x86; ARM VM slower), now 3 ms after first; strategy names 147 ms -> 0.06 ms. Same probe: Bybit private get_positions from a fresh process 0.17-0.50 s (9/9), so the >25 s reads were in-process parsing, not the venue. Change: cache keyed on (path, mtime_ns, size), so an edited file is re-read next call; frozen profiles, callers get their own dict. No values, decisions, sizing or order logic change. 779 tests pass. Deploy: pull-and-deploy restarts trader + web-api. Revert: git revert.",
+  "why": "Give the live VM its CPU back: stop re-parsing two large YAML files on every account read and every pipeline run."
+}
