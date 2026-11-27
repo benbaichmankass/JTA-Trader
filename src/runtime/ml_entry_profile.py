@@ -31,7 +31,7 @@ bybit_2, bybit_portfolio, alpaca_paper as of 2026-11-04 -- is byte-identical):
     Default none = the artifact's own (crypto) stack, unchanged.
 
 Resolution is per SYMBOL, because ml_entry builds ONE signal per symbol and the coordinator dispatches it to every
-account whose ``account_symbols`` holds that symbol. Accounts sharing a symbol must agree on reference / anchor /
+account whose derived set (``symbol_sets.leg_symbols``) holds that symbol. Accounts sharing a symbol must agree on reference / anchor /
 session / cost basis (a disagreement refuses the decision ``profile_conflict:<key>`` -- never a silent pick); sides
 take the UNION (the per-account ``accounts.yaml::side_filter`` at dispatch still narrows each account).
 """
@@ -47,15 +47,10 @@ _COST_KEYS = ("fee_bps_rt", "slippage_bps_rt", "funding_bps_per_8h", "artifact_b
 
 
 def _accounts_for(leg_cfg: Mapping[str, Any], symbol: str, leg: Optional[str] = None) -> List[str]:
-    from src.config.symbol_sets import (
-        ACCOUNT_SYMBOLS_KEY,
-        leg_symbols,
-        scoped_leg_accounts,
-    )
-    scope = leg_cfg.get(ACCOUNT_SYMBOLS_KEY)
-    if not isinstance(scope, Mapping):
-        return []
-    return [a for a in scoped_leg_accounts(leg, scope) if symbol in leg_symbols(leg_cfg, a, leg=leg)]
+    """The rostering accounts that trade ``symbol`` on this leg (ML-UNIVERSE-RULE: derived from each account's venue,
+    prop population and the ML population record by ``symbol_sets.leg_symbols``; there is no per-account map)."""
+    from src.config.symbol_sets import leg_symbols, rostering_accounts
+    return [a for a in rostering_accounts(leg) if symbol in leg_symbols(leg_cfg, a, leg=leg)]
 
 
 def _norm_cost(raw: Any) -> Optional[Dict[str, float]]:

@@ -190,12 +190,14 @@ def test_registered_once_and_rostered_only_on_soak_accounts():
     assert strategies["claude_desk"]["execution"] == "live"  # bybit_1 demo only (desk intake's demo floor)
     # Six markets on bybit_1 (DESK-WIDEN): the same-symbol concern is met by bybit_1's slice support plus
     # claude_desk's declared slice (config/slice_allocation.yaml::declared_slices).
-    # DESK-PAPER-ACCOUNTS: symbols: is the union of three venues; account_symbols scopes each rostering account.
-    scope = strategies["claude_desk"]["account_symbols"]
+    # DESK-PAPER-ACCOUNTS: symbols: is the union of three venues; ML-UNIVERSE-RULE (2026-11-26): each rostering account
+    # trades what its venue can trade (no per-account map).
+    from src.config.symbol_sets import leg_symbols
+    scope = {a: leg_symbols(strategies["claude_desk"], a, leg="claude_desk") for a in ("bybit_1", "alpaca_paper", "ib_paper")}
     assert scope == {"bybit_1": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "AVAXUSDT"],
                      "alpaca_paper": ["SPY", "QQQ", "IWM", "GLD", "TLT"],
-                     "ib_paper": ["MES", "MGC", "MHG"]}
-    assert strategies["claude_desk"]["symbols"] == [s for a in scope.values() for s in a]
+                     "ib_paper": ["SPY", "QQQ", "IWM", "GLD", "TLT", "MES", "MGC", "MHG"]}
+    assert set(strategies["claude_desk"]["symbols"]) == {s for a in scope.values() for s in a}
     assert "risk_pct" not in strategies["claude_desk"]
     accounts = yaml.safe_load((REPO / "config/accounts.yaml").read_text())["accounts"]
     on = sorted(a for a, v in accounts.items() if "claude_desk" in (v.get("strategies") or []))

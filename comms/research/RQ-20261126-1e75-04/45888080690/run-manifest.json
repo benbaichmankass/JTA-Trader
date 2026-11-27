@@ -1,0 +1,83 @@
+{
+  "unit": "RQ-20261126-1e75-04",
+  "run_id": "45888080690",
+  "commit_sha": "0daae872c2ccb9da6d387afbe42a3fa300cc9745",
+  "run_url": null,
+  "timeout_minutes": 180,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 24.04.1 LTS",
+    "kernel": "6.18.55+",
+    "image": {
+      "ImageOS": null,
+      "ImageVersion": null,
+      "RUNNER_OS": null,
+      "RUNNER_ARCH": null,
+      "RUNNER_ENVIRONMENT": null
+    },
+    "python": "3.13.15",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.3",
+      "scipy": "1.16.3",
+      "scikit-learn": "1.6.1"
+    },
+    "blas": "blas=scipy-openblas 0.3.27; lapack=scipy-openblas 0.3.27",
+    "unread": [],
+    "class_id": "e82f46504fe7",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/ml_entry_residual.py",
+        "run",
+        "--arms",
+        "raw,tabicl",
+        "--cache",
+        "/tmp/ml_entry_klines",
+        "--cache-source",
+        "published",
+        "--gpu-arm-budget-min",
+        "150",
+        "--max-windows",
+        "1",
+        "--probe-budget-min",
+        "290",
+        "--probe-peak-mb",
+        "14500",
+        "--out",
+        "comms/research/RQ-20261126-1e75-04/45888080690",
+        "--unit",
+        "RQ-20261126-1e75-04",
+        "--where",
+        "kaggle",
+        "--rule-id",
+        "RULE-RQ20261126-1e75-04-TABICL-T4-FEASIBILITY",
+        "--registered-at",
+        "2026-11-26"
+      ],
+      "log": "comms/research/RQ-20261126-1e75-04/45888080690/logs/cmd-0.log",
+      "exit_code": null,
+      "timed_out": true,
+      "seconds": 10802.1
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}

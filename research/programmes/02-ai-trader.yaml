@@ -2542,6 +2542,103 @@ nodes:
       written before close. ml_consumer: none yet by design (monitoring read); named so the guard sees an explicit null.'
 
 # ── Two-week iteration plan (lane ITERATION-PLAN-2W-20261123, 2026-11-23) ─────────────────────────────
+  # --- MODEL-PLAN-AUTHOR-1126 (lane dispatched by Manager Session 2026-11-26a; row COMPUTE-IDLE-TRAINER-GPU-W48). MODEL-track pass for
+  # the idle Kaggle GPU / trainer. WHAT WE LEARNED (read from research/results/, populations stated):
+  #  (1) D3 Foxhound learner lever is flat at the instrument's power: ten arms on ml_entry_residual.py's 13-window held-out year
+  #      (2025-10-01..2026-09-30, 59 perps, served tau, full cost stack) -- resid 4654-01, xsdemean -06, ens/ridge -07, conf -08,
+  #      ridge -09, gross 7e18-02, cb/ens3 dbf8-01, lrank f7c1-05, ftt f7c1-06 -- none beats RAW; paired per-window sd 0.07-0.20 R
+  #      puts the 13-window 80%-power MDE at ~0.06-0.17 R/decision. A further D3 learner arm on those 13 windows is mostly uninformative.
+  #  (2) The same runs give the frozen v1 on its sealed year: +0.008 R/decision (n 11,191, se ~0.010); long +0.032 (n 3,457),
+  #      short -0.003 (n 7,734). The live grade of v1r20261122 (2026-11-08..21, n 434) is the OPPOSITE sign by side (long -0.53,
+  #      short +0.84 R). Population differs (served refit, bybit symbols), but the side asymmetry flips with the window: a regime
+  #      lever, not a static side gate (feeds IPW-ML-ENTRY-SIDE-SPLIT / P2-PR1125-D3-trend-conditioned-side; noted on both rows).
+  #  (3) The regime target is not a money target: the D2 consumer test RQ-20261112-bcd2-01 FAILED (added -11.69 R over 195 SOL TD
+  #      trades, control p 0.82), so the five GRU-vs-LightGBM regime units (c21d-05, 9e71-01, 2819-01, 9e73-01/-02: FAIL; 9e72-01
+  #      INDETERMINATE) cannot change an order whichever way they land. No new regime-head GPU unit is proposed.
+  #  (4) Every GPU-shaped family with an instrument has been graded on the targets it can read (deep_sequence on regime FAIL,
+  #      deep_tabular on the money label FAIL, TabICL in feasibility 1e75-04 / dbf8-03). New honest GPU supply needs a new INSTRUMENT
+  #      or a new INFORMATION CLASS; the three nodes below are those, each gated on the build or result it needs (no unit authored:
+  #      nothing below meets its condition today, and a gated unit counted as runnable would overstate the queue).
+  #  Trainer: no MODEL question with a money consumer reads trainer-resident data outside ML-PRIMARY's D8/D9/D10 lines (the exit-head
+  #  corpus and the journal); the trainer's 1.0 GB overflow gate excludes the D3 / prop harnesses (771,560-row replay table). None added.
+  - id: P2-MPA1126-cov-tsfm-prop-entry
+    goal: G4
+    authoring_blocked: 'BUILD-GATED on row MLP-F-COVARIATE-TSFM (covariate forecast side-stream builder on Kaggle GPU + opt-in F0+TSFM arm in prop_ml_leg.py); not authorable until both land.'
+    theme: ml_health
+    roadmap: [L-PROP, L-ML-LIVE]
+    value: {usd_at_stake_per_month: 250, confidence: 0.1}
+    after: []
+    question: >-
+      Prop ML entry (ml_entry on tradeify_1 / velotrade_1, ETH+SOL; prop gate FAIL, comms/prop_survival/ml_entry.json EV -13.55 USD,
+      p_breach 0.875): do zero-shot COVARIATE-native TSFM forecasts (Chronos-2, apache-2.0; TiRex-2 as the second backend) of each
+      symbol's next-48h return quantiles, conditioned on its own funding + OI + basis history, carry a net-of-cost entry signal that
+      the raw funding / OI / basis columns did not (98e3-31..38 FAIL at LightGBM; 7d41-01 FAIL, 7d41-02 INDETERMINATE at low capacity)?
+    why: >-
+      MLP-D3-PROP-ENTRY's own record: the open lever is NEW INFORMATION (MDE ~0.14 R at n 381 vs a pooled edge of 0.03-0.04 R; ~40
+      price-feature arms found nothing). A covariate forecaster is the one free transform of the in-hand funding/OI streams not yet
+      tried, it is the re-scope MLP-F-COVARIATE-TSFM schedules for W48, and it is GPU-shaped (rolling point-in-time inference over
+      ~2 x 40k hourly origins, 2022-01..2026-09). Decision it changes: whether the prop leg gets a new information class (PASS -> a held Tier-3 prop
+      roster PR on the SUPERSET bar, after a disjoint-window confirmation) or the free-source list for MLP-D3-PROP-ENTRY shrinks by one
+      and the paid-source question goes to the operator. Pre-mortem: if it FAILs, the most likely reason is that the forecaster adds
+      only a smoothed version of the same funding/OI information the LightGBM arms already saw (the first variant: forecast DISPERSION
+      and quantile skew alone, not the median).
+    needs_authoring: >-
+      BUILD-GATED (row MLP-F-COVARIATE-TSFM, note 2026-11-26): (a) a point-in-time covariate forecast side-stream builder for ETHUSDT
+      and SOLUSDT 1h on the Kaggle GPU (Chronos-2 weights shipped in the bundle, as the TabICL checkpoint is; no internet), each origin
+      reading only bars and covariates <= t; (b) an opt-in F0+TSFM arm in scripts/research/prop_ml_leg.py that joins it as-of, so no
+      existing unit changes. When both land, author ONE unit: prop_ml_leg.py --profile bv and tradeify_es, arms F0 vs F0+TSFM on the
+      registered held-out span, the profile's own cost stack and the prop gate (prop_gate V3), rule registered before the run: PASS
+      iff F0+TSFM beats F0 on held-out net R/trade with the bootstrap CI low > 0 AND clears the prop EV/survival gate; FAIL iff its
+      held-out net R/trade <= F0's. Compute: gpu (forecast step), est 4-8 h; ml_consumer src/units/strategies/ml_entry.py on the prop
+      books. evidence_class {holdout: holdout_window, claim: edge}.
+  - id: P2-MPA1126-d3-ftt-matched-coverage
+    goal: G4
+    authoring_blocked: 'BUILD-GATED on the fttmc arm (row ML-ENTRY-FINETUNE note 2026-11-26); not authorable until it lands.'
+    theme: ml_health
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 150, confidence: 0.05}
+    after:
+    - {unit: RQ-20261118-f7c1-06, verdict: fail}
+    question: >-
+      D3 Foxhound (ml_entry, real money on bybit_2 + prop): with the deep tabular learner compared at MATCHED COVERAGE (the same
+      number of decisions as RAW on a held-out calibration slice, the lrank / conf pattern in ml_entry_residual.py), does an
+      FT-Transformer pick better trades than LightGBM, net of the full cost stack?
+    why: >-
+      DIAGNOSIS of f7c1-06 (FAIL, paired ftt-raw -0.013 R, CI [-0.078, +0.052], k 13): DESIGN, not idea. At the served tau the FTT took
+      15,590 decisions vs RAW's 10,810 (+44%); its long side was -0.060 R (n 3,600) vs RAW +0.038 (n 2,934), short -0.009 vs -0.014
+      (comms/research/RQ-20261118-f7c1-06/45802782002/measurement.json). The deficit sits in the extra marginal longs, which is what a
+      score-scale mismatch at a threshold tuned for the booster produces. The f7c1-06 FAIL closes "FTT at the served tau", not the
+      learner. Decision it changes: whether any deep learner stays on the D3 lever list (PASS -> a disjoint-window confirmation and a
+      Tier-3 note on ML-ENTRY-FINETUNE; FAIL -> deep_tabular is recorded flat on this label at matched coverage). Pre-mortem: if it
+      FAILs, the likely reason is that the booster already extracts what the 20 decision-time features hold (finding (1) above).
+    needs_authoring: >-
+      BUILD-GATED (row ML-ENTRY-FINETUNE, note 2026-11-26): an opt-in ``fttmc`` arm in scripts/research/ml_entry_residual.py: per
+      side, FTT and a RAW LightGBM fit on PROPER + CAL-A (_slices), s* matched on CAL-B so FTT admits as many rows as RAW (the
+      _match_threshold path lrank uses), test score ftt - s* + tau; GPU completeness guard as ftt. Then ONE unit, compute gpu, the
+      decide_vs_raw rule (>= 10 paired windows, mean d >= +0.06, CI low > 0, pooled n >= 300; FAIL iff mean d <= 0), est ~1.5 h on
+      a T4 (f7c1-06 ran 52 min for raw + ftt over 13 windows, run 45802782002).
+  - id: P2-MPA1126-d3-tabicl-predev-power
+    goal: G4
+    theme: ml_health
+    roadmap: [L-ML-LIVE]
+    value: {usd_at_stake_per_month: 150, confidence: 0.08}
+    after:
+    - {unit: RQ-20261126-1e75-04, verdict: pass}
+    question: >-
+      D3 Foxhound: if TabICLv2 at full n is feasible on a T4 and its held-out-year read (dbf8-03) leaves +0.06 inside its CI, does it
+      beat RAW on 39 DISJOINT pre-dev windows (2022-10-01..2025-09-30, every arm refit at each origin on rows before it)?
+    why: >-
+      Finding (1): at 13 windows the instrument's MDE is ~0.06-0.17 R, so a TabICL read on the held-out year alone will most likely be
+      INDETERMINATE. Pre-dev history is RESEARCH-NO-WAIT's first in-hand confirmation window and is disjoint from the grading year
+      (a number measured only over the grading window never promotes). The frozen v1 is not replayed there (it trained on it). Decision
+      it changes: whether the only tabular foundation model with a BSD licence becomes a D3 serving candidate (mirror-published scores
+      from a GPU host). Pre-mortem: if it FAILs, the likely reason is the same as (1): no learner moves this feature set.
+    needs_authoring: >-
+      GATED on RQ-20261126-1e75-04 PASS (feasible) AND RQ-20261126-dbf8-03 graded with the paired tabicl-raw 95% CI upper bound >= +0.06
+      (if the CI already excludes +0.06 on the held-out year, a pre-dev read cannot change the decision and is NOT authored). Needs an
+      opt-in --window-start / --window-end on ml_entry_residual.py (frozen v1 skipped when the window overlaps its training; drafted in
+      this lane, not landed: no unit uses it yet). Unit: compute gpu, decide_vs_raw rule, est 8-12 h (dbf8-03 declares ~4 h for 13 windows
+      at full n; earlier origins train on fewer rows), --gpu-arm-budget-min so a budget cut is INDETERMINATE.
 two_week_plan:
   schema: iteration-plan-2w/v1
   authored: '2026-11-23'

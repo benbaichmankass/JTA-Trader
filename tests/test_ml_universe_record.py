@@ -26,6 +26,9 @@ def _accts():
 # must reproduce them exactly on every rostered account, because the population test FAILED and nothing widens.
 _ML_ENTRY_BEFORE = {"bybit_2": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"],
                     "bybit_portfolio": ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]}
+# The other rostered books' sets (the retired account_symbols map's values, now derived: ML-UNIVERSE-RULE 2026-11-26).
+_ML_ENTRY_OTHER = {"tradeify_1": ["ETHUSDT", "SOLUSDT"], "velotrade_1": ["ETHUSDT", "SOLUSDT"],
+                   "alpaca_paper": ["SPY", "QQQ", "IWM", "TLT", "IEF", "SLV", "USO", "GDX", "TQQQ", "QLD", "SPYM", "IAUM", "SCHA"]}
 
 
 def test_only_ml_entry_has_a_record_and_it_changes_no_rostered_account():
@@ -41,7 +44,7 @@ def test_only_ml_entry_has_a_record_and_it_changes_no_rostered_account():
     assert set(_ML_ENTRY_BEFORE) <= set(rostered)
     for a in rostered:
         got = leg_symbols(cfgs["ml_entry"], a, leg="ml_entry")
-        want = _ML_ENTRY_BEFORE.get(a) or cfgs["ml_entry"]["account_symbols"][a]
+        want = _ML_ENTRY_BEFORE.get(a) or _ML_ENTRY_OTHER[a]
         assert sorted(got) == sorted(want), (a, got, want)
 
 
@@ -83,8 +86,7 @@ def test_record_flows_through_leg_symbols_with_the_account_venue(tmp_path, monke
     monkeypatch.setattr(MU, "RECORD_DIR", d)
     MU._CACHE.clear()
     five = ["BTCUSDT", "ETHUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT"]
-    cfg = dict(_cfgs()["ml_entry"])   # a configured bybit_2 scope of its own: this tests the resolver, not today's config
-    cfg["account_symbols"] = {**(cfg.get("account_symbols") or {}), "bybit_2": five}
+    cfg = dict(_cfgs()["ml_entry"])   # bybit_2's venue-derived set is the five configured perps: this tests the resolver
     assert leg_symbols(cfg, "bybit_2", leg="ml_entry") == five + ["AAVEUSDT"]       # widened, never narrowed
     assert "AAVEUSDT" not in leg_symbols(cfg, "alpaca_paper", leg="ml_entry")     # not listed on alpaca
     assert "AAVEUSDT" in leg_symbols(cfg, None, leg="ml_entry")                    # the builder's union sees it
@@ -126,4 +128,4 @@ def test_coordinator_scope_keeps_a_record_resolved_account(monkeypatch):
     sc = C._leg_account_scope("ml_entry")
     for a, want in _ML_ENTRY_BEFORE.items():
         assert sorted(sc.get(a) or []) == sorted(want), (a, sc.get(a))
-    assert sorted(sc["alpaca_paper"]) == sorted(_cfgs()["ml_entry"]["account_symbols"]["alpaca_paper"])
+    assert sorted(sc["alpaca_paper"]) == sorted(_ML_ENTRY_OTHER["alpaca_paper"])

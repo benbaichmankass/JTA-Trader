@@ -793,9 +793,15 @@ def chain_verdict(u: Optional[Dict[str, Any]]) -> Optional[str]:
     return None
 
 
-def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: Dict[str, str]) -> Tuple[str, List[str]]:
+def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: Dict[str, str],
+               dead: Optional[Dict[str, str]] = None) -> Tuple[str, List[str]]:
     """('ready'|'waiting'|'moot', reasons). moot = a prerequisite closed with a verdict this
-    node's `after` does not accept (or was retired): the branch was not taken."""
+    node's `after` does not accept (or was retired): the branch was not taken.
+
+    `dead` maps a node key to why that node can never produce a unit (it is `authoring_closed` or itself moot). A prerequisite
+    `node:` with no unit that is in `dead` reads as moot, NOT "open (not materialised yet)": nothing will ever materialise it
+    (9 nodes sat `waiting` on such prerequisites, 2026-11-26, lane BUILDS-W48)."""
+    dead = dead or {}
     reasons: List[str] = []
     state = "ready"
     for a in node.get("after") or []:
@@ -803,7 +809,10 @@ def node_state(node: Dict[str, Any], units: Dict[str, Dict[str, Any]], by_key: D
         want = str(a["verdict"])
         got = chain_verdict(units.get(uid)) if uid else None
         label = a.get("unit") or f"node {a.get('node')}"
-        if got is None:
+        if got is None and not uid and node_key(str(a.get("node") or "")) in dead:
+            state = "moot"
+            reasons.append(f"{label}: never unlocks ({dead[node_key(str(a.get('node') or ''))]})")
+        elif got is None:
             state = "waiting" if state != "moot" else state
             reasons.append(f"{label}: open" + ("" if uid else " (not materialised yet)"))
         elif got == "retired" or (want != "any" and got != want):
@@ -864,6 +873,28 @@ def _goal_rank(goal: Any) -> int:
     return int(m.group(1)) if m else 99
 
 
+def _dead_nodes(all_nodes: List[Dict[str, Any]], units: Dict[str, Dict[str, Any]], by_key: Dict[str, str]) -> Dict[str, str]:
+    """Node keys that can never materialise a unit: `authoring_closed`, or moot (a prerequisite already dead / not taken).
+    Iterated to a fixed point so a chain of dependents is all marked. A node that already HAS a unit is never dead here
+    (its unit's verdict decides)."""
+    dead: Dict[str, str] = {}
+    for n in all_nodes:
+        if n.get("authoring_closed") and not by_key.get(node_key(n["id"])):
+            dead[node_key(n["id"])] = "authoring_closed"
+    changed = True
+    while changed:
+        changed = False
+        for n in all_nodes:
+            k = node_key(n["id"])
+            if k in dead or by_key.get(k):
+                continue
+            st, _ = node_state(n, units, by_key, dead)
+            if st == "moot":
+                dead[k] = "moot"
+                changed = True
+    return dead
+
+
 def _node_value(node: Dict[str, Any]) -> float:
     v = node.get("value") or (node.get("unit") or {}).get("value") or {}
     try:
@@ -877,10 +908,12 @@ def programme_plan(root: Path, units: Dict[str, Dict[str, Any]]) -> Dict[str, An
     and the AUTHORING QUEUE (ready `needs_authoring` nodes), ranked goal-first then value."""
     by_key = {str(u["generated"]["key"]): uid for uid, u in units.items() if isinstance(u.get("generated"), dict)}
     nodes, emit, authoring = [], [], []
-    for path, sha, doc in load_programmes(root):
+    loaded = list(load_programmes(root))
+    dead = _dead_nodes([n for _p, _s, doc in loaded for n in doc["nodes"]], units, by_key)
+    for path, sha, doc in loaded:
         prog = str(doc["programme"])
         for n in doc["nodes"]:
-            st, why = node_state(n, units, by_key)
+            st, why = node_state(n, units, by_key, dead)
             if n.get("authoring_closed"):
                 st, why = "closed", [str(n["authoring_closed"])[:200]]
             materialised = by_key.get(node_key(n["id"]))
