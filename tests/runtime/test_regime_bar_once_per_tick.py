@@ -35,7 +35,10 @@ def test_all_41_symbols_scored_on_a_bar_close_with_one_resolve(monkeypatch, tmp_
     preds = [_regime_predictor(f"{s}-regime-5m", _spec(symbol=s), log) for s in SYMBOLS]
     calls = _live(monkeypatch, [100.0 + i * 0.4 for i in range(41)], lambda r, lp: preds)
     bar = {"ts": 1_000}
-    fetch = lambda s, tf: _candles(last_ts=bar["ts"])
+
+    def fetch(s, tf):
+        return _candles(last_ts=bar["ts"])
+
     for _ in SYMBOLS:                                    # one tick = 41 symbol passes, as the pipeline calls it
         R.emit_regime_bar_predictions({}, log_path=log, fetch_fn=fetch)
     assert len(calls) == 1                               # one resolve, not 41
@@ -49,7 +52,10 @@ def test_next_bar_is_scored_for_every_symbol_after_the_ttl(monkeypatch, tmp_path
     preds = [_regime_predictor(f"{s}-regime-5m", _spec(symbol=s), log) for s in SYMBOLS]
     calls = _live(monkeypatch, [100.0, 400.0], lambda r, lp: preds)
     bar = {"ts": 1_000}
-    fetch = lambda s, tf: _candles(last_ts=bar["ts"])
+
+    def fetch(s, tf):
+        return _candles(last_ts=bar["ts"])
+
     R.emit_regime_bar_predictions({}, log_path=log, fetch_fn=fetch)
     bar["ts"] = 1_300
     R._REGIME_FETCH_WALL.clear()                         # the 5m fetch gate has elapsed
