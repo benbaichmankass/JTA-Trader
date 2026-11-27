@@ -6617,6 +6617,18 @@ def claude_desk_signal_builder(settings: dict) -> Dict[str, Any]:
     if isinstance(_mh, int) and not isinstance(_mh, bool) and _mh > 0 \
             and not is_market_open(_cls, now + timedelta(minutes=_mh)):
         return _none(f"market_closes_before_max_hold:{_cls}:{_mh}m")
+    if (pkg.get("meta") or {}).get("entry_type") == "limit":
+        # DESK-MACRO v2 (b1): a leg-held limit waits -- NOT consumed, NOT terminal -- until this tick's price reaches it
+        # inside the bracket; good_till_bars ends it as expired_unfilled (cd.select). The price is the tick's last close.
+        try:
+            from src.runtime.market_data import fetch_candles
+            _df = fetch_candles(pkg["symbol"], "5m", settings=settings, limit=2)
+            _px = float(_df["close"].iloc[-1]) if _df is not None and len(_df) else None
+        except Exception:  # noqa: BLE001  # allow-silent: an unreadable price waits (named), never enters
+            _px = None
+        pkg, _why = cd.limit_touch(pkg, _px, now)
+        if pkg is None:
+            return _none(_why)
     meta = dict(pkg["meta"], strategy_name=name)
     return _with_signal_package(name, {
         "symbol": pkg["symbol"],

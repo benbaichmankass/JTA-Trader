@@ -1,7 +1,7 @@
 id: RQ-20261126-dbf8-03
 title: 'Tabular foundation model on a MONEY label (D3 Foxhound): does TabICLv2 (BSD-3, in-context, no training) at FULL n on a GPU beat LightGBM on the
   trades each would take at actual net R? (the same 13 monthly refits as RQ-20261118-dbf8-01) -- RE-RUN of RQ-20261118-dbf8-02 with TabICL inference-memory knobs (batch_size 1, disk offload) after its OOM'
-status: queued
+status: blocked
 cadence: once
 theme: ml_health
 priority: 2
@@ -138,3 +138,10 @@ grading:
   reason: 'read_state not unanimously measured: [''producer_failed'']'
   rows: 1
   verdict: null
+blocked_on:
+- kind: evidence
+  ref: RQ-20261126-1e75-04
+  what: 'Full-n TabICL does not fit a free Kaggle T4: the 1e75-04 probe was killed at its 180-min timeout INSIDE the first full-n window (>= about
+    170 min per window, so >= about 132,000 s for 13 windows against this command''s 290-min budget); a re-dispatch here only burns quota on the same
+    timeout. Manager 26a 2026-11-27 05:43Z: no RunPod spend. The capped-n question moved to RQ-20261127-7ab1-02.'
+  clears_when: a GPU backend on which one full-n TabICL window measurably fits (a new probe on that backend), with the operator's decision on spend.

@@ -113,6 +113,10 @@ TABICL_PARAMS = {"random_state": 0}            # every other TabICLRegressor arg
 TABICL_MEMORY = {"batch_size": 1}
 TABICL_OFFLOAD_DIR_DEFAULT = "/tmp/tabicl_offload"
 EXTRA_ARMS = EXTRA_ARMS + GPU_ARMS
+#: rawcap (CAPPED-n EDGE unit RQ-20261127-7ab1-02): the raw LightGBM fit on ONLY the most recent TABICL_MAX_ROWS training rows -- the
+#: matched-n control, so a capped TabICL is compared with the same rows and the cap is not confounded with the learner.
+EXTRA_ARMS = EXTRA_ARMS + ("rawcap",)
+LEARNER_ARMS["rawcap"] = "raw"
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -172,12 +176,16 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
         return fit_lrank(train, tau if tau is not None else 0.0)
     if arm in GPU_ARMS:
         return fit_gpu_arm(train, arm, max_rows=TABICL_MAX_ROWS if arm == "tabicl" else None)
+    if arm == "rawcap":
+        if not TABICL_MAX_ROWS:
+            raise ValueError("rawcap needs --tabicl-max-rows (its row cap)")
+        train = train if len(train) <= TABICL_MAX_ROWS else train.sort_values("ts").tail(TABICL_MAX_ROWS)   # same rows as fit_tabicl
     target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
         y = train[f"y_{side}_{target}"]
         ridge = None
-        if arm in LEARNER_ARMS:
+        if arm in LEARNER_ARMS and arm != "rawcap":
             from sklearn.impute import SimpleImputer
             from sklearn.linear_model import Ridge
             from sklearn.pipeline import make_pipeline
@@ -426,7 +434,8 @@ def fit_tabicl(train: pd.DataFrame, y_col: str, device: str = "auto", max_rows: 
                         **TABICL_MEMORY, **TABICL_PARAMS)
     m.fit(t[E.FEATURES].to_numpy(np.float32), t[y_col].to_numpy(float))
     return _TabICL(m), {"status": "ok", "device": dev.type, "n_train": int(len(t)), "full_n": bool(len(t) == len(train)),
-                        "checkpoint": TABICL_CKPT, "batch_size": TABICL_MEMORY["batch_size"], "disk_offload_dir": offload_dir}
+                        "checkpoint": TABICL_CKPT, "batch_size": TABICL_MEMORY["batch_size"], "disk_offload_dir": offload_dir,
+                        "max_rows": max_rows}
 
 
 def _free_gpu() -> None:
@@ -469,6 +478,8 @@ BUDGET_SAFETY = 1.2
 #: --tabicl-max-rows (a CAPPED-n probe, RQ-20261127-7ab1-01): fit TabICL in-context on only the most recent N training rows. The fit is flagged
 #: full_n=False, so gpu_arm_complete() still refuses it for the EDGE rule (that needs full n); a probe records the cap beside its timings.
 TABICL_MAX_ROWS: int | None = None
+#: --baseline-arm: the arm every EXTRA arm is paired against (default raw). RQ-20261127-7ab1-02 sets rawcap (the matched-n control).
+BASELINE_ARM = "raw"
 
 
 def fit_gpu_arm(train: pd.DataFrame, arm: str, device: str = "auto", **kw) -> dict:
@@ -493,7 +504,9 @@ def gpu_arm_complete(info: dict | None, arm: str) -> bool:
         if arm == "ftt" and not i.get("schedule_complete"):
             return False
         if arm == "tabicl" and not i.get("full_n"):
-            return False
+            # a capped fit counts ONLY when the run declared that cap (--tabicl-max-rows) and the fit used exactly it
+            if not (TABICL_MAX_ROWS and i.get("max_rows") == TABICL_MAX_ROWS and i.get("n_train") == TABICL_MAX_ROWS):
+                return False
     return True
 
 
@@ -703,18 +716,19 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
               for a, v in alls.items()}
     p_res = _paired(rows, "resid", "raw") if "resid" in arms else {"k": 0, "mean": None, "sd": None, "ci95": None}
     p_pla = _paired(rows, "placebo", "raw") if "placebo" in arms else {"k": 0, "mean": None, "sd": None, "ci95": None}
-    extra = {a: _paired(rows, a, "raw") for a in arms if a not in ARMS}
+    base = BASELINE_ARM if BASELINE_ARM in arms else "raw"
+    extra = {a: _paired(rows, a, base) for a in arms if a not in ARMS and a != base}
     if "resid" in arms:
         verdict = decide(p_res, p_pla, pooled)
     else:                                    # an EXTRA_ARMS unit: the same paired bar against RAW, no placebo arm
         a0 = next(iter(extra), None)
         verdict = decide_vs_raw(extra[a0], pooled.get(a0, {})) if a0 else "INDETERMINATE"
     gpu_complete = {a: all(gpu_arm_complete(r.get(f"{a}_info"), a) for r in rows) for a in arms if a in GPU_ARMS}
-    head = next((a for a in arms if a not in ARMS), None)
+    head = next((a for a in arms if a not in ARMS and a != base), None)
     if head in GPU_ARMS and not gpu_complete[head] and verdict in ("PASS", "FAIL"):
         verdict = "INDETERMINATE"           # registered: a CPU-fallback / capped / failed / truncated GPU arm is never PASS or FAIL
     return {"verdict": verdict, "gpu_arm_complete": gpu_complete, "paired_resid_vs_raw": p_res, "paired_placebo_vs_raw": p_pla,
-            "paired_extra_vs_raw": extra, "arms": list(arms), "pooled": pooled,
+            "paired_extra_vs_raw": extra, "baseline_arm": base, "arms": list(arms), "pooled": pooled,
             "windows": rows, "tau": tau, "window": {"start": start, "end": end, "step_days": step_days},
             "thresholds": {"win_n": WIN_N, "min_windows": MIN_WINDOWS, "pool_n": POOL_N, "delta": DELTA,
                            "beta_win": BETA_WIN, "beta_clip": [BETA_LO, BETA_HI], "placebo_seed": PLACEBO_SEED}}
@@ -809,7 +823,7 @@ def run(a) -> int:
                 f"{d['pooled']['raw']['n']}/{d['pooled']['resid']['n']}/{d['pooled']['placebo']['n']}")
     else:
         note = ("PROBE " + json.dumps(d.get("probe", {}).get("projected_full_gpu_s")) + " | " if a.max_windows else "") + \
-            f"EXTRA-ARM: {v} | " + " | ".join(f"paired {k}-raw mean {p['mean']} k={p['k']} ci95 {p['ci95']} n={d['pooled'][k]['n']}"
+            f"EXTRA-ARM: {v} | " + " | ".join(f"paired {k}-{d.get('baseline_arm', 'raw')} mean {p['mean']} k={p['k']} ci95 {p['ci95']} n={d['pooled'][k]['n']}"
                                                   for k, p in d["paired_extra_vs_raw"].items())
     head_arm = "resid" if "resid" in arms else next(x for x in arms if x != "raw")
     row = {"schema_version": 1, "research_unit": a.unit, "read_state": "measured", "verdict": verdict,
@@ -871,6 +885,27 @@ def self_test() -> int:
     assert np.allclose(me["long"].predict(xx), 0.5 * (mr["long"].predict(xx) + mg["long"].predict(xx)))
     d3 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit, arms=("raw", "ens", "ridge"))
     assert set(d3["paired_extra_vs_raw"]) == {"ens", "ridge"} and d3["verdict"] in ("PASS", "FAIL", "INDETERMINATE")
+    # rawcap + --baseline-arm (RQ-20261127-7ab1-02): the matched-n control trains on the same most-recent rows, and extra arms pair
+    # against it, never against full-n raw
+    global TABICL_MAX_ROWS, BASELINE_ARM
+    _cap0, _base0 = TABICL_MAX_ROWS, BASELINE_ARM
+    try:
+        TABICL_MAX_ROWS, BASELINE_ARM = 300, "rawcap"
+        seen = {}
+        def fit_spy(train, arm, **kw):
+            seen.setdefault(arm, []).append(len(train))
+            return fit(train, arm, **kw)
+        dcap = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_spy, arms=("raw", "rawcap", "ridge"))
+        assert dcap["baseline_arm"] == "rawcap" and set(dcap["paired_extra_vs_raw"]) == {"ridge"}, dcap["paired_extra_vs_raw"]
+        mcap = fit_arm(tab.head(2000), "rawcap")
+        assert set(mcap) == {"long", "short"}
+        cap_info = {s: {"status": "ok", "device": "cuda", "full_n": False, "max_rows": 300, "n_train": 300} for s in ("long", "short")}
+        assert gpu_arm_complete(cap_info, "tabicl")                               # exactly the declared cap
+        assert not gpu_arm_complete({**cap_info, "long": {**cap_info["long"], "n_train": 120}}, "tabicl")
+        TABICL_MAX_ROWS = None
+        assert not gpu_arm_complete(cap_info, "tabicl")                           # a cap the run did not declare
+    finally:
+        TABICL_MAX_ROWS, BASELINE_ARM = _cap0, _base0
     # conf (FRONTIER-Q-CONFORMAL-ENTRY): slices are time-ordered and gapped, coverage on CAL-B is matched to RAW's
     pr, ca, cb = _slices(tab)
     gap = pd.Timedelta(hours=E.HORIZON_H + 1)
@@ -1016,6 +1051,8 @@ def main(argv=None) -> int:
                     help="PROBE: feasible iff the slowest probed window x the full window count <= this many GPU minutes")
     ap.add_argument("--probe-peak-mb", dest="probe_peak_mb", type=float, default=14500.0,
                     help="PROBE: feasible iff peak GPU memory <= this (a 16 GB T4 less headroom)")
+    ap.add_argument("--baseline-arm", dest="baseline_arm", default="raw",
+                    help="the arm extra arms are paired against (default raw; rawcap = LightGBM on the same capped rows)")
     ap.add_argument("--tabicl-max-rows", dest="tabicl_max_rows", type=int, default=0,
                     help="PROBE: fit TabICL on only the most recent N training rows (0 = full n). Flagged full_n=False: never an edge-rule fit")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
@@ -1026,8 +1063,9 @@ def main(argv=None) -> int:
                     "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY), lrank (RQ-20261118-f7c1-05) are EXTRA arms for their own units; "
                     "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
-    global TABICL_MAX_ROWS
+    global TABICL_MAX_ROWS, BASELINE_ARM
     TABICL_MAX_ROWS = a.tabicl_max_rows if a.tabicl_max_rows and a.tabicl_max_rows > 0 else None
+    BASELINE_ARM = a.baseline_arm
     if a.self_test:
         return self_test()
     if a.cmd != "run" or not a.unit:

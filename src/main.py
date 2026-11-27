@@ -1031,7 +1031,10 @@ def _resolve_tick_symbols(settings: dict) -> list:
         from src.runtime import ml_pool_scoring as _ps
         from src.config.symbol_sets import tick_strategies_cfg
         pool_legs = {n for n, c in (strategies_cfg or {}).items() if isinstance(c, dict) and _ps.is_pool_scored(c)}
-        tick_cfg = tick_strategies_cfg(strategies_cfg) if pool_legs else strategies_cfg
+        from src.config.symbol_sets import QUEUE_SCORED_KEY
+        queue_legs = {n for n, c in (strategies_cfg or {}).items() if isinstance(c, dict) and bool(c.get(QUEUE_SCORED_KEY, False))}
+        tick_cfg = tick_strategies_cfg(strategies_cfg) if (pool_legs or queue_legs) else strategies_cfg
+        rostered_queue_legs: set = set()
         rostered_pool_legs: set = set()
         seen: set = set()
         out: list = []
@@ -1056,6 +1059,7 @@ def _resolve_tick_symbols(settings: dict) -> list:
             # the naked-position cross-check cannot see it', which is the
             # window the operator explicitly declined.
             rostered_pool_legs.update(pool_legs & set(strategies or []))
+            rostered_queue_legs.update(queue_legs & set(strategies or []))
             syms = resolve_symbols(
                 declared=getattr(acct, "symbols", None),
                 roster=getattr(acct, "strategies", None),
@@ -1071,6 +1075,14 @@ def _resolve_tick_symbols(settings: dict) -> list:
                     out.append(s)
         if rostered_pool_legs:
             for s in _ps.picks(strategies_cfg, legs=sorted(rostered_pool_legs)):   # strongest predicted net R first: cash goes to the best pick
+                if s not in seen:
+                    seen.add(s)
+                    out.append(s)
+        if rostered_queue_legs:
+            # DESK-MACRO v2: a queue_scored leg (claude_desk) gets a pass only for symbols with a live accepted proposal (or an
+            # open max-hold window), whatever it declares; an unreadable queue adds nothing (the static set is unchanged).
+            from src.units.strategies import claude_desk as _cd
+            for s in _cd.tick_symbols():
                 if s not in seen:
                     seen.add(s)
                     out.append(s)
