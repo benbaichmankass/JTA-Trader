@@ -1,0 +1,150 @@
+# Authored 2026-11-27 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV) on Manager 26a's 14:53Z instruction: the ml_entry learner levers
+# are spent, so the next lever is a NEW INFORMATION CLASS (plan docs/research/ml-entry-new-information-classes-2026-11-27.md, class 1).
+# Rule registered BEFORE any run. Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261127-26ac-01
+title: 'ml_entry COMPACT derivatives state: on the 8 dev folds, do 4 normalised basis/funding columns (F2c), 4 path-shape columns (F5c) or both,
+  added to the 20-feature ENTRY recipe, beat a seeded noise placebo of the SAME width, net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+question: On the pooled ENTRY recipe's 8 half-year dev folds (2022-01..2025-09, 60 frozen perps, LOFO tau, fee + slippage + funding), is the
+  leave-one-fold-out mean net R per decision higher with F2c (premium z168, funding z21, 8h premium minus funding, 4h premium change) or F5c
+  (semivariance ratio, efficiency ratio, ATR distance to the 168h high and low) or both, than with the same recipe plus the same number of
+  seeded N(0,1) columns?
+why_this_matters: 'The learner levers are spent on dev (c4e2-02 recency INDETERMINATE, c4e2-03 capacity FAIL, 7ab1-02 TabICL FAIL, GRU closed)
+  while served v1 loses money (c4e2-01, longs -0.46 R since 11-01). fs01-01 graded each family against the bare baseline, but its own N9
+  control (9 noise columns) cost -0.0167 R/decision: against that control F2 read +0.0175 and F5 +0.0202 (POST HOC, 5 families read), and
+  c4e2-04 (frozen encoder) read +0.013 vs its placebo. The recipe pays a per-column cost that hides information; this unit removes it two ways
+  (fewer, normalised columns; a matched-width placebo as the control) and asks the question fresh, under a multiplicity-adjusted bar.'
+practice_precedent: 'M3 (one lever per arm against a same-shape control), M4 (rule registered before the run), M6 (net of the full cost
+  stack), M13 (a post-hoc reading motivates a fresh registered test, never a promotion) and T1 (purged + embargoed walk-forward on dev folds
+  only) in docs/reference/trading-and-model-practice-principles.md.'
+evidence_class:
+  holdout: none
+  claim: ml_dev_fold_feature_value
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE before any run: fs01-01 arms scored 35k-92k LOFO decisions over the 8 dev folds (C/F2 64,719; F/F5 44,577; N9 52,688);
+    the materiality bar +0.010 R/decision is the fs01-01 / f8a1-01 bar. The graded statistic is the one-sided t of the 8 per-fold deltas
+    (df 7) at the house level (one-sided 0.025, Sidak k = 3: t >= 3.1215; Manager 26a review 2026-11-27 15:25Z). POWER, stated honestly:
+    fs01-01 per-fold deltas spread about 0.02-0.05 R, so P(PASS | true effect +0.010) is about 12 / 6 / 3 percent at fold sd 0.02 / 0.03 /
+    0.05 (noncentral t, df 7). A real effect of the materiality size most likely reads INDETERMINATE (upper bound above +0.010), not PASS;
+    FAIL needs the upper bound below +0.010.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history through 2025-09-30 only (no later date is downloaded); nothing accrues.
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ablation_compact
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261127-26ac-01
+decision_rule:
+  id: RULE-RQ20261127-26ac-01-COMPACT-DERIVS
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: 'per arm, its MATCHED-WIDTH PLACEBO: P2 (F2c, 4 columns) and P5 (F5c, 4 columns) vs N4 (recipe + 4 seeded N(0,1) columns); P25
+    (8 columns) vs N8. Baseline A (20 features) and A2 (A, second LightGBM seed) are reported, never graded.'
+  statistic: 'ml_entry_v2.combine_placebo: per arm, the pooled LOFO mean net R per decision minus its placebo''s; the 8 per-fold deltas (each
+    fold at its own LOFO tau, as fs01-01); folds with delta > 0; the one-sided t of the 8 per-fold deltas; the per-calendar-year mean delta
+    (2022..2025); the arm''s dev coverage. Columns, placebo seed (20261127 + width), arms and dev window are fixed now.'
+  rule: 'An arm PASSES iff pooled delta vs its placebo >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the per-fold t >= 3.1215
+    (one-sided Sidak family bar, k = 3, alpha 0.025, df 7) AND the yearly mean delta is positive in >= 3 of 4 years AND its columns are present
+    on >= 40 percent of dev rows. An arm FAILS iff mean(fold deltas) + 3.1215 x se(fold deltas) < +0.010 (the effect is excluded at the bar).
+    INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 8 folds carry both means. Unit verdict: pass if any arm passes
+    (the largest pooled delta is named), fail if all three fail, indeterminate otherwise. No threshold, column or seed changes after any
+    result.'
+  pass_action: 'ONE confirming read of the best arm on disjoint out-of-time data (2025-10-01 onward, holdout_lock claimed, the deflated ENTRY
+    bar), registered in its own unit before it runs; a pass there makes those columns an input of the next ml_entry_retrain challenger, a
+    data-backed Tier-3 replacement packet applied by the manager or a mandate, never by a lane.'
+  fail_action: Close compact basis/funding and path-shape state as crypto ENTRY inputs on research/levers/ml-entry.yaml; the next class in
+    the plan (crypto implied volatility, Deribit DVOL) is authored as its own unit. No re-run with other columns, widths or seeds.
+  proposal_mapping: pass -> confirming out-of-time read -> Tier-3 packet; fail -> class closed, next class authored; indeterminate -> report the
+    realised per-fold se and coverage, stop.
+  what_it_does_not_do: Promotes nothing; reads no sealed or held-out window (dev folds only, no date after 2025-09-30 is downloaded); serves
+    nothing; changes no config, served model or order path; sizes nothing; adds no gate. One compact definition per family; a FAIL does not
+    refute basis/funding information under a different representation.
+  min_n: 1000 dev decisions per arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: ml_entry trades real money on bybit_2 + bybit_portfolio and is losing (c4e2-01); two independent placebo-relative
+    near-misses (fs01-01 vs N9, c4e2-04 vs its placebo) point at this mechanism. Not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 90
+  why_runner: 'Fetches keyless public Binance Vision archives (vision_streams.py); the Kaggle kernel has no internet. GBDT on CPU.'
+  basis: 'INFERRED from fs01-01 (8 arms in parallel on a 4-core sandbox, 334-477 s per arm at 2 threads) and f8a1-01: seven arms (A, A2, P2,
+    P5, P25, N4, N8) at 1 thread each on the 4-core runner, plus the dev-only fetch and table build (~20-30 min).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the recipe's SL 2 / TP 3 ATR14 bracket and 24 h stop; only the model inputs differ
+  matched_random:
+    draws: 100
+    note: 'declared, NOT computed (each draw is a full 8-fold refit): the control that matters is the matched-width seeded noise placebo (N4 /
+      N8), which prices the recipe''s measured per-column overfit (fs01-01 N9 -0.0167 R)'
+  best_static:
+    grid:
+    - recipe (20 features)
+    - recipe + 4 noise columns (N4)
+    - recipe + 8 noise columns (N8)
+    excludes_test_folds: true
+    note: every arm is refit per fold on rows before the fold minus the registered purge/embargo; tau is chosen leave-one-fold-out
+  bootstrap_group: fold
+ml_consumer:
+  consumer: scripts/research/ml_entry_retrain.py
+  decision: whether compact basis/funding or path-shape columns enter the next ml_entry challenger; no change from this unit
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261127-c4e2-03/45990110825
+  verdict_read: fail
+  diagnosis: 'Learner capacity overfits (c4e2-03: lgb_big -0.027 R, t -2.70) and no recency arm helps (c4e2-02), so the recipe is at its
+    ceiling on its 20 features; the decay c4e2-01 found is a market shift those features cannot see. fs01-01''s own N9 control shows every
+    added column costs ~-0.017 R on this recipe, which masked F2 and F5 (each positive vs N9) and is the same pattern as c4e2-04 vs its placebo.'
+  search: three fixed arms (F2c, F5c, both), each against a matched-width placebo; no grid.
+  levers:
+  - features
+  map_entries:
+  - research/levers/ml-entry.yaml#levers.features.feature_families_F1_F5
+  - research/levers/ml-entry.yaml#levers_tested
+  attempt: 22
+  due_by: '2026-12-04'
+related:
+- docs/research/ml-entry-new-information-classes-2026-11-27.md
+- RQ-20261101-fs01-01
+- RQ-20261127-c4e2-02
+- RQ-20261127-c4e2-03
+- RQ-20261127-c4e2-04
+- RQ-20261125-f8a1-01
+- scripts/research/ml_entry_families.py
+population: The pooled ENTRY recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, LOFO tau, net
+  R after fee + slippage + funding.
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.

@@ -10,6 +10,7 @@
     python3 scripts/research/ml_entry_v2_run.py ensemble <unit> <out_dir>   # d507-01: K=3 seed ensembles + per-fold quantile threshold, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py timeframe <unit> <out_dir>  # b620..b626: the ENTRY pipeline at 5m/15m/1h/4h bars, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py ablation_macro <unit> <out_dir>  # F8 cross-asset family vs A / A2, DEV FOLDS ONLY
+    python3 scripts/research/ml_entry_v2_run.py ablation_compact <unit> <out_dir>  # 26ac-01: compact F2c/F5c vs matched-width placebos, DEV FOLDS ONLY
 
 Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image carries it, row RESEARCH-RUNNER-ML-DEPS / #22143),
 fetch the Binance Vision streams (vision_streams.py), build the family table, run the arms in parallel (dev folds only), combine.
@@ -34,7 +35,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "ablation_macro", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "ablation_macro", "ablation_compact", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -57,6 +58,21 @@ def main(argv: list[str]) -> int:
         run(str(HERE / "ml_entry_levers.py"), "run", "--unit", unit, "--table", str(work / "table.pkl"), "--out", str(work), "--n-jobs", "4")
         for f in work.glob("*_result.json"):
             shutil.copy(f, out / f.name)
+        return 0
+    if mode == "ablation_compact":
+        # COMPACT-DERIVS (RQ-20261127-26ac-01): dev-only fetch (no date after 2025-09-30 is downloaded), the fs01 table
+        # builder, then A / A2 (reported) and P2 / P5 / P25 each against a matched-width placebo N4 / N8 (graded).
+        run(vs, "--out", str(streams), "--streams", "klines12,funding,premium", "--start", "2020-07-01", "--end", "2025-09-30", "--workers", "24")
+        run(vs, "--out", str(streams), "--streams", "metrics", "--start", "2021-12-01", "--end", "2025-09-30", "--workers", "32")
+        run(v2, "build-table", "--streams", str(streams), "--out", str(work))
+        procs = [subprocess.Popen([sys.executable, v2, "arm", "--arm", a, "--out", str(work), "--n-jobs", "1"])
+                 for a in ("A", "A2", "P2", "P5", "P25", "N4", "N8")]
+        if any(p.wait() for p in procs):
+            return 1
+        run(v2, "combine-compact", "--out", str(work))
+        for f in list(work.glob("compact.json")) + list(work.glob("arm_*.json")):
+            shutil.copy(f, out / f.name)
+        write_compact_verdict(unit, out)
         return 0
     if mode in ("recipe", "labels", "ensemble"):
         # dev-only fetch: no date after 2025-09-30 is downloaded, so no sealed window can be read
@@ -122,6 +138,32 @@ def main(argv: list[str]) -> int:
 _WIN, _LOSS = {"win"}, {"no_win", "does_not_reproduce"}
 _TF = {"beats_1h": "pass", "reproduces": "pass", "viable_not_better": "no_action_warranted", "not_viable": "fail",
        "does_not_reproduce": "fail", "indeterminate": "indeterminate", "smoke_not_judged": "indeterminate"}
+
+
+def write_compact_verdict(unit: str, out: Path) -> bool:
+    """RQ-20261127-26ac-01: the unit verdict is ml_entry_v2.combine_placebo's own (pass / fail / indeterminate), copied
+    mechanically; an unrecognised shape writes NOTHING (stays producer_failed). DEV FOLDS ONLY."""
+    import json
+    p = out / "compact.json"
+    if not p.exists():
+        return False
+    d = json.loads(p.read_text())
+    if d.get("verdict") not in ("pass", "fail", "indeterminate"):
+        return False
+    arms = d.get("arms") or {}
+    (out / "verdict.json").write_text(json.dumps({
+        "verdict": d["verdict"], "read_state": "measured",
+        "population": f"{unit}: compact basis/funding (F2c) and path-shape (F5c) columns added to the 20-feature pooled ENTRY "
+                      "recipe, each vs a seeded N(0,1) placebo of the same width; 60 frozen perps, c692-01 dev folds 2022-01..2025-09, "
+                      "LOFO tau, net of fee + slippage + funding; DEV FOLDS ONLY",
+        "n": max([a.get("n") or 0 for a in arms.values()] or [0]),
+        "measurement": {"t_bar": d.get("t_bar"), "baseline_A": d.get("baseline_A"), "placebos": d.get("placebos"),
+                        "seed_noise_abs_A_minus_A2": d.get("seed_noise_abs_A_minus_A2"), "arms": arms, "best_arm": d.get("best_arm")},
+        "note": "mechanical copy of ml_entry_v2.combine_placebo's verdict; " + "; ".join(
+            f"{k}: {v.get('verdict')} delta {v.get('pooled_delta_vs_placebo')} folds {v.get('folds_positive')} t {v.get('t_fold')}"
+            for k, v in arms.items()),
+    }, indent=2, default=str) + "\n")
+    return True
 
 
 def write_ablation_trend_verdict(unit: str, out: Path, arm_key: str = "T", family: str = "F7 trend-align") -> bool:
