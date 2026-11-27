@@ -7723,10 +7723,52 @@ levers:
         max_drawdown_r: 17.7151
         verdict: fail
         joint_change: false
+      - value: pivot=3
+        baseline_value: 'off'
+        arm: S3
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 569
+        net_r: -19.3967
+        baseline_n: 392
+        baseline_net_r: 26.7309
+        delta_net_r: -46.1276
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 36.1131
+        verdict: fail
+        joint_change: false
+      - value: pivot=5
+        baseline_value: 'off'
+        arm: S5
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 480
+        net_r: -6.3939
+        baseline_n: 392
+        baseline_net_r: 26.7309
+        delta_net_r: -33.1248
+        folds_ge_baseline: 2/6
+        max_drawdown_r: 20.7376
+        verdict: fail
+        joint_change: false
+      - value: pivot=8
+        baseline_value: 'off'
+        arm: S8
+        unit: RQ-20261101-5e01-13
+        window: 2020-07-01..2026-10-15
+        n: 407
+        net_r: 13.1146
+        baseline_n: 392
+        baseline_net_r: 26.7309
+        delta_net_r: -13.6163
+        folds_ge_baseline: 4/6
+        max_drawdown_r: 17.7151
+        verdict: fail
+        joint_change: false
       shape: monotone
-      points: 8
-      best_delta_r_per_trade: -0.0363
-      fold_stability: 0.292
+      points: 11
+      best_delta_r_per_trade: -0.0347
+      fold_stability: 0.333
       reading: every tested value is worse than the baseline
     structure_buffer_atr:
       tests:

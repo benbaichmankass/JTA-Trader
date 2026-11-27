@@ -2535,7 +2535,16 @@ nodes:
     roadmap: [L-ML-MECE]
     value: {usd_at_stake_per_month: 30, confidence: 0.1}
     after: []
-    needs_authoring: 'D10 (Basset): a count, not a model. Blind-graded closes per leg family in comms/claude_strategy_scores.jsonl and a
+    authoring_closed: '2026-11-27 research-ops (ML-PRIMARY): answered in-pass. It is a count, so no unit was needed. Read
+      comms/claude_strategy_scores.jsonl at main 2026-11-27 (4,874 score rows; 2,251 with a pnl or closed_at). Of the 1,274
+      closes with readable reviewed_at AND closed_at, 0 were graded BEFORE the close (blind) and 1,274 after: pullback 191,
+      ict_scalp 229, trend_donchian 184, ml_entry 187, e4_oi 51, claude_desk 14, other 400. Another 977 closes have no closed_at
+      and are unreadable. Rule (registered in this node before the read): PASS iff >= 100 blind-graded closes in >= 2 leg families.
+      FAIL, the pre-mortem''s first cause. Every grade is written after the outcome (health-review / retroactive passes), so a
+      grade-vs-CUSUM join would leak the outcome. D10 is PARKED. Re-entry test: the same count reaches >= 100 blind closes in
+      >= 2 families. That needs grades written before close (the CJ-4 label-hazard fix: a pre-close grade writer), which has no
+      checklist row (handoff of the 2026-11-27 research-ops record).'
+    authoring_closed_ask: 'D10 (Basset): a count, not a model. Blind-graded closes per leg family in comms/claude_strategy_scores.jsonl and a
       Bernoulli CUSUM on R as the baseline. Decision it changes: whether the grade-vs-CUSUM join (a monitoring read, never a gate) is
       worth authoring. PASS iff >= 100 blind-graded closes in >= 2 leg families; FAIL parks the slot with the count as its re-entry test.
       Pre-mortem: FAIL most likely because most grades are not blind (graded after the outcome); first variant = count only grades

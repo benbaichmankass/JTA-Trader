@@ -109,10 +109,38 @@ levers:
         max_drawdown_r: 162.2367
         verdict: pass
         joint_change: false
+      - value: long
+        baseline_value: 'off'
+        arm: side_long
+        unit: RQ-20261126-162
+        window: 2024-07-18..2026-11-26
+        n: 154
+        net_r: 13.3986
+        baseline_n: 233
+        baseline_net_r: 13.7383
+        delta_net_r: -0.3397
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 20.4188
+        verdict: fail
+        joint_change: false
+      - value: short
+        baseline_value: 'off'
+        arm: side_short
+        unit: RQ-20261126-162
+        window: 2024-07-18..2026-11-26
+        n: 127
+        net_r: -21.581
+        baseline_n: 233
+        baseline_net_r: 13.7383
+        delta_net_r: -35.3193
+        folds_ge_baseline: 2/4
+        max_drawdown_r: 35.0997
+        verdict: fail
+        joint_change: false
       shape: noisy
-      points: 2
+      points: 4
       best_delta_r_per_trade: 0.1092
-      fold_stability: 0.583
+      fold_stability: 0.542
       reading: 'smooth, fold-stable gain: potential -- confirm on a holdout'
   entry:
     donchian:
