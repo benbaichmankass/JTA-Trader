@@ -3,7 +3,7 @@
 id: RQ-20261127-c4e2-02
 title: 'ml_entry STALENESS lever: on the registered dev folds, does fitting the two regressors with RECENCY weights (half-life 90/180/365/730 d) or a
   ROLLING window (12/24/36 months) beat the expanding unweighted recipe, net of cost, and beat a shuffled-weight placebo?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -133,3 +133,17 @@ related:
 population: The registered ml_entry recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, tau 0.10,
   net R after fee 11 bps rt + slippage 3 bps + funding 1 bps/8h.
 last_dispatched_at: '2026-11-27T12:30:09+00:00'
+grading:
+  attested: RULE-RQ20261127-c4e2-02-STALENESS-ARMS
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-c4e2-02-STALENESS-ARMS
+  evidence:
+  - research/results/RQ-20261127-c4e2-02/45991253394.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

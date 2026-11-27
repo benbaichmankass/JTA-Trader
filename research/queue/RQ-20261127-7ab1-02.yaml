@@ -5,7 +5,7 @@
 id: RQ-20261127-7ab1-02
 title: 'D3 TabICL at CAPPED n on a MONEY label: does TabICLv2 (in-context on the most recent 50,000 training rows) beat LightGBM fit on the SAME
   50,000 rows, on the trades each would take at actual net R? (the 13 monthly refits of RQ-20261118-dbf8-01; matched-n control)'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -123,3 +123,16 @@ related:
 - FRONTIER-LEVER-TABULAR
 population: As RQ-20261118-dbf8-01 (the 13 monthly refits); TabICL and RAWCAP fit on the most recent 50,000 training rows of each refit.
 last_dispatched_at: '2026-11-27T08:52:32+00:00'
+grading:
+  attested: RULE-RQ20261127-7ab1-02-TABICL-CAPPED-ENTRY
+  auto: true
+  decision_rule_id: RULE-RQ20261127-7ab1-02-TABICL-CAPPED-ENTRY
+  evidence:
+  - research/results/RQ-20261127-7ab1-02/45963402229.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
