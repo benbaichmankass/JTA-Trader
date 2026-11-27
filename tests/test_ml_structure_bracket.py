@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,3 +74,42 @@ def test_t_map_identity_equals_default_and_daily_map_is_strictly_earlier_session
     sess = pd.factorize(d.ts.dt.tz_convert("America/New_York").dt.date)[0]
     assert (tmap == sess - 1).all() and tmap[0] == -1      # never the session still forming
     assert len(datr) == sess.max() + 1
+
+
+# --------------------------------------------------------------------------- FastStructureLevels == StructureLevels (ML-STRUCTURE-UNIT-COST)
+def _ohlc(seed, n=3000):
+    rng = np.random.default_rng(seed)
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.006, n)))
+    o = np.r_[c[0], c[:-1]]
+    h = np.maximum(o, c) * (1 + rng.uniform(0, 0.004, n))
+    lo = np.minimum(o, c) * (1 - rng.uniform(0, 0.004, n))
+    h[rng.integers(0, n, 15)] = np.nan            # holes: NaN prices must never qualify in either class
+    return o, h, lo, c
+
+
+@pytest.mark.parametrize("seed,pivot", [(1, 3), (2, 5), (3, 8)])
+def test_fast_levels_answer_every_query_exactly_like_the_live_class(seed, pivot):
+    from src.runtime.structure_levels import StructureLevels
+    _, h, lo, c = _ohlc(seed)
+    live, fast = StructureLevels(h, lo, pivot), M.FastStructureLevels(h, lo, pivot)
+    rng = np.random.default_rng(seed + 100)
+    for t in rng.integers(0, len(h), 400):
+        px = float(c[t]) * float(rng.uniform(0.97, 1.03))
+        for fvg in (True, False):
+            assert live.resistance_above(int(t), px, fvg=fvg) == fast.resistance_above(int(t), px, fvg=fvg)
+            assert live.support_below(int(t), px, fvg=fvg) == fast.support_below(int(t), px, fvg=fvg)
+        assert live.last_swing_low(int(t), below=px) == fast.last_swing_low(int(t), below=px)
+        assert live.last_swing_high(int(t), above=px) == fast.last_swing_high(int(t), above=px)
+        assert live.last_swing_low(int(t)) == fast.last_swing_low(int(t))
+
+
+def test_fast_levels_give_byte_identical_structure_labels(monkeypatch):
+    import pandas as pd
+    from src.runtime.structure_levels import StructureLevels
+    o, h, lo, c = _ohlc(4, 2500)
+    df = pd.DataFrame({"ts": pd.date_range("2024-01-01", periods=len(c), freq="1h", tz="UTC"),
+                       "open": o, "high": np.nan_to_num(h, nan=float(np.nanmax(h))), "low": lo, "close": c, "volume": 1.0})
+    fast = M.label_cell_structure(df, 5, 2.0, 3.0)
+    monkeypatch.setattr(M, "FastStructureLevels", StructureLevels)
+    live = M.label_cell_structure(df, 5, 2.0, 3.0)
+    pd.testing.assert_frame_equal(fast, live)
