@@ -193,6 +193,15 @@ def begin_tick() -> None:
         _tick_start = None
 
 
+def current_tick_token() -> Optional[float]:
+    """An identity for the tick in progress (its monotonic start), or ``None`` outside one.
+
+    For per-tick memos (TICK-SESSION-REREAD / claude_desk, 2026-11-27): a value read once per
+    token is reused within that tick and re-read on the next. ``None`` (no tick open, or tests that
+    never call ``begin_tick``) means "do not memo": the caller reads fresh. Never raises."""
+    return _tick_start
+
+
 def end_tick() -> Optional[float]:
     """Close the tick, fold it into the accumulators, persist on cadence.
 
