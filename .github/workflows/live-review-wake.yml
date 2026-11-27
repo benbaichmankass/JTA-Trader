@@ -59,6 +59,9 @@ jobs:
         env:
           WAKE_TOGGLES_REMOTE: "1"  # console wake switches (per account class), read live over HTTP; unreadable => post
           DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}  # UI-OAUTH-SIGNIN: GET service bearer for the wake-toggles read
+          # VM-CONTROL-1127: evidence lands on live-review/rows with the token the rows mirrors push with; the job's
+          # GITHUB_TOKEN got patch_ref 403 on every sampled run (11-26 16:32Z..11-27 21:32Z, 26/26).
+          EVIDENCE_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
         # pipefail is load-bearing: without it `tee` decides the step's exit.
         run: |
           set -o pipefail
