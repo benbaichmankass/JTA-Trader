@@ -171,7 +171,7 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
     if arm == "lrank":
         return fit_lrank(train, tau if tau is not None else 0.0)
     if arm in GPU_ARMS:
-        return fit_gpu_arm(train, arm)
+        return fit_gpu_arm(train, arm, max_rows=TABICL_MAX_ROWS if arm == "tabicl" else None)
     target = LEARNER_ARMS.get(arm, arm)
     out = {}
     for side in ("long", "short"):
@@ -466,6 +466,9 @@ def _gpu_peak_mb() -> float | None:
 #: 45818155714: the deadline was only checked at a window's START, so one window ran past the 290-min budget into the
 #: 330-min runner timeout and the whole command landed producer_failed with nothing measured).
 BUDGET_SAFETY = 1.2
+#: --tabicl-max-rows (a CAPPED-n probe, RQ-20261127-7ab1-01): fit TabICL in-context on only the most recent N training rows. The fit is flagged
+#: full_n=False, so gpu_arm_complete() still refuses it for the EDGE rule (that needs full n); a probe records the cap beside its timings.
+TABICL_MAX_ROWS: int | None = None
 
 
 def fit_gpu_arm(train: pd.DataFrame, arm: str, device: str = "auto", **kw) -> dict:
@@ -641,6 +644,10 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
                 # fit AND predict are contained: TabICL is in-context, so its forward (and an OOM) happens in predict()
                 # (dbf8-02 run 45797062321 crashed the whole command on a predict-time OOM before this).
                 _gpu_peak_reset()
+                # flushed BEFORE the fit: a run killed mid-window still leaves its start, so the window's cost has a measured LOWER bound
+                # (RQ-20261126-1e75-04 run 45888080690 was killed inside its first window and left no timing line at all)
+                print(f"WINDOW_START arm={arm} start={row['start']} n_train={len(train)} n_win={len(win)} "
+                      f"max_rows={TABICL_MAX_ROWS if arm == 'tabicl' else None} t={_time.time():.0f}", flush=True)
                 t0 = _time.time()
                 t_fit = None
                 try:
@@ -792,7 +799,8 @@ def run(a) -> int:
             v = "PASS"
         else:
             v = "FAIL"
-        d["probe"].update(arm=g0, budget_s=60.0 * a.probe_budget_min, peak_cap_mb=a.probe_peak_mb, feasible=v, oom=oom)
+        d["probe"].update(arm=g0, budget_s=60.0 * a.probe_budget_min, peak_cap_mb=a.probe_peak_mb, feasible=v, oom=oom,
+                          tabicl_max_rows=TABICL_MAX_ROWS)
     verdict = {"PASS": "pass", "FAIL": "fail"}.get(v, "indeterminate")
     pr = d["paired_resid_vs_raw"]
     if "resid" in arms:
@@ -1008,6 +1016,8 @@ def main(argv=None) -> int:
                     help="PROBE: feasible iff the slowest probed window x the full window count <= this many GPU minutes")
     ap.add_argument("--probe-peak-mb", dest="probe_peak_mb", type=float, default=14500.0,
                     help="PROBE: feasible iff peak GPU memory <= this (a 16 GB T4 less headroom)")
+    ap.add_argument("--tabicl-max-rows", dest="tabicl_max_rows", type=int, default=0,
+                    help="PROBE: fit TabICL on only the most recent N training rows (0 = full n). Flagged full_n=False: never an edge-rule fit")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
                     help="fetch = data.binance.vision at run time (runner); published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")
     ap.add_argument("--rule-id", dest="rule_id", default="")
@@ -1016,6 +1026,8 @@ def main(argv=None) -> int:
                     "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY), lrank (RQ-20261118-f7c1-05) are EXTRA arms for their own units; "
                     "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
+    global TABICL_MAX_ROWS
+    TABICL_MAX_ROWS = a.tabicl_max_rows if a.tabicl_max_rows and a.tabicl_max_rows > 0 else None
     if a.self_test:
         return self_test()
     if a.cmd != "run" or not a.unit:
