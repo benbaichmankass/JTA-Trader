@@ -72,7 +72,7 @@ def test_live_config_declares_no_profile_for_the_bybit_symbols():
         assert (p["reference_venue"], p["reference_universe"], p["anchor"], p["session"], p["cost_basis"],
                 p["side_filter"]) == ("bybit", None, None, None, None, "both")
         # 2026-11-08 ML-ENTRY-PROP-BASELINE: the prop books run the ETH+SOL slice (same defaults, same implementation).
-        # breakout_2 dropped 2026-11-12 (account on ice, #25306 removed it from ml_entry.account_symbols).
+        # breakout_2 dropped 2026-11-12 (account on ice, #25306; the per-account map itself was retired 2026-11-26).
         prop = {"tradeify_1", "velotrade_1"} if s in ("ETHUSDT", "SOLUSDT") else set()
         assert set(p["accounts"]) == {"bybit_2", "bybit_portfolio"} | prop
 
@@ -122,8 +122,17 @@ def test_long_only_profile_takes_long_when_it_clears_tau_even_if_short_is_larger
     assert _pkg({"symbol": "ETHUSDT", "_profile": {"side_filter": "short"}}, _model(0.4, 0.2))["direction"] == "short"
 
 
-def test_side_filter_resolves_through_the_shared_resolver_and_unions_across_accounts():
-    leg = {"symbols": ["SPY"], "account_symbols": {"a": ["SPY"], "b": ["SPY"]},
+def _rostered(monkeypatch, accounts):
+    """ML-UNIVERSE-RULE: a leg's accounts are its ROSTERING accounts (no per-account map). These synthetic accounts are not in
+    accounts.yaml, so each resolves as unreadable, which keeps the leg's symbols: unfiltered (never narrowed)."""
+    import src.config.symbol_sets as SS
+    monkeypatch.setattr(SS, "rostering_accounts", lambda leg: list(accounts))
+    monkeypatch.setattr(SS, "_account", lambda a: None)
+
+
+def test_side_filter_resolves_through_the_shared_resolver_and_unions_across_accounts(monkeypatch):
+    _rostered(monkeypatch, ["a", "b"])
+    leg = {"symbols": ["SPY"],
            "account_profiles": {"a": {"side_filter": "long"}, "b": {"long_only": True}}}
     assert PR.resolve(leg, "SPY")["side_filter"] == "long"
     leg["account_profiles"]["b"] = {"side_filter": "short"}
@@ -176,8 +185,9 @@ def test_cost_basis_rebases_pred_net_r_only_with_a_declared_artifact_basis():
 
 
 # ------------------------------------------------------------------------------------------------ conflicts + meta
-def test_accounts_sharing_a_symbol_must_agree_or_the_decision_refuses():
-    leg = {"symbols": ["SPY"], "account_symbols": {"a": ["SPY"], "b": ["SPY"]},
+def test_accounts_sharing_a_symbol_must_agree_or_the_decision_refuses(monkeypatch):
+    _rostered(monkeypatch, ["a", "b"])
+    leg = {"symbols": ["SPY"],
            "account_profiles": {"a": {"session": "us_equity"}, "b": {}}}
     p = PR.resolve(leg, "SPY")
     assert p["conflict"] == "session" and p["declared"] is True
@@ -186,8 +196,9 @@ def test_accounts_sharing_a_symbol_must_agree_or_the_decision_refuses():
     assert PR.resolve(leg, "SPY")["conflict"] is None
 
 
-def test_a_declared_profile_is_recorded_on_the_package():
-    leg = {"symbols": ["ETHUSDT"], "account_symbols": {"x": ["ETHUSDT"]},
+def test_a_declared_profile_is_recorded_on_the_package(monkeypatch):
+    _rostered(monkeypatch, ["x"])
+    leg = {"symbols": ["ETHUSDT"],
            "account_profiles": {"x": {"side_filter": "long", "cost_basis": {"fee_bps_rt": 1, "slippage_bps_rt": 2}}}}
     prof = PR.resolve(leg, "ETHUSDT")
     pkg = _pkg({"symbol": "ETHUSDT", "_profile": prof, "_candle_venue": "alpaca"}, _model(0.3, 0.1))

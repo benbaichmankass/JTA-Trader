@@ -66,7 +66,8 @@ def test_claude_desk_packages_are_on_the_judgement_cadence():
     # hours may be temporarily empty (WEEKEND-TRIGGER-ONLY 2026-10-31, restore Mon 2026-11-02 13:30Z): then no slot event
     assert hours in (None, dh.CADENCE_HOURS)
     floor = set(cfg["events"]["daily_floor"]["accounts"])
-    accounts = yaml.safe_load((ROOT / "config/strategies.yaml").read_text())["strategies"][dh.DESK_LEG]["account_symbols"]
+    _acc = yaml.safe_load((ROOT / "config/accounts.yaml").read_text())["accounts"]
+    accounts = [a for a, c in _acc.items() if dh.DESK_LEG in (c.get("strategies") or [])]   # the desk's rostering books
     assert set(accounts) <= floor
     ev = lrd.judgement_cadence_event({"last": None}, cfg, NOW, tf)
     assert (ev is None) if hours is None else (ev and ev[0] == "judgement_cadence")

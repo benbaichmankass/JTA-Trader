@@ -4,10 +4,12 @@ Operator, verbatim (chat 2026-10-27 ~15:58Z): "I do want to have the desk live o
 so Alpaca and IB."
 
 Pins, against the REAL config where it matters:
-  1. one leg, three venues: ``account_symbols`` scopes each rostering account (``symbol_sets.leg_symbols``), and the
-     tick / data readers resolve each account to its own slice only;
-  2. routing: ``Coordinator.multi_account_execute`` drops a desk package on every account whose slice does not hold
+  1. one leg, three venues: each rostering account trades the desk symbols ITS VENUE can trade (ML-UNIVERSE-RULE
+     2026-11-26, ``symbol_sets.leg_symbols``; no per-account map), and the tick / data readers resolve each account to
+     that set only;
+  2. routing: ``Coordinator.multi_account_execute`` drops a desk package on every account whose venue cannot trade
      the symbol (``leg_account_scope``) -- a SPY desk order can never reach bybit_1, a BTCUSDT one never alpaca_paper;
+     an ETF reaches BOTH alpaca_paper and ib_paper (IB trades US ETFs; manager 26a decision (A) 2026-11-26);
   3. coexistence on a non-slice account: ``claude_desk.exclusive_hold_refusal`` (refused, journalled, both directions);
   4. market hours: an ETF / CME micro proposal waits while its market is closed (builder), is refused by desk_write
      when closed at the cutoff, and the scan packet says so per row;
@@ -47,9 +49,9 @@ MICROS = ["MES", "MGC", "MHG"]
 def test_each_rostering_account_resolves_to_its_own_venue_slice():
     assert leg_symbols(DESK, "bybit_1") == CRYPTO
     assert leg_symbols(DESK, "alpaca_paper") == ETFS
-    assert leg_symbols(DESK, "ib_paper") == MICROS
+    assert leg_symbols(DESK, "ib_paper") == ETFS + MICROS   # IB trades US ETFs and CME micros
     assert leg_symbols(DESK) == CRYPTO + ETFS + MICROS  # no account: the union the builder evaluates
-    for acct, syms in (("bybit_1", CRYPTO), ("alpaca_paper", ETFS), ("ib_paper", MICROS)):
+    for acct, syms in (("bybit_1", CRYPTO), ("alpaca_paper", ETFS), ("ib_paper", ETFS + MICROS)):
         got = resolve_symbols(declared=ACCTS[acct]["symbols"], roster=ACCTS[acct]["strategies"], mode=UNION,
                               strategies_cfg=STRATS, account_id=acct)
         assert set(syms) <= set(got)
@@ -137,14 +139,15 @@ def routed(tmp_path, monkeypatch, caplog):
     return run
 
 
-@pytest.mark.parametrize("symbol,price,home", [("SPY", 700.0, "alpaca_paper"), ("BTCUSDT", 80000.0, "bybit_1"),
-                                               ("MES", 7000.0, "ib_paper"), ("GLD", 370.0, "alpaca_paper")])
-def test_a_desk_package_reaches_only_its_own_venues_account(routed, symbol, price, home):
+@pytest.mark.parametrize("symbol,price,homes", [("SPY", 700.0, {"alpaca_paper", "ib_paper"}),
+                                                ("BTCUSDT", 80000.0, {"bybit_1"}),
+                                                ("MES", 7000.0, {"ib_paper"}), ("GLD", 370.0, {"alpaca_paper", "ib_paper"})])
+def test_a_desk_package_reaches_only_venues_that_can_trade_it(routed, symbol, price, homes):
     drops = routed(symbol, price)
-    assert sorted(drops) == sorted({"bybit_1", "alpaca_paper", "ib_paper"} - {home}), drops
-    # the new scope is what separates bybit <-> alpaca (the older routing rule only separates IB)
-    for a in {"bybit_1", "alpaca_paper"} - {home}:
-        if home != "ib_paper":
+    assert sorted(drops) == sorted({"bybit_1", "alpaca_paper", "ib_paper"} - homes), drops
+    # the venue scope is what separates bybit <-> alpaca (the older routing rule only separates IB)
+    for a in {"bybit_1", "alpaca_paper"} - homes:
+        if "ib_paper" not in homes or symbol in ETFS:
             assert "reason=leg_account_scope" in drops[a], drops[a]
 
 
