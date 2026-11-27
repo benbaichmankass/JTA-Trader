@@ -131,6 +131,17 @@ jobs:
               https://huggingface.co/jingang/TabICL/resolve/main/tabicl-regressor-v2-20260212.ckpt \
               && ls -l /tmp/kb/wheels/*.ckpt || echo "tabicl checkpoint download failed (the arm will report unavailable)"
           fi
+          # MLP-F-COVARIATE-TSFM: a unit running the tsfm arm needs the frozen Chronos encoder offline (amazon/chronos-t5-small,
+          # Apache-2.0, ~185 MB) plus the chronos-forecasting wheel; only such units pay for the download. A failed download leaves
+          # the arm unavailable -> INDETERMINATE (could_not_look), never FAIL.
+          if grep -q -- "--arm$" "research/queue/${UNIT}.yaml" 2>/dev/null && grep -q -- "- tsfm$" "research/queue/${UNIT}.yaml" 2>/dev/null; then
+            pip download --no-deps --only-binary=:all: -d /tmp/kb/wheels "chronos-forecasting>=1.4,<2" || echo "chronos wheel download failed (the arm will report unavailable)"
+            for f in config.json generation_config.json model.safetensors; do
+              curl -sSfL --retry 3 -o "/tmp/kb/wheels/chronos-t5-small__${f}" \
+                "https://huggingface.co/amazon/chronos-t5-small/resolve/main/${f}" || echo "chronos ${f} download failed (the arm will report unavailable)"
+            done
+            ls -l /tmp/kb/wheels/chronos-* || true
+          fi
           python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
               --username "$USERNAME" --out /tmp/kb/bundle --sha "$GITHUB_SHA" --wheels /tmp/kb/wheels | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
           # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset

@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "LTR-PROP-RECEIPT-CONFIRM-WRITEBACK (Tier 2, live-trader runtime: a third pass in the rows-watch thread). Read-only over the prop journal; writes only runtime_logs/live_review/venue_confirmations.jsonl + venue_confirm_state.json and ONE alert per flagged item. Sends, blocks or amends no order. The manager merges; deploy restarts ict-trader-live.",
+  "why": "Row LTR-PROP-RECEIPT-CONFIRM-WRITEBACK (Manager 26a, 2026-11-26 18:00Z: 'Without it, venue_unconfirmed receipts never resolve, and an unresolved receipt is a silent state'). Revert: git revert the merge."
+}

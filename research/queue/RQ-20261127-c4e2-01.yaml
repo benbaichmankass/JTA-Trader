@@ -1,0 +1,119 @@
+# Hand-authored 2026-11-27T08:34Z by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV). Manager 26a relayed the operator 2026-11-27 ~08:35Z, verbatim:
+# "Don't grant, stop asking, get it working" -> ml_entry real money is the lane's priority under the drift-remediation skill. This is the
+# skill's step 2 (decompose the gap within a day, one runner job): DESCRIPTIVE, grades nothing. Gates this adds or changes: none.
+id: RQ-20261127-c4e2-01
+title: 'ml_entry LIVE-GAP DECOMPOSITION: the served frozen v1 replayed on 2026-11-01..11-26, cut by side, symbol, the bybit_2 traded population,
+  week and exit -- which slice carries the real-money loss (live bybit_2 11-21..11-27 n 16, about -9.9 R, both sides negative)?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'T2, T8 (docs/reference/trading-and-model-practice-principles.md): diagnose before changing; one cut per question. Applied
+  per .claude/skills/drift-remediation/SKILL.md step 2: re-cut the replay by side, symbol, the live population, exit and time; each confirmed
+  driver becomes a lever unit.'
+question: On 2026-11-01..2026-11-26, what are the served ml_entry model's (ml-decision-entry-v1, tau from its artifact) mean and summed net R
+  per decision overall, by side, by symbol, on the bybit_2 traded population, by week and by exit reason, with the harness bracket and cost
+  stack?
+why_this_matters: 'Live real money is negative (11-21..11-27 bybit_2 n 16, about -9.9 R on the stored-stop basis, both sides) and every
+  registered fix arm graded FAIL or INDETERMINATE (f1a0-01..05, e1a7-01, d3a1-01). The next challenger needs a DIAGNOSED driver, not another
+  guessed lever: this tells which slice (population, side, symbol, time, exit) carries the loss in the replay, to compare with the live book.'
+evidence_class:
+  holdout: out_of_time
+  claim: measurement
+power:
+  expected_n: 600
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 1.2
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: the served model takes on the order of 20-30 decisions/day on the 60-perp universe (c692-01 held-out year about 7,000 in
+    365 days), so about 500-800 over 26 days. A descriptive read; n is reported per cut with its se.'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance history fetched at run time; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261127-c4e2-01-LIVE-GAP-DESCRIPTIVE
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: none (a decomposition)
+  statistic: 'verdict.json measurement: summarize() overall and for the traded population; _cut() by side, symbol, week and exit (n, mean, sum,
+    se per cell), each net of the harness cost stack (fee 11 bps + slip 3 + funding 1 bps/8h).'
+  rule: 'DESCRIPTIVE: no PASS or FAIL (the record verdict is indeterminate by construction). A cell is a CANDIDATE DRIVER iff n >= 30 and its
+    mean net R is below the overall mean by >= 2 se of the cell. Each candidate driver is written up as ONE lever unit (its own rule
+    registered before its run, graded on data disjoint from this window), feeding the next ml_entry challenger. Nothing here changes a model,
+    a roster or a config.'
+  what_it_does_not_do: Grades no edge, promotes and demotes nothing, touches no served artifact.
+  min_n: 30 per cell for the driver test
+compute: cpu_light
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.3
+  basis: 'stand-in: ml_entry trades real money on bybit_2 + bybit_portfolio; the decomposition directs the next fix.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 30
+  why_runner: Keyless public Binance Vision data; one booster predict over 26 days, no fitting.
+  basis: 'ESTIMATE from RQ-20261123-d3a1-01 (MEASURED there: a ~12 min fetch); no refits here.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - live-gap
+  - --fetch
+  - --run-date
+  - '2026-11-27'
+  - --fwd-start
+  - '2026-11-01'
+  - --fwd-end
+  - '2026-11-26'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --model-id
+  - ENTRY-v1-live-gap
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 120
+  inputs:
+    research_unit: RQ-20261127-c4e2-01
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: which diagnosed driver the next ml_entry challenger targets; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-f1a0-01
+- RQ-20261124-e1a7-01
+- RQ-20261123-d3a1-01
+- docs/research/promotion-rule-grade-window-2026-11-25.md
+population: The served ml-decision-entry-v1 decisions on 2026-11-01..2026-11-26 over the 60-perp universe; traded = the bybit_2 symbols.
+last_dispatched_at: '2026-11-27T09:57:40+00:00'
+grading:
+  attested: RULE-RQ20261127-c4e2-01-LIVE-GAP-DESCRIPTIVE
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-c4e2-01-LIVE-GAP-DESCRIPTIVE
+  evidence:
+  - research/results/RQ-20261127-c4e2-01/45976150814.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

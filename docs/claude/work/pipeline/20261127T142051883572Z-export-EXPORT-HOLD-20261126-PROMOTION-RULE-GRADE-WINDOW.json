@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261126-PROMOTION-RULE-GRADE-WINDOW",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-28",
+    "how_to_check": "the next export's summary no longer lists PROMOTION-RULE-GRADE-WINDOW as held",
+    "what": "PROMOTION-RULE-GRADE-WINDOW lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45838676017; held item PROMOTION-RULE-GRADE-WINDOW",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [PROMOTION-RULE-GRADE-WINDOW] held back from the work-store export of 2026-11-26: the store row fails the guard row check -- checklist row PROMOTION-RULE-GRADE-WINDOW enters landed_unproven with no soak contract (add a contract with id 'PROMOTION-RULE-GRADE-WINDOW' to docs/claude/work/SOAKS.json: the mechanical checklist and n_needed <= 2) — or, for a one-shot check, an `observation: {what, how_to_check, due_by}` on the row."
+}

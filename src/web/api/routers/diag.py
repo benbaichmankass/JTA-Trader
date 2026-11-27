@@ -650,6 +650,8 @@ _DESK_TRIGGER_LABELS = Path(repo_root()) / "runtime_logs" / "desk" / "trigger_la
 # as the writer (src.runtime.live_review_rows_watch.log_dir).
 _LTR_ROWS_WATCH_LOG = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch.jsonl"
 _LTR_ROWS_WATCH_STATUS = Path(repo_root()) / "runtime_logs" / "live_review" / "rows_watch_status.json"
+_LTR_VENUE_CONFIRMATIONS = Path(repo_root()) / "runtime_logs" / "live_review" / "venue_confirmations.jsonl"
+_LTR_VENUE_CONFIRM_STATE = Path(repo_root()) / "runtime_logs" / "live_review" / "venue_confirm_state.json"
 # DESK-4-INTAKE (2026-10-26): the desk intake's one line per new desk/decisions
 # row (dispatched / refused / not_dispatchable / accepted / expired), its last
 # pass, and the watcher's desk/decisions fetch state. Same anchors as the
@@ -735,6 +737,9 @@ _LOG_FILES: dict[str, Path] = {
     "ltr_prescreen": _LTR_PRESCREEN_LOG,
     "live_review_fires": _LTR_FIRES_LOG,
     "live_review_rows_watch_status": _LTR_ROWS_WATCH_STATUS,
+    # LTR-PROP-RECEIPT-CONFIRM-WRITEBACK: how each venue_unconfirmed (prop-VM / phone) apply resolved, and what is flagged.
+    "live_review_venue_confirmations": _LTR_VENUE_CONFIRMATIONS,
+    "live_review_venue_confirm_state": _LTR_VENUE_CONFIRM_STATE,
     # DESK-4-INTAKE: what happened to each desk decision row on the VM, and why.
     "desk_intake": _DESK_INTAKE_LOG,
     "desk_intake_status": _DESK_INTAKE_STATUS,

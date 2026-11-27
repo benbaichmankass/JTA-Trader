@@ -1,0 +1,23 @@
+{
+  "id": "OCC-OPTION-MULTIPLIER-UNRESOLVED",
+  "title": "contract_value_usd_for() returns 1.0 for OCC option symbols (e.g. SLV261231P00034000), so local P&L for option-leg rows is 100x too small",
+  "state": "queued",
+  "owner": "manager",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "L-OPS"
+  ],
+  "priority_rank": 1,
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Filed 2026-11-26T15:01Z by ML-PRIMARY. MEASURED locally: src.runtime.local_pnl.contract_value_usd_for('SLV261231P00034000') -> 1.0 (and 'SLV' -> 1.0). Standard US equity options are 100 shares per contract. Impact: any local-compute P&L on an alpaca_options_paper OCC-leg row (backfill_pnl_nulls, the local-P&L sweeps) is 100x too small, e.g. adopted orphan legs 8612/8613 on 2026-11-25: venue fills give -2.00 / -8.00 USD, local compute would give -0.02 / -0.08. Fix: resolve the OCC symbol pattern (ROOT + YYMMDD + C/P + 8-digit strike) to 100 in contract_value_usd_for, or read the contract multiplier from the order/position. Related: ALPACA-PARTIAL-ENTRY-CANCELLED-WRONG-SIZE, ALPACA-PKG-CLOSE-LEAVES-WORKING-ENTRY-1125 (8569).",
+  "phase": "observability",
+  "severity": "high",
+  "updated_at": "2026-11-26T15:06:12Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

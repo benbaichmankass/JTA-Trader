@@ -10914,6 +10914,12 @@ def _attempt_naked_autoprotect(row, sl, tp, *, db=None,
             if isinstance(_restored, dict) and _restored.get("failed"):
                 _alert_rearm_restore_failed(account_id, symbol, row["id"], _restored)
             return False
+        # ALPACA-OCO-PLACE-FIRST: the re-arm armed, but a sibling take-profit it released could not be restored -> ONE red
+        # flag (latched per account/symbol/trade); the sibling's own sweep keeps retrying.
+        _sib = (resp or {}).get("sibling_restore")
+        if isinstance(_sib, dict) and _sib.get("failed"):
+            _alert_rearm_restore_failed(account_id, symbol, row["id"],
+                                        {**_sib, "failed": [f"sibling take-profit not restored: {x}" for x in _sib["failed"]]})
         _stamp_repair(db, row, "naked_rearm")
         return True
     except Exception as exc:  # noqa: BLE001

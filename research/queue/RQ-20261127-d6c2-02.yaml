@@ -1,0 +1,189 @@
+# Hand-authored 2026-11-27 by lane ML-PRIMARY (Tier 1 research) from programme node P2-PR1125-D6-ceiling-two-legs after the b18a-03 FAIL.
+# Rule registered before any run. Gates this adds or changes: none (a research read; changes no config, served model, sizing or order path).
+id: RQ-20261127-d6c2-02
+title: 'D6 Pointer CEILING on xrp_pullback_2h (demo-floor (testing) leg, after the ada_pullback_2h b18a-03 FAIL): does ANY static entry bracket (atr_stop_mult x tp_r,
+  19 cells) beat the declared bracket (SL 2.5 ATR / TP 3.0R) net of the full cost stack under the registered replace rule? A flat surface means a learned bracket
+  has no headroom on this leg'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+programme_node:
+  programme: P2
+  node: P2-PR1125-D6-ceiling-two-legs
+  goal: G4
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261122-b18a-03/45043474454
+  verdict_read: fail
+  attempt: 2
+  due_by: '2026-12-08'
+  diagnosis: 'b18a-03 FAILED on ada_pullback_2h (no static cell replaces SL 1.5 / TP 4.0 under the replace rule), so a learned bracket has no measured headroom on
+    that leg. One pullback leg cannot close the D6 slot: brackets on a pullback leg behave differently (the plan''s D6 node, programme review 2026-11-25). This reads
+    the same ceiling, same grid, same rule, on xrp_pullback_2h, so the two remaining money-leg families are covered by registered reads before D6 is parked.'
+  search: registered static grid, 2 levers (atr_stop_mult 1.0..3.0 x tp_r 3..6), 19 candidates plus the declared cell (2.5/3.0), one rule
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+question: 'On xrp_pullback_2h (declared atr_stop_mult 2.5, tp_r 3.0), 2020-07-01..2026-10-15, six equal calendar folds by entry time, net of the full cost stack:
+  does any of the 19 static (atr_stop_mult x tp_r) cells replace the declared bracket under the registered replace rule (>= +4 R over the window AND >= +0.03 R/trade,
+  >= 5 of 6 folds, maxDD <= 1.35x)?'
+why_this_matters: D6 Pointer (predicted SL/TP at entry) is only worth building where a static cell already shows headroom. ada_pullback_2h showed none (b18a-03).
+  This prices the same ceiling on xrp_pullback_2h. FAIL here and on the sibling unit parks D6 with this re-entry test (programme node P2-PR1125-D6-ceiling-two-legs);
+  a PASS is a SELECTION and a Tier-3 candidate only after its own registered confirmation.
+power:
+  expected_n: 700
+  min_detectable_effect: 0.03
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.2
+  basis: n ESTIMATED ~700 trades for arm B over 2020-07..2026-10 (2h bars; not counted on this window), replaced by the first run. The bar is materiality plus fold
+    stability, not a significance test; n < 39 grades INDETERMINATE. sd 1.2 R ESTIMATE.
+  feasibility:
+    source: none
+    accrual_basis: Replays public candles over a pinned window; nothing accrues.
+evidence_class:
+  claim: edge
+  holdout: in_sample
+ml_consumer:
+  consumer: ML-DECISION-MODELS
+  decision: 'whether a learned entry bracket (Pointer) is worth building on xrp_pullback_2h (demo-floor (testing) leg): it must beat the best static cell this unit
+    finds, or the declared cell if none passes'
+  legs:
+  - xrp_pullback_2h
+  book: demo_floor
+baseline:
+  definition: xrp_pullback_2h as declared in config/strategies.yaml (atr_stop_mult 2.5, tp_r 3.0, trail_mult 6.0), arm B, same window and cost stack
+  net_of_cost: true
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B. The matched-random control belongs to the learned-head units.
+run:
+  timeout_minutes: 300
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - xrp_pullback_2h
+  - --arm
+  - B=
+  - --arm
+  - S10T3=atr_stop_mult=1.0;tp_r=3.0
+  - --arm
+  - S10T4=atr_stop_mult=1.0;tp_r=4.0
+  - --arm
+  - S10T5=atr_stop_mult=1.0;tp_r=5.0
+  - --arm
+  - S10T6=atr_stop_mult=1.0;tp_r=6.0
+  - --arm
+  - S15T3=atr_stop_mult=1.5;tp_r=3.0
+  - --arm
+  - S15T4=atr_stop_mult=1.5;tp_r=4.0
+  - --arm
+  - S15T5=atr_stop_mult=1.5;tp_r=5.0
+  - --arm
+  - S15T6=atr_stop_mult=1.5;tp_r=6.0
+  - --arm
+  - S20T3=atr_stop_mult=2.0;tp_r=3.0
+  - --arm
+  - S20T4=atr_stop_mult=2.0;tp_r=4.0
+  - --arm
+  - S20T5=atr_stop_mult=2.0;tp_r=5.0
+  - --arm
+  - S20T6=atr_stop_mult=2.0;tp_r=6.0
+  - --arm
+  - S25T4=atr_stop_mult=2.5;tp_r=4.0
+  - --arm
+  - S25T5=atr_stop_mult=2.5;tp_r=5.0
+  - --arm
+  - S25T6=atr_stop_mult=2.5;tp_r=6.0
+  - --arm
+  - S30T3=atr_stop_mult=3.0;tp_r=3.0
+  - --arm
+  - S30T4=atr_stop_mult=3.0;tp_r=4.0
+  - --arm
+  - S30T5=atr_stop_mult=3.0;tp_r=5.0
+  - --arm
+  - S30T6=atr_stop_mult=3.0;tp_r=6.0
+  - --days
+  - '2330'
+  - --start
+  - '2020-07-01'
+  - --end
+  - 2026-10-15 23:59
+  - --grade
+  - replace
+  - --baseline
+  - B
+  - --delta-r
+  - '4'
+  - --delta-r-per-trade
+  - '0.03'
+  - --folds
+  - '6'
+  - --fold-majority
+  - '5'
+  - --dd-tol-frac
+  - '0.35'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261127-d6c2-02
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261127-d6c2-02
+decision_rule:
+  id: RULE-RQ20261127-d6c2-02-BRACKET-CEILING
+  unit_rule_id: RULE-RQ20261127-d6c2-02-BRACKET-CEILING
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  min_n: 39
+  statistic: exit_lever_ablation.py --grade replace over 2020-07-01..2026-10-15 (--days 2330), 6 calendar folds by entry time, full cost stack the harness resolves
+    per venue, baseline B = the leg as declared; delta-r 4, delta-r-per-trade 0.03, fold-majority 5 of 6, dd-tol-frac 0.35, n-floor 39.
+  rule: 'Registered 2026-11-27 BEFORE any run of the grid. A candidate C REPLACES B iff net_r(C) - net_r(B) >= 4 R AND net_r(C) - net_r(B) >= 0.03 R x n(B) AND net_r(C)
+    >= net_r(B) in >= 5 of 6 folds AND maxDD(C) <= 1.35 x maxDD(B). Several pass -> the highest net R is SELECTED. The programme node states >= 4 R in >= 3 of 4 folds;
+    with 19 candidates per leg that bar carries no multiplicity adjustment, so this unit keeps the node''s +4 R AND adds b18a-03''s stricter 0.03 R/trade and 5 of
+    6 folds (like for like with the ada read). PASS = a SELECTION, unconfirmed: it supports nothing on the order path until the selected cell alone passes a confirmation
+    (exit_lever_ablation --grade paired, selected vs B, on the pre-window 2017-09-01..2020-06-30 where the feed exists, same bars). FAIL = no candidate passes with
+    n(B) >= 39: the bracket surface is flat on this leg and window. INDETERMINATE if n(B) < 39, every candidate is byte-identical to B, or the producer failed. Thresholds,
+    arms and window are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or order path; a PASS is not a promotion and a FAIL does not retire the Pointer family (family review needed, scripts/research/family_retirement_policy.yaml).
+    Per-trade R changes with the stop distance (R is stop-denominated), which the replace grade reports beside net R.
+follow_up: PASS -> author the registered paired confirmation for the selected cell on 2017-09-01..2020-06-30. FAIL on BOTH d6c2-01 and -02 -> D6 parks with re-entry
+  test 'a new money-leg family or a leg whose declared bracket changes'; record on research/levers/ml-brackets.yaml.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.15
+  basis: 'ESTIMATE: governs whether the D6 Pointer build proceeds on a money leg; not a measurement.'
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): intervention judged against the declared setting, entries fixed, net of cost;
+  a pre-registered grid with the multiplicity stated and the bar raised for it.'
+levers:
+- name: entry_bracket
+  values:
+  - atr_stop_mult 1.0..3.0
+  - tp_r 3..6
+  hypothesised_effect: a different static stop/target cell lifts net R per trade by >= 0.03 and >= 4 R on this leg; if none does, the surface is flat
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 75
+  basis: ESTIMATE from b18a-03 (20 arms of one 2h leg over 2330 d, est 75 min); a 4h leg has ~half the rows. The first run replaces it.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261122-b18a-03
+- RQ-20261118-04a5-02
+- RQ-20261101-c692-02

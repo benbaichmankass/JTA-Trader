@@ -1,0 +1,22 @@
+{
+  "id": "DESK-VENUE-RESTING-LIMIT",
+  "title": "Desk/macro limit entries as TRUE venue-resting limit orders (Alpaca, IB, Bybit) instead of the leg-held touch->market (b1)",
+  "state": "queued",
+  "owner": "ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV)",
+  "lane": null,
+  "model": null,
+  "tier": 2,
+  "roadmap": [
+    "unmapped"
+  ],
+  "roadmap_unmapped_reason": "desk macro layer (operator request 11-25)",
+  "ceiling_usd": null,
+  "spend_usd": null,
+  "prs": [],
+  "blocked_on": [],
+  "due_by": "2026-12-03",
+  "note": "Manager 26a 2026-11-26 21:07Z: (b1) chosen for DESK-MACRO v2 paper routing (#29307: the claude_desk leg holds a limit proposal until a tick's price reaches it inside the bracket, then sends the existing market bracket; touch_price vs limit_level recorded on every package; a 'touched' hop in desk_latency_hops). (b2) filed here. Scope (four pieces): (1) limit-entry brackets on Alpaca (order_class bracket, type limit), IB (LMT parent + children) and Bybit (limit with attached TP/SL); (2) a pending-entry journal state, so an unfilled resting order is never booked or telemetered as a position; (3) partial-fill handling (resize protective legs to the filled qty); (4) a cancel-at-expiry sweeper at good_till_bars (expired_unfilled, venue cancel read back). RE-ENTRY TEST (manager 26a): build it once the measured b1 slippage vs the limit level shows the gap matters -- read touch_price vs limit_level and fill price vs limit_level over the b1 trades (named population, net R impact per trade) and decide on that number; until then b1 stands. Tier 2 (order path).",
+  "phase": null,
+  "updated_at": "2026-11-26T21:20:48Z",
+  "updated_by": "session_01AFoLuLpCY5gABbqk3EBUeV"
+}

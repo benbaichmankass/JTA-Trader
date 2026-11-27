@@ -1,0 +1,5 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "why": "Runtime observability on the live trader (src/runtime/tick_cost.py + src/runtime/intent_multiplexer.py): times each strategy builder call inside the existing pipeline.signal_build phase and publishes a bounded per-strategy table in /api/diag/tick_cost ('builders', 'builder_names_refused'). Measurement only: no builder is skipped, reordered or budgeted; the recorder never raises. Basis: after #29455 the tick is still 93.3 s mean over 24 ticks vs the 63.1 s baseline, and signal_build is the largest block (984 calls, mean 556 ms = ~22.8 s/tick, ~11 s of it attributed fetches) with no per-strategy split. The suspected _resolve_shadow_predictors rebuild was checked and does not explain it: it runs only after a builder has produced an actionable package. Held for the manager's Tier-2 OK and merge; revert = git revert."
+}

@@ -1,0 +1,149 @@
+# Hand-authored 2026-11-27T10:50Z by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV). Lever unit from the c4e2-01 decomposition (drift-remediation
+# step 3). Manager 26a 09:19Z: ml_entry lever units go to TRAINER and KAGGLE-GPU. Gates this adds or changes: none.
+id: RQ-20261127-c4e2-02
+title: 'ml_entry STALENESS lever: on the registered dev folds, does fitting the two regressors with RECENCY weights (half-life 90/180/365/730 d) or a
+  ROLLING window (12/24/36 months) beat the expanding unweighted recipe, net of cost, and beat a shuffled-weight placebo?'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'M3, T2 (docs/reference/trading-and-model-practice-principles.md): one lever per arm, graded against the registered recipe and
+  a placebo on the same folds. Applied per .claude/skills/drift-remediation/SKILL.md step 3: the diagnosed driver (c4e2-01: a model trained
+  through 2025-09-22 losing -0.085 R/decision in 2026-11, longs -0.46 R, a side split far outside its dev history) becomes one lever unit.'
+question: On the registered ml_entry dev folds (8 half-year folds 2022-01-01..2025-10-01, purge + embargo, tau 0.10, the harness cost stack), is mean
+  net R per decision higher when each fold's two LightGBM regressors are fitted with recency weights 0.5^(age/half-life) or on only the last N
+  months, than with the registered expanding unweighted fit; and, for the recency arms, higher than the same weights shuffled across rows?
+why_this_matters: 'c4e2-01 (run 45976150814): the served v1, trained through 2025-09-22, made -0.085 R/decision on 2026-11-01..11-26 (n 867; traded
+  bybit_2 n 87, -0.245), with longs at -0.462 (n 381) against +0.211 for shorts. On its own dev and held-out folds the two sides were near
+  -0.02 / +0.02, and the side and regime arms are spent (f1a0-01/03, e1a7-01, d3a1-01 FAIL or INDETERMINATE). The untested lever is STALENESS:
+  whether weighting recent data more lets the model track a market that moved. A PASS here sets the weighting the weekly retrain
+  (ml_entry_retrain.py, row ML-ENTRY-RETRAIN-CADENCE) should use for the next challenger.'
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+power:
+  expected_n: 50000
+  min_detectable_effect: 0.0068
+  effect_units: R
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'alpha is the tabulated power-floor level (as f1a0-01); the per-arm family bar t >= 2.6865 (Sidak, k = 7) is enforced by the decision rule, so INDETERMINATE is a live outcome stated now. MEASURED on the same folds: f1a0-01 base arm n 72,996 and arm n 66,803 decisions over the 8 dev folds (run 45484674095); a refit arm
+    trades on the order of 50-75k decisions. min_detectable_effect = LEVER_RULE min_delta_r (0.0068 R, RULE-ML-ENTRY-LEVER-ARMS-20261124).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance history fetched at run time; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261127-c4e2-02-STALENESS-ARMS
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: the registered expanding unweighted refit per fold (arm "base"), same features, tau 0.10, policy and cost stack
+  statistic: 'per arm, ml_decision_entry.py lever_arms(): delta = mean net R (arm) - mean net R (base) over the pooled dev-fold decisions,
+    week-clustered se; folds where the arm beats base; years with a positive yearly delta. Recency arms also: delta vs placebo_<arm> (the same
+    weight values permuted across rows, seeded).'
+  rule: 'Each of the 7 arms is graded by LEVER_RULE (RULE-ML-ENTRY-LEVER-ARMS-20261124) with the family bar for 7 arms in one unit: PASS iff n
+    >= 3000 AND delta >= 0.0068 R AND week-clustered t >= 2.6865 (one-sided Sidak for k = 7, alpha 0.025; the code sets min_t = max(2.0, this))
+    AND (recency arms) delta vs placebo >= 0.0068 AND the arm beats base in >= 6 of 8 folds AND the yearly delta is positive in >= 3 years.
+    FAIL iff n ok and delta + min_t * se < 0.0068. INDETERMINATE otherwise. verdict.json carries the first arm; arm_verdicts carries all 7.'
+  pass_action: 'The best PASSing arm (largest delta) gets ONE confirming read on disjoint out-of-time data (2025-10-01 onward, holdout_lock
+    claimed, the deflated ENTRY bar) in its own unit; a pass there makes that weighting the next ml_entry_retrain challenger, a data-backed
+    Tier-3 replacement packet applied by the manager or a mandate, never by a lane.'
+  fail_action: Close recency weighting / rolling windows for crypto ENTRY on research/levers/ml-entry.yaml; no re-run with other half-lives.
+  proposal_mapping: pass -> confirming out-of-time read -> Tier-3 packet; fail -> lever closed; indeterminate -> report the realised se, stop.
+  what_it_does_not_do: 'Promotes nothing. These are DEV folds, the window that chooses: a PASS only qualifies the chosen weighting for ONE
+    confirming read on disjoint data (out-of-time 2025-10-01 onward, holdout_lock claimed) in its own unit, and that read decides. No served
+    artifact, roster or config changes here.'
+  min_n: 3000
+compute: cpu_long
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold on every row before the fold minus the embargo, unweighted, better
+    predicted side if > tau 0.10, one open position per symbol, SL 2 / TP 3 ATR14, 24 h time stop, full cost stack.
+  net_of_cost: true
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.15
+  basis: 'stand-in: ml_entry trades real money on bybit_2 + bybit_portfolio and is losing (c4e2-01); a fresher fit is the direct lever on the
+    diagnosed staleness.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 120
+  why_runner: 'TRAINER (manager 26a 09:19Z, idle compute): the trainer VM is 1 OCPU / 6 GB and idle most of the day; LightGBM-only, keyless
+    public Binance data fetched on the box. --n-jobs 2.'
+  basis: 'ESTIMATE from RQ-20261123-d3a1-01 (MEASURED there: 8 pair refits ~100 s on 4 cores after a ~12 min fetch): 12 fit sets (base + 7 arms +
+    4 placebos) x 8 folds = 96 pair refits, about 4x slower on 1 OCPU -> ~80 min + fetch ~15 min; 120 min allowed.'
+run:
+  workflow: research-script-run-trainer.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - lever-arms
+  - --fetch
+  - --run-date
+  - '2026-11-27'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --tau
+  - '0.10'
+  - --n-jobs
+  - '2'
+  - --arm
+  - rec90
+  - --arm
+  - rec180
+  - --arm
+  - rec365
+  - --arm
+  - rec730
+  - --arm
+  - win12
+  - --arm
+  - win24
+  - --arm
+  - win36
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 240
+  inputs:
+    research_unit: RQ-20261127-c4e2-02
+ml_consumer:
+  consumer: scripts/research/ml_entry_retrain.py
+  decision: which sample weighting / training window the next ml_entry challenger retrain uses; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261127-c4e2-01
+- RQ-20261124-f1a0-01
+- RQ-20261124-f1a0-03
+- RQ-20261124-e1a7-01
+- RQ-20261123-d3a1-01
+population: The registered ml_entry recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, tau 0.10,
+  net R after fee 11 bps rt + slippage 3 bps + funding 1 bps/8h.
+last_dispatched_at: '2026-11-27T12:30:09+00:00'
+grading:
+  attested: RULE-RQ20261127-c4e2-02-STALENESS-ARMS
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-c4e2-02-STALENESS-ARMS
+  evidence:
+  - research/results/RQ-20261127-c4e2-02/45991253394.jsonl
+  graded_at: '2026-11-27'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

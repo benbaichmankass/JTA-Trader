@@ -3095,15 +3095,14 @@ class AlpacaClient:
             # legs are released and the OCO retried ONCE. A sibling STOP is
             # never released here: if one rests, the position is not stop-naked
             # and the refusal stands. Named in the log, never silent.
-            # KEPT as documented (manager 2026-11-17 06:02Z: on Alpaca the shares are shared, so
-            # both cannot be held; the sibling's TP loss is a TP-doctrine gap filed for a
-            # merged-OCO design). NEW: if the retry is ALSO refused, the released targets are put
-            # back below, so a failed re-arm never leaves a sibling with less than it had.
+            # If the retry is ALSO refused, the released targets are put back below. If it SUCCEEDS,
+            # they are restored after it (ALPACA-OCO-PLACE-FIRST, 2026-11-27), so a re-arm never
+            # leaves a sibling without the target it had.
             logger.warning(
                 "alpaca place_protective(%s): OCO refused (%s) with %d sibling "
                 "take-profit leg(s) resting — releasing %s and retrying once so "
-                "the STOP can be armed; the sibling target(s) must be re-placed "
-                "by their owner", sym, env.get("retMsg"), len(kept_targets),
+                "the STOP can be armed; the sibling target(s) are restored "
+                "after the retry", sym, env.get("retMsg"), len(kept_targets),
                 ",".join(kept_targets),
             )
             for oid in kept_targets:
@@ -3121,7 +3120,55 @@ class AlpacaClient:
                         "retMsg": f"{env.get('retMsg')} | restore: {restored.get('summary')}"}
             return env
         result = env.get("result") or {}
-        return {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
+        out: Dict[str, Any] = {"retCode": 0, "result": {"orderId": str(result.get("id") or "")}}
+        if released_targets:
+            # ALPACA-OCO-PLACE-FIRST (operator 2026-11-27 "Build now (Recommended)"; PI-20261117-LSFHBH4A-0002): the retry
+            # SUCCEEDED only after sibling take-profit legs were released, which used to leave those siblings with NO target
+            # (a TP-doctrine gap). "Place first" is impossible here -- the sibling legs reserve the shares, which is exactly
+            # why the first POST was refused -- so the sibling targets are RESTORED now, after this OCO rests, each read back
+            # at the venue. If a restore is refused (the shares are still reserved), it is reported in ``sibling_restore``
+            # and the caller raises ONE red flag; the sweep keeps retrying (no halting).
+            sib = self._restore_cancelled_protection(sym, close_side, qty, [], released_targets)
+            out["sibling_restore"] = sib
+            out["readback"] = self._protection_readback(sym, close_side, str(result.get("id") or ""), released_targets)
+            if sib.get("failed"):
+                logger.error(
+                    "alpaca place_protective(%s): OCO armed, but %d sibling take-profit(s) released for it could NOT be "
+                    "restored: %s", sym, len(released_targets), sib.get("summary"))
+        return out
+
+    def _protection_readback(self, sym: str, close_side: str, own_order_id: str,
+                             released_targets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Venue read-back after a re-arm that touched a sibling: is THIS row's new OCO resting, and does a reducing-side
+        target of each released sibling's size rest again? Reads ``GET /v2/orders/{id}`` and the symbol's open orders;
+        never raises; ``None`` fields mean could-not-look, never "fine"."""
+        own_status = None
+        try:
+            if own_order_id:
+                back = self._request("GET", f"/v2/orders/{own_order_id}")
+                res = back.get("result") if back.get("retCode") == 0 else None
+                own_status = str(res.get("status") or "").lower() if isinstance(res, dict) else None
+        except Exception:  # noqa: BLE001  # allow-silent: a failed read is reported as None (could not look)
+            own_status = None
+        siblings: Dict[str, Any] = {}
+        legs = None
+        try:
+            legs = self._open_orders_for_symbol(sym)
+        except Exception:  # noqa: BLE001  # allow-silent: reported as could_not_look below
+            legs = None
+        for o in released_targets or []:
+            key = str(o.get("id"))
+            lq = self._leg_qty(o)
+            if legs is None or lq is None:
+                siblings[key] = None
+                continue
+            siblings[key] = any(
+                self._leg_protective_side(x.get("type") or x.get("order_type")) == "target"
+                and str(x.get("side") or "").lower() == close_side
+                and (self._leg_qty(x) is not None and abs(self._leg_qty(x) - lq) <= _QTY_EPS)
+                for x in legs)
+        return {"own_oco_status": own_status, "own_oco_resting": (own_status in _RESTING_LEG_STATUSES) if own_status else None,
+                "sibling_target_resting": siblings}
 
     def _restore_cancelled_protection(
         self, sym: str, close_side: str, qty: int, own_legs: List[Dict[str, Any]],

@@ -1925,6 +1925,48 @@ levers:
   other:
     structure_exit:
       tests:
+      - value: pivot=3
+        baseline_value: 'off'
+        arm: S3
+        unit: RQ-20261101-5e01-12
+        window: 2020-07-01..2026-10-15
+        n: 414
+        net_r: 14.6735
+        baseline_n: 380
+        baseline_net_r: 63.1812
+        delta_net_r: -48.5077
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 10.3851
+        verdict: fail
+        joint_change: false
+      - value: pivot=5
+        baseline_value: 'off'
+        arm: S5
+        unit: RQ-20261101-5e01-12
+        window: 2020-07-01..2026-10-15
+        n: 386
+        net_r: 28.1895
+        baseline_n: 380
+        baseline_net_r: 63.1812
+        delta_net_r: -34.9917
+        folds_ge_baseline: 0/6
+        max_drawdown_r: 9.7442
+        verdict: fail
+        joint_change: false
+      - value: pivot=8
+        baseline_value: 'off'
+        arm: S8
+        unit: RQ-20261101-5e01-12
+        window: 2020-07-01..2026-10-15
+        n: 354
+        net_r: 28.7997
+        baseline_n: 380
+        baseline_net_r: 63.1812
+        delta_net_r: -34.3815
+        folds_ge_baseline: 1/6
+        max_drawdown_r: 8.716
+        verdict: fail
+        joint_change: false
       - value: 'off'
         baseline_value: pivot=5
         arm: N0
@@ -1939,10 +1981,10 @@ levers:
         max_drawdown_r: 11.2235
         verdict: pass
         joint_change: false
-      shape: single_point
-      points: 1
+      shape: noisy
+      points: 4
       best_delta_r_per_trade: 0.0907
-      fold_stability: 1.0
+      fold_stability: 0.292
       reading: 'one-point or fold-unstable gain: overfit until a holdout says otherwise'
     direction_filter:
       tests:

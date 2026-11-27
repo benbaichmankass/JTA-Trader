@@ -1,0 +1,203 @@
+{
+ "run": "RESEARCH-OPS-2026-11-27-1447",
+ "finished_at": "2026-11-27T15:10:00Z",
+ "by": "session_01AFoLuLpCY5gABbqk3EBUeV",
+ "floor": 61,
+ "floor_basis": "computed_floor(fired_24h 76)",
+ "authoring_queue_depth": 23,
+ "throughput": {
+  "runnable_before": 7,
+  "runnable_after": 7,
+  "queued": 271,
+  "fired_24h": 76,
+  "results_landed_24h": 208,
+  "hours_since_last_dispatch": 0.6,
+  "idle_alarm": false
+ },
+ "mechanism": {
+  "dispatch_receipt": "ok (last_dispatched_at 2026-11-27T14:14:03Z)",
+  "collector": "ok (208 results landed 24h)",
+  "stranded_stamp_prs": "not listed this pass",
+  "incident": "watchdog dispatcher_fires 14:29Z: NOT a broken dispatcher (Manager 26a read of the 14:09Z dispatch log: runnable 4 of 3207, every backend idle with nothing due). Root cause = authoring stopped (OPS-AUTHOR-SKIPPED on the last 3 records)."
+ },
+ "prior_calls_scorecard": [
+  {
+   "call": "dbf8-03 lands a MEASURED verdict with gpu_arm_complete tabicl on >= 10 windows",
+   "p": 0.45,
+   "check_rerun": "ls research/results/RQ-20261126-dbf8-03/",
+   "outcome": "void",
+   "action_happened": true,
+   "note": "unit moved to blocked/ (full n infeasible on a free T4; 1e75-04 >= ~170 min/window); replaced by capped-n 7ab1-01 PASS / 7ab1-02 FAIL"
+  },
+  {
+   "call": "0838-05 re-run fails again with empty window",
+   "p": 0.5,
+   "check_rerun": "tail comms/research/RQ-20261125-0838-05/*/logs/cmd-0.log",
+   "outcome": "unresolved",
+   "action_happened": false,
+   "note": "no comms/research/RQ-20261125-0838-05 run dir on main at 15:05Z; resolves 11-28"
+  },
+  {
+   "call": "bd30-04 re-run lands a measured verdict",
+   "p": 0.8,
+   "check_rerun": "python3 scripts/research/result_disposition_check.py --list",
+   "outcome": "unresolved",
+   "action_happened": false,
+   "note": "only the 11-24 run 45432785102 row on main; resolves 11-28"
+  }
+ ],
+ "checks": {
+  "packet_as_of": "2026-11-27T14:49:22.570456+00:00",
+  "since": "2026-11-26T14:54:21+00:00",
+  "runnable_by_track": {
+   "TRADING": 3,
+   "MODEL": 1,
+   "INFRA": 3,
+   "total": 7
+  },
+  "results_graded": {
+   "no_action_warranted": 1,
+   "pass": 13,
+   "fail": 20,
+   "indeterminate": 4
+  },
+  "ungraded": 13,
+  "fails_without_next": 12,
+  "needs_review": 92,
+  "needs_review_unowned": 26,
+  "stale_14d": 7,
+  "could_not_look": []
+ },
+ "analysis": {
+  "rows_opened": [
+   "RQ-20261127-c4e2-01",
+   "RQ-20261127-c4e2-02",
+   "RQ-20261127-c4e2-03",
+   "RQ-20261127-c4e2-04",
+   "RQ-20261127-7ab1-02"
+  ],
+  "model": {
+   "meaning": [
+    "ml_entry crypto ENTRY, every retrain-side lever on the registered recipe now read on the same 8 dev folds, net of the full cost stack: staleness c4e2-02 INDETERMINATE (no recency arm beats base; short half-lives worse than their shuffled placebos), capacity c4e2-03 FAIL (bigger learners overfit, lgb_big -0.027 R t -2.70), TabICL 7ab1-02 FAIL, GRU closed earlier; so the live decay c4e2-01 found (longs -0.46 R since 11-01) has no retrain-side fix in the GBDT family.",
+    "c4e2-04 frozen TS-encoder covariates (Chronos-t5-small, PCA8 per fold): INDETERMINATE, delta +0.0097 R vs base (t 1.27), +0.013 vs the matched noise placebo (t 1.66), 4/8 folds, 3/4 years, n 68,883; the strongest positive arm of the series but below the t >= 2.0 bar, so its rule says report the se and stop. A re-run with another K/context is forbidden by its fail_action; a fresh pre-registered confirm on the 2025-10-01+ out-of-time window would test a number chosen on dev folds that did not clear dev, so its prior is low: proposed to the manager as a judgement, not authored."
+   ],
+   "fail_diagnoses": [
+    {
+     "cluster": "ml_entry ENTRY learner/weighting levers (c4e2-02/03, 7ab1-02)",
+     "hypotheses": [
+      "noise",
+      "the edge is in the features/regime, not the learner",
+      "label horizon/cost"
+     ],
+     "test": "same folds, matched placebos",
+     "survivor": "idea (learner levers) \u2014 the recipe is at its ceiling on these features",
+     "next": "c4e2-04 (new information class) read; remaining levers are features/side-regime (IPW-ML-ENTRY-SIDE-SPLIT)"
+    }
+   ],
+   "next_tests": []
+  },
+  "trading": {
+   "meaning": [],
+   "fail_diagnoses": [],
+   "next_tests": []
+  },
+  "cross_track": [],
+  "surprises": [
+   "claude_strategy_scores.jsonl holds 0 blind (pre-close) grades of 1,274 readable closes: every Claude decision grade is written after the outcome, so none can serve as an unleaked label or a CUSUM join."
+  ]
+ },
+ "results_read": {
+  "pass": 1,
+  "fail": 2,
+  "indeterminate": 3,
+  "units": [
+   "RQ-20261127-7ab1-01 pass",
+   "RQ-20261127-7ab1-02 fail",
+   "RQ-20261127-c4e2-01 indeterminate (descriptive)",
+   "RQ-20261127-c4e2-02 indeterminate",
+   "RQ-20261127-c4e2-03 fail",
+   "RQ-20261127-c4e2-04 indeterminate"
+  ]
+ },
+ "unlocked": [],
+ "retired": [],
+ "levers_filed": [],
+ "units_authored": [],
+ "followups_filed": [
+  "research/levers/ml-entry.yaml levers_tested c4e2-02/03 (#29490 merged)",
+  "DESK-MACRO-DAILY note (b1 hop log)",
+  "TICK-BAR-CLOSE-SKIP row"
+ ],
+ "authoring": {
+  "queue_depth": 23,
+  "nodes_drafted": 1,
+  "nodes": [
+   "P2-PR1125-D10-count (answered in-pass: 0 blind-graded closes of 1,274 -> FAIL, parked, re-entry test stated)"
+  ],
+  "skipped_on_purpose": false,
+  "note": "Of the 24 ready nodes: 4 are Tier-3 declare steps (P1-Q6 x3, P2-R3 c03/c04-pass), 5 are BUILD-GATED, the P8 equity nodes are authoring_blocked on the 207f-01 baseline, the P5 MLV gates iterate per ML variant. The single-lane week (ML-PRIMARY) drafts the remainder after #29500 lands (Manager 26a 14:36Z)."
+ },
+ "iteration": {
+  "results_attributed": {
+   "count": 5,
+   "of": 6,
+   "note": "c4e2-01..04 + 7ab1-02 attributed; lever_map --backfill rewrote 34 lever files (committed here)"
+  },
+  "map_entries_added": 2,
+  "next_tests_from_map": 0,
+  "orphans_before": {
+   "strategy_leg": 4,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "orphans_after": {
+   "strategy_leg": 4,
+   "ml_model": 3,
+   "ltr_class": 5
+  },
+  "overdue": {
+   "strategy_leg": 20,
+   "ml_model": 5,
+   "ltr_class": 2
+  },
+  "advanced": 1,
+  "survivors": [],
+  "retired_by_review": []
+ },
+ "limits": [
+  "single lane: TRADING-track FAILs since 11-26 (5e01-09/-10/-12/-13, RQ-20261126-169/-175, RQ-20261030-018) were not opened this pass",
+  "needs_review triage not done (92, 26 unowned)",
+  "stranded stamp PRs not listed"
+ ],
+ "not_run": [
+  "C needs_review triage (single-lane budget; the drain belongs to a BACKLOG-DRAIN lane at the reset)"
+ ],
+ "handoff": [
+  "Author the remaining ready programme nodes (queue_replenish.py --authoring-queue, 23): runnable 7 vs floor 61; Manager 26a assigned this to ML-PRIMARY after #29500 lands.",
+  "Open the TRADING-track FAILs since 11-26: RQ-20261101-5e01-09/-10/-12/-13 (P1), RQ-20261126-169/-175, RQ-20261030-018 -- diagnose and iterate.",
+  "needs_review 92 (26 unowned): triage or a BACKLOG-DRAIN lane at the 12-02 reset.",
+  "Orphans 4/3/5 and overdue 20/5/2 unchanged: claude_desk, xsec-crypto, cost-levers-live-legs, movement-capture; ml-exit-head-donchian-1h, ml-holdbias-exit, ml-btc-router-cells; 5 ltr classes.",
+  "CJ-4 label hazard: no pre-close grade writer exists, so D10 cannot re-enter; needs a build row (manager to rank).",
+  "TSFM c4e2-04 next-unit judgement sent to the manager (low prior; not authored)."
+ ],
+ "calls": [
+  {
+   "call": "runnable stays below 25 at the 11-28 14:47Z pass unless programme nodes are authored",
+   "p": 0.8,
+   "check": {
+    "command": "python3 scripts/ci/check_research_queue_throughput.py --json",
+    "rule": "runnable < 25",
+    "resolves_when": "2026-11-28"
+   }
+  },
+  {
+   "call": "bd30-04 re-run lands a measured verdict",
+   "p": 0.6,
+   "check": {
+    "command": "ls research/results/RQ-20261124-bd30-04/",
+    "rule": "a result file newer than 45432785102 with read_state measured",
+    "resolves_when": "2026-11-29"
+   }
+  }
+ ]
+}

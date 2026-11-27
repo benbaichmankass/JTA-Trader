@@ -1,0 +1,28 @@
+{
+  "due_when": {
+    "due_date": "2026-11-28",
+    "kind": "date"
+  },
+  "id": "EXPORT-HOLD-20261126-LTR-PACKET-DURING-RESTART",
+  "next_action": "check_observation",
+  "observation": {
+    "due_by": "2026-11-28",
+    "how_to_check": "the next export's summary no longer lists LTR-PACKET-DURING-RESTART as held",
+    "what": "LTR-PACKET-DURING-RESTART lands in the work-store export"
+  },
+  "origin": {
+    "by": "work-export",
+    "kind": "audit",
+    "ref": "scripts/ops/work.py export --to-files https://github.com/benbaichmankass/JTA-Trader/actions/runs/45838676017; held item LTR-PACKET-DURING-RESTART",
+    "rerun": "python3 scripts/ops/work.py export --to-files  # re-checks every held row; it lands once the guard row check passes"
+  },
+  "owner": "manager",
+  "roadmap": [
+    "unmapped"
+  ],
+  "severity": null,
+  "state": "queued",
+  "terminal_reason": null,
+  "tier": null,
+  "what": "EXPORT HELD BACK [LTR-PACKET-DURING-RESTART] held back from the work-store export of 2026-11-26: the store row fails the guard row check -- checklist row LTR-PACKET-DURING-RESTART enters landed_unproven with no soak contract (add a contract with id 'LTR-PACKET-DURING-RESTART' to docs/claude/work/SOAKS.json: the mechanical checklist and n_needed <= 2) — or, for a one-shot check, an `observation: {what, how_to_check, due_by}` on the row."
+}

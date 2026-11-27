@@ -6,8 +6,8 @@ that #26522 fixed; the flatten itself had cancelled the legs). "Place first" can
 legs reserve the shares, hence available 0), so after a refusal the legs it cancelled are put back, at their OLD
 prices, always GTC, READ BACK from the venue, and a failed restore is reported (and alerted, through the
 naked-position alert path, by the order monitor). A sibling's standalone target released for the retry is put back
-when the retry is also refused; when the retry succeeds it stays released (documented, manager 2026-11-17 06:02Z:
-the shares are shared on Alpaca, so both cannot be held; a merged-OCO design is filed).
+whether the retry is refused or succeeds (ALPACA-OCO-PLACE-FIRST, 2026-11-27; until then a successful retry left the
+sibling with no target), each placed order read back, and a sibling that cannot be restored is ONE alert.
 
 Fixtures reuse the captured alpaca_paper/SPY shape of tests/test_alpaca_rearm_scoped_cancel.py.
 """
@@ -157,13 +157,44 @@ def test_released_sibling_target_is_restored_when_the_retry_is_also_refused():
     assert r["restored"]["ok"] == 1 and not r["restored"]["failed"]
 
 
-def test_released_sibling_target_stays_released_when_the_retry_succeeds():
-    """Documented, kept (manager 2026-11-17 06:02Z): arming the STOP outranks the sibling's target geometry."""
-    v = _Readback([_SIB_TP], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}}])
+def test_released_sibling_target_is_restored_after_a_successful_retry_and_read_back():
+    """ALPACA-OCO-PLACE-FIRST (operator 2026-11-27 "Build now (Recommended)"): replaces the 2026-11-17 behaviour that left the
+    sibling with NO take-profit when the retry succeeded. Place-first is impossible (the sibling target reserves the shares),
+    so the target is put back AFTER this row's OCO rests, each placed order read back at the venue."""
+    v = _Readback([_SIB_TP], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}}, _OK])
     r = _rearm(v, 8, sibling_qtys=[11])
-    assert r["retCode"] == 0 and "restored" not in r
+    assert r["retCode"] == 0 and r["result"]["orderId"] == "oco-new" and "restored" not in r
     assert v.deletes() == [_SIB_TP["id"]]
-    assert len(_posts(v)) == 2
+    posts = _posts(v)
+    assert len(posts) == 3                                 # OCO refused, retry OCO armed, the sibling target restored
+    assert posts[1]["order_class"] == "oco" and posts[1]["qty"] == "8"
+    assert posts[2] == {"symbol": "SPY", "qty": "11", "side": "sell", "type": "limit",
+                        "time_in_force": "gtc", "limit_price": "830.43"}
+    assert r["sibling_restore"]["ok"] == 1 and not r["sibling_restore"]["failed"]
+    assert ("GET", "/v2/orders/oco-new", None) in v.calls  # this row's OCO read back
+    assert ("GET", "/v2/orders/restored-1", None) in v.calls  # the restored sibling target read back
+    assert r["readback"]["own_oco_resting"] is True
+
+
+def test_a_sibling_target_that_cannot_be_restored_is_reported_and_logged(caplog):
+    v = _Readback([_SIB_TP], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}},
+                                           {"retCode": 403, "retMsg": "insufficient qty available (available: 0)"}])
+    with caplog.at_level(logging.ERROR):
+        r = _rearm(v, 8, sibling_qtys=[11])
+    assert r["retCode"] == 0                               # this row IS armed
+    assert r["sibling_restore"]["ok"] == 0 and r["sibling_restore"]["failed"]
+    assert any("could NOT be restored" in rec.getMessage() for rec in caplog.records)
+
+
+def test_readback_reports_could_not_look_as_none_never_fine():
+    class _BlindReads(_Readback):
+        def _open_orders_for_symbol(self, sym):  # type: ignore[override]
+            if len([c for c in self.calls if c[0] == "POST"]) >= 3:
+                return None                                # the post-restore open-orders read fails
+            return super()._open_orders_for_symbol(sym)
+    v = _BlindReads([_SIB_TP], post_results=[_REFUSED, {"retCode": 0, "result": {"id": "oco-new"}}, _OK])
+    r = _rearm(v, 8, sibling_qtys=[11])
+    assert r["readback"]["sibling_target_resting"] == {_SIB_TP["id"]: None}
 
 
 def test_a_sibling_bracket_or_stop_is_never_deleted_on_a_refusal():
@@ -245,3 +276,28 @@ def test_sweep_does_not_alert_when_the_refused_rearm_was_restored(monkeypatch, t
     restored = {"attempted": 1, "ok": 1, "failed": [], "summary": "restored 1/1"}
     summary, alerts = _sweep_with(monkeypatch, tmp_path, restored)
     assert summary["rearmed"] == 0 and alerts == []
+
+
+def test_sweep_alerts_once_when_an_armed_rearm_could_not_restore_a_sibling_target(monkeypatch, tmp_path):
+    """ALPACA-OCO-PLACE-FIRST: the re-arm ARMED (retCode 0) but a released sibling target was not put back -> one alert."""
+    from tests.test_alpaca_naked_rearm import _FakeAlpaca, _FakeDB, _insert
+    sib = {"attempted": 1, "ok": 0, "failed": ["sibling target x: insufficient qty"], "summary": "restored 0/1"}
+
+    class _ArmedButSiblingLost(_FakeAlpaca):
+        def place_protective(self, order):
+            self.rearmed.append(order)
+            return {"retCode": 0, "result": {"orderId": "oco-new"}, "sibling_restore": sib}
+
+    db = _FakeDB(tmp_path / "j.db")
+    _insert(db, id=7001, account_id="alpaca_live", symbol="SPY", direction="long",
+            position_size=20, stop_loss=730.0, take_profit_1=818.5,
+            created_at="2026-06-25T00:00:00+00:00", status="open")
+    monkeypatch.setattr("src.bot.data_loaders.list_accounts",
+                        lambda: [{"account_id": "alpaca_live", "exchange": "alpaca"}])
+    monkeypatch.setattr("src.units.accounts.clients.alpaca_client_for", lambda acc: _ArmedButSiblingLost(protected=False))
+    alerts: list = []
+    monkeypatch.setattr(order_monitor, "_alert_rearm_restore_failed",
+                        lambda acct, sym, tid, rest: alerts.append((acct, sym, tid, rest)))
+    order_monitor._check_broker_naked_equity_positions(db)
+    assert len(alerts) == 1 and alerts[0][:3] == ("alpaca_live", "SPY", 7001)
+    assert alerts[0][3]["failed"] == ["sibling take-profit not restored: sibling target x: insufficient qty"]
