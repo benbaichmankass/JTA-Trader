@@ -47,6 +47,13 @@ MACRO_TICKERS = ("SPY", "QQQ", "TLT", "GLD", "UUP")
 #: 22:00 leaves a margin in both seasons, so a session is never read before it closed.
 MACRO_AVAIL_HOURS = 22
 FAMILIES["F8"] = [f"f8_{t.lower()}_{x}" for t in MACRO_TICKERS for x in ("r1", "r5", "r20", "rv20")] + ["f8_present"]
+# F9 crypto implied volatility (plan docs/research/ml-entry-new-information-classes-2026-11-27.md class 2): Deribit's BTC DVOL
+# index (30-day implied vol), hourly OHLC from the public get_volatility_index_data endpoint (history from 2021-03). It is a
+# real-time print with no revisions. Market-wide (the same values for every symbol at a ts). An hourly candle that OPENS at T
+# is closed at T + 1h; it is used only from T + 1h + DVOL_AVAIL_SLACK_S, so the candle closing exactly at the decision bar's
+# close is NOT read: the value at ts is the candle that closed one hour earlier (conservative on the stamp convention).
+DVOL_AVAIL_SLACK_S = 300
+FAMILIES["F9"] = ["f9_dvol", "f9_dvol_chg24", "f9_dvol_z168"]
 
 
 def _z(s: pd.Series, n: int) -> pd.Series:
@@ -357,6 +364,104 @@ def _synthetic(n=900, seed=1):
     return k, prem, fund, met
 
 
+def f9(ts: pd.Series, dvol: pd.DataFrame | None) -> pd.DataFrame:
+    """Crypto implied-vol features at each decision ``ts`` (F9). ``dvol`` has ``ts_ms`` (candle OPEN, epoch ms) and
+    ``close`` (BTC DVOL). f9_dvol = the level, f9_dvol_chg24 = 24-hour log change, f9_dvol_z168 = z-score over 168 hourly
+    candles (computed on the hourly grid; a missing hour stays NaN, never filled). LEAKAGE: see DVOL_AVAIL_SLACK_S;
+    removing every candle not yet usable at ts + 1h leaves the features at ts unchanged (self-test). Missing = NaN."""
+    out = pd.DataFrame({"ts": pd.to_datetime(ts, utc=True).astype("datetime64[ns, UTC]")})
+    cols = FAMILIES["F9"]
+    if dvol is None or len(dvol) < 2:
+        for c in cols:
+            out[c] = np.nan
+        return out[["ts"] + cols]
+    d = dvol[["ts_ms", "close"]].dropna().drop_duplicates("ts_ms").sort_values("ts_ms")
+    t_open = pd.to_datetime(d["ts_ms"].astype("int64"), unit="ms", utc=True)
+    grid = pd.date_range(t_open.iloc[0], t_open.iloc[-1], freq="1h", tz="UTC")
+    c = pd.Series(d["close"].astype(float).to_numpy(), index=t_open).reindex(grid)
+    lc = np.log(c)
+    feat = pd.DataFrame({"_avail": (grid + pd.Timedelta(hours=1) + pd.Timedelta(seconds=DVOL_AVAIL_SLACK_S))
+                         .astype("datetime64[ns, UTC]"),
+                         cols[0]: c.to_numpy(), cols[1]: (lc - lc.shift(24)).to_numpy(),
+                         cols[2]: ((c - c.rolling(168, min_periods=120).mean()) / c.rolling(168, min_periods=120).std()).to_numpy()})
+    feat = feat.dropna(subset=[cols[0]])
+    order = out["ts"].argsort(kind="stable").to_numpy()
+    left = out.iloc[order].reset_index().rename(columns={"index": "_row"})
+    left["_at"] = left["ts"] + pd.Timedelta(hours=1)
+    left = pd.merge_asof(left, feat, left_on="_at", right_on="_avail", direction="backward",
+                         tolerance=pd.Timedelta(hours=6)).drop(columns="_avail")
+    left = left.sort_values("_row").reset_index(drop=True)
+    return left[["ts"] + cols]
+
+
+def fetch_dvol(out_dir, start: str, end: str, currency: str = "BTC", get=None) -> pd.DataFrame:
+    """Hourly DVOL candles from Deribit's public API (no key), cached as <out_dir>/<currency>.csv (ts_ms, close). Pages of
+    40 days (< the 1000-point response cap). ``get`` is injectable for the self-test. An empty answer is an empty frame,
+    never zeros; a failed page raises (the caller decides; a research run must not silently lose a family)."""
+    import json
+    import urllib.request
+    from pathlib import Path
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if get is None:
+        def get(url):
+            with urllib.request.urlopen(url, timeout=60) as r:
+                return json.loads(r.read())
+    t0 = int(pd.Timestamp(start, tz="UTC").timestamp() * 1000)
+    t1 = int(pd.Timestamp(end, tz="UTC").timestamp() * 1000)
+    rows, step = [], 40 * 86_400_000
+    a = t0
+    while a < t1:
+        b = min(a + step, t1)
+        url = ("https://www.deribit.com/api/v2/public/get_volatility_index_data"
+               f"?currency={currency}&start_timestamp={a}&end_timestamp={b}&resolution=3600")
+        rows += [(int(x[0]), float(x[4])) for x in (get(url).get("result") or {}).get("data") or []]
+        a = b
+    df = pd.DataFrame(rows, columns=["ts_ms", "close"]).drop_duplicates("ts_ms").sort_values("ts_ms")
+    df.to_csv(out_dir / f"{currency}.csv", index=False)
+    return df
+
+
+def load_dvol(d, currency: str = "BTC") -> pd.DataFrame | None:
+    from pathlib import Path
+    p = Path(d) / f"{currency}.csv"
+    return pd.read_csv(p) if p.exists() else None
+
+
+def _self_test_f9() -> None:
+    rng = np.random.default_rng(9)
+    hrs = pd.date_range("2024-01-01", "2024-02-15", freq="1h", tz="UTC")
+    dv = pd.DataFrame({"ts_ms": hrs.as_unit("ms").asi8, "close": 50 + np.cumsum(rng.normal(0, 0.3, len(hrs)))})
+    ts = pd.Series(pd.date_range("2024-01-10", "2024-02-10", freq="1h", tz="UTC"))
+    full = f9(ts, dv)
+    assert list(full.columns) == ["ts"] + FAMILIES["F9"] and len(full) == len(ts)
+    for i in (5, 300, 700):
+        t = ts.iloc[i]
+        usable = dv[pd.to_datetime(dv["ts_ms"], unit="ms", utc=True) + pd.Timedelta(hours=1, seconds=DVOL_AVAIL_SLACK_S)
+                    <= t + pd.Timedelta(hours=1)]
+        part = f9(ts.iloc[[i]], usable)
+        a, b = full.iloc[i][FAMILIES["F9"]].astype(float), part.iloc[0][FAMILIES["F9"]].astype(float)
+        assert all(np.isclose(a[c], b[c], equal_nan=True) for c in FAMILIES["F9"]), f"F9 LOOKAHEAD at {t}"
+    # the value at ts is the candle that OPENED one hour earlier (closed at ts, one hour before the decision bar's close)
+    i = 300
+    want = dv.loc[pd.to_datetime(dv["ts_ms"], unit="ms", utc=True) == ts.iloc[i] - pd.Timedelta(hours=1), "close"].iloc[0]
+    assert np.isclose(full.iloc[i]["f9_dvol"], want), (full.iloc[i]["f9_dvol"], want)
+    # missing source -> NaN, never 0
+    assert f9(ts, None)[FAMILIES["F9"]].isna().all().all()
+    # fetch pages and parses with an injected getter
+    import tempfile
+    calls = []
+
+    def fake(url):
+        calls.append(url)
+        a = int(url.split("start_timestamp=")[1].split("&")[0])
+        return {"result": {"data": [[a, 1, 2, 0.5, 42.0]]}}
+    with tempfile.TemporaryDirectory() as d:
+        got = fetch_dvol(d, "2024-01-01", "2024-03-15", get=fake)
+        assert len(calls) == 2 and len(got) == 2 and float(got["close"].iloc[0]) == 42.0
+        assert load_dvol(d) is not None
+
+
 def self_test() -> None:
     k, prem, fund, met = _synthetic()
     full = symbol_frame(k, prem, fund, met)
@@ -399,6 +504,7 @@ def self_test() -> None:
     cs = cross_section(frames)
     assert cs["f4_rank_ret4"].dropna().between(0, 1).all()
     _self_test_f8()
+    _self_test_f9()
     print("ml_entry_families self-test OK")
 
 

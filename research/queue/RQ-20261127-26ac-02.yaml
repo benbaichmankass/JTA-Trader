@@ -1,0 +1,147 @@
+# Authored 2026-11-27 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV) on Manager 26a's 14:53Z instruction: the ml_entry learner levers
+# are spent, so the next lever is a NEW INFORMATION CLASS (plan docs/research/ml-entry-new-information-classes-2026-11-27.md, class 2;
+# the manager OK'd it as the second unit, 14:57Z).
+# Rule registered BEFORE any run. Gates this adds or changes: none (a research unit; no served model, config or order path).
+id: RQ-20261127-26ac-02
+title: 'ml_entry CRYPTO IMPLIED VOLATILITY: on the 8 dev folds, do 3 BTC implied-vol columns (Deribit DVOL level, 24h log change,
+  168h z), added to the 20-feature ENTRY recipe, beat a seeded noise placebo of the same width (3 columns), net of the full cost stack?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+question: 'On the pooled ENTRY recipe''s 8 half-year dev folds (2022-01..2025-09, 60 frozen perps, LOFO tau, fee + slippage + funding), is the
+  leave-one-fold-out mean net R per decision higher with F9 (BTC DVOL: level, 24h log change, 168h z-score; the hourly candle that closed one
+  hour before the decision bar''s close) than with the same recipe plus 3 seeded N(0,1) columns?'
+why_this_matters: 'c4e2-01 says served v1 decays because the market shifted in a way its 20 realised-price features cannot see. Implied vol is
+  forward-looking and priced by option traders: a regime change shows in DVOL before it shows in realised vol. The one market-wide input tried
+  so far (F8 cross-asset equities) failed (-0.072 R), so the prior is modest; DVOL is crypto-native, which F8 was not. Unit 26ac-01 tests the
+  in-hand derivatives state; this asks whether a new external information class helps.'
+practice_precedent: 'M3 (one lever per arm against a same-shape control), M4 (rule registered before the run), M6 (net of the full cost
+  stack), M13 (a post-hoc reading motivates a fresh registered test, never a promotion) and T1 (purged + embargoed walk-forward on dev folds
+  only) in docs/reference/trading-and-model-practice-principles.md.'
+evidence_class:
+  holdout: none
+  claim: ml_dev_fold_feature_value
+power:
+  expected_n: 60000
+  min_detectable_effect: 0.01
+  effect_units: metric
+  sd: 1.0
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE before any run: fs01-01 / f8a1-01 arms scored 35k-92k LOFO decisions over the 8 dev folds; the materiality bar +0.010
+    R/decision is the fs01-01 / f8a1-01 bar. One arm, so the bar is the single-arm one-sided t on the 8 per-fold deltas (df 7, 1.8946).'
+  feasibility:
+    source: none
+    accrual_basis: Replays public Binance Vision history and Deribit's public DVOL history through 2025-09-30 only (no later date is
+      downloaded); nothing accrues.
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_v2_run.py
+  - ablation_dvol
+  - '{unit}'
+  - '{out_dir}'
+  timeout_minutes: 300
+  workflow: research-script-run.yml
+  inputs:
+    research_unit: RQ-20261127-26ac-02
+decision_rule:
+  id: RULE-RQ20261127-26ac-02-DVOL
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: 'its MATCHED-WIDTH PLACEBO N3 (the recipe + 3 seeded N(0,1) columns, seed 20261130). Baseline A (20 features) and A2 (A,
+    second LightGBM seed) are reported, never graded.'
+  statistic: 'ml_entry_v2.combine_dvol (combine_placebo for arm V vs N3): the pooled LOFO mean net R per decision minus the placebo''s;
+    the 8 per-fold deltas (each fold at its own LOFO tau, as fs01-01); folds with delta > 0; the one-sided t of the 8 per-fold deltas; the
+    per-calendar-year mean delta (2022..2025); F9 dev coverage. Columns, the 1-hour availability lag, placebo seed, arms and dev window are fixed now.'
+  rule: 'PASS iff pooled delta vs N3 >= +0.010 R/decision AND delta > 0 in >= 6 of 8 folds AND the per-fold t >= 1.8946 (one-sided,
+    alpha 0.05, df 7, one arm) AND the yearly mean delta is positive in >= 3 of 4 years AND F9 is present on >= 40 percent of dev rows.
+    INDETERMINATE when coverage < 40 percent or fewer than 8 folds carry both means; FAIL otherwise. No threshold, column, lag or seed changes
+    after any result.'
+  pass_action: 'ONE confirming read of F9 on disjoint out-of-time data (2025-10-01 onward, holdout_lock claimed, the deflated ENTRY
+    bar), registered in its own unit before it runs; a pass there makes those columns an input of the next ml_entry_retrain challenger, a
+    data-backed Tier-3 replacement packet applied by the manager or a mandate, never by a lane.'
+  fail_action: Close BTC implied vol (DVOL) as a crypto ENTRY input on research/levers/ml-entry.yaml; the next class in the plan (order-book
+    depth) stays deferred to its re-entry test. No re-run with other columns, lags or seeds.
+  proposal_mapping: pass -> confirming out-of-time read -> Tier-3 packet; fail -> class closed, next class authored; indeterminate -> report the
+    realised per-fold se and coverage, stop.
+  what_it_does_not_do: Promotes nothing; reads no sealed or held-out window (dev folds only, no date after 2025-09-30 is downloaded); serves
+    nothing; changes no config, served model or order path; sizes nothing; adds no gate. One definition (BTC DVOL, 3 columns); a FAIL does not
+    refute implied vol in another form (ETH DVOL, term structure, skew).
+  min_n: 1000 dev decisions per arm
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.1
+  basis: 'stand-in: ml_entry trades real money on bybit_2 + bybit_portfolio and is losing (c4e2-01); implied vol is the untested
+    forward-looking information class. Not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 75
+  why_runner: 'Fetches keyless public Binance Vision archives (vision_streams.py) and Deribit DVOL (public API); the Kaggle kernel has no
+    internet. GBDT on CPU.'
+  basis: 'INFERRED from fs01-01 / f8a1-01: four arms (A, A2, V, N3) at 1 thread each on the 4-core runner, the dev-only fetch, ~50 DVOL
+    pages and the table build (~20-30 min).'
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the recipe's SL 2 / TP 3 ATR14 bracket and 24 h stop; only the model inputs differ
+  matched_random:
+    draws: 100
+    note: 'declared, NOT computed (each draw is a full 8-fold refit): the control that matters is the matched-width seeded noise placebo (N4 /
+      N8 in 26ac-01, N3 here), which prices the recipe''s measured per-column overfit (fs01-01 N9 -0.0167 R)'
+  best_static:
+    grid:
+    - recipe (20 features)
+    - recipe + 3 noise columns (N3)
+    excludes_test_folds: true
+    note: every arm is refit per fold on rows before the fold minus the registered purge/embargo; tau is chosen leave-one-fold-out
+  bootstrap_group: fold
+ml_consumer:
+  consumer: scripts/research/ml_entry_retrain.py
+  decision: whether BTC implied-vol columns enter the next ml_entry challenger (serving would need a live DVOL feed, its own build); no
+    change from this unit
+  legs:
+  - ml_entry
+  book: money
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: RQ-20261127-c4e2-03/45990110825
+  verdict_read: fail
+  diagnosis: 'The recipe is at its ceiling on its own features (c4e2-02/-03, 7ab1-02, GRU) and c4e2-01 reads the decay as a market shift
+    those features cannot see. Every input so far is realised-price or positioning data; none is forward-looking. Implied vol is, and it is
+    crypto-native where the failed market-wide family F8 (equities, rates, gold, dollar) was not.'
+  search: one fixed arm (F9, 3 columns) against a 3-column placebo; no grid.
+  levers:
+  - features
+  - regime
+  map_entries:
+  - research/levers/ml-entry.yaml#levers.features.feature_families_F1_F5
+  - research/levers/ml-entry.yaml#levers_tested
+  attempt: 23
+  due_by: '2026-12-04'
+related:
+- docs/research/ml-entry-new-information-classes-2026-11-27.md
+- RQ-20261127-26ac-01
+- RQ-20261101-fs01-01
+- RQ-20261127-c4e2-02
+- RQ-20261127-c4e2-03
+- RQ-20261127-c4e2-04
+- RQ-20261125-f8a1-01
+- scripts/research/ml_entry_families.py
+population: The pooled ENTRY recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, LOFO tau, net
+  R after fee + slippage + funding.
+what_it_does_not_do: Registers, serves or promotes nothing; changes no config; places no order; sizes nothing; reads no sealed window.
