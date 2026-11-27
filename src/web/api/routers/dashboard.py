@@ -920,6 +920,46 @@ async def refresh_positions_snapshot(include_paper: bool = True) -> list[dict[st
 
 
 
+# WEBAPP-API-SLOW-1127: a hard budget on ONE positions build. Measured 2026-11-27 21:34-21:41Z: Bybit private reads
+# from the VM took > 25 s (/api/diag/exchange_positions timed out at 25 s on bybit_1, bybit_2 and bybit_portfolio;
+# alpaca_paper alone answered at once), and this build awaited one such read per open row, serially, on the
+# single-worker account lane with NO deadline -- /positions?include_paper=true did not answer in 90 s (2/2) and the
+# SPA's Overview waited on it. Now a row whose broker read has not answered inside the budget renders
+# ``unrealizedPnl: null`` (source ``unavailable``, the existing could-not-read value, so the client's own fallback
+# still runs) with ``unrealizedPnlReadState: "timed_out"`` beside it, instead of holding the whole response.
+POSITIONS_BUILD_BUDGET_S = 6.0
+# One in-flight read per row identity. A timed-out read cannot be cancelled (it is a thread), so without this every
+# build (the stream keep-warm rebuilds every 15 s) would queue ANOTHER copy behind the stuck one on the single-worker
+# lane and the backlog would grow without bound. A later build joins the read already running instead.
+_ROW_PNL_INFLIGHT: dict[tuple, "asyncio.Future[Any]"] = {}
+
+
+async def _bounded_row_pnl(key: tuple, args: tuple, remaining_s: float) -> tuple[Any, str, str]:
+    """``(upnl, upnl_source, read_state)`` for one row, waiting at most *remaining_s*.
+
+    ``read_state`` is ``"read"`` when the resolver answered (its own source then says what it found) and
+    ``"timed_out"`` when it did not answer in time -- never collapsed into a value."""
+    fut = _ROW_PNL_INFLIGHT.get(key)
+    if fut is None:
+        fut = asyncio.ensure_future(run_account_read(_resolve_position_pnl, *args))
+        _ROW_PNL_INFLIGHT[key] = fut
+
+        def _done(f: "asyncio.Future[Any]", k: tuple = key) -> None:
+            if _ROW_PNL_INFLIGHT.get(k) is f:
+                _ROW_PNL_INFLIGHT.pop(k, None)
+            if not f.cancelled():
+                f.exception()  # retrieved so an abandoned failure never logs "exception was never retrieved"
+
+        fut.add_done_callback(_done)
+    if remaining_s <= 0 and not fut.done():
+        return None, "unavailable", "timed_out"
+    try:
+        upnl, upnl_source = await asyncio.wait_for(asyncio.shield(fut), timeout=max(remaining_s, 0.0) or None)
+    except asyncio.TimeoutError:
+        return None, "unavailable", "timed_out"
+    return upnl, upnl_source, "read"
+
+
 async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
     # Offload the blocking sqlite read to a worker thread so it never runs on
     # uvicorn's event loop (this route stays async for the awaited broker read
@@ -932,6 +972,7 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
     # `r: null`, never breaks the route.
     telemetry = await asyncio.to_thread(_telemetry_map)
     out: list[dict[str, Any]] = []
+    deadline = time.monotonic() + POSITIONS_BUILD_BUDGET_S
     for r in rows:
         # Offloaded to the dedicated single-worker account-read executor
         # (BL-20260706-IBCONCURRENCY): both the broker-truth read and its
@@ -949,8 +990,9 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
         # of $0.00. The client-side candle fallback was multiplier-blind for
         # futures (MGC=10× / MHG=2500×); this is computed where the canonical
         # contract_value_usd lives. Marked with a distinct source.
-        upnl, upnl_source = await run_account_read(
-            _resolve_position_pnl, r[1], r[2], r[3], r[4], r[5],
+        upnl, upnl_source, upnl_read_state = await _bounded_row_pnl(
+            (r[1], r[2], r[3], r[4], r[5]), (r[1], r[2], r[3], r[4], r[5]),
+            deadline - time.monotonic(),
         )
         # Options-expression rows carry a structure block in notes.options
         # (legs / strikes / defined risk). Surface it as a nested ``options``
@@ -975,6 +1017,9 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
             "entryPrice": r[5],
             "unrealizedPnl": upnl,
             "unrealizedPnlSource": upnl_source,
+            # "read" | "timed_out" (WEBAPP-API-SLOW-1127): whether the broker read answered inside the build budget.
+            # A null uPnL with "timed_out" means we could not look in time, not that there is nothing to show.
+            "unrealizedPnlReadState": upnl_read_state,
             # Is that number a MEASUREMENT? Resolved through the one canonical
             # vocabulary (src/runtime/provenance) rather than re-derived from
             # the source string at each consumer — which is exactly how the
