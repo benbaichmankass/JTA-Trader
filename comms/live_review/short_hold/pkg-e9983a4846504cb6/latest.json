@@ -1,7 +1,7 @@
 {
- "bar": "2026-11-27T17:55:00Z",
- "bar_close": "2026-11-27T18:00:00Z",
- "built_at": "2026-11-27T18:01:51Z",
+ "bar": "2026-11-27T18:00:00Z",
+ "bar_close": "2026-11-27T18:05:00Z",
+ "built_at": "2026-11-27T18:06:42Z",
  "closed": false,
  "order_package_id": "pkg-e9983a4846504cb6",
  "packet": {
@@ -97,13 +97,13 @@
      "BTCUSDT",
      "long",
      "trend_donchian_1h",
-     -0.159
+     -0.123
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth_prop",
-     -0.424
+     -0.426
     ],
     [
      "SPY",
@@ -121,19 +121,19 @@
      "ADAUSDT",
      "long",
      "ml_entry",
-     0.167
+     0.195
     ],
     [
      "ETHUSDT",
      "short",
      "trend_donchian_eth",
-     -0.101
+     -0.103
     ],
     [
      "SOLUSDT",
      "long",
      "ml_entry",
-     -0.0293
+     -0.0469
     ],
     [
      "XRPUSDT",
@@ -151,7 +151,7 @@
      "TLT",
      "long",
      "tlt_pullback_1h",
-     -0.271
+     -0.254
     ],
     [
      "IEF",
@@ -503,7 +503,7 @@
    "head": "e611ff7260",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T18:02:16Z",
+  "info_cutoff_at": "2026-11-27T18:07:33Z",
   "leg": "claude_desk",
   "mechanics": {
    "evidence": "bybit_1: BTCUSDT is NETTED across 3 open packages on this account (per side) (this one + pkg-2e227e58c3f7424d, pkg-ba1ffcf8ed9b498e); each package's own qty-scoped Partial SL/TP legs are matched by order id, never by level alone; 1 account(s) could not be read",
@@ -518,6 +518,14 @@
    "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:alpaca_orders",
+    "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
+   },
+   {
+    "field": "read:bybit_history:bybit_1:BTCUSDT",
+    "reason": "diag bybit_raw_order_history?account_id=bybit_1&symbol=BTCUSDT&start_ms=1795790279114&end_ms=1795802913472: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is "
+   },
    {
     "field": "regime.atr_now_over_entry",
     "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
@@ -587,25 +595,18 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T1801Z-pkg-e9983a4846504cb6",
+  "review_id": "LR-20261127T1806Z-pkg-e9983a4846504cb6",
   "short_hold": {
-   "atr": 178.96428571428572,
-   "bar": "2026-11-27T17:55:00Z",
-   "bar_close": "2026-11-27T18:00:00Z",
+   "atr": 181.971428571429,
+   "bar": "2026-11-27T18:00:00Z",
+   "bar_close": "2026-11-27T18:05:00Z",
    "entry": 60497.5,
-   "mark": 59899.2,
-   "minutes_held": 203.3,
-   "open_r_at_mark": -0.1996,
+   "mark": 59815.2,
+   "minutes_held": 208.2,
+   "open_r_at_mark": -0.2276,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
    "recent_bars": [
-    {
-     "close": 59941.5,
-     "high": 59983.3,
-     "low": 59845.6,
-     "open": 59924.2,
-     "t": "2026-11-27T17:00:00Z"
-    },
     {
      "close": 59914.6,
      "high": 60036.1,
@@ -682,6 +683,13 @@
      "low": 59678.6,
      "open": 59731.0,
      "t": "2026-11-27T17:55:00Z"
+    },
+    {
+     "close": 59815.2,
+     "high": 59932.5,
+     "low": 59765.7,
+     "open": 59899.2,
+     "t": "2026-11-27T18:00:00Z"
     }
    ],
    "risk_per_unit": null,
@@ -707,25 +715,18 @@
    }
   ]
  },
- "packet_sha": "65f501c7b2a006559e160a23b9121379e384d81fec9a9db35d3803020cbe7d3b",
+ "packet_sha": "55428b38e0b83ffde6e61a21c4f604cfae8091f1b15fd03f8a8c16da2c65721c",
  "short_hold": {
-  "atr": 178.96428571428572,
-  "bar": "2026-11-27T17:55:00Z",
-  "bar_close": "2026-11-27T18:00:00Z",
+  "atr": 181.971428571429,
+  "bar": "2026-11-27T18:00:00Z",
+  "bar_close": "2026-11-27T18:05:00Z",
   "entry": 60497.5,
-  "mark": 59899.2,
-  "minutes_held": 203.3,
-  "open_r_at_mark": -0.1996,
+  "mark": 59815.2,
+  "minutes_held": 208.2,
+  "open_r_at_mark": -0.2276,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
   "recent_bars": [
-   {
-    "close": 59941.5,
-    "high": 59983.3,
-    "low": 59845.6,
-    "open": 59924.2,
-    "t": "2026-11-27T17:00:00Z"
-   },
    {
     "close": 59914.6,
     "high": 60036.1,
@@ -802,6 +803,13 @@
     "low": 59678.6,
     "open": 59731.0,
     "t": "2026-11-27T17:55:00Z"
+   },
+   {
+    "close": 59815.2,
+    "high": 59932.5,
+    "low": 59765.7,
+    "open": 59899.2,
+    "t": "2026-11-27T18:00:00Z"
    }
   ],
   "risk_per_unit": null,
