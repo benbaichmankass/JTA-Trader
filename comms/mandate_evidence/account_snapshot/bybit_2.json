@@ -1,7 +1,7 @@
 {
   "account_id": "bybit_2",
   "exchange": "bybit",
-  "captured_at": "2026-11-26T16:56:53.262085+00:00",
+  "captured_at": "2026-11-27T16:38:51.651771+00:00",
   "source": "GET /api/diag/broker_account_status?account_id=bybit_2",
   "schema": 2,
   "balance_committed": false,
@@ -122,14 +122,15 @@
     "htf_pullback_trend_2h": {
       "config_fingerprint": "sha256:9bbee55ee66baad226ef2cd11835ccf8",
       "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/htf_pullback_trend_2h__trades.jsonl",
+      "refuse": "0 of 105 permitted setups size above zero on bybit_2 (balance read, not committed) at htf_pullback_trend_2h's latest committed price 76094.10 (2026-11-06 12:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 105,
       "setups_permitted": 105,
-      "setups_sized": 105,
+      "setups_sized": 0,
       "ref_price": 76094.1,
       "ref_price_at": "2026-11-06 12:00:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "iaum_pullback_1d": {
       "config_fingerprint": "sha256:22e79d52f5e87055b22b2cc9444b1522",
@@ -146,14 +147,15 @@
     "ict_scalp_5m": {
       "config_fingerprint": "sha256:e3d41415592709621a0d53d5bf80fa3e",
       "source_run": "comms/strategy_evidence/runs/2026-11-20/ict_scalp_5m__trades.jsonl",
+      "refuse": "0 of 90 permitted setups size above zero on bybit_2 (balance read, not committed) at ict_scalp_5m's latest committed price 74496.40 (2026-11-10 08:30:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 90,
       "setups_permitted": 90,
-      "setups_sized": 90,
+      "setups_sized": 0,
       "ref_price": 74496.4,
       "ref_price_at": "2026-11-10 08:30:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "ict_scalp_avax_5m": {
       "config_fingerprint": "sha256:d678fde990c82f54175247ce3619fe26",
@@ -300,7 +302,7 @@
       "affordable": true
     },
     "ml_entry": {
-      "config_fingerprint": "sha256:aa5e637bc11b8bf99fa662e4e1157215",
+      "config_fingerprint": "sha256:de122fd6a01a446101b6ccb9231272c1",
       "source_run": "comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl",
       "refuse": "source_run 'comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl' carries no setup with entry/sl/direction -- nothing to size",
       "setups_in_run": 0,
@@ -498,14 +500,15 @@
     "trend_donchian_1h": {
       "config_fingerprint": "sha256:c50404b3a8619fbe8929cf58aa501592",
       "source_run": "comms/research/RQ-20261113-f251-01/43447401545/evidence_runs/trend_donchian_1h__trades.jsonl",
+      "refuse": "0 of 184 permitted setups size above zero on bybit_2 (balance read, not committed) at trend_donchian_1h's latest committed price 79591.30 (2026-10-29 20:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 184,
       "setups_permitted": 184,
-      "setups_sized": 184,
+      "setups_sized": 0,
       "ref_price": 79591.3,
       "ref_price_at": "2026-10-29 20:00:00+00:00",
       "whole_units": false,
       "side_filter": "both",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian_ada_4h": {
       "config_fingerprint": "sha256:56590243dbe08bbaf49b6c650a8a4a51",

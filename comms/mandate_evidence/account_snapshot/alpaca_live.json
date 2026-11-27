@@ -1,7 +1,7 @@
 {
   "account_id": "alpaca_live",
   "exchange": "alpaca",
-  "captured_at": "2026-11-26T16:56:44.331342+00:00",
+  "captured_at": "2026-11-27T16:38:40.232754+00:00",
   "source": "GET /api/diag/broker_account_status?account_id=alpaca_live",
   "schema": 2,
   "balance_committed": false,
@@ -140,14 +140,15 @@
     "iaum_pullback_1d": {
       "config_fingerprint": "sha256:22e79d52f5e87055b22b2cc9444b1522",
       "source_run": "comms/strategy_evidence/runs/2026-11-05/iaum_pullback_1d__trades.jsonl",
+      "refuse": "0 of 5 permitted setups size above zero on alpaca_live (balance read, not committed) at iaum_pullback_1d's latest committed price 41.54 (2026-10-16 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 8,
       "setups_permitted": 5,
-      "setups_sized": 5,
+      "setups_sized": 0,
       "ref_price": 41.54,
       "ref_price_at": "2026-10-16 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "ict_scalp_5m": {
       "config_fingerprint": "sha256:e3d41415592709621a0d53d5bf80fa3e",
@@ -190,26 +191,28 @@
     "ict_scalp_sol_15m": {
       "config_fingerprint": "sha256:8cc491ccd70e0726b7e539c6c20af01c",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/ict_scalp_sol_15m__trades.jsonl",
+      "refuse": "0 of 37 permitted setups size above zero on alpaca_live (balance read, not committed) at ict_scalp_sol_15m's latest committed price 104.19 (2026-10-23 10:15:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 87,
       "setups_permitted": 37,
-      "setups_sized": 36,
+      "setups_sized": 0,
       "ref_price": 104.19,
       "ref_price_at": "2026-10-23 10:15:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "ict_scalp_sol_5m": {
       "config_fingerprint": "sha256:ca6ce9f4d791d4906d9ba77e5036ae78",
       "source_run": "comms/strategy_evidence/runs/2026-11-19/ict_scalp_sol_5m__trades.jsonl",
+      "refuse": "0 of 55 permitted setups size above zero on alpaca_live (balance read, not committed) at ict_scalp_sol_5m's latest committed price 79.47 (2026-11-13 21:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 116,
       "setups_permitted": 55,
-      "setups_sized": 55,
+      "setups_sized": 0,
       "ref_price": 79.47,
       "ref_price_at": "2026-11-13 21:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "ict_scalp_xrp_15m": {
       "config_fingerprint": "sha256:056b3d70ff4dc4925500d08c8957416c",
@@ -238,14 +241,15 @@
     "ief_pullback_1d": {
       "config_fingerprint": "sha256:cf67f836ee0e777dcd1fa0519a8fe0a1",
       "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/ief_pullback_1d__trades.jsonl",
+      "refuse": "0 of 2 permitted setups size above zero on alpaca_live (balance read, not committed) at ief_pullback_1d's latest committed price 89.40 (2026-10-09 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 6,
       "setups_permitted": 2,
-      "setups_sized": 2,
+      "setups_sized": 0,
       "ref_price": 89.4,
       "ref_price_at": "2026-10-09 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "iwm_trend_long_1d": {
       "config_fingerprint": "sha256:e50b1a963a62ba0a644bd8e9920c9cdb",
@@ -313,7 +317,7 @@
       "affordable": false
     },
     "ml_entry": {
-      "config_fingerprint": "sha256:aa5e637bc11b8bf99fa662e4e1157215",
+      "config_fingerprint": "sha256:de122fd6a01a446101b6ccb9231272c1",
       "source_run": "comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl",
       "refuse": "source_run 'comms/strategy_evidence/runs/2026-11-12/ml_entry__trades.jsonl' carries no setup with entry/sl/direction -- nothing to size",
       "setups_in_run": 0,
@@ -341,14 +345,15 @@
     "qld_trend_long_1d": {
       "config_fingerprint": "sha256:79e9593ea0da62e2a3328b8c4120e035",
       "source_run": "comms/strategy_evidence/runs/2026-09-24-e55/qld_trend_long_1d__trades.jsonl",
+      "refuse": "0 of 9 permitted setups size above zero on alpaca_live (balance read, not committed) at qld_trend_long_1d's latest committed price 96.27 (2026-09-21 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 9,
       "setups_permitted": 9,
-      "setups_sized": 2,
+      "setups_sized": 0,
       "ref_price": 96.27,
       "ref_price_at": "2026-09-21 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "qqq_pullback_1h": {
       "config_fingerprint": "sha256:ee7d105c498802a5148f6f1757ccdb64",
@@ -379,38 +384,41 @@
     "scha_trend_long_1d": {
       "config_fingerprint": "sha256:a6d254b58e8cde878c87e180fd494c93",
       "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/scha_trend_long_1d__trades.jsonl",
+      "refuse": "0 of 28 permitted setups size above zero on alpaca_live (balance read, not committed) at scha_trend_long_1d's latest committed price 33.68 (2026-11-04 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 28,
       "setups_permitted": 28,
-      "setups_sized": 28,
+      "setups_sized": 0,
       "ref_price": 33.68,
       "ref_price_at": "2026-11-04 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "slv_pullback_1d": {
       "config_fingerprint": "sha256:b3a10439190b5e91b50fa1e4164c3920",
       "source_run": "comms/strategy_evidence/runs/2026-10-22-odc1022/slv_pullback_1d__trades.jsonl",
+      "refuse": "0 of 5 permitted setups size above zero on alpaca_live (balance read, not committed) at slv_pullback_1d's latest committed price 59.93 (2026-09-18 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 10,
       "setups_permitted": 5,
-      "setups_sized": 5,
+      "setups_sized": 0,
       "ref_price": 59.93,
       "ref_price_at": "2026-09-18 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "slv_trend_1h": {
       "config_fingerprint": "sha256:eab5e2b837006499c757a8d8335fa810",
       "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/slv_trend_1h__trades.jsonl",
+      "refuse": "0 of 58 permitted setups size above zero on alpaca_live (balance read, not committed) at slv_trend_1h's latest committed price 48.12 (2026-11-09 19:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 92,
       "setups_permitted": 58,
-      "setups_sized": 58,
+      "setups_sized": 0,
       "ref_price": 48.125,
       "ref_price_at": "2026-11-09 19:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "sol_pullback_2h": {
       "config_fingerprint": "sha256:6c230443371fd5d4a94b0d8c588a0515",
@@ -467,38 +475,41 @@
     "tlt_pullback_1d": {
       "config_fingerprint": "sha256:49a29ebd9a0ca04ac20cefb9c10e6db4",
       "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/tlt_pullback_1d__trades.jsonl",
+      "refuse": "0 of 17 permitted setups size above zero on alpaca_live (balance read, not committed) at tlt_pullback_1d's latest committed price 81.22 (2026-11-04 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 45,
       "setups_permitted": 17,
-      "setups_sized": 17,
+      "setups_sized": 0,
       "ref_price": 81.225,
       "ref_price_at": "2026-11-04 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "tlt_pullback_1h": {
       "config_fingerprint": "sha256:e4e373ded0531f81ad9dd194e00ead4b",
       "source_run": "comms/research/RQ-20261114-db1a-14/43620924535/evidence_runs/tlt_pullback_1h__trades.jsonl",
+      "refuse": "0 of 75 permitted setups size above zero on alpaca_live (balance read, not committed) at tlt_pullback_1h's latest committed price 81.92 (2026-11-09 17:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 75,
       "setups_permitted": 75,
-      "setups_sized": 75,
+      "setups_sized": 0,
       "ref_price": 81.915,
       "ref_price_at": "2026-11-09 17:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "tqqq_trend_long_1d": {
       "config_fingerprint": "sha256:4f04fd90ada03b3c17bb8542abe6273a",
       "source_run": "comms/research/RQ-20261113-1449-01/43421052545/evidence_runs/tqqq_trend_long_1d__trades.jsonl",
+      "refuse": "0 of 54 permitted setups size above zero on alpaca_live (balance read, not committed) at tqqq_trend_long_1d's latest committed price 84.49 (2026-10-06 00:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 54,
       "setups_permitted": 54,
-      "setups_sized": 5,
+      "setups_sized": 0,
       "ref_price": 84.49,
       "ref_price_at": "2026-10-06 00:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian": {
       "config_fingerprint": "sha256:0f168b935aa033bcf756897861d7c6de",
@@ -592,38 +603,41 @@
     "trend_donchian_sol": {
       "config_fingerprint": "sha256:721fba1ad5375735f455babdcfce23f0",
       "source_run": "comms/strategy_evidence/runs/2026-10-28/trend_donchian_sol__trades.jsonl",
+      "refuse": "0 of 58 permitted setups size above zero on alpaca_live (balance read, not committed) at trend_donchian_sol's latest committed price 107.72 (2026-10-20 14:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 58,
       "setups_permitted": 58,
-      "setups_sized": 58,
+      "setups_sized": 0,
       "ref_price": 107.72,
       "ref_price_at": "2026-10-20 14:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian_sol_4h": {
       "config_fingerprint": "sha256:596eebc2eeffb713b77183bff44ef085",
       "source_run": "comms/strategy_evidence/runs/2026-11-13-closed/trend_donchian_sol_4h__trades.jsonl",
+      "refuse": "0 of 68 permitted setups size above zero on alpaca_live (balance read, not committed) at trend_donchian_sol_4h's latest committed price 82.24 (2026-11-10 12:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 115,
       "setups_permitted": 68,
-      "setups_sized": 67,
+      "setups_sized": 0,
       "ref_price": 82.24,
       "ref_price_at": "2026-11-10 12:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian_sol_prop": {
       "config_fingerprint": "sha256:9898f734d4474751bd35f5f7180f14e6",
       "source_run": "comms/strategy_evidence/runs/2026-11-12-forming/trend_donchian_sol_prop__trades.jsonl",
+      "refuse": "0 of 538 permitted setups size above zero on alpaca_live (balance read, not committed) at trend_donchian_sol_prop's latest committed price 95.06 (2026-11-04 14:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 538,
       "setups_permitted": 538,
-      "setups_sized": 478,
+      "setups_sized": 0,
       "ref_price": 95.06,
       "ref_price_at": "2026-11-04 14:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "trend_donchian_xrp_4h": {
       "config_fingerprint": "sha256:446b3a58b530a33d7c5a2a96b91fe491",
@@ -654,14 +668,15 @@
     "uso_trend_1h": {
       "config_fingerprint": "sha256:d67fb28ac7e86c79cbc4c09df4a240ea",
       "source_run": "comms/research/RQ-20261113-f251-02/43452855935/evidence_runs/uso_trend_1h__trades.jsonl",
+      "refuse": "0 of 58 permitted setups size above zero on alpaca_live (balance read, not committed) at uso_trend_1h's latest committed price 170.18 (2026-10-30 13:00:00+00:00) -- the edit would land a leg that cannot place an order",
       "setups_in_run": 58,
       "setups_permitted": 58,
-      "setups_sized": 52,
+      "setups_sized": 0,
       "ref_price": 170.175,
       "ref_price_at": "2026-10-30 13:00:00+00:00",
       "whole_units": true,
       "side_filter": "long",
-      "affordable": true
+      "affordable": false
     },
     "xrp_pullback_2h": {
       "config_fingerprint": "sha256:3772e293135cdbc5b967e7d8af1d9e87",
