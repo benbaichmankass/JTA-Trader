@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from src.utils.paths import runtime_logs_dir, trade_journal_db_path
-from src.web.api._account_read_executor import run_account_read
+from src.web.api._account_read_executor import run_account_read, run_account_read_parallel
 from src.web.api._asset_class import asset_class_for_symbol
 from src.web.api._swr import SWRCache, snapshot_headers
 from src.web.api._clean_trades import (
@@ -934,14 +934,36 @@ POSITIONS_BUILD_BUDGET_S = 6.0
 _ROW_PNL_INFLIGHT: dict[tuple, "asyncio.Future[Any]"] = {}
 
 
-async def _bounded_row_pnl(key: tuple, args: tuple, remaining_s: float) -> tuple[Any, str, str]:
+#: VM-CONTROL-1127: exchanges whose rows may use the multi-worker account lane. Their broker read is plain HTTP, and
+#: their local mark-to-market fallback prices crypto/equity symbols, so neither half can reach an IB socket
+#: (BL-20260706-IBCONCURRENCY keeps IB, prop and unknown accounts on the single-worker lane). MEASURED 2026-11-27
+#: 23:52-23:54Z after #29599: 16-18 of 20 rows still timed out inside the 6 s budget, and py-spy showed the single
+#: account-read lane inside a Bybit get_positions -- the rows were waiting in line behind each other, not on CPU.
+_PARALLEL_LANE_EXCHANGES = frozenset({"bybit", "alpaca"})
+
+
+def _account_exchanges() -> dict[str, str]:
+    """``{account_id: exchange}`` from the reconcile account configs; empty on any failure (=> single lane)."""
+    try:
+        from src.runtime.order_monitor import _load_account_cfgs_for_reconcile
+        return {str(aid): str((cfg or {}).get("exchange") or "").strip().lower()
+                for aid, cfg in (_load_account_cfgs_for_reconcile() or {}).items()}
+    except Exception:  # noqa: BLE001  # allow-silent: an unknown exchange routes every row to the single lane, as before
+        logger.warning("positions: account exchange map unavailable; all rows use the single lane", exc_info=True)
+        return {}
+
+
+async def _bounded_row_pnl(key: tuple, args: tuple, remaining_s: float,
+                           parallel: bool = False) -> tuple[Any, str, str]:
     """``(upnl, upnl_source, read_state)`` for one row, waiting at most *remaining_s*.
 
     ``read_state`` is ``"read"`` when the resolver answered (its own source then says what it found) and
-    ``"timed_out"`` when it did not answer in time -- never collapsed into a value."""
+    ``"timed_out"`` when it did not answer in time -- never collapsed into a value. ``parallel`` puts the read on the
+    multi-worker lane (Bybit/Alpaca rows only, see ``_PARALLEL_LANE_EXCHANGES``)."""
     fut = _ROW_PNL_INFLIGHT.get(key)
     if fut is None:
-        fut = asyncio.ensure_future(run_account_read(_resolve_position_pnl, *args))
+        runner = run_account_read_parallel if parallel else run_account_read
+        fut = asyncio.ensure_future(runner(_resolve_position_pnl, *args))
         _ROW_PNL_INFLIGHT[key] = fut
 
         def _done(f: "asyncio.Future[Any]", k: tuple = key) -> None:
@@ -971,8 +993,19 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
     # Best-effort by contract — a telemetry outage degrades a position to
     # `r: null`, never breaks the route.
     telemetry = await asyncio.to_thread(_telemetry_map)
+    exchanges = await asyncio.to_thread(_account_exchanges)
     out: list[dict[str, Any]] = []
     deadline = time.monotonic() + POSITIONS_BUILD_BUDGET_S
+    # Start every row's read now so rows on the multi-worker lane run side by side, then collect each one inside
+    # the shared deadline below (a single-lane row still queues behind the others, exactly as before).
+    pending = {
+        str(r[0]): asyncio.ensure_future(_bounded_row_pnl(
+            (r[1], r[2], r[3], r[4], r[5]), (r[1], r[2], r[3], r[4], r[5]),
+            deadline - time.monotonic(),
+            parallel=exchanges.get(str(r[1]), "") in _PARALLEL_LANE_EXCHANGES,
+        ))
+        for r in rows
+    }
     for r in rows:
         # Offloaded to the dedicated single-worker account-read executor
         # (BL-20260706-IBCONCURRENCY): both the broker-truth read and its
@@ -990,10 +1023,7 @@ async def _build_positions(effective_include: bool) -> list[dict[str, Any]]:
         # of $0.00. The client-side candle fallback was multiplier-blind for
         # futures (MGC=10× / MHG=2500×); this is computed where the canonical
         # contract_value_usd lives. Marked with a distinct source.
-        upnl, upnl_source, upnl_read_state = await _bounded_row_pnl(
-            (r[1], r[2], r[3], r[4], r[5]), (r[1], r[2], r[3], r[4], r[5]),
-            deadline - time.monotonic(),
-        )
+        upnl, upnl_source, upnl_read_state = await pending[str(r[0])]
         # Options-expression rows carry a structure block in notes.options
         # (legs / strikes / defined risk). Surface it as a nested ``options``
         # object so the SPA can render the spread; null for a
