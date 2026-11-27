@@ -1087,6 +1087,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/ml-entry-eq-structure-ensemble-evidence-and-proposal-2026-11-08.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-eq-structure-proposal-2026-11-07.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-hole-safe-adopt-2026-11-12.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ml-entry-new-information-classes-2026-11-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-promotion-rule-2026-11-06.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-prop-gate-2026-11-02/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ml-entry-review-2026-11-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
