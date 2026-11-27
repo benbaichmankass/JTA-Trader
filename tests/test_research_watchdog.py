@@ -494,3 +494,21 @@ def test_a_run_with_no_updated_at_is_read_from_its_start_as_before():
 def test_a_running_run_is_always_busy_whatever_its_age():
     v = w.check_backend("kaggle_cpu", 6, [run(1, 120, "in_progress")], NOW, TH)
     assert v["state"] == w.OK and "queued/in progress" in v["detail"]
+
+
+def test_fires_grades_due_now_not_the_refill_horizon():
+    # WATCHDOG-FIRES-DUE-NOW, MEASURED 2026-11-27 18:13Z: "15 runnable, 0 started for 101 min" while the dispatcher fired
+    # every cycle with due_total 0 -- runnable() looks 6 h ahead, so recurring units due later read as owed a fire.
+    fx = {"workflow_runs": {w.DISPATCH_WORKFLOW: [run(1, 20)], **{wf: [run(10 + i, 160)] for i, wf in enumerate(w.RESEARCH_WORKFLOWS)}},
+          "run_jobs": {"1": [job(20)]}}
+    later_only = dict(HEALTHY, runnable=14, by_backend={"github_runner": 14}, by_backend_due_now={})
+    v = next(x for x in w.evaluate(w.FixtureProbe(fx), CFG, NOW, later_only) if x["check"] == "dispatcher_fires")
+    assert v["state"] == w.OK and v["evidence"]["due_within_refill_horizon"] == 14
+    due_now = dict(HEALTHY, runnable=14, by_backend={"github_runner": 14}, by_backend_due_now={"github_runner": 3})
+    v = next(x for x in w.evaluate(w.FixtureProbe(fx), CFG, NOW, due_now) if x["check"] == "dispatcher_fires")
+    assert v["state"] == w.BAD and v["evidence"]["runnable"] == 3 and v["evidence"]["due_within_refill_horizon"] == 11
+    # the queue floor still reads the horizon count (refill must top up before the dispatcher runs dry)
+    q = next(x for x in w.evaluate(w.FixtureProbe(fx), CFG, NOW, later_only) if x["check"] == "queue")
+    assert q["evidence"]["runnable"] == 14
+    # direct: nothing due now but some due later is OK with the horizon named
+    assert w.check_fires(0, [], NOW, TH, due_later=5)["evidence"]["due_within_refill_horizon"] == 5

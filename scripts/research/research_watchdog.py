@@ -178,15 +178,25 @@ def _idle_age_min(r: dict, now: datetime) -> Optional[float]:
 
 
 def check_fires(runnable_n: Optional[int], research_runs: Optional[list], now: datetime, th: dict,
-                workflows: Optional[List[str]] = None) -> Dict[str, Any]:
+                workflows: Optional[List[str]] = None, due_later: int = 0) -> Dict[str, Any]:
+    """`runnable_n` is the count DUE NOW by the dispatcher's own rule (queue_facts `by_backend_due_now`, summed);
+    `due_later` the units only the refill horizon counts. WATCHDOG-FIRES-DUE-NOW (2026-11-27, ML-PRIMARY):
+    this check graded on queue_replenish.runnable(), which looks DISPATCH_CYCLE_HOURS (6 h) ahead, so recurring units
+    due later read as owed a fire. MEASURED 2026-11-27 18:13Z: incident dispatcher_fires "15 runnable, 0 started for
+    101 min" while the dispatcher fired every 5-10 min with due_total 0 on every backend (utilization 46037692536);
+    runnable(6 h) = 14, due now = 0, and the two units that came due fired at 18:27Z (run 46049189243). The same
+    false-alarm class check_backend fixed on 2026-10-21 (queue_facts comment)."""
     lim = float(th["fires_idle_minutes"])
     if runnable_n is None or research_runs is None:
         return verdict("dispatcher_fires", CNL, "could not count runnable units or list research compute runs")
     if runnable_n == 0:
+        if due_later:
+            return verdict("dispatcher_fires", OK, f"nothing due now ({due_later} unit(s) due within the refill horizon), "
+                           "so nothing is owed a fire", evidence={"runnable": 0, "due_within_refill_horizon": due_later})
         return verdict("dispatcher_fires", OK, "nothing runnable, so nothing is owed a fire", evidence={"runnable": 0})
     act = _active(research_runs, now)
     ages = [a for a in (_age_min(r.get("created_at"), now) for r in research_runs) if a is not None]
-    ev = {"runnable": runnable_n, "active_research_runs": len(act), "runs_listed": len(research_runs),
+    ev = {"runnable": runnable_n, "due_within_refill_horizon": due_later, "active_research_runs": len(act), "runs_listed": len(research_runs),
           "minutes_since_last_research_run_created": round(min(ages), 1) if ages else None,
           "workflows_counted": list(workflows) if workflows is not None else list(RESEARCH_WORKFLOWS)}
     if act:
@@ -698,7 +708,14 @@ def evaluate(probe: Any, cfg: dict, now: datetime, facts: Optional[dict]) -> Lis
             break
         research_runs += r
     n = facts["runnable"] if facts else None
-    out.append(check_fires(n, research_runs, now, th, counted))
+    # dispatcher_fires grades what is DUE NOW (the dispatcher's own rule); the queue floor keeps the 6 h refill horizon.
+    # Facts without the due-now split (older callers / fixtures) fall back to `runnable`, the previous reading.
+    if facts and isinstance(facts.get("by_backend_due_now"), dict):
+        n_due: Optional[int] = sum(int(v) for v in facts["by_backend_due_now"].values())
+    else:
+        n_due = n
+    out.append(check_fires(n_due, research_runs, now, th, counted,
+                           due_later=max(0, (n or 0) - (n_due or 0))))
     out.append(check_queue(n, th, {k: facts[k] for k in ("by_backend", "unplaceable", "router_style_due_not_counted_by_dispatchable")}
                            if facts else None))
     skip = set(cfg.get("backends_not_graded") or [])
