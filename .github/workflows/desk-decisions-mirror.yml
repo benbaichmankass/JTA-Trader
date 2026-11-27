@@ -106,8 +106,33 @@ jobs:
           python3 scripts/ci/check_desk_records.py
           if [ -n "$(git status --porcelain comms/desk)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
+      # VM-CONTROL-1127 (2026-11-27): grade at most once per ~55 min. This workflow is dispatched on every main push
+      # (~6 runs/h; 100 runs 04:00-21:59Z on 11-27) and each --live grade read up to ~100 x 1000-bar candles from the
+      # live VM's /api/bot/candles (MEASURED 21:30-21:33Z: 57 candle calls/min from runner IPs while the web-api used
+      # 61% of a CPU on a 92%-busy 2-CPU VM; the step ran 7 min in run 46070924846). Rows still mirror every run.
+      # Fails OPEN: any API error grades.
+      - name: Is the role grade due? (at most hourly)
+        id: grade_due
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+          WINDOW_S: "3300"
+        run: |
+          set -uo pipefail
+          due=1
+          ids="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/desk-decisions-mirror.yml/runs?status=completed&per_page=12" \
+                 --jq '.workflow_runs[] | select((now - (.run_started_at | fromdateiso8601)) < (env.WINDOW_S | tonumber)) | .id')" || ids=""
+          for id in $ids; do
+            c="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/jobs" \
+                 --jq '[.jobs[].steps[] | select(.name | startswith("Grade Claude")) | .conclusion][0] // ""')" || c=""
+            if [ "$c" = "success" ]; then
+              due=0; echo "::notice::role grade already ran in run ${id} within ${WINDOW_S}s; skipping it this run"; break
+            fi
+          done
+          echo "due=$due" >> "$GITHUB_OUTPUT"
+
       - name: Grade Claude's decisions per role (DESK-9-GRADING)
         id: grade
+        if: steps.grade_due.outputs.due != '0'
         continue-on-error: true
         env:
           DIAG_READ_TOKEN: ${{ secrets.DIAG_READ_TOKEN }}
