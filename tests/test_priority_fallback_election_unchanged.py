@@ -45,7 +45,9 @@ OLD_FALLBACK = 10
 #: it ties the ETF legs and still loses SLV to ``slv_pullback_1d`` (1); the same-symbol split is recorded in
 #: comms/same_symbol_allocation/.
 #: ``ml_entry_eq_struct``: put on alpaca_live + alpaca_portfolio 2026-11-08 (ML-ENTRY-EQ-STRUCT-LIVE); priority 0, same as ml_entry_eq.
-LATER_LEGS = ("ml_entry", "ml_entry_eq", "ml_entry_eq_struct")
+#: ``claude_desk``: widened to the 192 profiled symbols 2026-11-27 (ML-UNIVERSE-RULE, #29307), rostered on paper accounts
+#: only and ``queue_scored``; it joined these symbols after the 2026-09-28 change, so it has no "before" here.
+LATER_LEGS = ("ml_entry", "ml_entry_eq", "ml_entry_eq_struct", "claude_desk")
 
 
 def _old_priority(name: str) -> int:
