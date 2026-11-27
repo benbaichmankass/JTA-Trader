@@ -1361,11 +1361,68 @@ def lever_verdict(diffs: dict, folds_better: int, years_same: int, rule: dict = 
     return "indeterminate", (f"delta {d['delta']:+.4f}, t {d['t']}; control ok {ok_ctl}; folds {folds_better}; years {years_same}")
 
 
-def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | None = None) -> dict:
+# STALENESS + CAPACITY arms (drift-remediation step 3 for ml_entry, RQ-20261127-c4e2-02/-03). c4e2-01 (run 45976150814) found the
+# served v1 (train_end 2025-09-22) at -0.085 R/decision on 2026-11 with a -0.46 R long side far outside its dev history; the side and
+# regime arms are spent (f1a0-01/03, e1a7-01, d3a1-01). These arms ask whether FRESHER weighting (recency / rolling window) or a
+# BIGGER learner (deeper GBDT, XGBoost on GPU) beats the registered expanding-window recipe on the same dev folds, policy and costs.
+ARM_SPECS: dict[str, dict] = {
+    **{f"rec{h}": {"kind": "recency", "half_life_days": h} for h in (90, 180, 365, 730)},
+    **{f"win{m}": {"kind": "window", "months": m} for m in (12, 24, 36)},
+    "lgb_big": {"kind": "lgb", "params": {"n_estimators": 2000, "learning_rate": 0.01, "num_leaves": 127, "min_child_samples": 200}},
+    "xgb_d6": {"kind": "xgb", "params": {"max_depth": 6, "n_estimators": 600, "learning_rate": 0.05}},
+    "xgb_d8": {"kind": "xgb", "params": {"max_depth": 8, "n_estimators": 2000, "learning_rate": 0.02}},
+    "xgb_d10": {"kind": "xgb", "params": {"max_depth": 10, "n_estimators": 3000, "learning_rate": 0.01}},
+}
+XGB_BASE = {"tree_method": "hist", "subsample": 0.8, "colsample_bytree": 0.8, "min_child_weight": 50.0, "reg_lambda": 5.0,
+            "random_state": SEED, "verbosity": 0}
+
+
+def recency_weights(ts: pd.Series, fold_start: pd.Timestamp, half_life_days: float) -> np.ndarray:
+    """0.5 ** (age / half-life), age = days from the row's bar to the fold's first test bar (every train row is older)."""
+    age = (fold_start - pd.to_datetime(ts, utc=True)).dt.total_seconds().to_numpy() / 86400.0
+    return np.power(0.5, np.clip(age, 0.0, None) / float(half_life_days))
+
+
+def fit_predict_spec(train: pd.DataFrame, test: pd.DataFrame, spec: dict, fold_start: pd.Timestamp, n_jobs: int | None = None,
+                     placebo: bool = False, xgb_device: str = "cpu") -> tuple[np.ndarray, np.ndarray]:
+    """The registered two-regressor recipe with ONE thing changed per ``spec``. ``placebo`` (recency only) fits the same weight
+    values shuffled across rows: the same effective sample size with the recency information removed."""
+    feats, weight = FEATURES, None
+    if spec["kind"] == "window":
+        train = train[train.ts >= fold_start - pd.DateOffset(months=int(spec["months"]))]
+    if spec["kind"] == "recency":
+        weight = recency_weights(train.ts, fold_start, spec["half_life_days"])
+        if placebo:
+            weight = np.random.default_rng(SEED + int(fold_start.timestamp()) % 9973).permutation(weight)
+    preds = []
+    for side in ("long", "short"):
+        if spec["kind"] == "xgb":
+            import xgboost as xgb
+            m = xgb.XGBRegressor(**XGB_BASE, **spec["params"], device=xgb_device, n_jobs=n_jobs or LGB_PARAMS["n_jobs"])
+        else:
+            import lightgbm as lgb
+            params = {**LGB_PARAMS, **(spec.get("params") or {})}
+            if n_jobs is not None:
+                params["n_jobs"] = n_jobs
+            m = lgb.LGBMRegressor(**params)
+        m.fit(train[feats], train[f"net_{side}"], sample_weight=weight)
+        # provenance: predict — a regressor's predict is the regressed net R of that side, not a probability
+        preds.append(m.predict(test[feats]))
+    return preds[0], preds[1]
+
+
+def sidak_t(k: int, alpha: float = 0.025) -> float:
+    """One-sided Sidak z for k arms graded in one unit (k = 1 -> 1.96); the unit's PASS bar is max(LEVER_RULE min_t, this)."""
+    from statistics import NormalDist
+    return NormalDist().inv_cdf(1.0 - (1.0 - (1.0 - alpha) ** (1.0 / max(1, k))))
+
+
+def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | None = None, rule: dict = LEVER_RULE,
+               xgb_device: str = "cpu") -> dict:
     """Dev folds only (DEV_FOLDS .. HOLDOUT_START), registered recipe refit per fold, same tau / cost stack / sequencing."""
     d_bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < d_bounds[-1]]
-    pooled = {k: [] for k in ("base", "regime", "placebo", "top1", "random1")}
+    pooled: dict[str, list] = {k: [] for k in ("base", "regime", "placebo", "top1", "random1")}
     folds = []
     for a, b in itertools.pairwise(d_bounds):
         test = dev[(dev.ts >= a) & (dev.ts < b - pd.Timedelta(hours=HORIZON_H + 1))]
@@ -1384,14 +1441,24 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             rng = np.random.default_rng(SEED + int(a.timestamp()) % 9973)   # RANDOM_DRAWS seeded draws, pooled: the control's mean
             tk["random1"] = pd.concat([policy_bar_topk(test, pl, ps, tau, 1, rng=rng).assign(draw=k) for k in range(RANDOM_DRAWS)],
                                       ignore_index=True)
+        for arm in (x for x in arms if x in ARM_SPECS):
+            spec = ARM_SPECS[arm]
+            al, as_ = fit_predict_spec(train, test, spec, a, n_jobs, xgb_device=xgb_device)
+            tk[arm] = policy(test, al, as_, tau)
+            if spec["kind"] == "recency":
+                ql, qs = fit_predict_spec(train, test, spec, a, n_jobs, placebo=True)
+                tk[f"placebo_{arm}"] = policy(test, ql, qs, tau)
         for k, v in tk.items():
-            pooled[k].append(v)
+            pooled.setdefault(k, []).append(v)
             rec[k] = split_by_side(v)
         folds.append(rec)
         print(json.dumps({"fold": rec["test_start"]} | {k: (rec[k]["all"]["n"], rec[k]["all"]["mean_net_r"]) for k in tk}), flush=True)
     cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items() if v}
     res = {"folds": folds, "pooled": {k: split_by_side(v) | {"bar_risk": bar_risk(v)} for k, v in cat.items()}, "arms": {}}
     pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"}}
+    for arm in (x for x in arms if x in ARM_SPECS):
+        pairs[arm] = ({"vs_base": "base", "vs_placebo": f"placebo_{arm}"} if ARM_SPECS[arm]["kind"] == "recency"
+                      else {"vs_base": "base"})
     for arm in arms:
         diffs = {name: arm_diff(cat[arm], cat[ref]) for name, ref in pairs[arm].items()}
         fb = sum(1 for f in folds if f.get(arm) and f[arm]["all"]["mean_net_r"] is not None and f["base"]["all"]["mean_net_r"] is not None
@@ -1402,8 +1469,8 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             b_ = cat["base"][pd.to_datetime(cat["base"].ts, utc=True).dt.year == y]
             yearly[str(y)] = (float(a_.net_r.mean() - b_.net_r.mean()) if len(a_) and len(b_) else None)
         ys = sum(1 for v in yearly.values() if v is not None and v > 0)
-        ctl = "vs_placebo" if arm == "regime" else "vs_random1"
-        v, why = lever_verdict(diffs, fb, ys, control=ctl)
+        ctl = next((k for k in pairs[arm] if k != "vs_base"), None)
+        v, why = lever_verdict(diffs, fb, ys, rule=rule, control=ctl)
         res["arms"][arm] = {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
                             "verdict": v, "why": why}
     return res
@@ -1416,22 +1483,38 @@ def lever_arms_cmd(args) -> int:
     cache, out = Path(args.cache), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    if args.fetch:
+    cache_report = None
+    if getattr(args, "cache_source", "fetch") == "published":
+        import os
+
+        import ml_entry_residual as RES
+        root = Path(os.environ.get("ML_DATA_ROOT", ""))
+        if not (root / "datasets-out").is_dir():
+            raise SystemExit(f"--cache-source published needs $ML_DATA_ROOT with datasets-out/ (got {str(root)!r})")
+        cache_report, _present = RES.cache_from_published(cache, universe(), root)
+    elif args.fetch:
         R.fetch_through(cache, universe(), R.plan(date.fromisoformat(args.run_date)))
     tab = build_table(cache, universe())
     arms = args.arm or ["regime", "top1"]
+    rule = dict(LEVER_RULE)
+    k_new = sum(1 for x in arms if x in ARM_SPECS)   # the registered regime/top1 units keep their exact rule
+    if k_new > 1:   # several arms graded in one unit: the family bar (Sidak) applies to each arm's t
+        rule |= {"min_t": round(max(LEVER_RULE["min_t"], sidak_t(k_new)), 4), "n_arms": k_new}
+    xgb_device = getattr(args, "xgb_device", "cpu")
     if "regime" in arms:
         tab = pd.concat([tab.reset_index(drop=True), regime_columns(cache, universe(), tab)], axis=1)
         tab = tab.dropna(subset=REGIME_FEATURES).reset_index(drop=True)
     tau = float(args.tau) if args.tau is not None else 0.10
-    res = lever_arms(tab, tau, arms)
-    res |= {"schema": "ml_decision_entry_lever_arms/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(), "rule": LEVER_RULE,
+    res = lever_arms(tab, tau, arms, getattr(args, "n_jobs", None), rule=rule, xgb_device=xgb_device)
+    res |= {"schema": "ml_decision_entry_lever_arms/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(), "rule": rule,
+            "xgb_device": xgb_device, "cache_source": getattr(args, "cache_source", "fetch"), "cache_report": cache_report,
+            "arm_specs": {k: ARM_SPECS[k] for k in arms if k in ARM_SPECS},
             "table_rows": len(tab), "table_min_ts": str(tab.ts.min()), "table_max_ts": str(tab.ts.max()), "n_symbols": int(tab.symbol.nunique()),
             "regime_features": REGIME_FEATURES, "cost_stack": f"fee {FEE_BPS} bps rt + slippage 3.0 bps + funding 1.0 bps/8h (label_symbol net R)",
             "read_state": "measured", "elapsed_s": round(time.time() - t0)}
     (out / "summary.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     for arm, r in res["arms"].items():
-        vj = {"verdict": r["verdict"], "read_state": "measured", "n": r["diffs"]["vs_base"]["n_a"], "note": r["why"], "rule": LEVER_RULE,
+        vj = {"verdict": r["verdict"], "read_state": "measured", "n": r["diffs"]["vs_base"]["n_a"], "note": r["why"], "rule": rule,
               "arm": arm, "population": (f"registered recipe refit per dev fold {DEV_FOLDS[0]}..{HOLDOUT_START} (60-perp frozen universe), tau {tau}, "
                                          f"net R fee {FEE_BPS}+slip 3+funding 1 bps/8h, week-clustered se"),
               "measurement": r | {"pooled": {k: res["pooled"][k] for k in res["pooled"]}}}
@@ -1448,6 +1531,26 @@ def lever_arms_cmd(args) -> int:
             vj["note"] = f"{first}: {vj['note']} | " + "; ".join(f"{k}: {r['verdict']}" for k, r in res["arms"].items())
         (out / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n")
     return 0
+
+
+def _self_test_staleness_capacity() -> None:
+    fs = pd.Timestamp("2025-01-01", tz="UTC")
+    w = recency_weights(pd.Series(pd.to_datetime(["2024-12-02", "2024-10-03", "2025-01-01"], utc=True)), fs, 30)
+    assert abs(w[0] - 0.5) < 1e-9 and abs(w[1] - 0.125) < 1e-9 and abs(w[2] - 1.0) < 1e-9, w
+    assert abs(sidak_t(1) - 1.959964) < 1e-4 and sidak_t(7) > 2.6, sidak_t(7)
+    rng = np.random.default_rng(0)
+    n = 4000
+    ts = pd.date_range("2022-01-01", periods=n, freq="4h", tz="UTC")
+    tr = pd.DataFrame({f: rng.normal(size=n) for f in FEATURES} | {"ts": ts})
+    tr["net_long"] = tr[FEATURES[0]] * 0.1 + rng.normal(scale=1.0, size=n)
+    tr["net_short"] = -tr["net_long"]
+    te = tr.tail(50)
+    for arm in ("rec90", "win12", "lgb_big"):
+        spec = {**ARM_SPECS[arm], **({"params": {"n_estimators": 20, "num_leaves": 7, "min_child_samples": 20}} if arm == "lgb_big" else {})}
+        pl, ps = fit_predict_spec(tr, te, spec, ts[-1], n_jobs=1)
+        assert len(pl) == len(te) == len(ps) and np.isfinite(pl).all()
+    a, b = fit_predict_spec(tr, te, ARM_SPECS["rec90"], ts[-1], n_jobs=1, placebo=True), fit_predict_spec(tr, te, ARM_SPECS["rec90"], ts[-1], n_jobs=1)
+    assert not np.allclose(a[0], b[0]), "the placebo must fit different (shuffled) weights"
 
 
 def _self_test_lever_arms() -> None:
@@ -1539,6 +1642,7 @@ def _self_test() -> None:
     _self_test_universe_costed()
     _self_test_side_by_fold()
     _self_test_lever_arms()
+    _self_test_staleness_capacity()
     print("self-test ok")
 
 
@@ -1591,7 +1695,7 @@ def live_gap_cmd(args) -> int:
             "by_week": _cut(taken, "week"), "traded_by_week": _cut(tr, "week"), "by_exit": _cut(taken, "exit"),
             "traded_by_exit": _cut(tr, "exit"), "git_sha": _git_sha(), "elapsed_s": round(time.time() - t0)}
     (out / "summary.json").write_text(json.dumps(meas, indent=1, default=str) + "\n")
-    n = int(len(taken))
+    n = len(taken)
     vj = {"verdict": "indeterminate", "read_state": "measured", "n": n, "measurement": meas,
           "note": (f"DESCRIPTIVE (grades nothing): served {meta.get('model_id')} on {args.fwd_start}..{args.fwd_end}: all n={n} "
                    f"mean {meas['all'].get('mean_net_r')}; traded n={len(tr)} mean {meas['traded'].get('mean_net_r')}"),
@@ -1625,7 +1729,12 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
     ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
     ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
-    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1"], help="lever-arms: which arm(s); default both")
+    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", *ARM_SPECS],
+                    help="lever-arms: which arm(s); default regime + top1")
+    ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
+                    help="lever-arms: published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")
+    ap.add_argument("--xgb-device", dest="xgb_device", choices=("cpu", "cuda"), default="cpu", help="lever-arms: xgb_* arms device")
+    ap.add_argument("--n-jobs", dest="n_jobs", type=int, default=None, help="lever-arms: threads per fit (default LGB_PARAMS n_jobs)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
