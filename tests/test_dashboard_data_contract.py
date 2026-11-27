@@ -215,6 +215,7 @@ def test_positions_returns_open_trade_against_canonical_schema(
         # the null as "not measured" (Position-shape contract).
         "unrealizedPnl": None,
         "unrealizedPnlSource": "unavailable",
+        "unrealizedPnlReadState": "read",
         # 2026-07-30: the canonical provenance BUCKET for the raw source string
         # above, via src.runtime.provenance.classify. Additive and derived — it
         # introduces no new measurement, it just stops the existing signal being
