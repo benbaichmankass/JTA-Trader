@@ -675,10 +675,16 @@ def _directed_loop() -> None:
         time.sleep(SPOOL_TICK_S)
 
 
+def run_confirm_pass() -> Dict[str, Any]:
+    """LTR-PROP-RECEIPT-CONFIRM-WRITEBACK: resolve every venue_unconfirmed receipt from its executor's write-back."""
+    from src.runtime.live_review_confirm import run_confirm_pass as run
+    return run()
+
+
 def _loop() -> None:
     _proof(lambda fp: fp.ensure_seeded())
     while True:
-        for one in (run_pass, run_desk_pass):
+        for one in (run_pass, run_desk_pass, run_confirm_pass):
             try:
                 one()
             except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)
