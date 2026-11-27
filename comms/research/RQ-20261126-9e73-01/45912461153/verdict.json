@@ -1,0 +1,1061 @@
+{
+  "verdict": "fail",
+  "read_state": "measured",
+  "n": 72000,
+  "population": "3 group(s) ['BTCUSDT_1h', 'ETHUSDT_1h', 'SOLUSDT_1h']; baseline lgbm; candidates ['gru_raw_w64', 'gru_raw_w168']; metric logloss; n = baseline OOS test rows summed over groups; cv folds per group >= 5",
+  "note": "no candidate reaches the registered floor on any clause",
+  "measurement": {
+    "engine": "scripts/research/ml_bakeoff.py",
+    "metric": "logloss",
+    "higher_is_better": false,
+    "metric_caveats": [],
+    "delta_sign": "positive = learner better than reference",
+    "baseline": "lgbm",
+    "controls": [
+      "prior"
+    ],
+    "candidates": [
+      "gru_raw_w64",
+      "gru_raw_w168"
+    ],
+    "arm_status": {
+      "prior": "ok",
+      "lgbm": "ok",
+      "gru_raw_w64": "ok",
+      "gru_raw_w168": "ok"
+    },
+    "torch_devices": [
+      "cuda"
+    ],
+    "torch_gru_fit": [
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.424137,
+        "temperature": 0.9513,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 8,
+        "best_epoch": 4,
+        "best_val_logloss": 0.518103,
+        "temperature": 1.1616,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 8,
+        "best_epoch": 4,
+        "best_val_logloss": 0.477243,
+        "temperature": 0.905,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 10,
+        "best_epoch": 6,
+        "best_val_logloss": 0.347456,
+        "temperature": 1.0,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.395184,
+        "temperature": 0.9513,
+        "n_train": 28141,
+        "n_val": 7035
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.424299,
+        "temperature": 0.9513,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 8,
+        "best_epoch": 4,
+        "best_val_logloss": 0.517802,
+        "temperature": 1.1616,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 8,
+        "best_epoch": 4,
+        "best_val_logloss": 0.477777,
+        "temperature": 0.905,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 9,
+        "best_epoch": 5,
+        "best_val_logloss": 0.345828,
+        "temperature": 0.819,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 10,
+        "best_epoch": 6,
+        "best_val_logloss": 0.392716,
+        "temperature": 1.0,
+        "n_train": 28141,
+        "n_val": 7035
+      },
+      {
+        "epochs_run": 12,
+        "best_epoch": 8,
+        "best_val_logloss": 0.546084,
+        "temperature": 1.105,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.577362,
+        "temperature": 1.1616,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 12,
+        "best_epoch": 8,
+        "best_val_logloss": 0.571691,
+        "temperature": 0.905,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 13,
+        "best_epoch": 9,
+        "best_val_logloss": 0.594948,
+        "temperature": 1.105,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 6,
+        "best_epoch": 2,
+        "best_val_logloss": 0.56873,
+        "temperature": 1.0,
+        "n_train": 28141,
+        "n_val": 7035
+      },
+      {
+        "epochs_run": 12,
+        "best_epoch": 8,
+        "best_val_logloss": 0.548933,
+        "temperature": 1.105,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.576957,
+        "temperature": 1.1616,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 8,
+        "best_epoch": 4,
+        "best_val_logloss": 0.573661,
+        "temperature": 1.0512,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 13,
+        "best_epoch": 9,
+        "best_val_logloss": 0.594907,
+        "temperature": 1.105,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 12,
+        "best_epoch": 8,
+        "best_val_logloss": 0.562505,
+        "temperature": 1.0512,
+        "n_train": 28141,
+        "n_val": 7035
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.446943,
+        "temperature": 0.9513,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 11,
+        "best_epoch": 7,
+        "best_val_logloss": 0.585358,
+        "temperature": 1.0,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 9,
+        "best_epoch": 5,
+        "best_val_logloss": 0.57853,
+        "temperature": 1.105,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.61239,
+        "temperature": 1.0512,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 13,
+        "best_epoch": 9,
+        "best_val_logloss": 0.60407,
+        "temperature": 1.105,
+        "n_train": 28141,
+        "n_val": 7035
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.446977,
+        "temperature": 0.9513,
+        "n_train": 12781,
+        "n_val": 3195
+      },
+      {
+        "epochs_run": 11,
+        "best_epoch": 7,
+        "best_val_logloss": 0.585213,
+        "temperature": 1.0,
+        "n_train": 16621,
+        "n_val": 4155
+      },
+      {
+        "epochs_run": 9,
+        "best_epoch": 5,
+        "best_val_logloss": 0.578681,
+        "temperature": 1.105,
+        "n_train": 20461,
+        "n_val": 5115
+      },
+      {
+        "epochs_run": 7,
+        "best_epoch": 3,
+        "best_val_logloss": 0.612407,
+        "temperature": 1.0512,
+        "n_train": 24301,
+        "n_val": 6075
+      },
+      {
+        "epochs_run": 13,
+        "best_epoch": 9,
+        "best_val_logloss": 0.604413,
+        "temperature": 1.105,
+        "n_train": 28141,
+        "n_val": 7035
+      }
+    ],
+    "groups": {
+      "BTCUSDT_1h": {
+        "n_rows": 40000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6179228679497598,
+                  0.5968861225357088,
+                  0.4135032063380217,
+                  0.5375500245641097,
+                  0.4311219500187922
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5263489848329121,
+                  0.4813031850546662,
+                  0.3095536197098743,
+                  0.43830028221588707,
+                  0.34957239714084837
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.541741132736206,
+                  0.492793470621109,
+                  0.31467294692993164,
+                  0.45723262429237366,
+                  0.3536197543144226
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5416355729103088,
+                  0.4922361373901367,
+                  0.31612923741340637,
+                  0.45761972665786743,
+                  0.36388978362083435
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "n_rows": 40000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.6631741889999513,
+                  0.7237106434175806,
+                  0.6961824507940613,
+                  0.6644719550675776,
+                  0.5925335336923852
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5883039646187427,
+                  0.5956701685196759,
+                  0.5938433454958915,
+                  0.532839593984467,
+                  0.4961041957223294
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.57866370677948,
+                  0.5816510915756226,
+                  0.6050065159797668,
+                  0.5484994649887085,
+                  0.49437856674194336
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5810850858688354,
+                  0.5805895328521729,
+                  0.6111316084861755,
+                  0.5504592657089233,
+                  0.49029383063316345
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          }
+        }
+      },
+      "SOLUSDT_1h": {
+        "n_rows": 40000,
+        "classes": [
+          "range",
+          "volatile"
+        ],
+        "arms": {
+          "prior": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.635557966678656,
+                  0.6467651815138508,
+                  0.709596251719601,
+                  0.7677058117343903,
+                  0.78657814463218
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "lgbm": {
+            "status": "ok",
+            "features": [
+              "rolling_log_return_vol",
+              "log_return",
+              "log_return_lag_1",
+              "log_return_lag_2",
+              "hour_of_day",
+              "dayofweek",
+              "parkinson_vol",
+              "garman_klass_vol",
+              "rogers_satchell_vol",
+              "yang_zhang_vol"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5692611257771722,
+                  0.5673169490305932,
+                  0.61811729935583,
+                  0.5910338239877695,
+                  0.5765164805828048
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5573204159736633,
+                  0.5716962218284607,
+                  0.6335108876228333,
+                  0.6075954437255859,
+                  0.5811370015144348
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "status": "ok",
+            "features": [
+              "raw_r1",
+              "raw_hl",
+              "raw_co",
+              "raw_gap",
+              "raw_lv"
+            ],
+            "windows": {
+              "cv": {
+                "fold_metric": [
+                  0.5573143362998962,
+                  0.5717761516571045,
+                  0.6335738897323608,
+                  0.6076470017433167,
+                  0.5807991623878479
+                ],
+                "n_test_rows": 24000
+              }
+            }
+          }
+        }
+      }
+    },
+    "deltas": {
+      "BTCUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.09838114049044085,
+              "ci95": [
+                -0.11429545453332024,
+                -0.08246682644756145
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.09838114049044078,
+                "ci95": [
+                  -0.10869795745426543,
+                  -0.08727371297397281
+                ],
+                "sd": 0.005495579480193357,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.0,
+                "ci95": [
+                  -0.0,
+                  0.0
+                ],
+                "sd": 0.0,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.010996291987970985,
+              "ci95": [
+                -0.01897879764078305,
+                -0.003013786335158919
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.010996268146113097,
+                "ci95": [
+                  -0.017015091212399625,
+                  -0.0046808463322082034
+                ],
+                "sd": 0.003106658474662349,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.08738484850246986,
+              "ci95": [
+                0.07115921133335563,
+                0.10361048567158408
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.08738487234432768,
+                "ci95": [
+                  0.0756369059043451,
+                  0.09795616082107046
+                ],
+                "sd": 0.005602862335647757,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.013286397807673133,
+              "ci95": [
+                -0.019241374815699236,
+                -0.007331420799647031
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.013286397807673156,
+                "ci95": [
+                  -0.01909414925874503,
+                  -0.007399157971255836
+                ],
+                "sd": 0.0030419611719640217,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0850947426827677,
+              "ci95": [
+                0.06589713048089046,
+                0.10429235488464494
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.08509474268276762,
+                "ci95": [
+                  0.07346594221534862,
+                  0.09590724178629952
+                ],
+                "sd": 0.005640494104495619,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          }
+        }
+      },
+      "ETHUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.10666230072608988,
+              "ci95": [
+                -0.13587414430044198,
+                -0.07745045715173779
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.10666230072608984,
+                "ci95": [
+                  -0.11981820487041385,
+                  -0.09316356817434901
+                ],
+                "sd": 0.006915726879913902,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.0,
+                "ci95": [
+                  -0.0,
+                  0.0
+                ],
+                "sd": 0.0,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.0002876155448829576,
+              "ci95": [
+                -0.016257232116452268,
+                0.015682001026686355
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.00028759170302505854,
+                "ci95": [
+                  -0.0075953317206748526,
+                  0.0070428953065935825
+                ],
+                "sd": 0.003800593488097402,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.10637468518120693,
+              "ci95": [
+                0.07764518590503824,
+                0.13510418445737563
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.10637470902306478,
+                "ci95": [
+                  0.09331561064260445,
+                  0.11891908111308741
+                ],
+                "sd": 0.006531808427846271,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.0013596110416328356,
+              "ci95": [
+                -0.020119623954398612,
+                0.01740040187113294
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.0013596408439552343,
+                "ci95": [
+                  -0.008865751436432864,
+                  0.006325319222459841
+                ],
+                "sd": 0.0038750395222058396,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.10530268968445707,
+              "ci95": [
+                0.07448729620210892,
+                0.1361180831668052
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.10530265988213461,
+                "ci95": [
+                  0.09184928571195075,
+                  0.1176512831609948
+                ],
+                "sd": 0.006581305754749564,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          }
+        }
+      },
+      "SOLUSDT_1h": {
+        "cv": {
+          "prior": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.12479153550890168,
+              "ci95": [
+                -0.2046466599522086,
+                -0.044936411065594775
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.12479153550890165,
+                "ci95": [
+                  -0.13944411889701297,
+                  -0.10863583401784774
+                ],
+                "sd": 0.007820825038686386,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.0,
+                "ci95": [
+                  -0.0,
+                  0.0
+                ],
+                "sd": 0.0,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w64": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.0058028583861616575,
+              "ci95": [
+                -0.020039053796860336,
+                0.00843333702453702
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.005802846465232658,
+                "ci95": [
+                  -0.012063910372952926,
+                  0.000885512435648644
+                ],
+                "sd": 0.0034634224929756233,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.11898867712274001,
+              "ci95": [
+                0.04399732867910508,
+                0.19398002556637495
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.118988689043669,
+                "ci95": [
+                  0.10462442220799857,
+                  0.1322621420769856
+                ],
+                "sd": 0.007070993396003977,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          },
+          "gru_raw_w168": {
+            "lgbm": {
+              "n_folds": 5,
+              "mean": -0.005772972617271277,
+              "ci95": [
+                -0.02005278012579774,
+                0.008506834891255187
+              ],
+              "sign_consistent": false,
+              "boot": {
+                "n_rows": 24000,
+                "mean": -0.005773044142844963,
+                "ci95": [
+                  -0.0120635052236398,
+                  0.000996565103231175
+                ],
+                "sd": 0.0034631821772394015,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            },
+            "prior": {
+              "n_folds": 5,
+              "mean": 0.1190185628916304,
+              "ci95": [
+                0.043857265979383706,
+                0.1941798598038771
+              ],
+              "sign_consistent": true,
+              "boot": {
+                "n_rows": 24000,
+                "mean": 0.11901849136605669,
+                "ci95": [
+                  0.10458100469462805,
+                  0.13233961647211948
+                ],
+                "sd": 0.007084633431268516,
+                "block_rows": 24,
+                "n_boot": 1000,
+                "seed": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "rule_evaluation": {
+      "verdict": "fail",
+      "why": "no candidate reaches the registered floor on any clause",
+      "candidates": {
+        "gru_raw_w64": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['BTCUSDT_1h', 'ETHUSDT_1h', 'SOLUSDT_1h'] > 0.0 vs lgbm/cv"
+            }
+          ]
+        },
+        "gru_raw_w168": {
+          "evaluated": true,
+          "passes_all": false,
+          "clauses": [
+            {
+              "holds": false,
+              "what": "['BTCUSDT_1h', 'ETHUSDT_1h', 'SOLUSDT_1h'] > 0.0 vs lgbm/cv"
+            }
+          ]
+        }
+      }
+    },
+    "headline_checks": [],
+    "licences": {
+      "prior": {
+        "kind": "prior",
+        "licence": "n/a",
+        "research_only": false,
+        "weights": ""
+      },
+      "lgbm": {
+        "kind": "lightgbm",
+        "licence": "MIT",
+        "research_only": false,
+        "weights": ""
+      },
+      "gru_raw_w64": {
+        "kind": "torch_gru",
+        "licence": "BSD-3-Clause (torch)",
+        "research_only": false,
+        "weights": ""
+      },
+      "gru_raw_w168": {
+        "kind": "torch_gru",
+        "licence": "BSD-3-Clause (torch)",
+        "research_only": false,
+        "weights": ""
+      }
+    },
+    "n_folds_cv_min_over_groups": 5,
+    "seconds": 217.9
+  }
+}
