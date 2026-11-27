@@ -228,10 +228,11 @@ strategies, never symbols"): an account configures only its roster. A
 non-ML leg's `symbols:` is the symbol its own evidence measured. An ML leg's
 universe is the whole population its registered pooled test passed on (net
 of each symbol's own costs, minus a cost/liquidity filter fixed before the
-run), limited to what the venue can trade; per-symbol results never gate. Per-account symbol maps (`account_symbols` on `ml_entry` and
-`claude_desk`) still exist in today's config but violate the rule; the
-inventory and fixes are in
-`docs/audits/2026-11-04-per-symbol-config-inventory.md`. **The authoritative per-cell
+run), limited to what the venue can trade; per-symbol results never gate. The per-account symbol maps
+(`account_symbols` on `ml_entry` and `claude_desk`) were REMOVED 2026-11-26 (ML-UNIVERSE-RULE): an account's set on a leg is
+derived by `src/config/symbol_sets.py::leg_symbols` from the venue's asset classes (`src/config/venue_capability.py`), the
+prop gate's scored population on a prop account (`comms/prop_survival/<leg>.json::symbols`) and the ML population record;
+the 2026-11-04 inventory is `docs/audits/2026-11-04-per-symbol-config-inventory.md`. **The authoritative per-cell
 `execution:`/`enabled:`/`symbols:` matrix is `config/strategies.yaml`,
 surfaced on `/api/bot/strategies` — it is deliberately NOT re-enumerated in
 prose here** (an exhaustive per-cell list in this doc is exactly what drifted

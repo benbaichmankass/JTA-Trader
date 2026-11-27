@@ -123,7 +123,7 @@ from typing import Any, Dict, List
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from src.config.symbol_sets import ACCOUNT_SYMBOLS_KEY, leg_symbols  # noqa: E402
+from src.config.symbol_sets import leg_symbols  # noqa: E402
 
 ACCOUNTS = REPO / "config" / "accounts.yaml"
 STRATEGIES = REPO / "config" / "strategies.yaml"
@@ -257,15 +257,15 @@ def findings(accounts: Dict[str, Any], strategies: Dict[str, Any],
                                else "declares no `symbols:`"),
                 })
                 continue
-            # A leg with a per-account scope (`account_symbols`, DESK-PAPER-ACCOUNTS)
-            # needs only ITS slice here; a rostering account the map gives nothing
-            # would roster a leg that can never trade on it.
+            # ML-UNIVERSE-RULE: a leg needs, per account, only the symbols that account's venue can
+            # trade (plus its prop / ML population); a rostering account whose venue can trade none of
+            # them rosters a leg that can never trade there.
             syms = leg_symbols(scfg, name, leg=str(strat))   # the runtime view: a population record (src/config/ml_universe.py) counts
             if not syms:
                 out.append({
                     "kind": "strategy_unknown", "account": name,
                     "strategy": str(strat), "symbol": "",
-                    "detail": f"`{ACCOUNT_SYMBOLS_KEY}` names no symbol of the leg for {name}",
+                    "detail": f"{name}'s venue can trade no symbol of the leg (src/config/venue_capability.py)",
                 })
                 continue
             # A `pool_scored` leg (row ML-ENTRY-EQ-STRUCT-FULL-POOL) gets its data from its own pool-snapshot refresher and a tick pass for each
@@ -416,15 +416,21 @@ def _self_test() -> int:
     check("9 (case + `/` differences normalise to the same symbol -> clean)",
           findings(a9, strategies, profiled) == [])
 
-    # 9b. A per-account leg scope (`account_symbols`): each account needs only its own slice, and a
-    #     rostering account the map does not name is strategy_unknown (the leg could never trade there).
-    s9 = {"desk": {"symbols": ["BTCUSDT", "AVAXUSDT"],
-                   "account_symbols": {"a": ["BTCUSDT"], "b": ["AVAXUSDT"]}}}
+    # 9b. ML-UNIVERSE-RULE: each account needs only the leg's symbols ITS venue can trade, and a rostering
+    #     account whose venue can trade none of them is strategy_unknown (the leg could never trade there).
+    import src.config.symbol_sets as _SS
+    s9 = {"desk": {"symbols": ["BTCUSDT", "SPY"]}}
     a9b = {"a": {"strategies": ["desk"], "symbols": ["BTCUSDT"]},
-           "b": {"strategies": ["desk"], "symbols": ["AVAXUSDT"]},
+           "b": {"strategies": ["desk"], "symbols": ["SPY"]},
            "c": {"strategies": ["desk"], "symbols": ["BTCUSDT"]}}
-    f9b = findings(a9b, s9, profiled)
-    check("9b (scoped leg: each account checked on its own slice; an unnamed rostering account -> "
+    _venues = {"a": {"exchange": "bybit"}, "b": {"exchange": "alpaca"}, "c": {"exchange": "oanda"}}
+    _real_account = _SS._account
+    _SS._account = lambda acct: _venues.get(str(acct))
+    try:
+        f9b = findings(a9b, s9, profiled | {"SPY"})
+    finally:
+        _SS._account = _real_account
+    check("9b (each account checked on what its venue can trade; a venue that can trade none -> "
           "strategy_unknown)",
           [(f["kind"], f["account"]) for f in f9b] == [("strategy_unknown", "c")])
 

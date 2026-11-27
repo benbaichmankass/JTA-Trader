@@ -208,38 +208,34 @@ _LEG_SCOPE_CACHE: Optional[tuple] = None  # ((strategies.yaml mtime, population-
 
 
 def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]]:
-    """``{account_id: [symbols]}`` for a leg that declares ``account_symbols``
-    (DESK-PAPER-ACCOUNTS: one ``claude_desk`` leg on three venues), else None.
+    """``{account_id: [symbols]}`` for every account rostering the leg: the leg's set there, DERIVED by
+    ``symbol_sets.leg_symbols`` (ML-UNIVERSE-RULE 2026-11-26: the account's venue can trade it, a prop account only the
+    prop gate's scored population, plus passed ML populations). There is no per-account symbol map.
 
-    ``config/strategies.yaml::<leg>.account_symbols`` says which of the leg's
-    ``symbols:`` each rostering account trades, so a SPY desk package never
-    reaches ``bybit_1`` and a BTCUSDT one never reaches ``alpaca_paper``
-    (``symbol_exchange_routing`` below only separates IB). Cached on the
-    file's mtime. An unreadable config returns None and is logged: the desk leg's
-    own builder emits nothing when that file is unreadable, so no scoped
-    package exists to mis-route.
+    So a SPY desk package never reaches ``bybit_1`` and a BTCUSDT one never reaches ``alpaca_paper`` -- because that venue
+    cannot trade it, not because a map says so. Cached on the mtimes of strategies.yaml, accounts.yaml and the
+    population / prop-survival records. An unreadable config returns None and is logged (no per-account scope applied:
+    the venue's own refusal and the per-trade RiskManager still stand).
     """
     global _LEG_SCOPE_CACHE
     if not strategy:
         return None
     try:
         from src.config import ml_universe as _mu
-        from src.config.symbol_sets import (
-            ACCOUNT_SYMBOLS_KEY,
-            leg_symbols,
-            scoped_leg_accounts,
-        )
+        from src.config.accounts_loader import _resolve_path as _accounts_path
+        from src.config.symbol_sets import PROP_SURVIVAL_DIR, leg_symbols, rostering_accounts
         from src.units.strategies import _DEFAULT_STRATEGIES_YAML, load_strategy_config
-        # the population records (comms/ml_universe/*.json) change a scoped ML leg's per-account set too
-        mtime = (os.path.getmtime(_DEFAULT_STRATEGIES_YAML),
-                 tuple((p.name, p.stat().st_mtime) for p in sorted(_mu.RECORD_DIR.glob("*.json"))))
+        mtime = (os.path.getmtime(_DEFAULT_STRATEGIES_YAML), os.path.getmtime(_accounts_path(None)),
+                 tuple((p.name, p.stat().st_mtime) for p in sorted(_mu.RECORD_DIR.glob("*.json"))),
+                 tuple((p.name, p.stat().st_mtime) for p in sorted(PROP_SURVIVAL_DIR.glob("*.json"))))
         if _LEG_SCOPE_CACHE is None or _LEG_SCOPE_CACHE[0] != mtime:
-            # strategies.yaml is ~150 ms to parse: re-read only when it changes.
+            # strategies.yaml is ~150 ms to parse: re-read only when an input changes.
             scopes: Dict[str, Dict[str, List[str]]] = {}
             for name, scfg in (load_strategy_config() or {}).items():
-                sc = scfg.get(ACCOUNT_SYMBOLS_KEY) if isinstance(scfg, dict) else None
-                if isinstance(sc, dict):
-                    scopes[str(name)] = {a: leg_symbols(scfg, a, leg=str(name)) for a in scoped_leg_accounts(str(name), sc)}
+                if isinstance(scfg, dict):
+                    sc = {a: leg_symbols(scfg, a, leg=str(name)) for a in rostering_accounts(str(name))}
+                    sc["__declared__"] = leg_symbols(scfg, None, leg=str(name))   # the leg's whole declared union
+                    scopes[str(name)] = sc
             _LEG_SCOPE_CACHE = (mtime, scopes)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[coordinator] leg account scope unreadable for %s: %s", strategy, exc)
@@ -269,8 +265,8 @@ def _leg_account_scope(strategy: Optional[str]) -> Optional[Dict[str, List[str]]
 # and ``outside_account_scope`` is E35's per-account election losing
 # gracefully to a same-symbol sibling. Every other reason names a leg that DOES
 # belong on this account and is still not reaching it, so it logs at WARNING.
-# leg_account_scope (DESK-PAPER-ACCOUNTS): every claude_desk package is dropped on the two accounts whose venue it
-# is not -- by design, so DEBUG like the other two.
+# leg_account_scope (ML-UNIVERSE-RULE): a package is dropped on every rostering account whose venue cannot trade its
+# symbol (e.g. a desk SPY package on bybit_1) -- by design, so DEBUG like the other two.
 _DISPATCH_DROP_ROUTINE_REASONS = ("strategy_not_assigned", "outside_account_scope", "leg_account_scope")
 
 
@@ -1398,12 +1394,19 @@ class Coordinator:
                     f"strategy_not_assigned: {pkg.strategy} not in "
                     f"{sorted(str(a) for a in assigned)}"
                 )
-            # Per-account leg scope (DESK-PAPER-ACCOUNTS): a leg declaring
-            # ``account_symbols`` trades only that account's slice of its
-            # ``symbols:`` there. Named, like every exclusion above.
-            if _scope is not None:
-                _acct_syms = _scope.get(str(getattr(account_obj, "name", "")), [])
-                if str(getattr(pkg, "symbol", "") or "") not in _acct_syms:
+            # Per-account leg scope (ML-UNIVERSE-RULE): the leg's DERIVED set on
+            # this account (venue capability, prop population, ML population).
+            # Named, like every exclusion above.
+            # An account the scope map does not hold (not in accounts.yaml / unreadable) gets NO per-account scope:
+            # the derived rule never narrows on a read it could not make (strategy_not_assigned above still applies).
+            # Only a symbol the leg DECLARES but this account's venue cannot trade is dropped; a symbol the leg does
+            # not declare at all is not this rule's business (unchanged from before ML-UNIVERSE-RULE).
+            _acct_name = str(getattr(account_obj, "name", ""))
+            _pkg_sym = str(getattr(pkg, "symbol", "") or "")
+            if (_scope is not None and _acct_name in _scope
+                    and _pkg_sym in (_scope.get("__declared__") or [])):
+                _acct_syms = _scope[_acct_name]
+                if _pkg_sym not in _acct_syms:
                     return (
                         f"leg_account_scope: {pkg.strategy} trades "
                         f"{_acct_syms} on {getattr(account_obj, 'name', '?')}, "
