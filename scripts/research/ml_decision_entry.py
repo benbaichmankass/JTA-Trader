@@ -1621,7 +1621,7 @@ def lever_arms_cmd(args) -> int:
         try:
             import torch
             dev = "cuda" if torch.cuda.is_available() else None
-        except Exception:  # noqa: BLE001 -- no torch = the arm is unavailable, never a FAIL
+        except Exception:  # noqa: BLE001  # allow-silent: no torch = the arm is unavailable; recorded as verdict could_not_look below, never a FAIL
             dev = None
         if mdir is None or dev is None:
             why = f"tsfm arm unavailable: model_dir={mdir} cuda={dev} (the Chronos weights / GPU did not reach this run)"
@@ -1632,7 +1632,7 @@ def lever_arms_cmd(args) -> int:
         t_e = time.time()
         try:
             tsfm_emb, tsfm_info = tsfm_embeddings(cache, tab, mdir, device=dev)
-        except Exception as exc:  # noqa: BLE001 -- an encoder that cannot load or run is unavailable (could_not_look), never a FAIL
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the encoder failure is written to verdict.json (could_not_look, with the exception) and printed
             why = f"tsfm arm unavailable: the Chronos encoder failed to load or run ({type(exc).__name__}: {str(exc)[:300]})"
             (out / "verdict.json").write_text(json.dumps({"verdict": "indeterminate", "read_state": "could_not_look", "n": 0,
                                                           "note": why, "rule": rule, "arm": "tsfm"}, indent=1) + "\n")
@@ -1698,8 +1698,10 @@ def _self_test_tsfm() -> None:
     ctx, ok = tsfm_contexts(closes, np.array([1, 3, 9]), context=4)
     assert list(ok) == [False, True, True] and ctx.tolist() == [[0, 1, 2, 3], [6, 7, 8, 9]], (ok, ctx)
     rng = np.random.default_rng(1)
-    tr = rng.normal(size=(500, 16)); tr[:, 0] *= 10
-    te = rng.normal(size=(20, 16)); te[3] = np.nan
+    tr = rng.normal(size=(500, 16))
+    tr[:, 0] *= 10
+    te = rng.normal(size=(20, 16))
+    te[3] = np.nan
     a, b = pca_fit_project(tr, te, k=3)
     assert a.shape == (500, 3) and b.shape == (20, 3) and np.isnan(b[3]).all() and np.isfinite(b[[0, 1, 2, 4]]).all()
     assert abs(a[:, 0].var() - tr[:, 0].var()) / tr[:, 0].var() < 0.05      # PC1 is the inflated column
