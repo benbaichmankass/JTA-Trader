@@ -1,7 +1,7 @@
 {
  "bar": "2026-11-27T18:15:00Z",
  "bar_close": "2026-11-27T18:20:00Z",
- "built_at": "2026-11-27T20:17:11Z",
+ "built_at": "2026-11-27T20:20:19Z",
  "closed": false,
  "order_package_id": "pkg-51ef3ffb1b6748e1",
  "packet": {
@@ -23,15 +23,13 @@
    {
     "account_class": "paper",
     "account_id": "ib_paper",
-    "apply_paths": [],
-    "evidence": "ib_orders: SL 707.0 / TP 745.0, position True, matched by symbol; no apply path for interactive_brokers (live_review_apply.py ACTION_PATHS / tighten dispatch: none)",
+    "evidence": "ib_orders read failed: diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and",
     "mechanics": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "match"
+     "verdict": "could_not_look"
     },
-    "own_position": true,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
     "read_if_amend": "unknown"
@@ -114,7 +112,7 @@
      "SOLUSDT",
      "short",
      "ict_scalp_sol_5m",
-     0.152
+     0.087
     ],
     [
      "USO",
@@ -162,7 +160,7 @@
      "SOLUSDT",
      "long",
      "ml_entry",
-     0.0
+     -0.0121
     ],
     [
      "ETHUSDT",
@@ -520,10 +518,10 @@
    "head": "2e3f1220cc",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T20:18:19Z",
+  "info_cutoff_at": "2026-11-27T20:21:35Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "1 account(s) could not be read",
+   "evidence": "2 account(s) could not be read",
    "per_account": {
     "alpaca_paper": {
      "by_design": null,
@@ -535,12 +533,16 @@
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "match"
+     "verdict": "could_not_look"
     }
    },
-   "verdict": "match"
+   "verdict": "could_not_look"
   },
   "missing_inputs": [
+   {
+    "field": "read:ib_orders",
+    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
+   },
    {
     "field": "read:alpaca_orders",
     "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
@@ -600,7 +602,7 @@
      "reason": "could_not_price"
     },
     {
-     "count": 1,
+     "count": 2,
      "denominator": 2,
      "field": "mechanics",
      "reason": "venue_read_unreachable"
@@ -618,7 +620,7 @@
      "reason": "context_null:state.open_r"
     }
    ],
-   "status": "degraded"
+   "status": "could_not_look"
   },
   "packet_version": 3,
   "priced_options": null,
@@ -632,14 +634,14 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T2017Z-pkg-51ef3ffb1b6748e1",
+  "review_id": "LR-20261127T2020Z-pkg-51ef3ffb1b6748e1",
   "short_hold": {
    "atr": 1.022142857142837,
    "bar": "2026-11-27T18:15:00Z",
    "bar_close": "2026-11-27T18:20:00Z",
    "entry": 721.93,
    "mark": 728.35,
-   "minutes_held": 337.5,
+   "minutes_held": 340.7,
    "open_r_at_mark": 0.43,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
@@ -757,14 +759,14 @@
    }
   ]
  },
- "packet_sha": "a1d00a5137039b3da47e5de4bd4f888f1590690237b7a1aa8cef012d8421c45f",
+ "packet_sha": "90a20a7e7349f5275c4306b3b550f78175400aeb364ddad6a605265b357be72e",
  "short_hold": {
   "atr": 1.022142857142837,
   "bar": "2026-11-27T18:15:00Z",
   "bar_close": "2026-11-27T18:20:00Z",
   "entry": 721.93,
   "mark": 728.35,
-  "minutes_held": 337.5,
+  "minutes_held": 340.7,
   "open_r_at_mark": 0.43,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
