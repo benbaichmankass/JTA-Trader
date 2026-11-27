@@ -566,6 +566,53 @@ def run_desk_pass(git: Git = _git, intake: Callable[[str], Dict[str, Any]] = _de
     return status
 
 
+def macro_files() -> Tuple[Tuple[str, float], ...]:
+    """(name, mtime) of every macro brief on the VM tree (ict-git-sync pulls main): a cheap stat, no git."""
+    try:
+        d = ROOT / "comms" / "desk" / "macro"
+        return tuple(sorted((p.name, p.stat().st_mtime) for p in d.glob("*.json")))
+    except OSError:
+        return ()
+
+
+def _macro_intake() -> Dict[str, Any]:
+    """Run the desk intake's macro-brief source with --apply. Never raises."""
+    try:
+        r = subprocess.run([sys.executable, str(DESK_INTAKE), "--macro", "--apply"],
+                           cwd=ROOT, capture_output=True, text=True, timeout=DISPATCH_TIMEOUT_S)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"exit": 3, "detail": f"macro intake did not run: {type(exc).__name__}"}
+    summary: Dict[str, Any] = {}
+    for ln in (r.stdout or "").splitlines():
+        if ln.startswith("{"):
+            try:
+                summary = json.loads(ln)
+            except ValueError:
+                pass
+    return {"exit": r.returncode, "new": summary.get("new"), "verdicts": summary.get("verdicts")}
+
+
+def run_macro_pass(files_fn: Callable[[], Tuple[Tuple[str, float], ...]] = macro_files,
+                   intake: Callable[[], Dict[str, Any]] = _macro_intake,
+                   now_fn: Callable[[], datetime] = _now, logs: Optional[Path] = None) -> Dict[str, Any]:
+    """DESK-MACRO v2: when the macro briefs on disk changed (or the last run could not finish), hand them to the desk
+    intake's macro source. Dedupe and the seed live in the intake, exactly as for the desk/decisions pass."""
+    d = logs or log_dir()
+    status_path = d / "desk_macro_watch_status.json"
+    prev = _load(status_path) or {}
+    files = files_fn()
+    key = [list(f) for f in files]
+    status: Dict[str, Any] = {"pass_at": now_fn().isoformat(), "files": len(files)}
+    if key == prev.get("files_key") and prev.get("intake_exit") in (0, 1, 2):
+        status.update(intake="unchanged", intake_exit=prev.get("intake_exit"), files_key=key)
+    else:
+        res = intake()
+        status.update(intake="ran", intake_exit=res.get("exit"), new=res.get("new"), verdicts=res.get("verdicts"),
+                      files_key=key)
+    _write_json(status_path, status)
+    return status
+
+
 def _directed_vm_pass(tip: str) -> Dict[str, Any]:
     """Run the directed-action pass at the pinned tip. Never raises."""
     try:
@@ -684,7 +731,7 @@ def run_confirm_pass() -> Dict[str, Any]:
 def _loop() -> None:
     _proof(lambda fp: fp.ensure_seeded())
     while True:
-        for one in (run_pass, run_desk_pass, run_confirm_pass):
+        for one in (run_pass, run_desk_pass, run_macro_pass, run_confirm_pass):
             try:
                 one()
             except Exception:  # noqa: BLE001 — contained; the next pass tries again (no halting)

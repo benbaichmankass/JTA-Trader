@@ -1,0 +1,124 @@
+# Hand-authored 2026-11-27T07:27Z by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV): the registered PASS action of RQ-20261127-7ab1-01 (capped-n
+# feasibility probe, run 45951414824, PASS: one window 125.6 s at n_train 50,000, peak 4,681 MB, projection 1,633 s vs 17,400 s). Manager 26a
+# 2026-11-27 05:43Z: "Register a fresh subsampled-n probe on Kaggle (free) ... No RunPod spend." Rule registered before any run.
+# Gates this adds or changes: none.
+id: RQ-20261127-7ab1-02
+title: 'D3 TabICL at CAPPED n on a MONEY label: does TabICLv2 (in-context on the most recent 50,000 training rows) beat LightGBM fit on the SAME
+  50,000 rows, on the trades each would take at actual net R? (the 13 monthly refits of RQ-20261118-dbf8-01; matched-n control)'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'T2/T3 (docs/reference/trading-and-model-practice-principles.md): one factor at a time -- the learner changes, the training rows
+  do not (matched-n control), net of the full cost stack.'
+question: As RQ-20261126-dbf8-03, with TabICLv2 as the candidate learner fit in-context on the most recent 50,000 training rows of each refit, and the
+  baseline RAWCAP = the same LightGBM recipe fit on the SAME 50,000 rows (so the cap is not confounded with the learner). Full-n RAW also runs, for
+  reference only.
+why_this_matters: 'Full-n TabICL is impractical on a free T4 (RQ-20261126-1e75-04: killed inside its first window, >= about 170 min/window). The capped
+  probe RQ-20261127-7ab1-01 PASSED (125.6 s/window at n 50,000). This is the first test of the tabular-foundation-model family on a label that changes
+  an order at a feasible n. A PASS says TabICL beats LightGBM at matched n; it does NOT say it beats full-n LightGBM (RAW is reported beside it).'
+evidence_class:
+  holdout: holdout_window
+  claim: edge
+power:
+  expected_n: 13
+  min_detectable_effect: 0.06
+  effect_units: metric
+  sd: 0.074
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE (QUOTED): the same windows and sd as RQ-20261118-dbf8-01 / 4654-07 / dbf8-03.'
+  feasibility:
+    source: none
+    accrual_basis: Replays published Binance history; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261127-7ab1-02-TABICL-CAPPED-ENTRY
+  registered_at: '2026-11-27'
+  registration_note: 'RULE-RQ20261126-dbf8-03-TABICL-ENTRY word for word except: the baseline is RAWCAP (LightGBM on the same capped rows) instead of
+    full-n RAW, and "ran at full n on every window" becomes "ran at the declared 50,000-row cap on every window". No TabICL edge result exists anywhere
+    (dbf8-02/-03 never measured; 1e75-04 / 7ab1-01 are cost probes), so nothing could have shaped this copy.'
+  registered_before_run: true
+  baseline: 'RAWCAP: the same LightGBM recipe on the SAME most-recent 50,000 training rows per refit, same origins, tau and cost stack. Net of the full
+    cost stack. Full-n RAW is reported beside it and graded nothing.'
+  statistic: per 28-day window, mean actual net R per taken decision; d_w = TICL - RAWCAP over windows where both took >= 30 decisions; mean, sd, 95%
+    t-interval.
+  rule: PASS iff >= 10 paired windows AND mean d >= +0.06 R/decision AND the 95% t-CI lower bound > 0 AND TICL pooled n >= 300. FAIL iff >= 10 paired
+    windows AND mean d <= 0 AND the TICL arm ran at the declared 50,000-row cap on every window. INDETERMINATE otherwise; an unavailable arm, or one
+    fit at any other n, is INDETERMINATE, never FAIL. Thresholds are not changed after any result.
+  pass_action: register the confirming read (a fresh window, the same rule) and a TICL-capped vs full-n RAW comparison before any Tier-3 note on
+    ML-ENTRY-FINETUNE; tag tabular_foundation_model PASS for this configuration only.
+  fail_action: record FAIL for exactly TabICLv2 / n 50,000 / v1 recipe / raw target in families.tabular_foundation_model.history; the family is NOT
+    retired on one configuration.
+  what_it_does_not_do: Changes no served model or config. No fine-tuning of TabICL. A PASS is not a promotion and not a claim against full-n LightGBM.
+  min_n: 10 paired windows with >= 30 decisions per arm; 300 pooled decisions
+compute: gpu
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.06
+  basis: stand-in, as dbf8-01; not a P&L measurement.
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
+  peak_memory_gb: 16.0
+  est_minutes: 60
+  why_runner: Kaggle GPU (free); the kernel has no internet, so the klines come from the published metis-market-bp2 market_raw (--cache-source published).
+  basis: 'MEASURED 2026-11-27 (RQ-20261127-7ab1-01 run 45951414824): one TabICL window at n_train 50,000 = 125.6 s (fit 6.0 + predict 119.6), peak
+    4,681 MB; 13 windows ~ 27 min GPU, plus the table build and 2 x 13 LightGBM fits. --gpu-arm-budget-min 150 inside the 180-min timeout.'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_entry_residual.py
+  - run
+  - --arms
+  - raw,rawcap,tabicl
+  - --baseline-arm
+  - rawcap
+  - --tabicl-max-rows
+  - '50000'
+  - --cache
+  - /tmp/ml_entry_klines
+  - --cache-source
+  - published
+  - --gpu-arm-budget-min
+  - '150'
+  - --out
+  - '{out_dir}'
+  - --unit
+  - '{unit}'
+  - --where
+  - kaggle
+  - --rule-id
+  - RULE-RQ20261127-7ab1-02-TABICL-CAPPED-ENTRY
+  - --registered-at
+  - '2026-11-27'
+  bundle_paths:
+  - comms/research/broad_paths/bp2-f4271084b120
+  timeout_minutes: 180
+  inputs:
+    research_unit: RQ-20261127-7ab1-02
+ml_consumer:
+  consumer: src/units/strategies/ml_entry.py
+  decision: whether a capped-n TabICL is worth a confirming read and a full-n comparison; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261127-7ab1-01
+- RQ-20261126-1e75-04
+- RQ-20261126-dbf8-03
+- RQ-20261118-dbf8-01
+- FRONTIER-LEVER-TABULAR
+population: As RQ-20261118-dbf8-01 (the 13 monthly refits); TabICL and RAWCAP fit on the most recent 50,000 training rows of each refit.

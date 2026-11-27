@@ -1,7 +1,7 @@
 id: RQ-20261101-5e01-11
 title: 'Structure-based SL+TP (ML bracket) (swing / FVG / liquidity, ratcheting) vs the declared exit on ml_entry_symbol_heads (served per-symbol heads
   (RE-PARSE the registry at run time; this clone has no committed head list)): does it beat the current exit net of the full cost stack, held-out?'
-status: blocked
+status: retired
 cadence: once
 theme: live_strategy
 priority: 1
@@ -119,3 +119,8 @@ ml_consumer:
   legs:
   - ml_entry
   book: money
+retired_reason: '2026-11-27 lane ML-PRIMARY on Manager 26a''s ruling (05:43Z): "5e01-11: retire it. No per-symbol entry heads exist, so its question
+  has no population. Re-pointing it to eq_struct would be a new question; if it''s worth asking, register it fresh." Evidence: /api/bot/ml/registry
+  read 2026-11-27 ~03:25Z (100 of 108 rows, inventory_read_state ok): the served ML entry models are ml-decision-entry-v1, ml-decision-entry-v2,
+  ml-entry-eq-v1 and ml-entry-eq-struct-ens5-v1, all POOLED; no served per-symbol entry head. Never run; no result. Row
+  ML-STRUCTURE-SYMBOL-HEADS-POPULATION closed with the same reason.'

@@ -1,0 +1,206 @@
+{
+  "verdict": "INDETERMINATE",
+  "gpu_arm_complete": {
+    "tabicl": false
+  },
+  "paired_resid_vs_raw": {
+    "k": 0,
+    "mean": null,
+    "sd": null,
+    "ci95": null
+  },
+  "paired_placebo_vs_raw": {
+    "k": 0,
+    "mean": null,
+    "sd": null,
+    "ci95": null
+  },
+  "paired_extra_vs_raw": {
+    "tabicl": {
+      "k": 1,
+      "mean": 0.006868508277463756,
+      "sd": null,
+      "ci95": null
+    }
+  },
+  "arms": [
+    "raw",
+    "tabicl"
+  ],
+  "pooled": {
+    "raw": {
+      "n": 1015,
+      "mean_net_r": -0.06948485703709177,
+      "se": 0.03427750571456161,
+      "by_side": {
+        "long": {
+          "n": 228,
+          "mean_net_r": -0.4161452318544838
+        },
+        "short": {
+          "n": 787,
+          "mean_net_r": 0.030945340495774007
+        }
+      }
+    },
+    "tabicl": {
+      "n": 1954,
+      "mean_net_r": -0.06261634875962802,
+      "se": 0.025085186541223103,
+      "by_side": {
+        "long": {
+          "n": 1044,
+          "mean_net_r": -0.044598157731063376
+        },
+        "short": {
+          "n": 910,
+          "mean_net_r": -0.08328776791767363
+        }
+      }
+    },
+    "frozen": {
+      "n": 1098,
+      "mean_net_r": -0.0804248289481511,
+      "se": 0.03312569591784364,
+      "by_side": {
+        "long": {
+          "n": 238,
+          "mean_net_r": -0.3731850310333098
+        },
+        "short": {
+          "n": 860,
+          "mean_net_r": 0.0005948548847184168
+        }
+      }
+    }
+  },
+  "windows": [
+    {
+      "start": "2025-10-01",
+      "raw": {
+        "n": 1015,
+        "mean_net_r": -0.06948485703709177,
+        "se": 0.03427750571456161,
+        "by_side": {
+          "long": {
+            "n": 228,
+            "mean_net_r": -0.4161452318544838
+          },
+          "short": {
+            "n": 787,
+            "mean_net_r": 0.030945340495774007
+          }
+        }
+      },
+      "tabicl": {
+        "n": 1954,
+        "mean_net_r": -0.06261634875962802,
+        "se": 0.025085186541223103,
+        "by_side": {
+          "long": {
+            "n": 1044,
+            "mean_net_r": -0.044598157731063376
+          },
+          "short": {
+            "n": 910,
+            "mean_net_r": -0.08328776791767363
+          }
+        }
+      },
+      "tabicl_info": {
+        "long": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload"
+        },
+        "short": {
+          "status": "ok",
+          "device": "cuda",
+          "n_train": 50000,
+          "full_n": false,
+          "checkpoint": "tabicl-regressor-v2-20260212.ckpt",
+          "batch_size": 1,
+          "disk_offload_dir": "/tmp/tabicl_offload"
+        },
+        "timing": {
+          "fit_s": 6.0,
+          "predict_s": 119.6,
+          "total_s": 125.6,
+          "peak_gpu_mb": 4681.2,
+          "n_train": 646766,
+          "n_win": 8736
+        }
+      },
+      "frozen": {
+        "n": 1098,
+        "mean_net_r": -0.0804248289481511,
+        "se": 0.03312569591784364,
+        "by_side": {
+          "long": {
+            "n": 238,
+            "mean_net_r": -0.3731850310333098
+          },
+          "short": {
+            "n": 860,
+            "mean_net_r": 0.0005948548847184168
+          }
+        }
+      },
+      "btc_ret24_mean": 5.106092135307544e-05
+    }
+  ],
+  "tau": 0.1,
+  "window": {
+    "start": "2025-10-01",
+    "end": "2026-09-30",
+    "step_days": 28
+  },
+  "thresholds": {
+    "win_n": 30,
+    "min_windows": 10,
+    "pool_n": 300,
+    "delta": 0.06,
+    "beta_win": 720,
+    "beta_clip": [
+      -1.0,
+      3.0
+    ],
+    "placebo_seed": 20261112
+  },
+  "probe": {
+    "max_windows": 1,
+    "windows_full_run": 13,
+    "timings": {
+      "tabicl": [
+        {
+          "fit_s": 6.0,
+          "predict_s": 119.6,
+          "total_s": 125.6,
+          "peak_gpu_mb": 4681.2,
+          "n_train": 646766,
+          "n_win": 8736
+        }
+      ]
+    },
+    "projected_full_gpu_s": {
+      "tabicl": 1632.8
+    },
+    "peak_gpu_mb": {
+      "tabicl": 4681.2
+    },
+    "basis": "projection = the slowest probed window x the full run's window count (later windows train on more rows, so it is a LOWER bound)",
+    "arm": "tabicl",
+    "budget_s": 17400.0,
+    "peak_cap_mb": 14500.0,
+    "feasible": "PASS",
+    "oom": false,
+    "tabicl_max_rows": 50000
+  },
+  "latest_bar": "2026-11-24 23:00:00+00:00",
+  "cache_source": "published",
+  "symbols_absent": []
+}
