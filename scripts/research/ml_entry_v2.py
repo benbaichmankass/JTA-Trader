@@ -61,6 +61,14 @@ ALL_FAM_COLS = [c for v in F.FAMILIES.values() for c in v]
 EXTRA_DEV_FOLDS = ["2025-10-01", "2026-01-01", "2026-04-01", "2026-07-01"]   # used ONLY by the forward unit (dev through W1 start)
 W1 = ("2026-10-01", "2026-10-31")
 ADMIT_DELTA, ADMIT_FOLDS, ADMIT_COVERAGE = 0.010, 6, 0.40
+#: PREDEV re-read (RQ-20261127-c25a-01, Manager 27a 2026-11-27 20:43Z): the 26ac-01 lead P25 (F2c+F5c, 8 cols) vs its N8
+#: placebo on a window DISJOINT from the dev folds that chose it: monthly folds through 2021 (each trained only on rows before
+#: it, from START 2020-07-01), dev_end 2022-01-01 = the first dev fold, so no dev or sealed row is a test row. Single arm, so
+#: the bar is the one-sided 0.025 t at df 11 (12 folds - 1), not the Sidak k = 3 bar.
+PREDEV_FOLDS = [f"2021-{m:02d}-01" for m in range(1, 13)]
+PREDEV_END = "2022-01-01"
+PREDEV_T_BAR = 2.2010
+PREDEV_FOLDS_MIN_POSITIVE = 8
 SEEDS = {"A2": 7}   # A2 = arm A with another LightGBM seed: the harness noise floor, measured, not assumed
 
 
@@ -172,7 +180,8 @@ def lofo(folds: list[dict]) -> dict:
     return {"per_fold": per_fold, "n": tot_n, "mean_net_r": (tot_sum / tot_n) if tot_n else None}
 
 
-def run_arm(tab: pd.DataFrame, arm: str, out: Path, n_jobs: int) -> dict:
+def run_arm(tab: pd.DataFrame, arm: str, out: Path, n_jobs: int, predev: bool = False) -> dict:
+    """``predev`` (opt-in, RQ-20261127-c25a-01): walk forward over PREDEV_FOLDS ending at PREDEV_END instead of the dev folds."""
     t0 = time.time()
     feats = features_for(arm)
     if arm in PLACEBO_WIDTH:
@@ -181,7 +190,8 @@ def run_arm(tab: pd.DataFrame, arm: str, out: Path, n_jobs: int) -> dict:
     if arm in SEEDS:
         E.LGB_PARAMS["random_state"] = SEEDS[arm]
     try:
-        wf = E.walk_forward(tab, feats, n_jobs=n_jobs)
+        wf = (E.walk_forward(tab, feats, dev_folds=PREDEV_FOLDS, dev_end=PREDEV_END, n_jobs=n_jobs) if predev
+              else E.walk_forward(tab, feats, n_jobs=n_jobs))
     finally:
         E.LGB_PARAMS.clear()
         E.LGB_PARAMS.update(base_params)
@@ -303,6 +313,51 @@ def combine_placebo(tab: pd.DataFrame, out: Path, pairs: dict | None = None, t_b
     res["verdict"] = "pass" if passed else ("fail" if vs and all(v == "fail" for v in vs) else "indeterminate")
     res["best_arm"] = max(passed, key=lambda a: res["arms"][a]["pooled_delta_vs_placebo"]) if passed else None
     (out / result_name).write_text(json.dumps(res, indent=1, default=str))
+    return res
+
+
+def combine_predev(tab: pd.DataFrame, out: Path) -> dict:
+    """RQ-20261127-c25a-01 rule (registered before any run). ONE arm, P25 (F2c+F5c) vs N8, on the 12 PREDEV_FOLDS (2021,
+    monthly, disjoint from the dev folds that chose P25), LOFO tau as 26ac-01:
+      PASS iff pooled delta (P25 - N8) >= +0.010 R/decision AND the one-sided t on the 12 per-fold deltas >= PREDEV_T_BAR
+           (2.2010, df 11) AND delta > 0 in >= 8 of 12 folds AND the families are present on >= 40 percent of the window's rows;
+      FAIL iff mean(fold deltas) + PREDEV_T_BAR x se < +0.010;
+      INDETERMINATE otherwise, and whenever coverage < 40 percent or fewer than 12 folds carry both means.
+    Baseline A is reported, never graded."""
+    arms = {p.stem[4:]: json.loads(p.read_text()) for p in sorted(out.glob("arm_*.json"))}
+    for nd in ("A", "P25", "N8"):
+        if nd not in arms:
+            raise SystemExit(f"arm {nd} is required by the registered rule")
+    x, n = arms["P25"]["lofo"], arms["N8"]["lofo"]
+    pairs = [(a["fold"], a["mean_net_r"] - b["mean_net_r"]) for a, b in zip(x["per_fold"], n["per_fold"])
+             if a["mean_net_r"] is not None and b["mean_net_r"] is not None]
+    d = [v for _, v in pairs]
+    pooled = (x["mean_net_r"] - n["mean_net_r"]) if None not in (x["mean_net_r"], n["mean_net_r"]) else None
+    t, upper, se = None, None, None
+    if len(d) >= 2:
+        se = float(np.std(d, ddof=1)) / np.sqrt(len(d))
+        t = (float(np.mean(d)) / se) if se > 0 else None
+        upper = float(np.mean(d)) + PREDEV_T_BAR * se
+    w = tab[(tab.ts >= pd.Timestamp(PREDEV_FOLDS[0], tz="UTC")) & (tab.ts < pd.Timestamp(PREDEV_END, tz="UTC"))]
+    cov = float(min(w[_fam_cols(f)[0]].notna().mean() for f in ARMS["P25"])) if len(w) else 0.0
+    pos = sum(1 for v in d if v > 0)
+    if cov < ADMIT_COVERAGE or len(d) < len(PREDEV_FOLDS):
+        verdict = "indeterminate"
+    elif pooled is not None and pooled >= COMPACT_DELTA and t is not None and t >= PREDEV_T_BAR and pos >= PREDEV_FOLDS_MIN_POSITIVE:
+        verdict = "pass"
+    elif upper is not None and upper < COMPACT_DELTA:
+        verdict = "fail"
+    else:
+        verdict = "indeterminate"
+    res = {"read_state": "read", "rule": combine_predev.__doc__, "t_bar": PREDEV_T_BAR, "window": [PREDEV_FOLDS[0], PREDEV_END],
+           "baseline_A": {"n": arms["A"]["lofo"]["n"], "mean_net_r": arms["A"]["lofo"]["mean_net_r"]},
+           "arms": {"P25": {"families": ARMS["P25"], "placebo": "N8", "n": x["n"], "mean_net_r": x["mean_net_r"],
+                            "placebo_n": n["n"], "placebo_mean_net_r": n["mean_net_r"], "pooled_delta_vs_placebo": pooled,
+                            "fold_deltas": dict(pairs), "fold_mean_delta": float(np.mean(d)) if d else None, "se": se,
+                            "folds_positive": pos, "t_fold": t, "upper_bound": upper, "window_coverage": cov, "verdict": verdict}},
+           "verdict": verdict, "best_arm": "P25" if verdict == "pass" else None, "variants_read_on_sealed_window": 0,
+           "dev_rows_read_as_test": 0}
+    (out / "predev.json").write_text(json.dumps(res, indent=1, default=str))
     return res
 
 
@@ -466,11 +521,52 @@ def _self_test_compact() -> None:
             raise AssertionError("a missing placebo was allowed")
         except SystemExit:
             pass
+    _self_test_predev()
+
+
+def _self_test_predev() -> None:
+    """RQ-20261127-c25a-01: the PREDEV window is disjoint from the dev folds and the sealed window, the single-arm bar applies,
+    and every clause of combine_predev bites (pass, fail, noisy indeterminate, too few folds, low coverage, missing placebo)."""
+    import tempfile
+    assert PREDEV_END == E.DEV_FOLDS[0] and all(f < E.DEV_FOLDS[0] for f in PREDEV_FOLDS) and len(PREDEV_FOLDS) == 12
+    assert all(f > E.START for f in PREDEV_FOLDS) and PREDEV_END < E.HOLDOUT_START
+
+    def arm(means, folds=PREDEV_FOLDS):
+        return {"lofo": {"n": 1000 * len(means), "mean_net_r": float(np.mean(means)),
+                         "per_fold": [{"fold": f, "tau": 0.1, "n": 1000, "mean_net_r": m} for f, m in zip(folds, means)]}}
+    base = [0.0] * 12
+    good = [0.03, 0.025, 0.02, 0.035, 0.03, 0.02, 0.028, 0.022, 0.03, 0.026, 0.024, 0.031]
+    cov_tab = pd.DataFrame({"ts": pd.to_datetime(["2021-03-01"] * 3, utc=True),
+                            **{c: [1.0, 1.0, np.nan] for f in COMPACT.values() for c in f}})
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d)
+        for name, m in (("A", [0.05] * 12), ("N8", base), ("P25", good)):
+            (out / f"arm_{name}.json").write_text(json.dumps(arm(m)))
+        r = combine_predev(cov_tab, out)
+        assert r["verdict"] == "pass" and r["t_bar"] == PREDEV_T_BAR and r["dev_rows_read_as_test"] == 0, r["arms"]["P25"]
+        (out / "arm_P25.json").write_text(json.dumps(arm([0.001, -0.001] * 6)))
+        assert combine_predev(cov_tab, out)["verdict"] == "fail"                     # tight null: upper < +0.010
+        (out / "arm_P25.json").write_text(json.dumps(arm([0.09, -0.08] * 6)))
+        assert combine_predev(cov_tab, out)["verdict"] == "indeterminate"            # noisy null
+        (out / "arm_P25.json").write_text(json.dumps(arm(good[:11], PREDEV_FOLDS[:11])))
+        assert combine_predev(cov_tab, out)["verdict"] == "indeterminate"            # fewer than 12 folds carry both means
+        (out / "arm_P25.json").write_text(json.dumps(arm(good)))
+        low = cov_tab.assign(**{c: [1.0, np.nan, np.nan] for f in COMPACT.values() for c in f})
+        assert combine_predev(low, out)["verdict"] == "indeterminate"                # coverage < 40 percent in the window
+        outside = cov_tab.assign(ts=pd.to_datetime(["2023-01-01"] * 3, utc=True))
+        assert combine_predev(outside, out)["verdict"] == "indeterminate"            # no rows in the window -> coverage 0
+        (out / "arm_N8.json").unlink()
+        try:
+            combine_predev(cov_tab, out)
+            raise AssertionError("a missing placebo was allowed")
+        except SystemExit:
+            pass
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", nargs="?", choices=["build-table", "arm", "combine", "combine-compact", "combine-dvol", "forward"])
+    ap.add_argument("cmd", nargs="?", choices=["build-table", "arm", "combine", "combine-compact", "combine-dvol", "combine-predev", "forward"])
+    ap.add_argument("--predev", action="store_true", help="arm: walk forward over PREDEV_FOLDS (2021 monthly, RQ-20261127-c25a-01)")
     ap.add_argument("--streams", default="")
     ap.add_argument("--oct-dir", default="")
     ap.add_argument("--macro-dir", default="", help="F8: the <TICKER>.csv daily closes ml_entry_families.fetch_macro_daily wrote")
@@ -498,12 +594,14 @@ def main() -> int:
     tab = pd.read_pickle(out / "table.pkl")
     tab[ALL_FAM_COLS] = tab[ALL_FAM_COLS].astype(float)   # object dtypes from older table builds break LightGBM
     if a.cmd == "arm":
-        r = run_arm(tab, a.arm, out, a.n_jobs)
+        r = run_arm(tab, a.arm, out, a.n_jobs, predev=a.predev)
         print(a.arm, json.dumps(r["lofo"])[:300], flush=True)
     elif a.cmd == "combine":
         print(json.dumps(combine(tab, out), indent=1, default=str))
     elif a.cmd == "combine-compact":
         print(json.dumps(combine_placebo(tab, out), indent=1, default=str)[:4000])
+    elif a.cmd == "combine-predev":
+        print(json.dumps(combine_predev(tab, out), indent=1, default=str)[:4000])
     elif a.cmd == "combine-dvol":
         print(json.dumps(combine_dvol(tab, out), indent=1, default=str)[:4000])
     elif a.cmd == "forward":
