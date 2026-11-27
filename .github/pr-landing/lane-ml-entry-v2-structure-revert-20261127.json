@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "operator_asked_to_hold",
+  "hold_text": "Data-backed Tier-3 strategy-param change (canonical § Data-backed Tier-2/3 decisions): delete ml_entry_v2's structure_exit line so the leg exits on its declared ATR 2 / 2R bracket. Evidence: RQ-20261101-5e01-10 FAIL (research/results/RQ-20261101-5e01-10/45947501095.jsonl). Demo floor (bybit_1), reversible. Manager 26a 2026-11-27 07:26Z: 'revert it ... I'll merge it and notify the operator.' Deploy restarts ict-trader-live.",
+  "why": "The leg's own net-of-cost evidence says the structure exit does not earn its place (n 2,107, structure -0.0261 vs declared +0.0122 R/trade, lower bound -0.077, 2/6 bins, R4/R2 false, 4/4 seeds FAIL). Revert: re-add structure_exit: \"pivot=5\"."
+}
