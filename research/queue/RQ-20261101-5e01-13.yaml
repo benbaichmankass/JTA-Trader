@@ -1,7 +1,7 @@
-id: RQ-20261101-5e01-12
-title: 'Structure-based SL+TP (swing / FVG / liquidity, ratcheting) vs the declared exit on trend_donchian family on bybit_1 (all trend_donchian* rostered
-  legs) (testing legs (Stage 1)): does it beat the current exit net of the full cost stack, held-out?'
-status: blocked
+id: RQ-20261101-5e01-13
+title: 'Structure-based SL+TP (swing / FVG / liquidity, ratcheting) vs the declared exit on pullback family on bybit_1 (ada/avax/eth/sol/htf pullback legs)
+  (testing legs (Stage 1)): does it beat the current exit net of the full cost stack, held-out?'
+status: queued
 cadence: once
 theme: live_strategy
 priority: 2
@@ -21,7 +21,7 @@ intervention_controls:
     - pivot_8
     excludes_test_folds: true
   bootstrap_group: week
-question: 'Replace trend_donchian family on bybit_1 (all trend_donchian* rostered legs)''s declared SL/TP mechanism (backtest_trend) with a dynamic structure-based
+question: 'Replace pullback family on bybit_1 (ada/avax/eth/sol/htf pullback legs)''s declared SL/TP mechanism (backtest_pullback) with a dynamic structure-based
   SL and TP and compare it with the declared exit on the same entries. Legs are RE-PARSED from config/accounts.yaml at run time, graded per leg and pooled
   per family; one unit per family keeps the queue lean (per-leg verdicts are in the result). Operator 2026-11-01: dynamic structure-based exits are the
   default until a leg''s own net-of-cost evidence proves another exit better; this unit is that evidence for this leg.'
@@ -48,7 +48,7 @@ evidence_class:  # EVIDENCE-CLASS-BACKFILL 2026-11-11, rule E2 (scripts/research
   claim: edge
 decision_rule:
   id: RULE-STRUCTURE-EXITS-V1
-  unit_rule_id: RULE-RQ20261101-5E01-12-STRUCT-EXIT
+  unit_rule_id: RULE-RQ20261101-5E01-13-STRUCT-EXIT
   registered_at: '2026-11-01'
   registered_before_run: true
   statistic: 'Per leg, exit_lever_ablation.py (the leg''s own Stage-0 harness, same argv build_strategy_evidence.py uses) over the pinned window 2020-07-01..2026-10-15,
@@ -68,13 +68,12 @@ decision_rule:
     4). Thresholds, grid, seeds and window are not changed after any result.'
   what_it_does_not_do: Edits no config, roster, mandate or live-review policy and places no order. A PASS is not a promotion. Harness fills a stop at the
     stop price (no gap), equally in S, A and the R controls.
-blocked_on:
-- kind: work_item
-  ref: STRUCTURE-FAMILY-EXPANSION
-  what: Detector and --structure-exit exist on backtest_trend.py and backtest_pullback.py. Family units need the leg list re-parsed at run time and per-leg
-    argv (ict_scalp and the other families use harnesses without the arm).
-  clears_when: A family runner expands the legs from config/strategies.yaml and runs exit_lever_ablation per leg with the S arms (trend/pullback families
-    can reuse the 5e01-01..08 command shape); other harnesses get the arm or are listed as not covered. Then git mv, status queued.
+amendments:
+- at: '2026-11-26T22:05Z'
+  by: lane BUILDS-W48 (manager 26a, same date)
+  before_any_run: true
+  what: 'HARNESS WRAPPER changed, rule and thresholds unchanged. Registered: scripts/research/exit_lever_ablation.py --leg "<family label>" (one invocation). Used: scripts/research/structure_family_run.py --family pullback --account bybit_1, which re-parses the family''s rostered legs at run time and invokes exit_lever_ablation.py once per leg with the registered arms (A, S3, S5, S8) and the single-leg unit shape of RQ-20261101-5e01-01..08 (replace grade, 6 folds, majority 4, dd tol 0.35, n floor 39, delta 0.02 R/trade).'
+  why: 'exit_lever_ablation --leg takes ONE config/strategies.yaml key, so the registered command cannot run a family. The verdict stays PER LEG, as the unit''s rule says (no pooled test is added); a leg whose harness lacks --structure-exit is listed as not covered, not run. The unit had not run and no result was seen. Tests: tests/test_structure_family_run.py.'
 compute: cpu_long
 value:
   usd_at_stake_per_month: 100
@@ -91,24 +90,21 @@ routing:
   basis: 'Estimate: (3 pivot arms + 1 hold + 100 random controls) x one leg; one 2h-leg arm over the window took about 20 s on a runner (ed1c-17 / 9a7e-01
     logs). The first run replaces it.'
 run:
+  workflow: research-script-run.yml
   command:
   - python3
-  - scripts/research/exit_lever_ablation.py
-  - --leg
-  - trend_donchian family on bybit_1 (all trend_donchian* rostered legs)
-  - --arm
-  - A=
-  - --arm
-  - S3=--structure-exit=pivot=3
-  - --arm
-  - S5=--structure-exit=pivot=5
-  - --arm
-  - S8=--structure-exit=pivot=8
-  - --common=--days=2330;--start=2020-07-01;--end=2026-10-15 23:59
+  - scripts/research/structure_family_run.py
+  - --family
+  - pullback
+  - --account
+  - bybit_1
+  - --leg-timeout-minutes
+  - '30'
   - --out
   - '{out_dir}'
+  timeout_minutes: 300
   inputs:
-    research_unit: RQ-20261101-5e01-12
+    research_unit: RQ-20261101-5e01-13
 lands:
   store: research/results/
   assert_field: read_state
