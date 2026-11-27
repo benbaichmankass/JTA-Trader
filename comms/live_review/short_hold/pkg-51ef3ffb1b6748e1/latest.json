@@ -1,7 +1,7 @@
 {
  "bar": "2026-11-27T18:15:00Z",
  "bar_close": "2026-11-27T18:20:00Z",
- "built_at": "2026-11-27T22:53:03Z",
+ "built_at": "2026-11-27T22:55:52Z",
  "closed": false,
  "order_package_id": "pkg-51ef3ffb1b6748e1",
  "packet": {
@@ -9,27 +9,35 @@
    {
     "account_class": "paper",
     "account_id": "alpaca_paper",
-    "evidence": "alpaca_orders read failed: diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP",
+    "apply_paths": [
+     "close",
+     "move_tp",
+     "tighten"
+    ],
+    "evidence": "alpaca_orders: SL 707.0 / TP 745.0, position True, matched by sl:order_id,tp:qty; apply paths close, move_tp, tighten; would_apply = an executor reaches this leg, NOT that its RiskManager approved (LTR-6 gap)",
     "mechanics": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
+    "own_position": true,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
-    "read_if_amend": "unknown"
+    "read_if_amend": "would_apply"
    },
    {
     "account_class": "paper",
     "account_id": "ib_paper",
-    "evidence": "ib_orders read failed: diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and",
+    "apply_paths": [],
+    "evidence": "ib_orders: SL 707.0 / TP 745.0, position True, matched by symbol; no apply path for interactive_brokers (live_review_apply.py ACTION_PATHS / tighten dispatch: none)",
     "mechanics": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
+    "own_position": true,
     "read": null,
     "read_basis": "depends on the recommendation: no_action for hold/no_recommendation, else see read_if_amend",
     "read_if_amend": "unknown"
@@ -107,7 +115,7 @@
      "SOLUSDT",
      "short",
      "ict_scalp_sol_5m",
-     1.04
+     1.17
     ],
     [
      "USO",
@@ -531,35 +539,27 @@
    "head": "4f73bbe080",
    "state": "current"
   },
-  "info_cutoff_at": "2026-11-27T22:53:57Z",
+  "info_cutoff_at": "2026-11-27T22:56:27Z",
   "leg": "claude_desk",
   "mechanics": {
-   "evidence": "2 account(s) could not be read",
+   "evidence": "package sl 707.0 / tp 745.0 agree with every readable account",
    "per_account": {
     "alpaca_paper": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     },
     "ib_paper": {
      "by_design": null,
      "evidence": null,
      "level_only": false,
-     "verdict": "could_not_look"
+     "verdict": "match"
     }
    },
-   "verdict": "could_not_look"
+   "verdict": "match"
   },
   "missing_inputs": [
-   {
-    "field": "read:alpaca_orders",
-    "reason": "diag alpaca_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP"
-   },
-   {
-    "field": "read:ib_orders",
-    "reason": "diag ib_open_orders: exit 3 (kdns.org -> timed_out_after_connect. Use the issue relay only if every candidate is 'unreachable'; an 'answered_*' or 'timed_out_after_connect' means the web-api is UP and"
-   },
    {
     "field": "regime.atr_now_over_entry",
     "reason": "candles unavailable or meta.atr (ATR at entry) not recorded"
@@ -603,19 +603,13 @@
      "reason": "could_not_price"
     },
     {
-     "count": 2,
-     "denominator": 2,
-     "field": "mechanics",
-     "reason": "venue_read_unreachable"
-    },
-    {
      "count": 1,
      "denominator": 1,
      "field": "state.open_r",
      "reason": "context_null:state.open_r"
     }
    ],
-   "status": "could_not_look"
+   "status": "degraded"
   },
   "packet_version": 3,
   "priced_options": null,
@@ -629,14 +623,14 @@
    "timeframe_source": "meta",
    "trend_now": "trending"
   },
-  "review_id": "LR-20261127T2253Z-pkg-51ef3ffb1b6748e1",
+  "review_id": "LR-20261127T2255Z-pkg-51ef3ffb1b6748e1",
   "short_hold": {
    "atr": 1.022142857142837,
    "bar": "2026-11-27T18:15:00Z",
    "bar_close": "2026-11-27T18:20:00Z",
    "entry": 721.93,
    "mark": 728.35,
-   "minutes_held": 493.4,
+   "minutes_held": 496.2,
    "open_r_at_mark": 0.43,
    "r_unit": "entry_to_current_sl",
    "read_state": "read",
@@ -754,14 +748,14 @@
    }
   ]
  },
- "packet_sha": "9242a20727925e5c114f3a91e155e1cd45a3641c89b56c8dbdd749e7b82e528a",
+ "packet_sha": "e3570c57dece0b1539c5d8e628536e58a1bf86adfcba62b1e2009c655be64b0c",
  "short_hold": {
   "atr": 1.022142857142837,
   "bar": "2026-11-27T18:15:00Z",
   "bar_close": "2026-11-27T18:20:00Z",
   "entry": 721.93,
   "mark": 728.35,
-  "minutes_held": 493.4,
+  "minutes_held": 496.2,
   "open_r_at_mark": 0.43,
   "r_unit": "entry_to_current_sl",
   "read_state": "read",
