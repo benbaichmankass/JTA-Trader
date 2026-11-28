@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/queue/blocked/RQ-20261113-e44a-04.yaml (its blocked_on names this grader); tests/test_event_follow_read.py. Row NO-WAIT-HAND-BUILDS (lane INFRA-BUILD-20261128).
+# wiring: manual-only - the grader named by research/queue/blocked/RQ-20261113-e44a-04.yaml; the unit's run block is added when it is unblocked (blocked_on clears_when); tests/test_event_follow_read.py. Row NO-WAIT-HAND-BUILDS (lane INFRA-BUILD-20261128).
 """Post-release FOLLOW trade on hourly bars: enter at the close of the first bar after a release in the direction of that bar's move, hold 24 h.
 
 The statistic of RQ-20261113-e44a-04 (rule RULE-RQ20261113e44a04-GDX-CPI-FOLLOW), generalised from ``ppi_event_read.py`` so ONE symbol and ONE
@@ -122,6 +122,7 @@ def _self_test() -> None:
     # 3) the instrument check: the PPI read's GDX arm on the committed bars, +145.0 bps / t 2.28 / n 23
     ppi = REPO / "comms" / "macro" / "ppi_event_read_20261113" / "ppi_surprises.json"
     bars = list((REPO / "comms" / "research" / "RQ-20261018-ef5d-01").glob("*/data/GDX_60.csv"))
+    print(f"event_follow_read self-test: bars candidates {[str(b.relative_to(REPO)) for b in bars]}; ppi {ppi.is_file()}")
     if ppi.is_file() and len(bars) == 1:
         v = run(bars[0], ppi, 4.0, None)
         assert v["n"] == 23 and v["mean_bps"] == 145.0 and v["t"] == 2.28, v
