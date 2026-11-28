@@ -20,7 +20,7 @@ Operator, 2026-11-28 ~09:30Z, popup to Manager Session 2026-11-28b (relayed), ve
 - **G2. The resolver trusts the record.** `_holdout` checks that `evaluations_on_holdout == 1` as written by the producer. It never compares that against the reads recorded on the same window.
 - **G3. Nothing measures whether the SELECTION overfits.** `trial_ledger` deflates the chosen record by how many configs were tried. It does not ask how often the in-sample winner falls below the median out of sample. That is the probability of backtest overfitting, PBO (Bailey, Borwein, López de Prado & Zhu 2014, CSCV).
 - **G4. The per-config series PBO needs are not committed.** The scan says *"the needed per-config series exist for the f1a0 family"*. **Checked: they do not.** `comms/research/RQ-20261124-f1a0-0*/<run>/measurement.json` holds pooled stats, `yearly_delta` (4 values), `n_folds` and a `folds_better` count. It has no per-period series per arm, and no `--emit-trades` file. PBO therefore needs an emit step in the harness first.
-- **G5. A conflict with an operator rule.** P-6 says "a window past k reads is **spent**; promotion needs a fresh window". Principle **M13** (operator 2026-11-05: *"We can't just, like, give up on a certain line of research … That's ridiculous"*, popup *"Adopt (Rec.)"*) **replaced** exactly that (the one-read refusal) with "re-reading raises the bar; it is never refused". This build keeps M13. The spend rule is § 6 proposal **D-B**, recommended *against*.
+- **G5. A conflict with an operator rule.** P-6 says "a window past k reads is **spent**; promotion needs a fresh window". Principle **M13** (operator 2026-11-05: *"We can't just, like, give up on a certain line of research … That's ridiculous"*, popup *"Adopt (Rec.)"*) **replaced** exactly that (the one-read refusal) with "re-reading raises the bar; it is never refused". This build keeps M13. The spend rule (§ 6 **D-B**) is **rejected** (Manager 2026-11-28b, 09:26Z).
 
 ## 3. Design A: the subject-wide read ledger (`scripts/research/read_ledger.py`)
 
@@ -93,7 +93,11 @@ ML-ENTRY-REDESIGN (rank 2) grades its units under steps 1–2.
 ## 6. Proposals for the operator (not applied; each adds enforcement)
 
 - **D-A.** Make the ledger's count decisive in `_holdout`: the bar is `bar_for(ledger_n_reads)`, not the record's self-claim. *Recommended*, once T6 holds on live records for one week. It closes G2 without a new kind of rule, because it only applies M13 with an honest N.
-- **D-B.** P-6's "spent at k reads". *Not recommended.* It reverses M13, and the deflated bar already makes the k-th read progressively harder to pass without forbidding it.
+- **D-B.** P-6's "spent at k reads". **Rejected, not proposed** (Manager 2026-11-28b, 09:26Z). It would reverse two operator rules:
+  - M13 (2026-11-05): *"We can't just, like, give up on a certain line of research because we've already trained a model on all the data that we have. That's ridiculous."*
+  - The 2026-11-28 ~09:55Z rule (row `RESEARCH-NO-WAIT-FOR-DATA`): *"Eventually, we're going to have to retrain models on the same data. That's fine."*
+  
+  The deflated bar already makes the k-th read progressively harder to pass without forbidding it.
 - **D-C.** A PBO ceiling on promotion (for example PBO < 0.5 for a record selected among ≥ 5 configs). *Defer* until T5 and three more families have real PBO numbers. A threshold chosen before any value is seen is the honest way, but we do not yet know the scale.
 
 ## 7. Calls (graded at the next weekly ML review)
