@@ -2,10 +2,11 @@
 """Build the JTA Trader pitch deck (docs/pitch/jta-trader-pitch-deck.pptx) and its
 markdown source / speaker notes (docs/pitch/jta-trader-pitch-deck.md).
 
-Row PROJECT-PITCH-DECK. Every number on a slide is COMPUTED here from a file on
+Rows PROJECT-PITCH-DECK (v1, 2026-11-04) and PITCH-DECK-V2 (2026-11-17 refresh + docs/pitch/slides.json). Every number on a slide is COMPUTED here from a file on
 disk at build time (config/strategies.yaml + scripts/ops/strategy_status.py,
-config/accounts.yaml, config/mandates.yaml, comms/strategy_evidence/*.json,
-research/queue/*.yaml) and carries a provenance tag (src/runtime/provenance.py
+config/accounts.yaml, config/mandates.yaml, config/values_exclusions.yaml,
+comms/strategy_evidence/*.json, comms/live_review/reviews.jsonl, comms/ml_consolidation/*.json,
+research/queue/*.yaml, scripts/ci/check_tp_doctrine.py) and carries a provenance tag (src/runtime/provenance.py
 vocabulary: MEASURED / ESTIMATED). Re-run to refresh; never hand-edit numbers.
 
 Shareability: the deck names no account ids, hosts, addresses, balances or dollar
@@ -34,6 +35,7 @@ from pptx.util import Emu, Inches, Pt
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_PPTX = os.path.join(ROOT, "docs", "pitch", "jta-trader-pitch-deck.pptx")
 OUT_MD = os.path.join(ROOT, "docs", "pitch", "jta-trader-pitch-deck.md")
+OUT_JSON = os.path.join(ROOT, "docs", "pitch", "slides.json")
 
 # ----------------------------------------------------------------------------- data
 
@@ -78,14 +80,19 @@ def load_facts() -> dict:
 
     # Research queue.
     q = collections.Counter()
+    qv = collections.Counter()
     for p in glob.glob(os.path.join(ROOT, "research/queue/*.yaml")):
         try:
-            d = yaml.safe_load(open(p)) or {}
+            d = yaml.load(open(p), Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader)) or {}
         except Exception:
             q["unparseable"] += 1
             continue
         q[d.get("status")] += 1
+        if d.get("status") == "done":
+            qv[str((d.get("grading") or {}).get("verdict")).lower()] += 1
     f["queue"] = q
+    f["queue_verdicts"] = qv
+    f["served"] = yaml.safe_load(open(os.path.join(ROOT, "ml/served/SERVED_MODELS.yaml")))["models"]
     f["queue_total"] = sum(q.values())
     f["queue_blocked"] = len(glob.glob(os.path.join(ROOT, "research/queue/blocked/*.yaml")))
 
@@ -104,7 +111,7 @@ def load_facts() -> dict:
         h = str(d.get("harness"))
         # A record's harness field can carry a full run descriptor, e.g.
         # "ml_entry_tp_revision ... (on ml_decision_entry)"; group by the family it names.
-        for known in ("ml_decision_entry", "event_oi_shock"):
+        for known in ("ml_decision_entry", "event_oi_shock", "ml_entry_equity"):
             if known in h:
                 h = known
         fam[h].append(d)
@@ -123,6 +130,9 @@ def load_facts() -> dict:
         fd = d.get("fold_detail") or []
         start = (fd[0].get("start") if fd else None) or ""
         end = (fd[-1].get("end") if fd else None) or ""
+        win = d.get("window") or []
+        if not start and len(win) == 2:
+            start, end = str(win[0]), str(win[1])
         fee_only = d.get("net_r_oos_fee_only")
         rows.append(dict(
             leg=leg, exp=d["expectancy_r_oos"], n=d["n_trades_oos"], net=d["net_r_oos"],
@@ -139,6 +149,70 @@ def load_facts() -> dict:
                     if (d.get("cost_stack") or {}).get("slippage") is not None})
     f["slippage_bps"] = slips
     f["scalp"] = f["families"].get("ict_scalp")
+
+    # Real-money legs by venue (the production legs' real-money accounts).
+    by_venue = collections.Counter()
+    for leg in f["production_legs"]:
+        venues = {str(v.get("exchange")) for v in acc.values()
+                  if v.get("account_class") == "real_money" and leg in (v.get("strategies") or [])}
+        for ven in venues:
+            by_venue[ven] += 1
+    f["prod_by_venue"] = by_venue
+
+    # TP doctrine compliance (the guard itself, never a quoted count).
+    tp = json.loads(subprocess.check_output([sys.executable, os.path.join(ROOT, "scripts/ci/check_tp_doctrine.py"),
+                                             "--json"], text=True, cwd=ROOT))
+    f["tp"] = tp["summary"]
+
+    # Values exclusions (real money only).
+    vx = yaml.safe_load(open(os.path.join(ROOT, "config/values_exclusions.yaml")))
+    f["fossil_n"] = len(vx["fossil_fuels"]["symbols"])
+
+    # Live-trade review record (append-only JSONL).
+    lr = os.path.join(ROOT, "comms/live_review/reviews.jsonl")
+    f["reviews_n"] = sum(1 for line in open(lr) if line.strip()) if os.path.exists(lr) else None
+    # ML inventory by decision slot (dated snapshot; the live feed is /api/bot/ml/registry).
+    mc = json.load(open(os.path.join(ROOT, "comms/ml_consolidation/2026-11-11.json")))
+    slot_keep = collections.Counter(m["slot"] for m in mc["models"] if str(m.get("proposal", "")).startswith("KEEP (consumer)"))
+    f["ml_inv"] = dict(as_of=str(mc.get("as_of"))[:10], total=len(mc["models"]), keep_consumer=slot_keep,
+                       proposals=collections.Counter(str(m.get("proposal", "")).split(" ")[0] for m in mc["models"]))
+    # Live real-money R per leg: the pipeline map's generated per-leg table, rebuilt now (journal via the API);
+    # falls back to the committed snapshot docs/reference/trading-pipeline-map.md if the live build fails.
+    md, src = None, "live: python3 scripts/ops/pipeline_map_numbers.py --stdout (GET /api/bot/performance?window=all)"
+    try:
+        md = subprocess.check_output([sys.executable, os.path.join(ROOT, "scripts/ops/pipeline_map_numbers.py"),
+                                      "--stdout"], text=True, cwd=ROOT, timeout=150, stderr=subprocess.DEVNULL)
+    except Exception:
+        md = open(os.path.join(ROOT, "docs/reference/trading-pipeline-map.md")).read()
+        src = "snapshot: docs/reference/trading-pipeline-map.md"
+    live = {}
+    _re = __import__("re")
+
+    def _lv(c):
+        m = _re.search(r"n=(\d+) · ΣR ([+-]?[0-9.]+) · E\[R\] ([+-]?[0-9.]+)", c)
+        if not m:
+            return None
+        cf = _re.search(r"confirmed (\d+)", c)
+        return dict(n=int(m.group(1)), sr=float(m.group(2)), er=float(m.group(3)), conf=int(cf.group(1)) if cf else 0)
+    track = []
+    for line in md.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 12 and cells[0].startswith("`"):
+            leg = cells[0].strip("`")
+            if (leg.startswith("ml_") or leg.endswith("_ml") or leg == "claude_desk" or "pair" in leg
+                    or any(t["leg"] == leg for t in track)):
+                continue
+            bt = _re.search(r"([+-][0-9.]+)", cells[4])
+            track.append(dict(leg=leg, status=cells[1], books=cells[2], bt=float(bt.group(1)) if bt else None,
+                              bt_n=cells[5], bt_folds=cells[6], rm=_lv(cells[10]), paper=_lv(cells[11])))
+    f["track"] = track
+    for line in md.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 12 and cells[0].startswith("`") and cells[1] == "production":
+            leg = cells[0].strip("`")
+            m = __import__("re").search(r"n=(\d+).*?E\[R\] ([+-]?[0-9.]+)", cells[10])
+            live[leg] = dict(n=int(m.group(1)), er=float(m.group(2))) if m else dict(n=0, er=None)
+    f["live_rm"], f["live_rm_source"] = live, src
     f["sha"] = _git_sha()
     f["date"] = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
     return f
@@ -152,11 +226,16 @@ PLAIN = {
     "trend_donchian_sol_prop": "Solana trend breakout (hourly bars)",
     "trend_donchian_xrp_4h": "XRP trend breakout (4-hour bars)",
     "xrp_pullback_2h": "XRP pullback (2-hour bars)",
+    "ml_entry_eq_struct": "ML entry model (US funds pool, hourly)",
+    "slv_trend_1h": "Silver-ETF trend breakout (hourly bars)",
+    "tlt_pullback_1h": "Long-bond-ETF pullback (hourly bars)",
+    "tqqq_trend_long_1d": "Leveraged Nasdaq-ETF trend, long only (daily)",
+    "trend_donchian_xrp_adx25": "XRP trend breakout, strong-trend filter (4-hour)",
 }
 
 FAMILY_PLAIN = {
     "trend": "Trend breakouts", "pullback": "Pullbacks in a trend", "ict_scalp": "Short-term scalps",
-    "ml_decision_entry": "ML entry model", "event_oi_shock": "Event: open-interest shock",
+    "ml_decision_entry": "ML entry model (crypto)", "ml_entry_equity": "ML entry model (US funds)", "event_oi_shock": "Event: open-interest shock",
     "fade": "Fade a breakout", "fvg_range": "Price-gap range", "squeeze": "Volatility squeeze",
 }
 
@@ -175,6 +254,12 @@ FONT = "Calibri"
 
 W, H = Inches(13.333), Inches(7.5)
 
+# The trading pipeline map's eleven steps (docs/reference/trading-pipeline-map.skeleton.md § The flow): the deck's spine.
+STAGES = ["Data in", "Signal builders", "Strategy legs and ML heads", "Intent layer", "Per-account routing",
+          "RiskManager and sizing", "Order package + bracket", "Venue execution", "Live management",
+          "Close and reconcile", "Grading, evidence, research"]
+MAP_PNG = os.path.join(ROOT, "docs", "pitch", "pipeline_map.png")
+
 
 class Deck:
     def __init__(self, facts):
@@ -185,6 +270,24 @@ class Deck:
         self.md: list[str] = []
         self.f = facts
         self.section = ""
+        self.slides: list[dict] = []
+
+    # -- slide records (docs/pitch/slides.json)
+    def _rec(self, title, notes, kicker=None, tags=()):
+        self.slides.append(dict(number=self.n, section=self.section or "Opening", title=title, kicker=kicker,
+                                provenance=list(tags), bullets=[], notes=notes, numbers=[], sources=[]))
+
+    def num(self, label, value, provenance, source, live_endpoint=None):
+        """Register one number shown on the current slide, with where it comes from and what would refresh it."""
+        self.slides[-1]["numbers"].append(dict(label=label, value=value, provenance=provenance, source=source,
+                                                live_endpoint_candidate=live_endpoint))
+
+    def cite(self, *paths):
+        self.slides[-1]["sources"].extend(p for p in paths if p not in self.slides[-1]["sources"])
+
+    def _b(self, text):
+        if self.slides:
+            self.slides[-1]["bullets"].append(text)
 
     # -- primitives
     def _text(self, slide, x, y, w, h, text, size=18, bold=False, color=INK, align=PP_ALIGN.LEFT,
@@ -225,14 +328,38 @@ class Deck:
         r.text = kind
         r.font.size, r.font.bold, r.font.color.rgb, r.font.name = Pt(11), True, WHITE, FONT
 
-    def new(self, title, notes, kicker=None, tags=()):
+    def strip(self, s, stages, y=Inches(1.2)):
+        """The compact pipeline strip: all eleven steps, the current ones highlighted."""
+        gap = Inches(0.05)
+        n_on = sum(1 for i in range(11) if (i + 1) in stages)
+        off_w = Inches(0.42)
+        on_w = (W - Inches(1.2) - gap * 10 - off_w * (11 - n_on)) / max(n_on, 1)
+        x = Inches(0.6)
+        for i, name in enumerate(STAGES):
+            on = (i + 1) in stages
+            bw = on_w if on else off_w
+            b = self._box(s, x, y, bw, Inches(0.34), TEAL if on else LIGHT, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            x += bw + gap
+            tf = b.text_frame
+            tf.margin_top = tf.margin_bottom = tf.margin_left = tf.margin_right = 0
+            para = tf.paragraphs[0]
+            para.alignment = PP_ALIGN.CENTER
+            r = para.add_run()
+            r.text = f"{i + 1} · {name}" if on else str(i + 1)
+            r.font.size, r.font.bold, r.font.name = Pt(9), on, FONT
+            r.font.color.rgb = WHITE if on else GREY
+
+    def new_at(self, stages, title, notes, **kw):
+        return self.new(title, notes, stages=stages, **kw)
+
+    def new(self, title, notes, kicker=None, tags=(), stages=()):
         self.n += 1
         s = self.p.slides.add_slide(self.blank)
         self._box(s, 0, 0, W, Inches(1.1), NAVY)
         self._box(s, 0, Inches(1.1), W, Inches(0.06), TEAL)
         self._text(s, Inches(0.6), Inches(0.18), Inches(11.0), Inches(0.8), title, size=28, bold=True,
                    color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
-        if kicker:
+        if kicker and not stages:
             self._text(s, Inches(0.6), Inches(1.28), Inches(12.0), Inches(0.5), kicker, size=16,
                        color=TEAL, bold=True)
         for i, t in enumerate(tags):
@@ -249,6 +376,11 @@ class Deck:
         if tags:
             self.md.append("Provenance: " + ", ".join(tags) + "\n")
         self._cur_notes = notes
+        self._rec(title, notes, kicker, tags)
+        if stages:
+            self.strip(s, stages)
+            self.slides[-1]["stages"] = list(stages)
+            self.md.append("Pipeline stage(s): " + ", ".join(f"{i} {STAGES[i - 1]}" for i in stages) + "\n")
         return s
 
     def end_md(self):
@@ -270,18 +402,20 @@ class Deck:
             r.text = text
             r.font.size, r.font.color.rgb, r.font.name = Pt(size - (3 if sub else 0)), INK, FONT
             self.md.append(("  - " if sub else "- ") + text)
+            self._b(("  – " if sub else "") + text)
         self.md.append("")
         return tb
 
-    def cards(self, s, cards, y=Inches(1.9), h=Inches(4.25), cols=None, size=15, head=19):
+    def cards(self, s, cards, y=Inches(1.9), h=Inches(4.25), cols=None, size=15, head=19, x0=None):
         cols = cols or len(cards)
         gap = Inches(0.25)
-        cw = (W - Inches(1.2) - gap * (cols - 1)) / cols
+        x0 = x0 if x0 is not None else Inches(0.6)
+        cw = (W - x0 - Inches(0.6) - gap * (cols - 1)) / cols
         for i, (head_txt, body) in enumerate(cards):
             r, c = divmod(i, cols)
             rows = (len(cards) + cols - 1) // cols
             ch = (h - gap * (rows - 1)) / rows
-            x = Inches(0.6) + (cw + gap) * c
+            x = x0 + (cw + gap) * c
             yy = y + (ch + gap) * r
             self._box(s, x, yy, cw, ch, LIGHT)
             self._box(s, x, yy, Inches(0.08), ch, TEAL)
@@ -290,6 +424,7 @@ class Deck:
             self._text(s, x + Inches(0.2), yy + Inches(0.62), cw - Inches(0.3), ch - Inches(0.7),
                        body if isinstance(body, list) else [body], size=size, color=INK)
             self.md.append(f"- **{head_txt}** — " + " ".join(body if isinstance(body, list) else [body]))
+            self._b(f"{head_txt} — " + " ".join(body if isinstance(body, list) else [body]))
         self.md.append("")
 
     def flow(self, s, steps, y=Inches(2.2), h=Inches(1.6), size=14, sub=None):
@@ -309,6 +444,7 @@ class Deck:
             self._text(s, x, y + h + Inches(0.15), cw, Inches(2.3), body, size=size, color=INK,
                        align=PP_ALIGN.CENTER)
             self.md.append(f"{i + 1}. **{head_txt}** — " + " ".join(body if isinstance(body, list) else [body]))
+            self._b(f"{i + 1}. {head_txt} — " + " ".join(body if isinstance(body, list) else [body]))
         self.md.append("")
 
     def table(self, s, header, rows, y=Inches(1.9), col_w=None, size=13, h_row=Inches(0.42)):
@@ -340,639 +476,664 @@ class Deck:
         self.md.append("|" + "---|" * ncol)
         for row in rows:
             self.md.append("| " + " | ".join(str(v) for v in row) + " |")
+        if self.slides:
+            self.slides[-1].setdefault("table", {"header": list(header), "rows": [[str(v) for v in r] for r in rows]})
         self.md.append("")
+
+    def model_card(self, s, good, stats, nxt):
+        """A 'model card': what makes it good (plain English) · headline stats (big number + bar) · what's next."""
+        y0 = Inches(1.75)
+        colw = Inches(3.9)
+        # left: what makes it good
+        self._box(s, Inches(0.6), y0, colw, Inches(4.75), LIGHT)
+        self._text(s, Inches(0.75), y0 + Inches(0.1), colw - Inches(0.3), Inches(0.4), "Why it's good at its job",
+                   size=15, bold=True, color=NAVY)
+        self._text(s, Inches(0.75), y0 + Inches(0.55), colw - Inches(0.3), Inches(4.1), good, size=13, color=INK)
+        # middle: stat tiles
+        mx, mw = Inches(4.7), Inches(4.3)
+        th = Inches(1.12)
+        vmax = max([abs(t["r"]) for t in stats if t.get("r") is not None] or [1]) or 1
+        for i, t in enumerate(stats):
+            ty = y0 + (th + Inches(0.09)) * i
+            self._box(s, mx, ty, mw, th, WHITE, line=LIGHT)
+            self._text(s, mx + Inches(0.12), ty + Inches(0.02), Inches(1.9), Inches(0.6), t["big"], size=24, bold=True,
+                       color=(RED if t.get("bad") else NAVY))
+            self._text(s, mx + Inches(2.0), ty + Inches(0.06), mw - Inches(2.1), Inches(0.6), t["label"], size=10,
+                       color=INK)
+            self._text(s, mx + Inches(0.12), ty + Inches(0.72), mw - Inches(0.2), Inches(0.38),
+                       f"{t['prov']} · {t['kind']} · {t['meta']}", size=8, color=GREY)
+            if t.get("r") is not None:
+                cx = mx + Inches(2.0) + Inches(1.1)
+                ln = int(Inches(1.05) * min(1.0, abs(t["r"]) / vmax))
+                if ln > 0:
+                    self._box(s, cx if t["r"] >= 0 else cx - ln, ty + Inches(0.58), ln, Inches(0.1),
+                              TEAL if t["r"] >= 0 else AMBER)
+                self._box(s, cx, ty + Inches(0.52), Inches(0.015), Inches(0.22), GREY)
+        # right: next
+        rx = Inches(9.2)
+        rw = W - rx - Inches(0.6)
+        self._box(s, rx, y0, rw, Inches(4.75), LIGHT)
+        self._text(s, rx + Inches(0.15), y0 + Inches(0.1), rw - Inches(0.3), Inches(0.4), "What's next",
+                   size=15, bold=True, color=NAVY)
+        self._text(s, rx + Inches(0.15), y0 + Inches(0.55), rw - Inches(0.3), Inches(4.1),
+                   [f"→ {x}" for x in nxt], size=13, color=INK)
+        self.slides[-1]["card"] = {"good": good, "stats": stats, "next": nxt}
+        self.md.append("**Why it's good at its job.** " + " ".join(good) + "\n")
+        self.md.append("| Stat | What | Provenance · kind · n / window |")
+        self.md.append("|---|---|---|")
+        for t in stats:
+            self.md.append(f"| {t['big']} | {t['label']} | {t['prov']} · {t['kind']} · {t['meta']} |")
+            self.slides[-1]["numbers"].append(dict(label=t["label"], value=t["big"], provenance=t["prov"],
+                                                   source=t["source"], live_endpoint_candidate=t.get("live")))
+        self.md.append("\n**What's next.** " + " ".join(f"→ {x}" for x in nxt) + "\n")
+        for x in good + nxt:
+            self._b(x)
 
     def footnote(self, s, text, y=None):
         self._text(s, Inches(0.6), y or (H - Inches(1.05)), Inches(12.1), Inches(0.55), text, size=12,
                    color=GREY)
         self.md.append(f"> {text}\n")
+        if self.slides:
+            self.slides[-1]["footnote"] = text
 
 
 def pct(x):
     return f"{x * 100:.0f}%"
 
 
+_STRATS = None
+
+
+def plain_leg(leg):
+    global _STRATS
+    if leg in PLAIN:
+        return PLAIN[leg]
+    if _STRATS is None:
+        d0 = yaml.safe_load(open(os.path.join(ROOT, "config/strategies.yaml")))
+        _STRATS = d0.get("strategies", d0)
+    cfg = _STRATS.get(leg) or {}
+    syms = cfg.get("symbols") or ([cfg["symbol"]] if cfg.get("symbol") else [])
+    tf = cfg.get("timeframe") or ""
+    fam = ("Trend breakout" if "donchian" in leg else "ICT scalp" if "ict_scalp" in leg else
+           "Pullback" if "pullback" in leg else "Trend" if "trend" in leg else None)
+    if fam and len(syms) == 1:
+        sym = str(syms[0]).replace("USDT", "")
+        return f"{fam} · {sym} {tf}".strip() + (" (prop variant)" if leg.endswith("_prop") else "")
+    t = leg.split("_")
+    tf = next((x for x in t if x[:-1].isdigit() and x[-1] in "mhd"), "")
+    words = {"trend": "trend", "donchian": "breakout", "pullback": "pullback", "ict": "ICT", "scalp": "scalp",
+             "prop": "(prop variant)", "long": "long-only", "oi": "open-interest", "shock": "shock", "e4": "Event:"}
+    out = [words.get(x, x.upper()) for x in t if x != tf]
+    name = " ".join(out).replace("trend breakout", "trend breakout")
+    return (name[0].upper() + name[1:] + (f" ({tf})" if tf else "")).replace("TREND", "Trend")
+
+
 def build():
     f = load_facts()
     d = Deck(f)
     st = f["status"]
+    cov = f["coverage"]
+    q = f["queue"]
+    qv = f["queue_verdicts"]
+    sv = f["served"]
+    rm = f["tp"]["by_class"]["real_money"]
 
     # ---------------------------------------------------------------- 1 title
     d.n += 1
     s = d.p.slides.add_slide(d.blank)
     d._box(s, 0, 0, W, H, NAVY)
-    d._box(s, Inches(0.8), Inches(3.55), Inches(2.2), Inches(0.08), TEAL)
-    d._text(s, Inches(0.8), Inches(1.8), Inches(11.5), Inches(1.2), "JTA Trader", size=54, bold=True, color=WHITE)
-    d._text(s, Inches(0.8), Inches(2.75), Inches(11.5), Inches(0.8),
-            "An automated trading system that only trusts what it can prove", size=26, color=WHITE)
-    d._text(s, Inches(0.8), Inches(3.9), Inches(11.5), Inches(1.4),
-            ["What it is · how it works · how it keeps improving · where it goes next",
+    d._box(s, Inches(0.8), Inches(3.75), Inches(2.2), Inches(0.08), TEAL)
+    d._text(s, Inches(0.8), Inches(1.6), Inches(11.5), Inches(1.2), "JTA Trader", size=54, bold=True, color=WHITE)
+    d._text(s, Inches(0.8), Inches(2.55), Inches(11.8), Inches(1.2),
+            "The edge comes from the research loop, not the plumbing", size=28, color=WHITE)
+    d._text(s, Inches(0.8), Inches(4.0), Inches(11.5), Inches(1.4),
+            ["How a trade flows · how the models keep getting better · what the research has produced",
              f"Project walkthrough · {f['date']}"], size=18, color=RGBColor(0xC8, 0xD3, 0xE0))
     d._text(s, Inches(0.8), Inches(6.3), Inches(11.8), Inches(0.8),
-            "Numbers in this deck are ratios only (R-multiples, percentages, counts) and each is tagged "
-            "MEASURED or ESTIMATED. No dollar amounts or balances. Not investment advice.",
-            size=12, color=RGBColor(0xC8, 0xD3, 0xE0))
-    notes = ("Welcome. This deck walks through the whole project for someone smart who does not trade for a living. "
-             "The main section is plain language; the appendix has the technical detail. Every number is either "
-             "MEASURED (read straight from a file or a backtest result) or ESTIMATED (rests on an assumption), "
-             "and the tag on the slide says which.")
+            "Numbers are ratios only (R-multiples, percentages, counts) and each is tagged MEASURED or ESTIMATED. "
+            "No dollar amounts or balances. Not investment advice.", size=12, color=RGBColor(0xC8, 0xD3, 0xE0))
+    notes = ("Automated trading infrastructure is common; what is hard is finding an edge that survives costs and "
+             "keeps surviving. This deck is about the research and development loop that produces that edge, "
+             "especially on the machine-learning side, and about what it has produced so far. One slide covers how "
+             "the system runs. Every number is either MEASURED, read straight from a committed file or result, or "
+             "ESTIMATED, resting on an assumption, and the tag says which. R means one unit of risk: what a trade "
+             "loses if its stop is hit.")
     s.notes_slide.notes_text_frame.text = notes
-    d.md.append(f"## 1. JTA Trader — an automated trading system that only trusts what it can prove\n\n"
+    d.md.append("## 1. JTA Trader — the edge comes from the research loop, not the plumbing\n\n"
                 f"Project walkthrough · {f['date']}. Ratios only; each number tagged MEASURED or ESTIMATED; "
                 "no dollar amounts. Not investment advice.\n")
     d._cur_notes = notes
+    d._rec("JTA Trader — the edge comes from the research loop, not the plumbing", notes)
+    d._b("The edge comes from the research loop, not the plumbing")
+    d._b("How a trade flows · how the models keep getting better · what the research has produced")
+    d._b(f"Project walkthrough · {f['date']}")
+    d.num("build date", f["date"], "MEASURED", "docs/pitch/build_deck.py (build time, UTC)")
     d.end_md()
 
-    # ---------------------------------------------------------------- PART 1
-    d.section = "The idea"
-    s = d.new("The one-minute version",
-              "Three sentences to remember. It trades automatically. It tests ideas on history, with full costs, "
-              "before risking money. And it keeps learning, because every trade and every test feeds the next "
-              "round of research. The rest of the deck explains each of these.")
+    # ---------------------------------------------------------------- 2 pipeline map
+    d.section = "The trade pipeline"
+    s = d.new("The trading pipeline",
+              "This is the trading pipeline map we built and use on the Work tab, drawn from the same source. Every "
+              "trade passes through these eleven steps. At step 3, two kinds of decision-makers run side by side: "
+              "hand-designed rule strategies, such as trend breakouts, pullbacks in a trend and short-term scalps, "
+              "each with its own backtest evidence; and machine-learning models that propose trades of their own. "
+              "Both feed the same intent layer, risk manager, bracket and execution steps, so a model gets no "
+              "shortcut around the risk controls. Step 11 grades every trade and test, and its two dashed arrows "
+              "are the loop: new evidence changes which strategies run and with what settings, and retrained, "
+              "promoted models go back in at step 3.")
+    pic_h = H - Inches(1.45)
+    pic = s.shapes.add_picture(MAP_PNG, Inches(0.6), Inches(1.3), height=pic_h)
+    tx = Inches(0.6) + pic.width + Inches(0.5)
+    d.slides[-1]["visual"] = "pipeline_image"
+    d.slides[-1]["image"] = "docs/pitch/pipeline_map.png"
+    d.slides[-1]["mermaid_source"] = "docs/reference/trading-pipeline-map.md § The flow"
     d.cards(s, [
-        ("It trades by itself", ["Many small, rule-based strategies run around the clock on crypto, US "
-                                 "exchange-traded funds and futures. Each trade has a stop-loss and a profit "
-                                 "target from the moment it opens."]),
-        ("It proves before it risks", ["A strategy reaches real money only after a historical test, charged "
-                                       "with realistic trading costs, clears a pass mark that was written "
-                                       "down before the test was run."]),
-        ("It keeps learning", ["Failures go back into research, not the bin. AI agent sessions run the "
-                               "research, the reviews and the bookkeeping. A human operator sets strategy "
-                               "and risk policy."]),
-    ], size=17, h=Inches(3.4))
+        ("Step 3 runs two kinds of decision-makers", ["Rule strategies: trend breakouts, pullbacks, scalps and "
+                                                      "others, each with its own backtest evidence.",
+                                                      "ML models: learned entry models that propose trades too."]),
+        ("Same path for both", ["Steps 4–10 treat them alike: intent layer, risk manager, stop and target, "
+                                "execution, live management, reconciliation."]),
+        ("The loop", ["Step 11 grades everything. New evidence changes rosters and settings; retrained models "
+                      "re-enter at step 3."]),
+    ], y=Inches(1.3), h=Inches(5.4), cols=1, size=14, head=16, x0=tx)
+    fn = ("The map: docs/reference/trading-pipeline-map.md § The flow (mermaid source rendered verbatim; live at "
+          "/api/bot/work/pipeline-map).")
+    d._text(s, tx, H - Inches(0.75), W - tx - Inches(0.6), Inches(0.4), fn, size=11, color=GREY)
+    d.md.append(f"> {fn}\n")
+    d.slides[-1]["footnote"] = fn
     d.end_md()
 
-    s = d.new("How to read the numbers in this deck",
-              "Two ideas make every later slide readable. First, R. We never quote money; we quote how many "
-              "units of risk a trade made or lost. Second, the tags. A MEASURED number was read directly from a "
-              "result file. An ESTIMATED number depends on an assumption, for example how much worse than "
-              "expected our fills are.")
-    d.cards(s, [
-        ("R = one unit of risk", ["Before a trade opens, it gets a stop-loss. The money lost if the stop is "
-                                  "hit is 1R.", "A trade that makes +2R made twice what it risked. One "
-                                  "that hits its stop is −1R.", "R lets us compare strategies of any size "
-                                  "without quoting money."]),
-        ("Expectancy", ["The average R per trade. +0.20R means that, on average, each trade earned a fifth "
-                        "of what it risked, after costs.", "Small positive expectancy, repeated over "
-                        "many trades, is what an edge looks like."]),
-        ("The two tags", ["MEASURED: read straight from a backtest result or a config file.",
-                          "ESTIMATED: depends on an assumption (e.g. an allowance for slippage).",
-                          "If we could not verify a number, it is not in the deck."]),
-    ], size=16)
-    d.end_md()
-
-    s = d.new("The problem: most trading ideas do not survive contact with costs",
-              "This is the core problem the project is built around. Lots of ideas look good on a chart. Most "
-              "of them stop working once you charge fees and slippage, or once you test on data the idea was "
-              "not tuned on. People also fool themselves: they pick the pass mark after seeing the result. "
-              "The system is designed to make those mistakes hard to make.")
-    d.bullets(s, [
-        "An idea that looks profitable on a chart is often an illusion. Three things usually kill it:",
-        (1, "Costs: exchange fees, slippage (getting a worse price than expected) and funding charges."),
-        (1, "Overfitting: rules tuned so tightly to the past that they describe noise, not a pattern."),
-        (1, "Moving the goalposts: deciding what counts as success after seeing the result."),
-        "Running a live book well is also hard: positions must be protected 24/7, and every close must "
-        "be explained.",
-        "JTA Trader's answer is to make discipline mechanical: the rules are code and records, not willpower.",
-    ])
-    d.end_md()
-
-    s = d.new("What JTA Trader is",
-              f"Concrete shape. The counts here were re-read from the configuration files on the day this deck "
-              f"was built ({f['date']}, repo commit {f['sha']}). {f['legs_total']} strategy legs are configured; "
-              f"{f['accounts_total']} trading accounts are configured, {f['accounts_live_mode']} of them switched "
-              f"to send orders. Paper accounts trade with simulated money at the broker; real-money accounts "
-              f"trade the operator's capital; prop-firm accounts trade a firm's capital under the firm's rules.",
-              tags=("MEASURED",))
-    d.cards(s, [
-        (f"{f['legs_total']} strategy legs", ["A leg is one strategy on one market and timeframe, e.g. "
-                                              "“Ether trend breakout on 4-hour bars”."]),
-        (f"{f['accounts_total']} accounts", [f"{f['accounts_live_mode']} switched on to send orders, "
-                                             f"{f['accounts_dry']} in dry run (they log what they would do, "
-                                             "but send nothing)."]),
-        ("3 kinds of book", ["Paper (simulated money at the broker), real money, and prop-firm "
-                             "evaluation accounts (the firm's capital, the firm's rules)."]),
-        ("Always on", ["Runs 24/7 on cloud servers. It never switches itself off; problems are "
-                       "handled trade by trade."]),
-    ], cols=2, size=16)
-    d.footnote(s, f"MEASURED: config/strategies.yaml (via scripts/ops/strategy_status.py) and config/accounts.yaml, "
-                  f"commit {f['sha']}, {f['date']}. Population: every leg / account in those files.")
-    d.end_md()
-
-    s = d.new("Markets and venues",
-              "Where the system trades. Crypto runs on Bybit as perpetual futures. US exchange-traded funds "
-              "run on Alpaca. Futures and some ETFs run on Interactive Brokers. An OANDA forex practice account "
-              "exists but is in dry run. Prop-firm accounts trade through the firms' own platforms.",
-              tags=("MEASURED",))
-    d.cards(s, [
-        ("Crypto", ["Bitcoin, Ether, Solana, XRP, Cardano, Avalanche and others, as perpetual futures on "
-                    "Bybit. Paper, real-money and mirror accounts."]),
-        ("US funds (ETFs)", ["Broad index, bond, gold, silver, oil and leveraged funds on Alpaca. Paper, "
-                             "real money, mirror and an options paper account."]),
-        ("Futures", ["Micro index and metals futures on Interactive Brokers, on paper. A real-money account "
-                     "exists in dry run with no strategies yet."]),
-        ("Prop firms", [f"{f['prop_total']} prop-firm accounts are configured; {f['prop_live']} are switched on. "
-                        "They must clear a stricter bar than real money (slide 14)."]),
-    ], cols=2, size=16)
-    d.footnote(s, f"MEASURED: config/accounts.yaml, {f['accounts_total']} accounts, commit {f['sha']}.")
-    d.end_md()
-
-    s = d.new("The strategy families, in plain words",
-              "No single clever trick. A portfolio of simple, well-understood rule families, each tested "
-              "separately on each market. The point is breadth plus honest testing, not secrecy.")
-    d.cards(s, [
-        ("Trend breakouts", ["Buy when price breaks above its recent range, sell when it breaks below. "
-                             "Catches big moves; loses small often."]),
-        ("Pullbacks", ["In an established trend, wait for a dip, then enter in the trend's direction."]),
-        ("Short-term scalps", ["Quick trades on 5- and 15-minute bars around specific price patterns."]),
-        ("Volatility & fades", ["Trade the break-out after a quiet squeeze, or bet a false break-out "
-                                "reverses."]),
-        ("Pairs & macro", ["Trade two related coins against each other; a slower, thesis-driven sleeve "
-                           "built from valuation and economic events."]),
-        ("Machine learning & AI desk", ["A learned model that picks entries; an AI trading desk that "
-                                        "reviews open trades and proposes changes."]),
-    ], cols=3, size=15, head=18)
-    d.end_md()
-
-    # ---------------------------------------------------------------- PART 2
-    d.section = "How it works"
-    s = d.new("The life of a trade",
-              "Every trade follows the same path. Market data arrives. Strategies check their rules. If a rule "
-              "fires, the risk manager decides whether this account may take it and how big it is. The order goes "
-              "out with a stop and a target already attached. While it is open, management may move the "
-              "brackets. When it closes, the reason is recorded and the trade is graded.")
+    # ---------------------------------------------------------------- 3a first half of the pipeline (operator comment 2026-11-17)
+    s = d.new_at((1, 2, 3, 4, 5, 6), "From data to a sized order: steps 1–6",
+              "The first half of the map, from market data to an order that is ready to send. Data arrives from every "
+              "venue. Each strategy computes its own inputs. At step 3, rule strategies and ML models propose trades "
+              "side by side. The intent layer combines the proposals, steps aside where a strategy loses in the "
+              "current market regime, and elects one trade per market. Routing decides which accounts carry the "
+              "strategy, behind exactly two switches: account live or dry run, strategy live or shadow. The risk "
+              f"manager then sizes the trade in R and applies the daily drawdown brake. Today {st['production']} "
+              f"strategies trade real money and {st['testing']} trade on the demo floor; {f['accounts_live_mode']} of "
+              f"{f['accounts_total']} accounts send orders.", tags=("MEASURED",))
     d.flow(s, [
-        ("Data", ["Prices arrive from four broker connections, every bar, every market."]),
-        ("Signal", ["Each strategy checks its own rules on its own markets."]),
-        ("Risk check", ["Per-account limits decide yes/no and the size, in R."]),
-        ("Order", ["Sent with a stop-loss and a profit target already attached."]),
-        ("Manage", ["Brackets can move, but only on evidence."]),
-        ("Close & grade", ["Exit reason recorded; trade graded and fed back to research."]),
-    ], size=14)
+        ("Data in", ["Candles, feeds and ML features from every venue."]),
+        ("Signal builders", ["Each strategy computes its own inputs."]),
+        ("Strategies + ML", ["Rule strategies and ML models propose trades."]),
+        ("Intent layer", ["Combine; step aside in losing regimes; elect one."]),
+        ("Routing", ["Which accounts; two on/off switches."]),
+        ("Risk + sizing", ["Size in R; daily drawdown brake; exposure."]),
+    ], size=12, h=Inches(1.25))
+    d.num("production legs", st["production"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
+    d.num("testing legs", st["testing"], "MEASURED", "scripts/ops/strategy_status.py", "/api/bot/strategies")
+    d.num("accounts sending orders", f["accounts_live_mode"], "MEASURED", "config/accounts.yaml (mode: live)", "/api/bot/config")
+    d.footnote(s, f"MEASURED: {st['production']} production and {st['testing']} testing legs (scripts/ops/strategy_status.py); "
+                  f"{f['accounts_live_mode']} of {f['accounts_total']} accounts live (config/accounts.yaml). Steps from "
+                  "docs/reference/trading-pipeline-map.md.", y=H - Inches(1.3))
     d.end_md()
 
-    s = d.new("Every trade carries a real stop and a real target",
-              "A rule the operator set: no fictional take-profits. Many systems put a target so far away it "
-              "never triggers, which is a way of not having one. Here, each strategy's target must be a real "
-              "prediction of where price is going, and compliance is checked by a script. Active management "
-              "means the system may move either bracket while a trade is open, but each kind of move stays "
-              "advice-only until its own cost-aware test passes.")
-    d.cards(s, [
-        ("Stop-loss from the start", ["Every order rests at the broker with a protective stop. That stop "
-                                      "defines 1R."]),
-        ("A real profit target", ["The target is a prediction, not a placeholder. A target set so far away "
-                                  "it can never fill counts as no target, and a checker flags it."]),
-        ("Evidence-backed management", ["Moving a stop or a target mid-trade is allowed. Each kind of move "
-                                        "is advice only until its own test, net of costs, says it helps."]),
-    ], size=16, h=Inches(3.0))
-    d.end_md()
-
-    s = d.new("Risk controls that never switch the system off",
-              "Risk is handled per trade, not by switching the whole system off. There are exactly two switches "
-              "that decide whether something trades: one per account, one per strategy. The one sanctioned "
-              "brake is a daily drawdown switch per account: once a day's loss reaches a set level, existing "
-              "positions keep their stops and targets but no new trades open until the reset.")
-    d.cards(s, [
-        ("Sizing in R", ["Each account risks a fixed fraction per trade, so one loss is always a known, "
-                         "small amount."]),
-        ("Two switches only", ["Account: live or dry run. Strategy: live or shadow. There is no "
-                               "hidden third switch."]),
-        ("Daily drawdown brake", ["Per account, when armed: past a day's loss limit, open trades stay "
-                                  "protected and new ones are blocked until the reset."]),
-        ("Never self-halts", ["Failures are contained to the one trade or job and retried; persistent "
-                              "problems raise a flag to the operator while the system keeps going."]),
-    ], cols=2, size=16)
-    d.end_md()
-
-    # ---------------------------------------------------------------- PART 3
-    d.section = "How we decide what trades"
-    s = d.new("Backtesting, explained simply",
-              "A backtest replays history and asks: if we had followed this rule, what would have happened? "
-              "The trap is that you can always find a rule that worked in the past. So three protections: "
-              "charge the full cost of trading; judge only on data the rule was not tuned on, split into several "
-              "separate time periods called folds; and write down the pass mark before running the test.")
-    d.flow(s, [
-        ("Replay history", ["Run the exact rule over past prices, trade by trade."]),
-        ("Charge full costs", ["Fees, plus allowances for slippage and funding."]),
-        ("Test out of sample", ["Score it on time periods it was not tuned on, split into folds."]),
-        ("Pass mark first", ["The rule for passing is registered before the run, never after."]),
-    ], size=15, h=Inches(1.5))
-    d.footnote(s, "The current pass mark for most legs: out-of-sample net R, after the full cost stack, must be "
-                  "above zero (rule RULE-D1-STAGE0-NET-OF-FULL-COST, registered 2026-09-22).", y=H - Inches(1.3))
-    d.end_md()
-
-    s = d.new("The promotion ladder: three stages, two gates",
-              "This is how an idea becomes a real-money strategy. Stage 0 decides whether there is an edge, "
-              "offline. Stage 1, paper trading, is not a performance test. It is a mechanical check: does the "
-              "order go out at the right size, do the stop and target rest at the broker, does the close get "
-              "recorded. One or two clean trades are enough. If the execution path is already proven, Stage 1 "
-              "is skipped. Stage 2 is real money plus a paper mirror that copies it exactly; if the mirror turns "
-              "net-negative after costs over its window, the strategy is demoted.")
-    y = Inches(1.9)
-    bw, bh, gap = Inches(3.6), Inches(3.2), Inches(0.55)
-    stages = [
-        ("STAGE 0 · Backtest", "Is there an edge, net of all costs?",
-         "Passes only by clearing a pass mark registered before the run.", NAVY),
-        ("STAGE 1 · Paper", "Do the mechanics work?",
-         "1–2 clean trades. Skipped when the execution path is already proven.", TEAL),
-        ("STAGE 2 · Real money", "Does it hold up live, with its mirror?",
-         "A paper mirror copies every trade; net-negative after costs → demoted.", GREEN),
-    ]
-    for i, (h1, q, body, col) in enumerate(stages):
-        x = Inches(0.6) + (bw + gap) * i
-        d._box(s, x, y, bw, bh, col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        d._text(s, x + Inches(0.2), y + Inches(0.2), bw - Inches(0.4), Inches(0.6), h1, size=19, bold=True,
-                color=WHITE)
-        d._text(s, x + Inches(0.2), y + Inches(0.9), bw - Inches(0.4), Inches(0.9), q, size=18, color=WHITE)
-        d._text(s, x + Inches(0.2), y + Inches(1.8), bw - Inches(0.4), Inches(1.3), body, size=15, color=WHITE)
-        if i < 2:
-            d._box(s, x + bw + Inches(0.07), y + bh / 2 - Inches(0.25), Inches(0.42), Inches(0.5), GREY,
-                       shape=MSO_SHAPE.RIGHT_ARROW)
-        d.md.append(f"- **{h1}** — {q} {body}")
-    d.md.append("")
-    d.footnote(s, "A paper or live record never proves an edge; it checks mechanics and cost. Edge is decided "
-                  "offline, at Stage 0.", y=H - Inches(1.6))
-    d.end_md()
-
-    s = d.new("Three statuses, derived from the books",
-              f"Every leg has exactly one of three statuses, and the status is computed from which accounts it "
-              f"is on, never typed in by hand. Testing legs trade on paper so even weak ideas generate data. "
-              f"Production legs trade real money plus the mirror. Inactive legs were retired by a written "
-              f"research record that also says what evidence would bring them back. Counts as of {f['date']}.",
+    # ---------------------------------------------------------------- 3 trade management
+    s = d.new_at((7, 8, 9, 10), "Trade management: entry, in-trade, exit",
+              "The second half of the map, steps 7 to 10, where the trade is actually managed. At entry every order "
+              "carries a protective stop, which defines 1R, and a profit target that must be a real prediction, "
+              "not a placeholder set too far away to ever fill. In the trade, either bracket can move, or the "
+              "position can be part-closed or closed, but only when something in the live market triggers it: "
+              "structure, volatility, momentum, regime or a scheduled event. Never the profit alone, never the "
+              "clock alone. A review function looks at every open trade, prices each option from that strategy's own "
+              "backtest history, and since 14 November its recommended actions are applied automatically through "
+              "each account's own risk checks, with a ping to the operator. At the exit the close reason is "
+              "recorded and graded, and the grade feeds research. Honest status on targets: on real money "
+              f"{rm['routings'] - rm['entry_fail']} of {rm['routings']} routings set a real target at entry, but only "
+              f"{rm['routings'] - rm['revision_fail']} of {rm['routings']} revise it during the trade.",
               tags=("MEASURED",))
-    total = f["legs_total"]
-    rows = [
-        ["Testing", "Paper accounts (the demo floor)", str(st["testing"]), pct(st["testing"] / total)],
-        ["Production", "Real money + its paper mirror", str(st["production"]), pct(st["production"] / total)],
-        ["Inactive", "Nowhere — retired by a research record", str(st["inactive"]), pct(st["inactive"] / total)],
-        ["Total", "", str(total), "100%"],
-    ]
-    d.table(s, ["Status", "Where it trades", "Legs", "Share"], rows, col_w=[2, 5, 1.2, 1.2], size=17,
-            h_row=Inches(0.62))
-    d.footnote(s, f"MEASURED: scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml, "
-                  f"{total} legs, commit {f['sha']}. Shares are of those {total} legs.", y=H - Inches(2.0))
+    d.flow(s, [
+        ("Entry", ["Stop-loss defines 1R; profit target is a real prediction (the TP doctrine)."]),
+        ("In-trade", ["Either bracket moves, part-close or close, triggered by live market evidence."]),
+        ("Review desk", [f"Every open trade reviewed; options priced from the strategy's own history. "
+                         f"{f['reviews_n']} reviews on record."]),
+        ("Exit + grade", ["Close reason recorded, trade graded, grade becomes a training label."]),
+    ], size=14, h=Inches(1.3))
+    d.footnote(s, f"MEASURED: real-money target at entry {rm['routings'] - rm['entry_fail']} of {rm['routings']} "
+                  f"routings, revised in-trade {rm['routings'] - rm['revision_fail']} of {rm['routings']} "
+                  f"(scripts/ci/check_tp_doctrine.py); reviews: comms/live_review/reviews.jsonl. "
+                  "Rules: docs/ARCHITECTURE-CANONICAL.md § TP doctrine, § Active management.", y=H - Inches(1.35))
+    d.num("real-money routings with an entry target", f"{rm['routings'] - rm['entry_fail']} of {rm['routings']}", "MEASURED", "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)")
+    d.num("real-money routings revising the target in-trade", f"{rm['routings'] - rm['revision_fail']} of {rm['routings']}", "MEASURED", "scripts/ci/check_tp_doctrine.py --json (summary.by_class.real_money)")
+    d.num("live-trade reviews on record", f["reviews_n"], "MEASURED", "comms/live_review/reviews.jsonl (line count)")
     d.end_md()
 
-    s = d.new("Prop-firm accounts clear a stricter bar",
-              "Prop firms lend capital under strict drawdown limits; break them and the account is gone. So a "
-              "strategy must clear everything a real-money strategy clears, plus a survival test against that "
-              "firm's specific limits. Never a lower bar.", tags=("MEASURED",))
-    d.bullets(s, [
-        "A prop firm funds a trader on condition they stay within daily and total loss limits.",
-        "A prop leg must clear the real-money bar PLUS a survival and expected-value test against the "
-        "firm's own drawdown rules.",
-        "Prop trades are executed and protected automatically, like any other account.",
-        f"{f['prop_total']} prop accounts are configured; {f['prop_live']} are switched on to send orders.",
-    ])
-    d.footnote(s, f"MEASURED: config/accounts.yaml (type: prop), commit {f['sha']}.")
+    # ---------------------------------------------------------------- 4 R&D loop
+    d.section = "How we find edge"
+    s = d.new_at((11,), "The R&D loop: how a model earns, and keeps, its place",
+              "This is the core of the project. Every strategy and every model sits in the same loop. Start from a "
+              "diagnosis of why the current version is not better. Write down the test and its pass mark before "
+              "running it. Run it on data held out from tuning, charged with the full cost of trading. Compare the "
+              "challenger with the champion, the version in use, on the same trades and the same costs. Pass, and "
+              "it goes straight to real money with a paper mirror. Fail, and the result is not thrown away: it "
+              "becomes the next diagnosis. A live model whose mirror goes net-negative after costs drops back to the "
+              "demo floor and keeps generating data while it is improved. Retirement needs evidence that no lever "
+              "helps, never a fixed number of attempts.")
+    d.flow(s, [
+        ("Diagnose", ["Why is the champion not better? Name the lever: label, features, threshold, exit."]),
+        ("Pre-register", ["Test, statistic and pass mark written down before the run."]),
+        ("Test", ["Held-out data, full cost stack, challenger vs champion on the same trades."]),
+        ("Decide", ["Pass → real money + mirror. Fail → back to Diagnose."]),
+        ("Monitor", ["Mirror net-negative after costs → demo floor, keep iterating."]),
+    ], size=13, h=Inches(1.3))
+    d.footnote(s, "Rules: docs/plans/OPERATING-PLAN-2026-09-21.md § 2 (no step between a backtest pass and real money, "
+                  "2026-11-12; the held-out pass governs real money) and § “What does not pass goes back into research”.",
+               y=H - Inches(1.2))
+    d.cite("docs/plans/ml-pipeline-design-2026-10-29.md (champion/challenger)")
     d.end_md()
 
-    # ---------------------------------------------------------------- PART 4
-    d.section = "The evidence"
-    cov = f["coverage"]
-    other = f["evidence_records"] - sum(cov[k] for k in ("measured", "harness_failed", "no_harness"))
-    s = d.new("The evidence bar in numbers: about half of what we test fails",
-              f"This is the slide that shows the discipline is real. Of {f['evidence_records']} strategy evidence "
-              f"records on file, {cov['measured']} have a real measured backtest. Of those, {f['measured_pass']} "
-              f"passed their pre-registered rule and {f['measured_fail']} failed. Failing is normal and expected: "
-              f"it is the filter working. Records also include legs that are no longer on any book, so this is "
-              f"a count of tests, not of live strategies.", tags=("MEASURED",))
+    # ---------------------------------------------------------------- 5 worked example
+    ex = sv.get("ml-entry-eq-struct-ens5-v1", {}).get("headline_metric", {})
+    tlt = next((r for r in f["prod_rows"] if r["leg"] == "tlt_pullback_1h" and not r.get("missing")), None)
+    s = d.new_at((3, 11), "Two real cycles: one ML model, one rule strategy",
+              "Two worked examples of the loop from the last three weeks. On the left, the equity entry model: "
+              "promoted on a strong held-out result, then a pre-registered test found its score mostly tracks how "
+              "cheap a trade is relative to its risk, not direction, so the next challenger targets that. On the right, "
+              "a rule strategy, the long-bond fund pullback: its one-year record failed because it traded too often "
+              "for its small edge and costs ate it. Filters that cut trade frequency, chosen on early data and judged "
+              "on held-back data, turned it positive; it was confirmed on older history it had never seen; the operator "
+              "approved a long-only version with a real 3.5R target, and it went to real money on 14 November.",
+              tags=("MEASURED",))
     d.cards(s, [
-        (f"{f['evidence_records']} evidence records", [f"{cov['measured']} measured", f"{cov['harness_failed']} "
-                                                       f"where the test harness broke (we looked)",
-                                                       f"{cov['no_harness']} with no harness yet",
-                                                       f"{other} comparison record"]),
-        (f"{f['measured_pass']} passed", [f"{pct(f['measured_pass'] / cov['measured'])} of measured records "
-                                          "cleared their pre-registered rule, after the full cost stack."]),
-        (f"{f['measured_fail']} failed", [f"{pct(f['measured_fail'] / cov['measured'])} did not. Failures stay "
-                                          "on paper and go back into research, or are retired by record."]),
-    ], size=17, head=22, h=Inches(3.6))
-    d.footnote(s, f"MEASURED: comms/strategy_evidence/*.json, {f['evidence_records']} files, commit {f['sha']}. "
-                  f"Pass/fail = decision_rule.verdict. Percentages are of the {cov['measured']} measured records.")
+        ("Equity ML model (Foxhound-4)", [
+            f"1 · Promoted: held-out {ex.get('value', 0):+.2f}R per trade, n {ex.get('n', '—')}.",
+            "2 · Diagnosis: trades cluster in volatile months.",
+            "3 · Test: does the score predict direction or cost? → cost (IC −0.53). FAIL.",
+            "4 · Next: a cost-neutral training target, registered 17 Nov.",
+        ]),
+        ("Long-bond pullback (rule strategy)", [
+            "1 · One-year record: −6.7R, n 94. FAIL: costs were 3.5× the gross edge.",
+            "2 · Fix: fewer trades, chosen on early data; held-back read +4.5R, n 111. PASS.",
+            "3 · Confirmed on unseen 2018–2020 history. PASS.",
+            "4 · Long only, 3.5R target → real money 14 Nov" + (f"; record {tlt['net']:+.1f}R, n {tlt['n']}, "
+                                                               f"{tlt['folds_pos']}/{tlt['folds']} folds +." if tlt else "."),
+        ]),
+    ], y=Inches(1.75), h=Inches(4.4), cols=2, size=14, head=17)
+    d.num("Foxhound-4 held-out expectancy at promotion", round(ex.get("value", 0), 3), "MEASURED", "ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1")
+    d.num("Foxhound-4 score IC vs cost per R", -0.527, "MEASURED", "research/queue/RQ-20261111-207f-03.yaml grading.reason")
+    d.num("TLT pullback one-year record (before)", -6.73, "MEASURED", "research/queue/RQ-20261101-78fc-56.yaml iteration.diagnosis")
+    d.num("TLT pullback held-back read after the fix", 4.48, "MEASURED", "research/queue/RQ-20261112-c1b4-02.yaml iteration.diagnosis (from RQ-20261111-203c-02)")
+    if tlt:
+        d.num("TLT pullback promoted record net R", round(tlt["net"], 2), "MEASURED", "comms/strategy_evidence/tlt_pullback_1h.json")
+    d.cite("research/queue/RQ-20261111-207f-03.yaml", "research/queue/RQ-20261117-c21d-06.yaml",
+           "research/queue/RQ-20261101-78fc-56.yaml", "research/queue/RQ-20261111-203c-02.yaml",
+           "research/queue/RQ-20261112-c1b4-02.yaml", "research/queue/RQ-20261114-db1a-14.yaml")
+    d.footnote(s, "MEASURED: graded units 207f-03, c21d-06 (Foxhound-4); 78fc-56, 203c-02, c1b4-02, db1a-14 and "
+                  "comms/strategy_evidence/tlt_pullback_1h.json (long-bond pullback). Every test was registered before "
+                  "it ran, net of the full cost stack.", y=H - Inches(1.05))
     d.end_md()
 
-    s = d.new("Production strategies: their backtest evidence",
-              "The strategies trading real money right now, with the out-of-sample backtest result each was "
-              "promoted on. Read the expectancy column as average profit per trade in units of risk, after the "
-              "full cost stack. Positive folds means: of the separate time periods tested, how many came out "
-              "positive. Two caveats are shown rather than hidden: the gold-ETF leg has very few trades, and "
-              "rows marked approximate are from a harness that did not model every setting the live strategy "
-              "uses.", tags=("MEASURED",))
+    # ---------------------------------------------------------------- 10 strategies track record
+    tr = f["track"]
+    agg = {}
+    for book in ("rm", "paper"):
+        xs = [t[book] for t in tr if t[book]]
+        n = sum(x["n"] for x in xs)
+        sr = sum(x["sr"] for x in xs)
+        agg[book] = dict(n=n, sr=sr, er=(sr / n if n else None), conf=sum(x["conf"] for x in xs),
+                         legs=len(xs), pos=sum(1 for x in xs if x["sr"] > 0))
+    # Operator comments 2026-11-17 16:54Z / 16:57Z ("these are the only strategies with positive records? That can't
+    # be"): every rule strategy with a net-positive live record on ANY book (real money or demo/paper).
+    entries = []
+    for t in tr:
+        for book, key in (("real money", "rm"), ("demo", "paper")):
+            if t[key] and t[key]["sr"] > 0:
+                entries.append((t, book, t[key]))
+    # Operator comment 2026-11-17 17:04Z: "lead with the live money R positive ones, then paper".
+    entries.sort(key=lambda e: (e[1] != "real money", -e[2]["sr"]))
+    n_pos = len({e[0]["leg"] for e in entries})
+    _names = collections.Counter(plain_leg(t["leg"]) for t in {e[0]["leg"]: e[0] for e in entries}.values())
+
+    def nm(leg):
+        n0 = plain_leg(leg)
+        return f"{n0} [{leg}]" if _names[n0] > 1 else n0
+    ra, pa = agg["rm"], agg["paper"]
+    s = d.new_at((3,), "What our strategies have delivered",
+              "The track record of the rule-based strategies, the part of the system that has run long enough to "
+              "have one; the ML models are too new and are judged on their offline evidence. The table shows only "
+              "strategies with a positive live record, on any book. For context, if asked: "
+              f"across all {len(tr)} rule strategies, all-time realized results are negative, "
+              f"{ra['sr']:+.1f}R over {ra['n']} real-money trades and {pa['sr']:+.1f}R over {pa['n']} demo trades. "
+              "That total includes strategies that have since failed their backtests and been taken off real money, "
+              "which is the ladder working. The table shows the production strategies with a positive actual record, "
+              "and the Interactive Brokers paper strategies with a positive record, with their backtest beside them. Only a minority of live trades have their result "
+              "confirmed against the venue, shown as a small tag.", tags=("MEASURED",))
     rows = []
-    for r in f["prod_rows"]:
-        if r.get("missing"):
-            rows.append([PLAIN.get(r["leg"], r["leg"]), "—", "—", "—", "—", "—"])
-            continue
-        rows.append([PLAIN.get(r["leg"], r["leg"]), f"{r['exp']:+.2f}R" if abs(r['exp']) >= 0.05 else f"{r['exp']:+.3f}R",
-                     str(r["n"]), f"{r['folds_pos']} of {r['folds']}", f"{r['start']} → {r['end']}",
-                     r["fidelity"]])
-    d.table(s, ["Strategy (production)", "Expectancy / trade", "Trades", "Positive folds", "Test window",
-                "Harness fidelity"], rows, col_w=[4.2, 1.8, 1.1, 1.6, 2.4, 1.6], size=14, h_row=Inches(0.5))
-    d.footnote(s, "MEASURED (backtest, out-of-sample, net of fees + slippage + funding): comms/strategy_evidence/"
-                  "<leg>.json. The ML model's row is one held-out year scored once, not folds. "
-                  "Parameter-selection history is not established for the six rule-based legs.",
-               y=H - Inches(1.25))
+    for t, book, x in entries[:8]:
+        bt = (f"{t['bt']:+.1f}R · n {t['bt_n']} · {t['bt_folds']} folds +" if t["bt"] is not None else "no record yet")
+        rows.append([f"{nm(t['leg'])} · {t['status']}", book,
+                     f"{x['sr']:+.2f}R · n {x['n']} · E[R] {x['er']:+.2f} · {x['conf']} of {x['n']} confirmed", bt])
+    for t, book, x in entries:
+        d.num(f"live {book} ΣR: {t['leg']}", x["sr"], "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d._text(s, Inches(0.6), Inches(1.65), Inches(12), Inches(0.5),
+            f"{n_pos} rule strategies are net positive live", size=22, bold=True, color=TEAL)
+    d.md.append(f"**{n_pos} rule strategies are net positive live.**\n")
+    d.slides[-1]["headline"] = f"{n_pos} rule strategies are net positive live"
+    d.num("rule strategies net positive live (any book)", n_pos, "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.table(s, ["Strategy", "Book", "Live result (actual)", "Backtest (net R, out of sample)"],
+            rows, y=Inches(2.3), col_w=[3.7, 1.4, 4.4, 2.5], size=12, h_row=Inches(0.42))
+    rest = entries[8:]
+    if rest:
+        line = "Also net positive: " + " · ".join(f"{nm(t['leg'])} ({book}) {x['sr']:+.1f}R" for t, book, x in rest)
+        d._text(s, Inches(0.6), Inches(2.3) + Inches(0.42) * 9 + Inches(0.08), Inches(12.1), Inches(0.9), line,
+                size=10, color=GREY)
+        d.md.append(f"> {line}\n")
+        d.slides[-1]["rest_line"] = line
+    d.num("rule strategies, real money all-time ΣR", round(ra["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.num("rule strategies, demo all-time ΣR", round(pa["sr"], 1), "MEASURED", f["live_rm_source"], "/api/bot/performance?window=all")
+    d.slides[-1]["track_record"] = dict(aggregate=agg, as_of=f["date"], source=f["live_rm_source"])
+    d.footnote(s, f"Live results are real but small samples; edge is established offline, live checks it holds. "
+                  f"MEASURED, journal all-time to {f['date']} (pipeline-map per-leg table); backtests "
+                  "comms/strategy_evidence/. ML legs and the AI desk excluded.", y=H - Inches(0.85))
     d.end_md()
 
-    s = d.new("Costs are charged in full, and they matter",
-              f"Why we insist on the full cost stack. Taking the production legs that have a fee-only number "
-              f"on file (n = {f['cost_cut_n']} of {len(f['prod_rows'])} production legs), adding slippage and funding allowances removed between {pct(f['cost_cut_min'])} and "
-              f"{pct(f['cost_cut_max'])} of their fee-only net result. That range is ESTIMATED because the "
-              f"slippage allowance is an assumption, not a measurement of our fills. A strategy that only "
-              f"passes on fees alone does not pass.", tags=("MEASURED", "ESTIMATED"))
-    d.cards(s, [
-        ("Fees", ["Each venue's trading fee is charged on every entry and exit in the backtest."]),
-        ("Slippage", [f"An allowance of {'–'.join(str(int(x)) for x in f['slippage_bps'])} basis points per "
-                      "round trip for getting a worse price than the chart shows. ESTIMATED."]),
-        ("Funding", ["Crypto perpetual futures pay or charge a periodic funding rate; the backtest "
-                     "charges an allowance for it. ESTIMATED."]),
-        ("The effect", [f"On the {f['cost_cut_n']} production legs with a fee-only figure, slippage + funding "
-                        f"cut {pct(f['cost_cut_min'])}–{pct(f['cost_cut_max'])} of net R. ESTIMATED."]),
-    ], cols=2, size=16)
-    d.footnote(s, "Inputs MEASURED from comms/strategy_evidence/<leg>.json (net_r_oos vs net_r_oos_fee_only, "
-                  "cost_stack); the resulting range is ESTIMATED because the slippage and funding inputs are "
-                  "allowances.")
+    # ---------------------------------------------------------------- 6 ML families on the map
+    d.section = "The ML families"
+    s = d.new_at((3, 4, 6, 7, 9), "The model families, placed on the map",
+              "Each family sits on the step where it decides. Most are gradient-boosted decision trees: many "
+              "small trees added together, each correcting the last; they suit tabular market data and retrain "
+              "fast. The filter is a deliberately simple logistic regression. Three decisions have no model yet "
+              "and run on rules, which we state rather than hide. The ML models have only been live a short time, "
+              "so their story is the R&D process and the offline evidence; the rule strategies carry the live "
+              "track record.", tags=("MEASURED",))
+    d.table(s, ["Step", "Family · slot", "Model type", "Decides", "Where it stands"], [
+        ["3 Strategies", "Foxhound · D3", "Gradient-boosted trees", "Open long, short or nothing", "Real money"],
+        ["4 Intent layer", "Collie · D2", "Gradient-boosted classifier", "Which market regime", "Advisory on paper"],
+        ["4 Intent layer", "Beagle · D4", "Logistic regression", "Take or halve a signal", "Live on 2 legs"],
+        ["6 Risk", "Mastiff · D5", "None yet", "Combine signals on one market", "Research only"],
+        ["7 Order", "Pointer · D6", "None yet", "Stop and target at entry", "Rule today"],
+        ["9 Live mgmt", "Labrador · D7", "Gradient-boosted classifier", "Extend the target", "Live on ML trades"],
+        ["9 Live mgmt", "Labrador · D8", "Close/hold head", "Close now?", "Demo floor"],
+        ["11 Grade", "Basset · D10", "CUSUM baseline", "Is a strategy fading?", "Baseline tested"],
+    ], col_w=[2.0, 2.2, 2.8, 3.2, 2.2], size=12, h_row=Inches(0.48))
+    d.cite("docs/reference/model_names.yaml", "ml/served/SERVED_MODELS.yaml", "ml/served/*/model.json",
+           "ml/overlay/overlay_td.json", "ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml",
+           "research/queue/RQ-20261117-aadc-05.yaml")
+    d.footnote(s, "The ML models have only been live a short time: judge them on the R&D process and offline evidence. "
+                  "MEASURED from model artifacts (ml/served, ml/candidates, ml/overlay, ml/configs) and "
+                  "ml/served/SERVED_MODELS.yaml. The D8 exit head's artifact lives on the trainer; its type is not "
+                  "verified here.", y=H - Inches(0.95))
     d.end_md()
 
-    s = d.new("What fails is useful",
-              "An example of the filter working. The short-term scalp family looked attractive, but on honest "
-              "testing every one of its measured records failed, so it is not on real money. That is a result, "
-              "not a waste: it tells us where not to spend capital, and those records stay on file so nobody "
-              "re-runs the same idea by accident. The table groups every measured record by strategy family.",
-              tags=("MEASURED",))
-    rows = []
-    for h, v in sorted(f["families"].items(), key=lambda kv: -kv[1]["records"]):
-        rows.append([FAMILY_PLAIN.get(h, h), str(v["records"]), str(v["passed"]),
-                     f"{v['median_exp']:+.2f}R", str(v["trades"])])
-    d.table(s, ["Family", "Records", "Passed", "Median expectancy", "Test trades"], rows,
-            col_w=[4, 1.4, 1.4, 2.2, 1.6], size=14, h_row=Inches(0.46))
-    d.footnote(s, f"MEASURED: the {cov['measured']} measured records in comms/strategy_evidence/, grouped by their "
-                  "harness field; out-of-sample, net of the full cost stack. Median is across records.",
-               y=H - Inches(0.95))
-    d.end_md()
-
-    # ---------------------------------------------------------------- PART 5
-    d.section = "How it keeps improving"
-    q = f["queue"]
-    s = d.new("The research loop: decide before you measure",
-              f"Research is run as a queue of questions. Each question is written down with its data, its test "
-              f"and its decision rule before it runs, so the result IS the decision and nobody argues about it "
-              f"afterwards. The queue currently holds {f['queue_total']} questions: {q['done']} done, "
-              f"{q['queued']} waiting, {q['retired']} retired, plus {f['queue_blocked']} parked as blocked.",
-              tags=("MEASURED",))
-    d.flow(s, [
-        ("Ask", ["One question, with its data, its test and its decision rule written first."]),
-        ("Run", ["A dispatcher runs queued questions automatically on cloud runners."]),
-        ("Grade", ["The result is graded against the rule that was registered."]),
-        ("Act", ["Pass → next stage. Fail → back to research with a diagnosis."]),
-    ], size=15, h=Inches(1.4))
-    d.footnote(s, f"MEASURED: research/queue/*.yaml status fields — {f['queue_total']} units: {q['done']} done, "
-                  f"{q['queued']} queued, {q['retired']} retired; {f['queue_blocked']} more in research/queue/blocked/. "
-                  f"Commit {f['sha']}.", y=H - Inches(1.3))
-    d.end_md()
-
-    s = d.new("Iterate on levers, not on luck",
-              "A rule the operator set on 1 November: when something fails, we do not just try a different "
-              "random idea. We work out why it failed, identify the levers that could change the outcome, "
-              "and test them one by one. A strategy is retired only when the levers are exhausted, never after "
-              "a fixed number of attempts. The same applies to ML models and to the live-trade review.")
-    d.bullets(s, [
-        "Every strategy, ML model and live-trade action class goes through the same research workflow.",
-        "The centre of it is understanding how each lever moves the outcome, not pass/fail alone.",
-        (1, "Levers include entry timing, stop distance, target placement, market regime and timeframe."),
-        "A failed test returns with a diagnosis and the next lever to test.",
-        "Retirement needs evidence that no lever helps, plus a written test that would bring it back.",
-        "Weekly programme reviews check that every non-passing strategy has a live next step.",
+    # ---------------------------------------------------------------- 7 Foxhound card
+    e1 = sv.get("ml-decision-entry-v1", {}).get("headline_metric", {})
+    e4 = sv.get("ml-entry-eq-struct-ens5-v1", {}).get("headline_metric", {})
+    rf = sv.get("ml-decision-entry-v1r20261106", {}).get("headline_metric", {})
+    s = d.new_at((3,), "Model card · Foxhound, the entry model (step 3)",
+              "Foxhound answers the first question of every trade: is there one worth taking right now? Think of a "
+              "scout that has studied hundreds of thousands of past situations and only signals when the odds after "
+              "costs look good; most of the time it says nothing. The crypto version trades real money on its "
+              "held-out result. The equity version showed a much larger held-out result, but our own follow-up found "
+              "it mostly picks trades that are cheap to make relative to their risk, so the next challenger targets "
+              "that. A broader test on 51 coins at each coin's own costs failed, which is why it trades only the "
+              "five it passed on.", tags=("MEASURED",))
+    d.model_card(s, [
+        "It scans every market every four hours and asks one question: after costs, would a standard trade here "
+        "pay? If not, it stays out.",
+        "Like a scout who has studied 660,000 past situations, it learns patterns in how prices move, not rules "
+        "someone wrote down.",
+        "It is judged only on data it never saw while learning.",
+    ], [
+        dict(big=f"{e1.get('value', 0):+.3f}R", r=e1.get("value"), label="Crypto model, average result per trade",
+             prov="MEASURED", kind="offline, held-out", meta=f"n {e1.get('n')} · 2025-10 → 2026-09",
+             source="ml/served/SERVED_MODELS.yaml ml-decision-entry-v1"),
+        dict(big=f"{e4.get('value', 0):+.2f}R", r=e4.get("value"), label="Equity model, per trade (mostly a cost effect)",
+             prov="MEASURED", kind="offline, held-out", meta=f"n {e4.get('n')} · 2025-07 → 2026-10",
+             source="ml/served/SERVED_MODELS.yaml ml-entry-eq-struct-ens5-v1"),
+        dict(big=f"{rf.get('value', 0):+.4f}R", r=rf.get("value"), label="Refit vs old model (−0.092R) on recent weeks",
+             prov="MEASURED", kind="offline, 14-day grade", meta=f"n {rf.get('n')} · 2026-10-23 → 11-05",
+             source="ml/served/SERVED_MODELS.yaml ml-decision-entry-v1r20261106"),
+        dict(big="−0.068R", r=-0.068, bad=True, label="Wider test, 51 coins at own costs: FAIL",
+             prov="MEASURED", kind="offline, held-out", meta="n 12,746 decisions · year to 2026-10",
+             source="research/results/RQ-20261112-2e3b-01/43302779170.jsonl (measurement.pooled.mean_net_r)"),
+    ], [
+        "Test a stricter trigger on the held-out year: it won on development data (6 of 8 periods).",
+        "Retrain the equity model so it predicts direction, not just cheapness to trade.",
+        "Widen to new coins only where each coin's own costs still leave a profit.",
     ])
     d.end_md()
 
-    s = d.new("Live books check mechanics and cost, never edge",
-              "Live and paper trades are watched closely, but they do not decide whether a strategy has an "
-              "edge; a handful of live trades is far too few. They check that the machinery works and that "
-              "costs match what the backtest assumed. The paper mirror of each real-money book is the early "
-              "warning: if it goes net-negative after costs over its window, the strategy moves back to paper.")
-    d.cards(s, [
-        ("Mechanics", ["Did the signal fire, the order go out at the right size, the brackets rest at the "
-                       "broker, and the close get a real reason?"]),
-        ("Cost", ["Are real fees and slippage in line with the backtest's allowances?"]),
-        ("Demotion signal", ["The paper mirror's net-of-cost result over its declared window triggers "
-                             "demotion to paper."]),
-        ("Live-trade review", ["An AI review of open trades recommends the best action now, each option "
-                               "priced from that strategy's own history."]),
-    ], cols=2, size=16)
+    # ---------------------------------------------------------------- 8 Beagle card
+    ov = sv.get("overlay-td-v1", {}).get("headline_metric", {})
+    inv = f["ml_inv"]
+    s = d.new_at((4,), "Model card · Beagle, the signal filter (step 4)",
+              "Beagle sits between a strategy's signal and the order. It does not veto; it turns the volume down on "
+              "signals that look weak, halving their size, on two trend strategies. It is deliberately simple, a "
+              "logistic regression on nine inputs, because simple models are harder to fool themselves with. It "
+              "passed a test that it does no harm across 1,830 historical trades. Its first challenger did not "
+              "beat it, so the next one has to disagree with it more often to be worth testing. The regime family, "
+              "Collie, also sits at this step; an inventory on 11 November proposed retiring most of its unused "
+              "models.", tags=("MEASURED",))
+    d.model_card(s, [
+        "A second opinion on every trend signal: if the setup looks weak, it halves the bet instead of refusing it.",
+        "Like a volume knob, not an off switch, so a wrong call costs little.",
+        "Nine plain inputs (trend strength, volatility, distance from average), kept simple on purpose.",
+    ], [
+        dict(big=str(ov.get("verdict", "—")).upper(), r=None, label="No-harm test vs taking every signal",
+             prov="MEASURED", kind="offline, out-of-sample", meta=f"n {ov.get('n')} trades · 2020-07 → 2026-10",
+             source="ml/served/SERVED_MODELS.yaml overlay-td-v1"),
+        dict(big="2 legs", r=None, label="Live: halves size on weak signals",
+             prov="MEASURED", kind="live, mechanics only", meta="config/overlay_policy.yaml",
+             source="ml/served/SERVED_MODELS.yaml overlay-td-v1.stage_basis"),
+        dict(big="NOT A WIN", r=None, bad=True, label="First challenger vs Beagle",
+             prov="MEASURED", kind="offline", meta="graded indeterminate · 2026-11-16",
+             source="research/queue/RQ-20261116-cc86-01.yaml grading"),
+    ], [
+        "Build a challenger that disagrees with Beagle more often: new inputs or a profit target, not a new cutoff.",
+        "A live side-by-side read of the challenger runs in the background until enough disagreements pile up.",
+        f"Regime models: keep only those that beat a simple baseline ({inv['proposals']['RETIRE']} of "
+        f"{inv['total']} proposed for retirement).",
+    ])
     d.end_md()
 
-    s = d.new("Run by AI agents, governed by a human",
-              f"Day-to-day operations are done by AI agent sessions. A manager session keeps one register of "
-              f"work and dispatches focused lanes, like the one that built this deck. The operator sets "
-              f"strategy and risk policy and grants standing authorizations, called mandates, for decisions the "
-              f"data can settle. Currently {f['mandates_granted']} mandates are granted and {f['mandates_proposed']} "
-              f"is proposed. Agents may propose a mandate; only the operator grants one.", tags=("MEASURED",))
-    d.cards(s, [
-        ("Manager + lanes", ["One manager session keeps the work register and dispatches narrow lanes, each "
-                             "with one question and a spending ceiling."]),
-        ("Mandates", [f"{f['mandates_granted']} standing grants let evidence-backed decisions proceed without "
-                      "asking. Agents can propose; only the operator grants."]),
-        ("Daily sync", ["One brief a day: what came due, what was decided under mandate, decisions for the "
-                        "operator, what moved, what is running, spend."]),
-        ("Permission tiers", ["Docs and tooling: autonomous. Runtime changes: one OK. Strategy and risk: "
-                              "operator approval, or a committed evidence record."]),
-    ], cols=2, size=16)
-    d.footnote(s, f"MEASURED: config/mandates.yaml, commit {f['sha']}.")
+    # ---------------------------------------------------------------- 9 Labrador card
+    tpr = sv.get("ml-entry-tp-revision-v1", {}).get("headline_metric", {})
+    xh = sv.get("exit-head-donchian-1h-v1", {}).get("headline_metric", {})
+    s = d.new_at((7, 9), "Model card · Labrador, the in-trade manager (steps 7 and 9)",
+              "Labrador manages a trade that is already open. At five check-ins it re-estimates how far the trade is "
+              "likely to run and can only move the target further out, never closer, so it cannot cut a winner "
+              "short. Its registered forward test passed and its live gain is small but positive. Its sibling, the "
+              "exit head, decides whether to close now; it failed out of sample on two of three markets and only "
+              "acts on the demo floor. A new training label for it showed a small gain that missed the pass bar, "
+              "and the next version is queued.", tags=("MEASURED",))
+    d.model_card(s, [
+        "Once a trade is open, it re-checks five times where the price is likely to get to.",
+        "Like a navigator who only extends the destination when the road ahead is clear, never shortens it.",
+        "So it can add profit on strong trades without ever cutting a winner short.",
+    ], [
+        dict(big="+0.0081R", r=0.0081, label="Registered forward test, per trade: PASS",
+             prov="MEASURED", kind="offline, forward", meta="n 868 · Oct 2026",
+             source="research/results/RQ-20261101-383f-01/local-20261101T1030Z.jsonl (via ml/served/SERVED_MODELS.yaml)"),
+        dict(big=f"{tpr.get('value', 0):+.4f}R", r=tpr.get("value"), label="Live policy (extend only), per trade",
+             prov="MEASURED", kind="offline replay", meta=f"n {tpr.get('n')} · 2025-10 → 2026-09",
+             source="ml/served/SERVED_MODELS.yaml ml-entry-tp-revision-v1"),
+        dict(big=f"{xh.get('value', 0):+.4f}R", r=xh.get("value"), bad=True, label="Exit head (close now?): FAIL",
+             prov="MEASURED", kind="offline, out-of-sample", meta=f"n {xh.get('n')} · 3 folds 2022–2026",
+             source="ml/served/SERVED_MODELS.yaml exit-head-donchian-1h-v1"),
+    ], [
+        "Re-check it once 300 live trades have closed since 12 November.",
+        "Test checking in on market events, not only on a timer.",
+        "Exit head: confirm a new training label (+0.007R per trade, just under the bar) on a wider margin.",
+    ])
     d.end_md()
 
-    s = d.new("Numbers you can trust",
-              "Small rules that stop the most common reporting mistakes. Every number carries a label saying "
-              "whether it was measured or estimated, or worse. A zero is never allowed to hide the fact that "
-              "we could not look. A missing value shows as a dash, never as zero. And automated checks run on "
-              "every change to keep the documents, the configuration and the code in agreement.")
-    d.cards(s, [
-        ("Provenance labels", ["Every number is MEASURED, ESTIMATED, FABRICATED or UNVERIFIED, and the four "
-                               "are never mixed."]),
-        ("“0” vs “could not look”", ["A count that reads zero must say whether we actually looked. "
-                                     "Missing data shows as “—”."]),
-        ("Merged ≠ deployed ≠ observed", ["A change is only done when its effect is seen on the running "
-                                          "system, and reports say which of the three is true."]),
-        ("Automated guards", ["Checks on every change keep rules, configuration and docs from drifting "
-                              "apart, e.g. a guard refuses a strategy on both paper and real money."]),
-    ], cols=2, size=16)
+    # ---------------------------------------------------------------- 11 Basset card
+    d.section = "What the R&D has produced"
+    s = d.new_at((11,), "Model card · Basset, the early-warning light (step 11)",
+              "The newest family, and an honest one to show. Basset's job is to spot a strategy that is starting to "
+              "fade before the losses pile up. The first baseline is a classic statistical alarm, a CUSUM: it adds up "
+              "how far each strategy's live results fall short of its backtest and rings when the shortfall builds "
+              "up. It works as a warning, better than chance in its test window. But stopping strategies when it "
+              "rang did not hold up on a fresh window of data, so it stays a warning light and does not act. Both "
+              "results are recorded, which is exactly how the loop is meant to work.", tags=("MEASURED",))
+    d.model_card(s, [
+        "It watches every strategy's results against what its backtest promised, trade by trade.",
+        "Like a smoke detector: small shortfalls add up, and when they build past a line it rings.",
+        "Today it is a warning light, not an automatic switch, because the switch failed a fresh test.",
+    ], [
+        dict(big="0.654", r=None, label="Spots a fading strategy (0.5 = coin flip): PASS",
+             prov="MEASURED", kind="offline, in-window", meta="AUC · n 664 points · 24 strategies",
+             source="research/queue/RQ-20261117-aadc-05.yaml grading.reason"),
+        dict(big="PASS", r=None, label="Stopping on the alarm beat random stops, in-window",
+             prov="MEASURED", kind="offline, in-window", meta="p 0.0115 · 654 skipped trades",
+             source="research/queue/RQ-20261117-aadc-07.yaml grading.reason"),
+        dict(big="FAIL", r=None, bad=True, label="Same rule on a fresh window: did not replicate",
+             prov="MEASURED", kind="offline, fresh window", meta="p 0.994 · 620 skipped · before 2026-05",
+             source="research/queue/RQ-20261117-aadc-09.yaml grading.reason"),
+    ], [
+        "Keep the alarm as a warning in reviews; it does not switch anything off.",
+        "Redesign the action before retesting, on data it has never seen.",
+        "Find out why AI grades of past trades ran opposite to their results before using them as a signal.",
+    ])
     d.end_md()
 
-    s = d.new("Machine learning today",
-              "Where ML stands, honestly. The first ML-driven leg, a learned entry model, now trades real money; "
-              "its evidence is one held-out year scored once, with a small positive expectancy over many trades. "
-              "Elsewhere, ML is used for advice about market regime, for example whether volatility is high. "
-              "Earlier attempts to have models predict what to do from price data alone failed offline, and "
-              "the lesson recorded was that the binding constraint is labelled outcomes, not computing power.",
+    # ---------------------------------------------------------------- 12 throughput
+    decisive = qv["pass"] + qv["fail"]
+    s = d.new_at((11,), "Produced so far 2 — research throughput, and how much fails",
+              f"The volume behind the results. The research queue has {q['done']} completed questions. Of the graded "
+              f"ones, {qv['pass']} passed their pre-registered rule and {qv['fail']} failed, with {qv['indeterminate']} "
+              f"indeterminate because the sample was too small to call. That is a pass rate of "
+              f"{pct(qv['pass'] / decisive)} on decisive results. Strategy evidence tells the same story: of "
+              f"{cov['measured']} measured backtests, {f['measured_pass']} passed. The short-term scalp family passed "
+              f"{(f['scalp'] or {}).get('passed', 0)} of its {(f['scalp'] or {}).get('records', 0)} tests and is not on "
+              f"real money. Most ideas fail, and the system is built so that "
+              f"they fail cheaply, offline, before any money is at risk.", tags=("MEASURED",))
+    sc = f["scalp"] or {}
+    d.cards(s, [
+        (f"{q['done']} questions done", [f"{qv['pass']} passed · {qv['fail']} failed · {qv['indeterminate']} indeterminate.",
+                                        f"{pct(qv['pass'] / decisive)} pass rate on decisive results."]),
+        (f"{cov['measured']} strategy backtests", [f"{f['measured_pass']} passed, {f['measured_fail']} failed, after the "
+                                                 "full cost stack.", f"Scalps: {sc.get('passed', 0)} of "
+                                                 f"{sc.get('records', 0)} passed."]),
+        (f"{q['queued']} questions queued", ["Each written down with its data, test and pass mark before it runs.",
+                                            "A dispatcher runs them on cloud runners."]),
+    ], size=15, h=Inches(3.3))
+    d.num("research questions done", q["done"], "MEASURED", "research/queue/*.yaml (status: done)", "/api/bot/research/catalog")
+    d.num("graded pass / fail / indeterminate", f"{qv['pass']} / {qv['fail']} / {qv['indeterminate']}", "MEASURED", "research/queue/*.yaml (grading.verdict, status done)", "/api/bot/research/catalog")
+    d.num("pass rate on decisive results", pct(qv["pass"] / decisive), "MEASURED", "research/queue/*.yaml (grading.verdict)", "/api/bot/research/catalog")
+    d.num("questions queued", q["queued"], "MEASURED", "research/queue/*.yaml (status: queued)", "/api/bot/research/catalog")
+    d.num("measured strategy backtests passed", f"{f['measured_pass']} of {cov['measured']}", "MEASURED", "comms/strategy_evidence/*.json (decision_rule.verdict)")
+    d.footnote(s, f"MEASURED: research/queue/*.yaml (status + grading.verdict; {qv['none']} done units carry no verdict); "
+                  f"comms/strategy_evidence/*.json. Commit {f['sha']}.", y=H - Inches(1.1))
+    d.end_md()
+
+    # ---------------------------------------------------------------- 13 how it runs
+    d.section = "How it runs"
+    s = d.new_at((1, 2, 5, 8, 10), "How it runs automatically, in one slide",
+              f"The infrastructure, briefly. The trader runs around the clock on cloud servers, on crypto, US funds "
+              f"and futures venues, plus prop-firm accounts. {f['accounts_live_mode']} of {f['accounts_total']} "
+              f"accounts are switched on to send orders. Exactly two switches decide whether something trades: one "
+              f"per account, one per strategy. It never switches itself off: failures are contained to one trade or "
+              f"job and retried. Day to day, AI agent sessions run the research, reviews and bookkeeping under "
+              f"{f['mandates_granted']} standing mandates the operator has granted; agents may propose a mandate, "
+              f"only the operator grants one. Real money excludes fossil-fuel funds by the operator's policy.",
               tags=("MEASURED",))
-    ml = next((r for r in f["prod_rows"] if r["leg"] == "ml_entry" and not r.get("missing")), None)
-    items = []
-    if ml:
-        items.append(f"A learned entry model is in production: {ml['exp']:+.3f}R per trade over {ml['n']} trades "
-                     f"in one held-out year ({ml['start']} → {ml['end']}), net of costs. Small, but over many trades.")
-    items += [
-        "Per the ML plan (last measured 2026-10-11, not re-checked for this deck), the advisory models are "
-        "volatility-regime models: they advise on when conditions suit a strategy.",
-        "Lesson recorded in the ML plan: models fed only price data did not predict direction; "
-        "the limit is labelled outcomes, not compute.",
-        "Every model follows the same ladder: candidate → shadow → advisory, and nothing past shadow without "
-        "the operator.",
-    ]
-    d.bullets(s, items)
-    d.footnote(s, "MEASURED: comms/strategy_evidence/ml_entry.json (basis "
-                  f"{ml['basis'] if ml else '—'}, fidelity {ml['fidelity'] if ml else '—'}). "
-                  "The ML plan's lessons: ROADMAP.md § “AI trader (ML) — build plan”.")
+    d.cards(s, [
+        ("Venues", ["Crypto perpetual futures, US funds and futures, and prop-firm accounts. "
+                    f"{f['accounts_live_mode']} of {f['accounts_total']} accounts sending orders."]),
+        ("Two switches", ["Account: live or dry run. Strategy: live or shadow. No hidden third switch; "
+                          "never self-halts."]),
+        ("Run by agents", [f"AI agent sessions do the research and reviews; {f['mandates_granted']} operator-granted "
+                           "mandates let evidence-backed decisions proceed."]),
+    ], size=15, h=Inches(3.0))
+    d.num("accounts sending orders", f["accounts_live_mode"], "MEASURED", "config/accounts.yaml (mode: live)", "/api/bot/config")
+    d.num("accounts configured", f["accounts_total"], "MEASURED", "config/accounts.yaml", "/api/bot/config")
+    d.num("mandates granted", f["mandates_granted"], "MEASURED", "config/mandates.yaml (mandates)")
+    d.footnote(s, "MEASURED: config/accounts.yaml, config/mandates.yaml; rules docs/CLAUDE-RULES-CANONICAL.md § Prime "
+                  "Directive, CLAUDE.md § The two execution gates; config/values_exclusions.yaml.", y=H - Inches(1.3))
     d.end_md()
 
-    # ---------------------------------------------------------------- PART 6 roadmap
+    # ---------------------------------------------------------------- 14 roadmap
     d.section = "Where it goes next"
-    s = d.new("Roadmap 1 — scale the real-money strategies",
-              "Goal one on the roadmap is real-money edge, decided offline. The near-term work: make active "
-              "management a standard on every real-money strategy, finish making the promotion ladder fully "
-              "mechanical, keep pushing the testing legs through Stage 0, and explore longer and shorter "
-              "timeframes, always net of cost.")
+    s = d.new_at((3, 4, 6, 7, 8, 9, 11), "Roadmap: the next ML milestone at each decision",
+              "Where the loop goes next, decision by decision. The entry model's next challenger tests a "
+              "cost-neutral target. The regime family is being pruned to the heads that beat their baseline. The "
+              "empty slots each have a first question: predicted brackets at entry, combining several signals on one "
+              "market, cheaper order placement, and whether a learned review of closed trades detects a fading "
+              "strategy earlier than a simple statistical alarm. Alongside: more ML in the live loops, the trading "
+              "desk made production-ready, and more labelled outcomes, which are the binding constraint. The deck "
+              "ends here: no request, just the plan.")
+    d.table(s, ["Slot", "Next milestone"], [
+        ["D3 Entry", "Cost-neutral training target vs the live recipe (registered 2026-11-17)"],
+        ["D2 Regime", "Keep only heads that beat their baseline; retire the rest"],
+        ["D4 Filter / D7–D8", "Extend proven in-trade actions; retest the exit head per market"],
+        ["D6 Bracket", "Does a predicted stop and target beat each strategy's fixed bracket?"],
+        ["D5 Aggregate", "Offline research: combine several signals on one market"],
+        ["D9 Execution", "Cut realised trading cost against today's order types"],
+        ["D10 Review", "Does a learned grade spot a fading strategy earlier than a CUSUM alarm on R?"],
+        ["Across slots", "ML in the live loops · trading desk V1 · more labelled outcomes"],
+    ], col_w=[2.6, 9.4], size=14, h_row=Inches(0.46))
+    d.cite("docs/roadmap/milestones.yaml (G4: L-ML-LIVE, L-ML-MECE, L-REGIME, L-DESK-V1, L-DATA, L-ML-AGGREGATOR)",
+           "docs/plans/ML-ROADMAP-MECE-2026-11.md § 2–3", "docs/plans/ML-CONSOLIDATION-2026-11-11.md")
+    d.footnote(s, "Source: ROADMAP.md live block (docs/roadmap/milestones.yaml, goal G4) and the ML plan's slot "
+                  "questions (docs/plans/ML-ROADMAP-MECE-2026-11.md § 2).", y=H - Inches(1.1))
+    d.end_md()
+
+    # ---------------------------------------------------------------- 16 ML infrastructure roadmap (operator comment 17:13Z)
+    s = d.new_at((1, 11), "ML infrastructure roadmap",
+              "The operator asked what comes next for the ML infrastructure and for building more powerful models. "
+              "Left, the infrastructure being built and what each piece unlocks; every item is a filed build or a "
+              "queued research unit. Right, how the models get more powerful. The lesson so far is that labels and "
+              "new information, not computing power, are the binding constraint: a sequence model lost to gradient-"
+              "boosted trees on regime, and a tabular foundation model only tied. So GPU time is pointed at the "
+              "questions with a diagnosis behind them, once their data is published where the GPU can read it.")
     d.cards(s, [
-        ("Active management as standard", ["Evidence-backed stop and target moves on every real-money "
-                                           "strategy."]),
-        ("A fully mechanical ladder", ["Promotion and demotion decided by registered rules and standing "
-                                       "mandates, without a human in the loop for routine calls."]),
-        ("More legs through Stage 0", [f"{st['testing']} testing legs keep iterating on their levers; each one "
-                                       "that passes moves to real money."]),
-        ("New horizons", ["Daily and weekly holds, and sub-hour breakout families, tested net of cost."]),
-    ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block (generated from docs/roadmap/milestones.yaml), goal G1. "
-                  "Testing-leg count MEASURED as on slide 13.")
-    d.end_md()
-
-    s = d.new("Roadmap 2 — machine learning",
-              "Goal four on the roadmap is the AI trader. Near-term priorities: more ML in the live trading "
-              "loops, with the infrastructure to run and monitor it; the regime programme, which asks when "
-              "each strategy is primed; a frontier programme that tests newer model families against what we "
-              "use today; and a data programme to collect, process and label more outcomes, since labels are "
-              "the binding constraint.")
-    d.cards(s, [
-        ("ML in the live loops", ["Extend the ML entry model and add ML heads to live decisions, with the "
-                                  "infrastructure to serve and monitor them."]),
-        ("Regime: when to trade", ["Learn when each strategy is primed, and step aside when it is not."]),
-        ("Model frontier", ["Bake newer forecasting and tabular models off against today's, on the same "
-                            "data and cost stack."]),
-        ("Data and labels", ["Grow the store of labelled outcomes, the binding constraint on every model."]),
-    ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block, goal G4 (L-ML-LIVE, L-REGIME, frontier track, L-DATA).")
-    d.end_md()
-
-    s = d.new("Roadmap 3 — the learning machine",
-              "The last part of the roadmap is about the machine that does the improving: prop accounts that "
-              "qualify on their own, plumbing that can be trusted, a research queue that turns evidence into "
-              "decisions without the operator in the path, and a slower macro and value sleeve. This is where "
-              "the deck ends: no request, just the plan.")
-    d.cards(s, [
-        ("Prop accounts", ["Automate, protect and qualify the prop-firm accounts."]),
-        ("Trustworthy plumbing", ["Every position protected, every close explained, every number labelled."]),
-        ("Research machine", ["Evidence turns into decisions on its own: questions run, get graded, and "
-                              "act."]),
-        ("Macro and value", ["A slower, thesis-driven sleeve expressed through defined-risk options."]),
-    ], cols=2, size=16)
-    d.footnote(s, "Source: ROADMAP.md live block, goals G2, G3, G5, G6.")
-    d.end_md()
-
-    # ---------------------------------------------------------------- APPENDIX
-    d.section = "Appendix"
-    s = d.new("Appendix A — system architecture",
-              "For technical readers. Five layers, kept separate on purpose. The runtime layer is the live "
-              "trader: market data, strategy evaluation, order construction, per-account risk, broker execution, "
-              "and a single trade journal database. The research layer holds backtests and ML training, on a "
-              "separate machine. Operator communications, deployment and governance are their own layers. A web "
-              "API feeds one dashboard.")
-    d.table(s, ["Layer", "What it holds"], [
-        ["Runtime trading", "Market data · strategy evaluation · order build + validation · per-account risk · "
-                            "broker execution · trade journal"],
-        ["Research & validation", "Backtest harnesses · ML datasets, training, registry · research queue runner"],
-        ["Operator comms", "Request/response channel · alert and ping delivery"],
-        ["Deployment", "Service units · repo sync to the servers every few minutes · self-heal workflows"],
-        ["Governance", "Canonical docs · work register · follow-through pipeline · CI guards"],
-    ], col_w=[2.2, 8], size=14, h_row=Inches(0.62))
-    d.footnote(s, "Source: docs/ARCHITECTURE-CANONICAL.md § System Layers. Two cloud servers: the live trader and "
-                  "an ML trainer; a separate broker gateway. Addresses intentionally omitted.",
-               y=H - Inches(1.4))
-    d.end_md()
-
-    s = d.new("Appendix B — what an evidence record contains",
-              "Each strategy has one evidence record, written by a script, never by hand. These are the fields "
-              "that matter. Coverage state is read first, so a missing number is never mistaken for a bad one. "
-              "Fidelity says whether the harness modelled every setting the live strategy uses.")
-    d.table(s, ["Field", "Meaning"], [
-        ["coverage_state", "measured · harness_failed · no_harness · not_attempted — read first"],
-        ["net_r_oos / expectancy_r_oos", "Out-of-sample net R and R per trade, after the full cost stack"],
-        ["n_trades_oos · folds · folds_positive", "Sample size and how many separate time folds were positive"],
-        ["cost_stack", "Fees, slippage allowance, funding allowance, with the source run"],
-        ["fidelity · omitted_levers", "faithful = every configured lever modelled; approximate names the gaps"],
-        ["decision_rule", "Rule id, when it was registered, and the verdict (pass / fail)"],
-        ["path_stats", "Max drawdown in R, worst trade, worst day — descriptive, not a verdict"],
-    ], col_w=[3.2, 7], size=14, h_row=Inches(0.55))
-    d.footnote(s, "Source: comms/strategy_evidence/README.md and the records themselves "
-                  "(producer scripts/ops/build_strategy_evidence.py).", y=H - Inches(1.1))
-    d.end_md()
-
-    s = d.new("Appendix C — production legs, path statistics",
-              "The same production legs with path detail: total net R over the test, and the largest peak-to-"
-              "trough drawdown in R. Drawdown is descriptive here; it is not a pass mark. The ML model's record "
-              "does not carry path statistics, shown as a dash.", tags=("MEASURED",))
-    rows = []
-    for r in f["prod_rows"]:
-        if r.get("missing"):
-            continue
-        rows.append([PLAIN.get(r["leg"], r["leg"]), f"{r['net']:+.1f}R", str(r["n"]),
-                     f"{r['maxdd']:.1f}R" if r["maxdd"] is not None else "—", r["basis"].replace("_", " ")])
-    d.table(s, ["Strategy (production)", "Net R, out of sample", "Trades", "Max drawdown", "Basis"], rows,
-            col_w=[4.2, 2, 1.2, 1.8, 2.4], size=14, h_row=Inches(0.5))
-    d.footnote(s, "MEASURED: comms/strategy_evidence/<leg>.json fields net_r_oos, n_trades_oos, "
-                  "path_stats.max_drawdown_r, basis. Windows differ by leg (slide 16).", y=H - Inches(1.1))
-    d.end_md()
-
-    s = d.new("Appendix D — glossary",
-              "Plain definitions of the terms used in the deck.")
-    d.table(s, ["Term", "Meaning"], [
-        ["R", "One unit of risk: what a trade loses if its stop-loss is hit"],
-        ["Expectancy", "Average R per trade, after costs"],
-        ["Leg", "One strategy on one market and timeframe"],
-        ["Out of sample / fold", "Data the rule was not tuned on; a fold is one separate time slice of it"],
-        ["Slippage", "Getting a worse price than expected when the order fills"],
-        ["Funding", "Periodic payment between long and short holders of crypto perpetual futures"],
-        ["Paper / mirror", "Simulated-money account at the broker / a paper copy of a real-money book"],
-        ["Mandate", "A standing operator grant to act on a class of decision when the evidence settles it"],
-        ["Prop firm", "A firm that funds traders under strict loss limits"],
-    ], col_w=[2.4, 8], size=14, h_row=Inches(0.5))
-    d.end_md()
-
-    s = d.new("Appendix E — sources and provenance",
-              "Where every number in the deck came from. The deck is generated by a script that reads these files "
-              "directly, so re-running it refreshes the numbers.")
-    d.bullets(s, [
-        f"Built {f['date']} from repo commit {f['sha']} by docs/pitch/build_deck.py (numbers are computed, not typed).",
-        "Leg counts and statuses: scripts/ops/strategy_status.py over config/strategies.yaml + config/accounts.yaml.",
-        "Accounts, prop accounts, modes: config/accounts.yaml. Mandates: config/mandates.yaml.",
-        "Backtest evidence: comms/strategy_evidence/*.json (out of sample, net of the full cost stack).",
-        "Research queue: research/queue/*.yaml status fields.",
-        "Concepts and rules: docs/plans/OPERATING-PLAN-2026-09-21.md, docs/ARCHITECTURE-CANONICAL.md, ROADMAP.md.",
-        "Left out on purpose: live and paper profit figures (a live book never establishes edge, and they were "
-        "not re-verified for this build), and every dollar amount, balance, account id and server address.",
-    ], size=16, gap=8)
+        ("Infrastructure we're building", [
+            "1 · Entry and exit data published as GPU datasets → the diagnosed entry and exit questions can run on GPU.",
+            "2 · Pooled reads across a strategy family → bigger samples in every test.",
+            "3 · Live results as a column in the promotion packet → live evidence feeds the ladder (after the 18 Nov reset).",
+            "4 · A benchmark for in-trade check-ins → test acting on market events, not only a timer.",
+            "5 · A new teacher label for the review student model → the first AI grade ran opposite to results.",
+        ]),
+        ("How we'll get more powerful models", [
+            "1 · More and better labels: the binding constraint on every model.",
+            "2 · New information, not more price data: a news-layer veto and prediction-market surprises.",
+            "3 · New model families, tested fairly: a sequence model lost and a tabular foundation model tied; next tries run on GPU.",
+            "4 · Regime-transition research: spotting when markets change state.",
+            "5 · Faster iteration: every ML test runs the same registered-rule pipeline as strategy tests.",
+        ]),
+    ], y=Inches(1.75), h=Inches(4.6), cols=2, size=13, head=17)
+    d.cite("PI-20261117-ZQKSKUGH-0001 (Kaggle GPU datasets)", "PI-20261117-NIVCJP7T-0007 (pooled cells)",
+           "PI-20261117-LSFHBH4A-0007 (live-performance promotion path, post-reset)",
+           "research/queue/RQ-20261117-c21d-04.yaml (check-in cadence)", "CJ-LABEL-ALTERNATIVE (student teacher label)",
+           "PI-20261117-LSFHBH4A-0004 (regime-transition research)", "ROADMAP.md § AI trader (ML) — build plan (tracks D, N, F)")
+    d.footnote(s, "Sources: work-store items PI-20261117-ZQKSKUGH-0001, -NIVCJP7T-0007, -LSFHBH4A-0007, -LSFHBH4A-0004, "
+                  "CJ-LABEL-ALTERNATIVE; unit RQ-20261117-c21d-04; ROADMAP.md § AI trader (ML) build plan. Dates only "
+                  "where a plan states one.", y=H - Inches(0.95))
     d.end_md()
 
     d.p.save(OUT_PPTX)
     header = ("# JTA Trader — pitch deck: markdown source and speaker notes\n\n"
-              "> **Doc status:** `live` · category `unknown` · last verified `2026-11-04` · registered in "
+              f"> **Doc status:** `live` · category `unknown` · last verified `{f['date']}` · registered in "
               "[`docs/DOCUMENT-INDEX.md`](../DOCUMENT-INDEX.md)\n\n"
               "Generated by [`build_deck.py`](build_deck.py) together with "
-              "[`jta-trader-pitch-deck.pptx`](jta-trader-pitch-deck.pptx) (row `PROJECT-PITCH-DECK`). "
+              "[`jta-trader-pitch-deck.pptx`](jta-trader-pitch-deck.pptx) and [`slides.json`](slides.json) "
+              "(rows `PROJECT-PITCH-DECK`, `PITCH-DECK-V2`). "
               "Do not hand-edit: change the builder and re-run `python3 docs/pitch/build_deck.py`. "
               f"Built from commit `{f['sha']}` on {f['date']}; {d.n} slides.\n\n"
               "Audience: a smart non-expert. Numbers: ratios only (R, %, counts), each tagged MEASURED or "
               "ESTIMATED; no dollar amounts, balances, account ids, hosts or addresses.\n")
     with open(OUT_MD, "w") as fh:
         fh.write(header + "\n".join(d.md) + "\n")
-    print(f"wrote {OUT_PPTX} ({d.n} slides) and {OUT_MD}")
+    for sl in d.slides:
+        # A slide is live-refreshable when every number on it is recomputable from a script or file at build time
+        # (all are) AND at least one has a read-only API endpoint that could feed it without a rebuild.
+        sl["live_refreshable"] = any(n.get("live_endpoint_candidate") for n in sl["numbers"])
+    doc = dict(
+        schema="jta-pitch-slides/v1",
+        built_from_commit=f["sha"], built_on=f["date"], slide_count=len(d.slides),
+        spec=dict(audience="smart non-expert", numbers="ratios only, no $, each tagged MEASURED or ESTIMATED",
+                  length="deep dive, 20+ slides", close="roadmap, no ask"),
+        refresh="python3 docs/pitch/build_deck.py (recomputes every number from the files named in `source`)",
+        note=("live_endpoint_candidate names a read-only API route that serves the same underlying data; a UI that "
+              "wires it must verify the field it reads matches `source` before showing the number."),
+        slides=d.slides)
+    assert [sl["number"] for sl in d.slides] == list(range(1, d.n + 1)), "slide records out of step with the deck"
+    with open(OUT_JSON, "w") as fh:
+        json.dump(doc, fh, indent=1, ensure_ascii=False, default=str)
+        fh.write("\n")
+    print(f"wrote {OUT_PPTX} ({d.n} slides), {OUT_MD} and {OUT_JSON}")
 
 
 if __name__ == "__main__":
