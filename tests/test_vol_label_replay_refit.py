@@ -64,3 +64,8 @@ def test_overlapping_spans_are_refused(tmp_path):
                  "--train-start", "2020-01-10", "--train-end", "2020-01-20", "--score-start", "2020-01-15",
                  "--score-end", "2020-01-25", "--out", str(tmp_path / "o.jsonl")])
     assert rc == 2
+
+
+def test_build_market_features_span_argvs():
+    import build_market_features_span as BM
+    BM.self_test()
