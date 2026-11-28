@@ -300,3 +300,91 @@ def test_the_records_guard_accepts_an_outcome_for_a_sidecar_review(tmp_path):
     (lr / "reviews_refused_dispatchable.jsonl").unlink()
     f = rules.findings(reviews=lr / "reviews.jsonl", outcomes=lr / "outcomes.jsonl")
     assert any("has no row in reviews" in x for x in f)  # control: without the sidecar it is still flagged
+
+
+# --- LTR-MIRROR-SKIPPED-ROWS-1128: a correction row whose own packet was never written -------------------------------
+#: the measured case: LR-20261127T1815Z (SOL close correction, bybit_2) supersedes LR-20261127T1806Z (hold) on the same
+#: package and carries the 1806Z packet's sha; only the 1806Z packet was ever written.
+EARLIER = "LR-20261127T1806Z-pkg-76ee0d87ff404bcb"
+CORRECTION = "LR-20261127T1815Z-pkg-76ee0d87ff404bcb"
+SOL_PACKET = '{"order_package_id":"pkg-76ee0d87ff404bcb","sym":"SOLUSDT"}'
+FLAG = f"correction: supersedes {EARLIER} (hold) at manager request; same packet_sha; packet file for this review_id not written by reviewer"
+
+
+def _correction(flags=(FLAG,), packet_content=SOL_PACKET, rid=CORRECTION, **over):
+    return row(rid, True, False, packet_content=packet_content, context_flags=list(flags), **over)
+
+
+def test_a_correction_inherits_the_superseded_reviews_packet_when_its_sha_matches(tmp_path):
+    read = branch([row(EARLIER, True, False, packet_content=SOL_PACKET), _correction()],
+                  {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET})
+    res = lrm.mirror(tmp_path, read)
+    assert res["skipped"] == [] and res["review_ids"] == [EARLIER, CORRECTION]
+    assert res["packet_inherited"] == [{"review_id": CORRECTION, "packet_from": EARLIER}]
+    # main's record now satisfies main's own packet check for the correction, byte for byte
+    assert (tmp_path / lrm.PACKETS / f"{CORRECTION}.json").read_text() == SOL_PACKET
+    assert rules.packet_problems(json.loads(_correction()), tmp_path / lrm.PACKETS) == []
+    before = (tmp_path / lrm.REVIEWS).read_bytes()
+    assert lrm.mirror(tmp_path, read)["mirrored"] == 0 and (tmp_path / lrm.REVIEWS).read_bytes() == before
+
+
+def test_the_earlier_review_already_on_main_still_lets_the_correction_mirror(tmp_path):
+    """As measured: 1806Z is on main already; the branch still carries its row and packet."""
+    (tmp_path / lrm.PACKETS).mkdir(parents=True)
+    early = row(EARLIER, True, False, packet_content=SOL_PACKET)
+    (tmp_path / lrm.REVIEWS).write_text(early + "\n")
+    (tmp_path / lrm.PACKETS / f"{EARLIER}.json").write_text(SOL_PACKET)
+    res = lrm.mirror(tmp_path, branch([early, _correction()], {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET}))
+    assert res["review_ids"] == [CORRECTION] and res["skipped"] == []
+
+
+def _refused(tmp_path, rows, files):
+    res = lrm.mirror(tmp_path, branch(rows, files))
+    skip = [x for x in res["skipped"] if x["review_id"] == CORRECTION]
+    assert CORRECTION not in res["review_ids"] and len(skip) == 1
+    assert skip[0]["why"].startswith(f"cited file {lrm.PACKETS}/{CORRECTION}.json missing")  # still a HARD skip
+    assert not (tmp_path / lrm.PACKETS / f"{CORRECTION}.json").exists()
+    return skip[0]["why"]
+
+
+def test_no_supersede_declaration_stays_a_hard_skip(tmp_path):
+    why = _refused(tmp_path, [row(EARLIER, True, False, packet_content=SOL_PACKET), _correction(flags=())],
+                   {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET})
+    assert "declares no earlier review" in why
+
+
+def test_two_different_declarations_are_ambiguous_and_stay_a_hard_skip(tmp_path):
+    other = "LR-20261127T1700Z-pkg-76ee0d87ff404bcb"
+    _refused(tmp_path, [row(EARLIER, True, False, packet_content=SOL_PACKET), _correction(flags=(FLAG, f"supersedes {other}"))],
+             {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET})
+
+
+def test_a_superseded_review_on_another_package_stays_a_hard_skip(tmp_path):
+    elsewhere = "LR-20261127T1806Z-pkg-ffff"
+    flag = f"correction: supersedes {elsewhere} (hold)"
+    why = _refused(tmp_path, [row(elsewhere, True, False, packet_content=SOL_PACKET), _correction(flags=(flag,))],
+                   {f"{lrm.PACKETS}/{elsewhere}.json": SOL_PACKET})
+    assert "same order package" in why
+
+
+def test_a_superseded_review_not_on_the_branch_stays_a_hard_skip(tmp_path):
+    _refused(tmp_path, [_correction()], {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET})
+
+
+def test_a_superseded_review_with_no_packet_either_stays_a_hard_skip(tmp_path):
+    why = _refused(tmp_path, [row(EARLIER, False, False), _correction()], {})
+    assert "no packet on the rows branch either" in why
+
+
+def test_a_packet_sha_that_differs_from_the_superseded_packet_stays_a_hard_skip(tmp_path):
+    why = _refused(tmp_path, [row(EARLIER, True, False, packet_content=SOL_PACKET), _correction(packet_content='{"other":1}')],
+                   {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET})
+    assert "packet_sha does not equal" in why
+
+
+def test_a_row_with_its_own_packet_never_takes_the_superseded_one(tmp_path):
+    own = '{"own":1}'
+    read = branch([row(EARLIER, True, False, packet_content=SOL_PACKET), _correction(packet_content=own)],
+                  {f"{lrm.PACKETS}/{EARLIER}.json": SOL_PACKET, f"{lrm.PACKETS}/{CORRECTION}.json": own})
+    res = lrm.mirror(tmp_path, read)
+    assert res["packet_inherited"] == [] and (tmp_path / lrm.PACKETS / f"{CORRECTION}.json").read_text() == own
