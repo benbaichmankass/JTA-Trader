@@ -986,40 +986,46 @@ build_equity_daily MHG "HG=F"
 # manifest (btc-regime-1h-lgbm-funding-v1) only needs this when it is being
 # evaluated. Non-fatal: a fetch hiccup just leaves the funding columns at 0.0.
 build_funding_oi() {
+  # FUNDING-OI-DATASETS-ETH-SOL (2026-11-28, lane INFRA-BUILD-20261128): was BTCUSDT only. ETHUSDT and SOLUSDT now get the same
+  # funding/OI side-stream and a funding-joined 1h market_features shard (blocks RQ-20260929-109/-110). Same opt-in flag, same 1h-only
+  # scope, same non-fatal contract per symbol: one symbol's fetch hiccup leaves ITS funding columns at 0.0 and never stops the others.
   [ "${ICT_BUILD_FUNDING_OI:-0}" = "1" ] || return 0
-  local fo_dir="${DATASETS_ROOT}/funding_oi/BTCUSDT/v001"
-  emit "$(printf '{"ts":"%s","status":"building","family":"funding_oi","symbol":"BTCUSDT"}' "$(iso_now)")"
+  local symbols="${ICT_FUNDING_OI_SYMBOLS:-BTCUSDT ETHUSDT SOLUSDT}" sym
+  for sym in $symbols; do build_funding_oi_symbol "$sym"; done
+}
+
+build_funding_oi_symbol() {
+  local sym="$1"
+  local fo_dir="${DATASETS_ROOT}/funding_oi/${sym}/v001"
+  emit "$(printf '{"ts":"%s","status":"building","family":"funding_oi","symbol":"%s"}' "$(iso_now)" "$sym")"
   set +e
   ICT_OFFVM_BUILD_HOST=1 python -m scripts.ml.fetch_funding_oi \
-    --symbol BTCUSDT --start "${MARKET_START}" --end "${MARKET_END}" \
+    --symbol "$sym" --start "${MARKET_START}" --end "${MARKET_END}" \
     --oi-interval 1h --out "$fo_dir" >/tmp/funding_oi_$$.out 2>/tmp/funding_oi_$$.err
     local rc=$?
   set -e
   if [ "$rc" -ne 0 ]; then
-    emit "$(printf '{"ts":"%s","status":"skipped","family":"funding_oi","detail":"fetch failed rc=%d"}' "$(iso_now)" "$rc")"
+    emit "$(printf '{"ts":"%s","status":"skipped","family":"funding_oi","symbol":"%s","detail":"fetch failed rc=%d"}' "$(iso_now)" "$sym" "$rc")"
     rm -f "/tmp/funding_oi_$$.out" "/tmp/funding_oi_$$.err"
     return 0
   fi
   rm -f "/tmp/funding_oi_$$.out" "/tmp/funding_oi_$$.err"
-  # Rebuild the BTC market_features shard(s) the funding manifests read, WITH the
-  # funding/OI join. **1h ONLY** — both funding manifests
-  # (btc-regime-1h-lgbm-funding-v1 + -svble-v1) are 1h, so there is nothing to
-  # gain on 5m/15m. Critically, this runs LATE (after build_bybit_15m_fc has
-  # already built the 15m shard WITH the forecast side-stream): a `--overwrite`
-  # 15m rebuild here — without forecast_path — silently ZEROED every fc_* column
-  # the fc-pcv-v2 head trains on (MB-20260726-FC-CLOBBER: the fresh forecast
-  # side-stream was produced nightly yet fc_* audited 100% dead, because this
-  # loop clobbered the 15m join minutes after it was built). Scoping to 1h
-  # removes the clobber; the fc-pcv-v2 15m shard keeps its forecast join.
+  # Rebuild the market_features shard(s) the funding manifests read, WITH the funding/OI join. **1h ONLY** (the funding manifests are
+  # 1h). Critically this runs LATE, after build_bybit_15m_fc built the 15m shard WITH the forecast side-stream: a `--overwrite` 15m
+  # rebuild here without forecast_path ZEROED every fc_* column (MB-20260726-FC-CLOBBER). Scoping to 1h removes the clobber.
+  # ETH: the 1h ETH shard carries the cross_asset (xa_*) join (XA_ETH_PARAM, built above). A `--overwrite` rebuild WITHOUT it would
+  # zero every xa_* column the eth-regime-1h-lgbm-xasset-v1 head trains on (the FC-CLOBBER class), so ETH passes it again here.
+  local extra=""
+  if [ "$sym" = "ETHUSDT" ] && [ -n "${XA_ETH_PARAM:-}" ]; then extra="$XA_ETH_PARAM"; fi
   for tf in 1h; do
-    local raw_path="${DATASETS_ROOT}/market_raw/BTCUSDT/${tf}/${DATASET_VERSION}"
+    local raw_path="${DATASETS_ROOT}/market_raw/${sym}/${tf}/${DATASET_VERSION}"
     [ -d "$raw_path" ] || continue
     build_family market_features \
       --output-dir "$DATASETS_ROOT" --version "$DATASET_VERSION" \
-      --source "${raw_path}" --symbol-scope BTCUSDT --timeframe "$tf" --overwrite \
+      --source "${raw_path}" --symbol-scope "$sym" --timeframe "$tf" --overwrite \
       "market_raw_path=${raw_path}" "funding_oi_path=${fo_dir}" "funding_window_n=168" \
       "vol_window_n=20" "forward_window_m=5" \
-      "vol_threshold=0.005" "trend_threshold=0.005" "n_vol_buckets=3"
+      "vol_threshold=0.005" "trend_threshold=0.005" "n_vol_buckets=3" ${extra:+"$extra"}
   done
 }
 
