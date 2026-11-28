@@ -38,9 +38,9 @@ power:
   effect_units: metric
   sd: 0.5
   design: paired
-  alpha: 0.025
+  alpha: 0.01
   power: 0.8
-  basis: 'INFERRED: same 4,076-trade book as d4a9 (3,921 priced). age fires on every trade that lives past the declared bar count, so n_fired is expected to exceed r_milestone''s ~1,400; vol_expansion is unknown before the run. The d4a9 per-trade CIs (half-width ~0.013 R at n ~1,400) put a 0.05 R effect well inside detection; V1''s n_floor 39 governs.'
+  basis: 'INFERRED: same 4,076-trade book as d4a9 (3,921 priced). age fires on every trade that lives past the declared bar count, so n_fired is expected to exceed r_milestone''s ~1,400; vol_expansion is unknown before the run. The d4a9 per-trade CIs (half-width ~0.013 R at n ~1,400) put a 0.05 R effect well inside detection; V1''s n_floor 39 governs. Power planned at alpha 0.01 (the grader''s nearest supported level, stricter than the 0.025 the 2-arm Bonferroni implies).'
   feasibility:
     source: none
     accrual_basis: Replays committed corpora and committed candles; nothing accrues.
