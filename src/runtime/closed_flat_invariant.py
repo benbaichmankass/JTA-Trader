@@ -143,6 +143,56 @@ def _canonical_exchange_side(side: Any) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
+def _trade_columns(conn: sqlite3.Connection) -> set:
+    """Column names of ``trades`` (empty on any failure, which keeps every caller on its pre-existing behaviour)."""
+    try:
+        return {str(r[1]) for r in conn.execute("PRAGMA table_info(trades)").fetchall()}
+    except sqlite3.Error:
+        return set()
+
+
+def _fetch_open_sizes(db) -> Dict[tuple, float]:
+    """``{(account_id, symbol, canonical_side): summed open size}`` over OPEN, non-backtest DB trades.
+
+    CFI-NET-OPEN-TRADES (2026-11-28): a venue position on the same account + symbol + side as a recently CLOSED trade
+    is not an orphan when an OPEN trade accounts for it. MEASURED twice: ib_paper MGC +35 = open #8655 (alert named closed
+    #8634); bybit_1 ETHUSDT -16.1 = open #8641 (alert named closed #8642). Empty when ``position_size`` is absent or the
+    read fails, so nothing is netted and the check behaves exactly as before. Never raises.
+    """
+    if isinstance(db, sqlite3.Connection):
+        conn, owned = db, False
+    elif hasattr(db, "connect"):
+        conn, owned = db.connect(), True
+    elif isinstance(db, (str, os.PathLike)):
+        conn, owned = sqlite3.connect(os.fspath(db)), True
+    else:
+        return {}
+    try:
+        if "position_size" not in _trade_columns(conn):
+            return {}
+        out: Dict[tuple, float] = {}
+        for aid, sym, direction, size in conn.execute(
+            "SELECT account_id, symbol, direction, position_size FROM trades "
+            "WHERE status = 'open' AND COALESCE(is_backtest, 0) = 0"
+        ).fetchall():
+            side = _canonical_db_side(direction)
+            if not aid or not sym or side is None:
+                continue
+            try:
+                qty = abs(float(size or 0.0))
+            except (TypeError, ValueError):
+                continue
+            key = (str(aid), str(sym), side)
+            out[key] = out.get(key, 0.0) + qty
+        return out
+    except sqlite3.Error as exc:
+        logger.warning("closed_flat_invariant: open-trade read failed (nothing netted): %s", exc)
+        return {}
+    finally:
+        if owned:
+            conn.close()
+
+
 def _fetch_recently_closed(
     db, *, cutoff_iso: str,
 ) -> List[dict[str, Any]]:
@@ -183,6 +233,12 @@ def _fetch_recently_closed(
         )
     try:
         conn.row_factory = sqlite3.Row
+        # CFI-NET-OPEN-TRADES (2026-11-28): the trade's OWN close time comes first. The package's updated_at led the
+        # chain, and something re-touches closed packages: trade #8634 closed 15:54Z but its package updated_at read
+        # 21:55:42Z, so it sat in the window ~6 h after its close and re-fired. op.updated_at stays as a fallback for
+        # rows that carry no close time of their own. `t.closed_at` is used only where the column exists.
+        has_closed_at = "closed_at" in _trade_columns(conn)
+        own_close = "t.closed_at," if has_closed_at else ""
         # Subquery handles the closed-at fallback. The notes JSON
         # extraction is sqlite3's json_extract — present on every
         # CPython 3.11 stdlib build.
@@ -197,7 +253,7 @@ def _fetch_recently_closed(
         # NULL → the COALESCE falls through to ``t.created_at`` for that
         # row only, instead of failing the check for all rows.
         cur = conn.execute(
-            """
+            f"""
             SELECT t.id, t.account_id, t.symbol, t.direction
             FROM trades t
             LEFT JOIN order_packages op ON op.linked_trade_id = t.id
@@ -205,10 +261,11 @@ def _fetch_recently_closed(
               AND COALESCE(t.is_backtest, 0) = 0
               AND datetime(
                     COALESCE(
-                        op.updated_at,
+                        {own_close}
                         CASE WHEN json_valid(t.notes)
                              THEN json_extract(t.notes, '$.closed_at')
                         END,
+                        op.updated_at,
                         t.created_at
                     )
                   ) >= datetime(?)
@@ -549,6 +606,7 @@ def _check_inner(
                 [], [], window_seconds=window, cadence_basis=cadence_basis,
                 controls_ok=controls_ok, checked=False,
             )
+        open_sizes = _fetch_open_sizes(db) if rows else {}
         violations: List[InvariantViolation] = []
         unreadable: List[UnreadableRead] = []
         counts: Dict[str, int] = {s: 0 for s in RESIDUAL_STATES}
@@ -573,6 +631,15 @@ def _check_inner(
                 ))
                 continue
             if read.residual_state == RESIDUAL_STATE_FLAT:
+                continue
+            # CFI-NET-OPEN-TRADES: net out OPEN DB trades on the same account + symbol + side. Only the part of the
+            # venue position they do not account for is a closed-but-open contradiction; a covered position is not.
+            covered = open_sizes.get((account_id, symbol, canonical), 0.0)
+            if abs(float(read.qty)) - covered <= _DUST_THRESHOLD:
+                logger.info(
+                    "closed_flat_invariant: %s %s %s venue %.8g is covered by open DB trades (%.8g); trade #%s is "
+                    "not contradicted", account_id, symbol, canonical, float(read.qty), covered, row.get("id"),
+                )
                 continue
             violations.append(InvariantViolation(
                 detected_at=now_dt.isoformat(),

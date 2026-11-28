@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-MIRROR-SKIPPED-ROWS-1128 (manager 28a dispatch). scripts/ops/live_review_rows_mirror.py only; no order path, no runtime, no config. The live-review-rows-mirror was red on every run on one hard skip: LR-20261127T1815Z-pkg-76ee0d87ff404bcb (SOL close correction, bybit_2) cites packets/<own id>.json, which the reviewer never wrote; the packet exists under the superseded LR-20261127T1806Z id. A row with no packet under its own id now mirrors ONLY when (a) its context_flags declare exactly one 'supersedes <review_id>' whose row is on the rows branch for the SAME order_package_id, (b) that review's packet is on the branch, and (c) packet_blob_problems (main's own sha + handoff + packet_defects check) passes against that packet. The packet then lands on main under the row's id byte for byte, so main's packet_problems check holds. Everything else stays the same hard skip. Dry run against origin/live-review/rows: mirrored 1 (the 1815Z row), hard skips 0, packet_problems [] on the result. Tests: the measured case (both with the earlier row new and already on main) plus 7 negatives (no declaration, ambiguous declaration, other package, superseded row absent, superseded packet absent, sha mismatch, own packet present never inherits). Revert: git revert.",
+  "why": "Unblock the live-review rows mirror (red on every run) without loosening the packet rule for anything but a declared, sha-verified correction."
+}

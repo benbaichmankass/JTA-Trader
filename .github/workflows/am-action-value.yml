@@ -54,6 +54,9 @@ on:
         description: "AM-HEADS-ARTIFACT-REMATERIALISE: run plan + heads only (no labelling, fit, replay or grade). Needs labels_run_id."
         type: boolean
         default: false
+      heads_corpus_sha:
+        description: "With labels_run_id: the corpus the heads job pins (the one those labels were built on); empty = corpus_sha. Lets a grading run replay the tree (corpus_sha '') on heads refit from pinned-corpus labels"
+        default: ""
       compare_heads_run_id:
         description: "With labels_run_id: download am-heads-<this id> and compare its file hashes with the heads just fitted (determinism proof); empty = no compare"
         default: ""
@@ -139,10 +142,10 @@ jobs:
           FEATS: ${{ inputs.head_feats }}
         run: |
           case "$FEATS" in base|rich) ;; *) echo "head_feats must be base|rich, got '$FEATS'"; exit 2;; esac
-      - name: Pin the trade corpus to corpus_sha
-        if: ${{ inputs.corpus_sha != '' }}
+      - name: Pin the trade corpus the labels were built on (heads_corpus_sha, else corpus_sha)
+        if: ${{ inputs.heads_corpus_sha != '' || inputs.corpus_sha != '' }}
         env:
-          CORPUS_SHA: ${{ inputs.corpus_sha }}
+          CORPUS_SHA: ${{ inputs.heads_corpus_sha != '' && inputs.heads_corpus_sha || inputs.corpus_sha }}
         run: |
           git fetch --no-tags --depth=1 origin "$CORPUS_SHA"
           rm -rf comms/research comms/strategy_evidence

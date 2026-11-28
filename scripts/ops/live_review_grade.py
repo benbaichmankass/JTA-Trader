@@ -251,9 +251,16 @@ def use_rules(results: List[dict], cal_by_action: Dict[str, Any]) -> Dict[str, A
     return out
 
 
-def grade(reviews: List[dict], results: List[dict]) -> Dict[str, Any]:
-    by_id = {r["review_id"]: r for r in reviews}
-    pop = {"n_reviews": len(reviews), "n_packages": len({r["order_package_id"] for r in reviews}),
+def grade(reviews: List[dict], results: List[dict], side_reviews: Optional[List[dict]] = None) -> Dict[str, Any]:
+    """``side_reviews`` = the refused-dispatchable sidecar rows (LTR-GRADE-APPLIED) whose results ``main`` prices into
+    ``results``: every per-call lookup must find them too, or a sidecar call with a confidence (or a closed-trade hold)
+    raised KeyError at _cal_points and the workflow step stopped before it reported the outcomes it had appended
+    (LTR-MIRROR-SKIPPED-ROWS-1128). The population still counts main's reviews; the sidecar is counted beside it."""
+    side_reviews = [r for r in (side_reviews or []) if isinstance(r, dict) and r.get("review_id")]
+    by_id = {r["review_id"]: r for r in side_reviews}
+    by_id.update({r["review_id"]: r for r in reviews})
+    pop = {"n_reviews": len(reviews), "n_refused_dispatchable_reviews": len(side_reviews),
+           "n_packages": len({r["order_package_id"] for r in reviews}),
            "by_action_basis": dict(Counter(f'{(r.get("recommendation") or {}).get("action")}/{(r.get("recommendation") or {}).get("basis")}' for r in reviews))}
     priced = [r for r in results if r["state"] == "priced"]
     cnp = [r for r in results if r["state"] == "could_not_price"]
@@ -375,7 +382,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     results += cf.price_contained(side, packages, trades, cf.fetch_candles_live)
     if a.write_outcomes:
         print(f"outcomes appended: {cf.append_outcomes(results)}", file=sys.stderr)
-    g = grade(reviews, results)
+    g = grade(reviews, results, side_reviews=side)
     window = f"since {a.since}" if a.since else "all reviews on main"
     print(json.dumps(g, indent=1, default=str) if a.json else render(g, window))
     return 0
