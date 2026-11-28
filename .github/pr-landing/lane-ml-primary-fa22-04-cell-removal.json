@@ -1,0 +1,7 @@
+{
+  "tier": 3,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "Registered fail_action of RQ-20261122-fa22-04 (rule RULE-RQ20261122-fa22-04-BTC-CELL-MARGINAL), left undone since 2026-11-22: remove the one authored BTC OFF-cell that FAILED its per-cell marginal grade, config/regime_policy.yaml trend_vol.chop.calm.trend_donchian {long: off}. Record: comms/research/RQ-20261122-fa22-04/45015566879/ (cells.json), committed d7c2-01 tagged trades net of the full cost stack: n 101 vetoed trades, added R -1.7178 (the veto LOST R), matched-drop control p 0.4085, 3 of 6 folds, yearly 2023 +4.14 / 2024 -0.92 / 2025 -8.92 / 2026 +12.13. The cell was authored 2026-06-27 on 11 trades (-$218). The other 7 authored cells are underpowered or indeterminate and are NOT touched. Caveat from the rule itself: trend_donchian cells are approximate (the live exit head is omitted from the replay), which the operator weighs. Effect: makes the gate MORE permissive (unlisted cell = on) for trend_donchian long in chop+calm on the BTC legs it routes. Only enforces where the regime router is active with the ML vol verdict. tests/test_regime_policy.py pins the cell's absence (25 pass; 106 regime-policy tests pass). Revert: restore the calm block.",
+  "why": "Close a registered action left undone: the one router cell whose veto measurably cost money is removed, per its own pre-registered rule."
+}
