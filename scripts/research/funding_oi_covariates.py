@@ -55,9 +55,11 @@ def load_side_stream(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np
         r = json.loads(ln)
         t = _to_epoch(r["ts"])
         if r.get("funding_rate") is not None:
-            f_t.append(t); f_v.append(float(r["funding_rate"]))
+            f_t.append(t)
+            f_v.append(float(r["funding_rate"]))
         if r.get("open_interest") is not None:
-            o_t.append(t); o_v.append(float(r["open_interest"]))
+            o_t.append(t)
+            o_v.append(float(r["open_interest"]))
     fo, oo = np.argsort(f_t, kind="stable"), np.argsort(o_t, kind="stable")
     return (np.asarray(f_t, dtype=float)[fo], np.asarray(f_v, dtype=float)[fo],
             np.asarray(o_t, dtype=float)[oo], np.asarray(o_v, dtype=float)[oo])
