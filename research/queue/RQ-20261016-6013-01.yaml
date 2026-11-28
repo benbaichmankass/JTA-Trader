@@ -51,11 +51,15 @@ routing:
 run:
   workflow: research-script-run.yml
   timeout_minutes: 15
-  command:
-  - python3
-  - scripts/research/trial_ledger.py
-  - --out
-  - '{out_dir}'
+  commands:
+  - - python3
+    - scripts/research/trial_ledger.py
+    - --out
+    - '{out_dir}'
+  - - python3
+    - scripts/research/read_ledger.py
+    - --out
+    - '{out_dir}/read_ledger.json'
   inputs:
     research_unit: RQ-20261016-6013-01
 lands:
