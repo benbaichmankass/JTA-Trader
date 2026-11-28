@@ -20,6 +20,7 @@ def _isolate(monkeypatch):
     dash._ROW_PNL_INFLIGHT.clear()
     monkeypatch.setattr(dash, "_fetch_open_position_rows", lambda include: [ROW])
     monkeypatch.setattr(dash, "_telemetry_map", lambda: {})
+    monkeypatch.setattr(dash, "_account_exchanges", lambda: {})  # single lane unless a test routes otherwise
     yield
     dash._ROW_PNL_INFLIGHT.clear()
 
@@ -83,3 +84,41 @@ def test_a_second_build_joins_the_stuck_read_instead_of_queueing_another(monkeyp
     assert a[0]["unrealizedPnlReadState"] == b[0]["unrealizedPnlReadState"] == "timed_out"
     assert c[0]["unrealizedPnlReadState"] == "read" and c[0]["unrealizedPnl"] == 3.0
     assert calls["n"] == 2
+
+
+def test_bybit_and_alpaca_rows_use_the_parallel_lane_ib_and_unknown_do_not(monkeypatch):
+    rows = [(i, acct, "SYM", "long", 1.0, 1.0, "t", None, None, "p", 1, "paper", None, None)
+            for i, acct in enumerate(["bybit_1", "alpaca_paper", "ib_paper", "tradeify_1"], start=1)]
+    monkeypatch.setattr(dash, "_fetch_open_position_rows", lambda include: rows)
+    monkeypatch.setattr(dash, "_account_exchanges", lambda: {
+        "bybit_1": "bybit", "alpaca_paper": "alpaca", "ib_paper": "interactive_brokers", "tradeify_1": "tradovate"})
+    lanes = {}
+
+    def lane(name):
+        async def run(fn, *args):
+            lanes[args[0]] = name
+            return 1.0, "broker"
+        return run
+
+    monkeypatch.setattr(dash, "run_account_read", lane("single"))
+    monkeypatch.setattr(dash, "run_account_read_parallel", lane("parallel"))
+    out = asyncio.run(dash._build_positions(True))
+    assert lanes == {"bybit_1": "parallel", "alpaca_paper": "parallel", "ib_paper": "single", "tradeify_1": "single"}
+    assert all(r["unrealizedPnlReadState"] == "read" for r in out)
+
+
+def test_parallel_rows_overlap_inside_one_budget(monkeypatch):
+    rows = [(i, "bybit_1", f"S{i}", "long", 1.0, 1.0, "t", None, None, "p", 1, "paper", None, None) for i in range(1, 6)]
+    monkeypatch.setattr(dash, "_fetch_open_position_rows", lambda include: rows)
+    monkeypatch.setattr(dash, "_account_exchanges", lambda: {"bybit_1": "bybit"})
+    monkeypatch.setattr(dash, "POSITIONS_BUILD_BUDGET_S", 1.0)
+
+    async def half_second(fn, *args):
+        await asyncio.sleep(0.5)
+        return 2.0, "broker"
+
+    monkeypatch.setattr(dash, "run_account_read_parallel", half_second)
+    t0 = time.monotonic()
+    out = asyncio.run(dash._build_positions(True))
+    assert time.monotonic() - t0 < 1.0  # 5 x 0.5 s side by side, not 2.5 s in line
+    assert all(r["unrealizedPnlReadState"] == "read" for r in out)
