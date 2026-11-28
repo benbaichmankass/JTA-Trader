@@ -1748,3 +1748,40 @@ def test_the_legs_promotion_exclusions_are_reported_beside_the_verdict(repo):
           {"strategy": "other_leg", "trade_id": 1, "account_id": "x", "decided": "2026-11-25", "reason": "r"}]
     res = _s1s2(_live_feed(repo(records={LEG: _fee_only()}), excluded=ex))
     assert [x["trade_id"] for x in res["evidence"]["live_bar"]["excluded_for_leg"]] == [4773]
+
+
+# ---- READ LEDGER beside the holdout clause (MEASURE-READ-LEDGER-PBO, design T6): reported, never decisive --------------
+def _ledger(root, n_reads, subject=LEG, start="2025-01-01", end="2026-12-31"):
+    _w(root, mr.READ_LEDGER_REL, {"schema": 1, "subjects": [{"subject": subject, "windows": [
+        {"start": start, "end": end, "n_reads": n_reads, "n_claimed": 1, "n_unclaimed": n_reads - 1,
+         "next_bar": {"n_tries": n_reads + 1}}]}]})
+
+
+def test_ledger_mismatch_is_reported_and_the_decision_is_unchanged(repo):
+    root = _h_repo(repo)
+    base = _s1s2(root)
+    _ledger(root, 5)                                   # the record self-claims 1 read; the ledger counts 5
+    res = _s1s2(root)
+    assert res["verdict"] == base["verdict"] == "FIRE", res
+    led = res["evidence"]["holdout"]["ledger"]
+    assert led["read_state"] == "measured" and led["n_reads"] == 5 and led["decisive"] is False
+    assert led["mismatch"]["clause"] == mr.LEDGER_MISMATCH_CLAUSE and led["mismatch"]["record_says"] == 1
+
+
+def test_ledger_agreement_and_absence_are_stated_not_collapsed(repo):
+    root = _h_repo(repo)
+    assert _s1s2(root)["evidence"]["holdout"]["ledger"]["read_state"] == "could_not_look"   # no ledger file
+    _ledger(root, 1)
+    assert _s1s2(root)["evidence"]["holdout"]["ledger"]["mismatch"] is False
+    _ledger(root, 3, subject="some_other_leg")
+    led = _s1s2(root)["evidence"]["holdout"]["ledger"]
+    assert led["read_state"] == "no_reads" and led["n_reads"] == 0
+
+
+def test_ledger_falls_back_to_the_newest_weekly_run_copy(repo):
+    root = _h_repo(repo)
+    for run, n in (("100", 2), ("200", 4)):
+        _w(root, f"comms/research/RQ-20261016-6013-01/{run}/read_ledger.json", {"schema": 1, "subjects": [{"subject": LEG,
+           "windows": [{"start": "2025-01-01", "end": "2026-12-31", "n_reads": n, "n_unclaimed": 0}]}]})
+    led = _s1s2(root)["evidence"]["holdout"]["ledger"]
+    assert led["n_reads"] == 4 and led["ledger"].endswith("/200/read_ledger.json")
