@@ -293,6 +293,100 @@ def test_fire_demote_s2_to_s1_when_both_t3_windows_are_below_p10(repo):
     assert res["evidence"]["t3_p10"] == p["p10"]
 
 
+# ── operator amendment 2026-11-28: never the SOLE tested incumbent of an ML decision step ──────────────────────────────────
+def _plan(root, lines):
+    _w(root, mr.ML_PLAN_REL, {"schema": 1, "lines": lines}, as_yaml=True)
+
+
+def _d3(line_id, leg, books, stage="production", slot="D3", kind="model"):
+    return {"id": line_id, "slot": slot, "kind": kind, "stage": stage, "subject": f"{leg} model",
+            "consumer": {"class": "real_money", "books": books, "legs": [leg]}}
+
+
+def test_sole_incumbent_demotion_returns_replacement_search_not_fire(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"])])
+    res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)
+    assert res["verdict"] == mr.REPLACEMENT_SEARCH == "REPLACEMENT-SEARCH", res
+    assert res["clause"] == "R-SOLE-INCUMBENT"
+    assert res["proposal"] is None                       # nothing is demoted, no roster edit is proposed
+    assert res["evidence"]["sole_incumbent"]["slot"] == "D3"
+    assert res["data_task"]["next_action"] == "start_replacement_search"
+    assert res["verdict"] != mr.FIRE
+
+
+def test_ordinary_strategy_leg_still_demotes_when_a_plan_exists(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    _plan(root, [_d3("MLP-D3-X", "some_other_leg", ["bybit_2", "bybit_portfolio"])])
+    res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)
+    assert res["verdict"] == "FIRE", res
+
+
+def test_a_passed_replacement_lets_the_incumbent_demote(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"]),
+                 _d3("MLP-D3-Y", "challenger_leg", ["bybit_1"], stage="passed_waiting")])
+    assert mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)["verdict"] == "FIRE"
+
+
+def test_a_challenger_that_has_not_passed_is_not_a_replacement(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    for stage in ("testing_book", "iterating", "failed", "idea"):
+        _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"]),
+                     _d3("MLP-D3-Y", "challenger_leg", ["bybit_1"], stage=stage)])
+        assert mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)["verdict"] == mr.REPLACEMENT_SEARCH, stage
+
+
+def test_another_live_incumbent_on_the_same_book_means_the_step_keeps_a_decision(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"]),
+                 _d3("MLP-D3-Z", "second_live_leg", ["bybit_2", "bybit_portfolio"])])
+    assert mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)["verdict"] == "FIRE"
+
+
+def test_incumbent_on_a_different_venue_is_not_this_legs_book(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"]),
+                 _d3("MLP-D3-EQ", "equity_leg", ["alpaca_live", "alpaca_portfolio"])])
+    # the equity incumbent serves other books: it does not keep the crypto step alive
+    assert mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)["verdict"] == mr.REPLACEMENT_SEARCH
+
+
+def test_non_originating_slots_do_not_block_a_leg_demotion(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root)
+    for slot in ("D4", "D7", "D8", "D9"):
+        _plan(root, [_d3("MLP-X", LEG, ["bybit_2", "bybit_portfolio"], slot=slot)])
+        assert mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)["verdict"] == "FIRE", slot
+
+
+def test_the_incumbent_guard_never_overrides_evidence_that_does_not_support_a_demotion(repo):
+    root = repo(accounts=_stage2_accts())
+    _t3_mirror(root, windows=(+2.0, -6.0))               # T3 not met
+    _plan(root, [_d3("MLP-D3-X", LEG, ["bybit_2", "bybit_portfolio"])])
+    res = mr.resolve(LEG, "S2", "S1", "bybit_2", root=root)
+    assert res["verdict"] == "REFUSE" and res["clause"] == "R-T3", res
+
+
+def test_an_unreadable_plan_cannot_demote_an_ml_leg_but_does_not_block_ordinary_legs(tmp_path):
+    assert mr.sole_incumbent("ada_pullback_2h", "bybit_2", tmp_path) is None
+    with pytest.raises(mr._NeedsData) as e:
+        mr.sole_incumbent("ml_entry", "bybit_2", tmp_path)
+    assert e.value.clause == "R-INCUMBENT-UNREADABLE"
+
+
+def test_real_plan_names_ml_entry_as_the_sole_d3_incumbent_and_a_strategy_leg_as_none():
+    inc = mr.sole_incumbent("ml_entry", "bybit_2", REPO)
+    assert inc is not None and inc["slot"] == "D3", inc          # the step the operator named (ml_entry, D3)
+    assert mr.sole_incumbent("trend_donchian_eth_4h", "bybit_2", REPO) is None
+
+
 @pytest.mark.parametrize("windows,clause", [
     ((+2.0, -6.0), "R-T3"),              # only one window bad: T3 not met
     ((-1.0, -6.0), "R-T3"),              # both negative, one above p10

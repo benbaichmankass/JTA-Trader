@@ -160,6 +160,24 @@ def test_apply_demotes_a_leg_with_both_windows_below_p10_from_live_and_mirror(ro
     assert "# the live roster" in (r / "config/accounts.yaml").read_text()
 
 
+def test_a_sole_ml_incumbent_is_not_demoted_and_is_listed_for_a_replacement_search(root):
+    """Operator amendment 2026-11-28: the evidence holds (same input as the demotion test above) but LEG is the sole tested
+    incumbent of D3, so nothing is cut, the roster is unchanged, and the gate reports it for the alert."""
+    r = root()
+    (r / "docs/plans").mkdir(parents=True, exist_ok=True)
+    (r / "docs/plans/ml-dev-plan.yaml").write_text(yaml.safe_dump({"schema": 1, "lines": [{
+        "id": "MLP-D3-T", "slot": "D3", "kind": "model", "stage": "production", "subject": "t",
+        "consumer": {"class": "real_money", "books": ["bybit_2", "bybit_portfolio"], "legs": [LEG]}}]}))
+    before = _roster(r, "bybit_2")
+    out = g.run(_recent(real={LEG: _entry(LEG, [-6.0, -6.0])}), root=r, apply=True)
+    assert out["demoted"] == []
+    assert _roster(r, "bybit_2") == before and LEG in _roster(r, "bybit_portfolio")
+    assert [x["leg"] for x in out["replacement_search"]] == [LEG]
+    assert out["replacement_search"][0]["slot"] == "D3"
+    assert out["refused"][0]["verdict"] == "REPLACEMENT-SEARCH"
+    assert "replacement search" in g.render(out)
+
+
 def test_a_planted_minus_0_3R_leg_demotes_only_after_two_windows(root):
     """-0.3R/trade = -6R per 20-trade window. One bad window after a healthy
     one HOLDS; the second consecutive bad window DEMOTES."""

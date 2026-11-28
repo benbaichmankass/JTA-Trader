@@ -154,6 +154,19 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY"
           n=$(python3 -c "import json;print(len(json.load(open('gate.json'))['demoted']))")
           echo "demoted=$n" >> "$GITHUB_OUTPUT"
+          rs=$(python3 -c "import json;print(len(json.load(open('gate.json')).get('replacement_search') or []))")
+          echo "replacement_search=$rs" >> "$GITHUB_OUTPUT"
+
+      - name: Alert - a sole ML incumbent met the demotion rule (replacement search, nothing demoted)
+        if: steps.gate.outputs.replacement_search != '0' && env.APPLY == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          set -euo pipefail
+          legs=$(python3 -c "import json;print(', '.join(d['leg']+' ('+str(d.get('slot'))+')' for d in json.load(open('gate.json'))['replacement_search']))")
+          gh issue create --label system-action \
+            --title "send-ping: R4 demotion rule met by a sole ML incumbent (not demoted)" \
+            --body "$(printf 'action: send-ping\npriority: high\nmessage: MD-DEMOTE-S2-S1 evidence holds for %s, but it is the SOLE tested incumbent of an ML decision step with no passed replacement. NOT demoted (operator amendment 2026-11-28). Start a replacement search. Run %s.\nreason: MD-DEMOTE-S2-S1 amendment: alert the operator instead of demoting' "$legs" "${{ github.run_id }}")"
 
       - name: Push the demotion branch and record its provenance
         id: push
