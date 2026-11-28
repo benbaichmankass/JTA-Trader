@@ -114,11 +114,36 @@ def test_score_band_cap_threshold_and_control_remove_the_same_count():
 
 def test_cap_arms_are_on_the_cli_and_paired_with_their_random_control():
     src = (REPO / "scripts/research/ml_decision_entry.py").read_text()
-    assert "*ARM_SPECS, *CAP_ARMS]" in src
+    assert "*ARM_SPECS, *CAP_ARMS" in src
     assert 'pairs[arm] = {"vs_base": "base", "vs_random": f"random_{arm}"}' in src
 
 
 def test_cap_arms_count_toward_the_sidak_family_bar():
     """Three cap arms in one unit must be graded at the k=3 family bar (t >= 2.3909), not the single-arm 2.0."""
     src = (REPO / "scripts/research/ml_decision_entry.py").read_text()
-    assert "k_new = sum(1 for x in arms if x in ARM_SPECS or x in CAP_ARMS)" in src
+    assert "k_new = sum(1 for x in arms if x in ARM_SPECS or x in CAP_ARMS" in src
+
+
+def test_calibration_maps_fit_on_the_slice_and_the_control_keeps_the_values():
+    """CAL arms (lever `calibration`): iso is monotone, bin10 returns per-decile means (may be non-monotone), and the control
+    bin10_perm uses the SAME decile means permuted (the remap's size without its information)."""
+    import numpy as np
+    import ml_decision_entry as M
+    rng = np.random.default_rng(0)
+    pred = rng.normal(0, 1, 4000)
+    real = np.where(pred > 1.3, -1.0, pred)                    # a losing top band: what the declared hypothesis describes
+    iso = M.calib_map(pred, real, "iso")
+    xs = np.linspace(-3, 3, 50)
+    assert (np.diff(iso(xs)) >= -1e-12).all()                  # monotone non-decreasing
+    b10 = M.calib_map(pred, real, "bin10")
+    assert b10(np.array([3.0]))[0] < b10(np.array([1.0]))[0]   # non-monotone: the top decile maps below the one under it
+    perm = M.calib_map(pred, real, "bin10_perm", np.random.default_rng(3))
+    grid = np.quantile(pred, np.linspace(0.05, 0.95, 10))
+    assert sorted(np.round(b10(grid), 10)) == sorted(np.round(perm(grid), 10))   # same values, different order
+
+
+def test_cal_arms_on_cli_paired_and_counted_in_the_family_bar():
+    src = (REPO / "scripts/research/ml_decision_entry.py").read_text()
+    assert "*CAP_ARMS, *CAL_ARMS]" in src
+    assert 'pairs["cal_bin10"] = {"vs_base": "base", "vs_random": "random_cal_bin10"}' in src
+    assert "or x in CAL_ARMS)" in src
