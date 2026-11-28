@@ -554,7 +554,7 @@ def run(recent: Dict[str, Any], *, root: Path = REPO, window: str = WINDOW_LABEL
         "freshness": staleness(recent, now), "max_staleness_hours": MAX_STALENESS_HOURS,
         "legs": decisions, "counts": _counts(decisions),
         "no_evidence": [d["leg"] for d in decisions if d["abstain"] == "no_evidence"],
-        "demoted": [], "refused": [], "written": [],
+        "demoted": [], "refused": [], "replacement_search": [], "written": [],
     }
     if not candidates:
         return out
@@ -576,6 +576,12 @@ def run(recent: Dict[str, Any], *, root: Path = REPO, window: str = WINDOW_LABEL
         if res["verdict"] != mr.FIRE:
             out["refused"].append({"leg": d["leg"], "verdict": res["verdict"],
                                    "clause": res["clause"], "detail": res["detail"]})
+            if res["verdict"] == mr.REPLACEMENT_SEARCH:
+                # Operator amendment 2026-11-28: the demotion evidence held but the leg is the sole tested incumbent of an ML
+                # decision step with no passed replacement. Nothing is demoted; the workflow alerts the operator from this list.
+                out["replacement_search"].append({"leg": d["leg"], "account": d["account"], "clause": res["clause"],
+                                                  "detail": res["detail"],
+                                                  "slot": (res.get("evidence", {}).get("sole_incumbent") or {}).get("slot")})
             continue
         removed = apply_proposal(work, res["proposal"], d["leg"])
         firing_rel = f"{mr.FIRINGS_DIR_REL}/{stamp}-{d['leg']}-demote.json"
@@ -613,6 +619,7 @@ def render(out: Dict[str, Any]) -> str:
                      f"demoted by this gate until its evidence record is fixed")
     lines.append(f"  demoted: {out['demoted'] or 'none'}")
     lines.append(f"  refused by resolver: {out['refused'] or 'none'}")
+    lines.append(f"  replacement search (sole incumbent, NOT demoted): {out.get('replacement_search') or 'none'}")
     return "\n".join(lines)
 
 

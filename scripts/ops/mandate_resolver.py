@@ -25,7 +25,7 @@ evidence yet". The operator's ruling is the fix:
     "either we have enough data to decide, or we don't and then getting that
     data becomes a task which needs to happen so that a decision can be made"
 
-So there are three verdicts, never two:
+So there are three verdicts, never two (plus, for S2 -> S1 ONLY, ``REPLACEMENT-SEARCH``: see below):
 
   ``FIRE``        every clause read a DECISIVE measurement, and all of them
                   passed. Act -- open the PR the proposal names.
@@ -243,6 +243,24 @@ MIRROR_DIR_REL = "comms/mandate_evidence/mirror_window"
 FIRINGS_DIR_REL = "comms/mandate_firings"
 
 FIRE, REFUSE, NEEDS_DATA = "FIRE", "REFUSE", "NEEDS-DATA"
+#: A FOURTH verdict, S2 -> S1 only (operator amendment of MD-DEMOTE-S2-S1, 2026-11-28 ~09:40Z, popup "Amend: never the sole
+#: incumbent (Recommended)", from the operator's rule "we have to have something live for each decision. So if there's not a better
+#: option yet, then we don't demote"): the demotion evidence HOLDS, but the leg is the SOLE tested incumbent of an ML decision step
+#: with no passed replacement. Nothing is demoted; a replacement search starts and the operator is alerted. Like NEEDS_DATA it is
+#: NEVER a FIRE: every consumer gates on `verdict != FIRE`, so it can never edit a roster. Ordinary strategy legs keep auto-demotion.
+REPLACEMENT_SEARCH = "REPLACEMENT-SEARCH"
+
+#: Where the incumbents of the ML decision steps are recorded (one source: the iterative ML dev plan, which already names every
+#: model's slot D1-D10, stage, books and consumer legs). No second hand-written list.
+ML_PLAN_REL = "docs/plans/ml-dev-plan.yaml"
+#: Decision slots whose MODEL IS THE LEG: the model originates the trades, so demoting the leg removes the decision step's
+#: only live decision. Today that is D3 (ENTRY: ml_entry, ml_entry_eq_struct). The other slots (D4 overlay, D6/D7/D8 brackets and
+#: exits, D9 fills) are models a leg USES; demoting the leg takes the leg off real money, it does not leave the step without a
+#: decision-maker, so they are not incumbents of a leg. Widen this set only with the plan line that proves the model is the leg.
+LEG_ORIGINATING_SLOTS = frozenset({"D3"})
+#: A line in the same slot at one of these stages is a PASSED REPLACEMENT (passed offline, waiting to go live). `testing_book` is a
+#: paper leg that has not passed; `failed`/`idea`/`iterating` are not replacements.
+PASSED_REPLACEMENT_STAGES = frozenset({"passed_waiting"})
 STAGES = ("S0", "S1", "S2", "OFF")
 
 #: RULE-R3-GATE1-COST-FIDELITY-v1's five verdicts. Mirrored from
@@ -906,6 +924,15 @@ class _Refuse(Exception):
         self.clause, self.detail = clause, detail
 
 
+class _ReplacementSearch(Exception):
+    """The demotion evidence held, but the leg is the sole tested incumbent of an ML decision step with no passed replacement
+    (see REPLACEMENT_SEARCH). Carries `data_task` in the same shape as `_NeedsData` so the alert / pipeline filer can reuse it."""
+
+    def __init__(self, clause: str, detail: str, data_task: Dict[str, Any]):
+        super().__init__(f"{clause}: {detail}")
+        self.clause, self.detail, self.data_task = clause, detail, data_task
+
+
 class _NeedsData(Exception):
     """A clause could not find a decisive measurement at all -- missing,
     below a stated floor, or a non-decisive R3 verdict. Carries `data_task`,
@@ -937,6 +964,9 @@ def resolve(leg: str, from_stage: str, to_stage: str, account: str, *,
     except _NeedsData as nd:
         ctx["proposal"] = None
         return _result(NEEDS_DATA, nd.clause, nd.detail, ctx, data_task=nd.data_task)
+    except _ReplacementSearch as rs:
+        ctx["proposal"] = None
+        return _result(REPLACEMENT_SEARCH, rs.clause, rs.detail, ctx, data_task=rs.data_task)
     except _Refuse as r:
         ctx["proposal"] = None
         return _result(REFUSE, r.clause, r.detail, ctx)
@@ -1022,6 +1052,10 @@ def _decide(leg: str, frm: str, to: str, account: str, root: Path,
         _s1_cut_on_stage0_fail(leg, account, exchange, m, rosters, acfg, root, ctx)
     elif (frm, to) == ("S2", "S1"):
         _demote_s2(leg, root, ctx)
+        # The demotion evidence HOLDS. One more thing must be true before it fires: this leg must not be the only live
+        # decision-maker of an ML decision step (operator amendment 2026-11-28). Checked AFTER the evidence clauses so a
+        # leg whose evidence does not support a demotion still answers REFUSE / NEEDS-DATA exactly as before.
+        _sole_incumbent_guard(leg, account, root, ctx)
     else:
         _demote_s1_off(leg, venue, m, root, ctx)
     ctx["proposal"] = {
@@ -1865,6 +1899,70 @@ def _finite(v: Any) -> bool:
     `NaN` / `Infinity` literals, and an infinite equity would size anything."""
     import math
     return _num(v) and math.isfinite(v)
+
+
+def sole_incumbent(leg: str, account: str, root: Path = REPO) -> Optional[Dict[str, Any]]:
+    """The ML decision step this leg is the SOLE tested incumbent of on `account`, with no passed replacement; else None.
+
+    Read from ML_PLAN_REL. A leg is an incumbent of slot S when a `kind: model`, `stage: production` plan line in a
+    LEG_ORIGINATING_SLOTS slot lists it in `consumer.legs` and the demoted account (or its Stage-2 mirror) in `consumer.books`.
+    It is NOT sole if another production model line in that slot serves the same book with a different leg (the step keeps a
+    live decision), and a PASSED REPLACEMENT (another line in the slot at a PASSED_REPLACEMENT_STAGES stage) means a demotion
+    leaves something to go live, so it is not blocked. Raises `_NeedsData` when the plan cannot be read for a leg that could be
+    an ML leg (`ml_` prefix): "we could not look" must not demote a decision step's only incumbent."""
+    plan = _yaml(root, ML_PLAN_REL)
+    lines = (plan or {}).get("lines") if isinstance(plan, dict) else None
+    if not isinstance(lines, list):
+        if leg.startswith("ml_"):
+            raise _NeedsData("R-INCUMBENT-UNREADABLE", f"{ML_PLAN_REL} is absent or unreadable -- could not look up whether "
+                                                       f"{leg} is the sole incumbent of an ML decision step",
+                             {"what": f"{ML_PLAN_REL} must be readable to decide whether {leg} is a decision step's sole incumbent",
+                              "clears_when": f"{ML_PLAN_REL} is committed and parses with a `lines:` list",
+                              "check_every_days": 1, "next_action": "check_observation"})
+        return None
+    books = {account, MIRROR_OF.get(account)} - {None}
+
+    def _legs(ln: Dict[str, Any]) -> List[str]:
+        c = ln.get("consumer") if isinstance(ln.get("consumer"), dict) else {}
+        return [x for x in (c.get("legs") or []) if isinstance(x, str)]
+
+    def _books(ln: Dict[str, Any]) -> set:
+        c = ln.get("consumer") if isinstance(ln.get("consumer"), dict) else {}
+        return {x for x in (c.get("books") or []) if isinstance(x, str)}
+
+    models = [ln for ln in lines if isinstance(ln, dict) and ln.get("kind") == "model"]
+    for slot in sorted({str(ln.get("slot")) for ln in models} & LEG_ORIGINATING_SLOTS):
+        in_slot = [ln for ln in models if str(ln.get("slot")) == slot]
+        mine = [ln for ln in in_slot if ln.get("stage") == "production" and leg in _legs(ln) and (_books(ln) & books)]
+        if not mine:
+            continue
+        other_live = [ln for ln in in_slot if ln.get("stage") == "production" and leg not in _legs(ln) and (_books(ln) & books)]
+        if other_live:
+            continue
+        replacement = [ln for ln in in_slot if ln.get("stage") in PASSED_REPLACEMENT_STAGES and leg not in _legs(ln)]
+        if replacement:
+            continue
+        return {"slot": slot, "line": mine[0].get("id"), "subject": str(mine[0].get("subject"))[:160],
+                "books": sorted(_books(mine[0]) & books), "plan": ML_PLAN_REL}
+    return None
+
+
+def _sole_incumbent_guard(leg: str, account: str, root: Path, ctx: Dict[str, Any]) -> None:
+    inc = sole_incumbent(leg, account, root)
+    if inc is None:
+        return
+    ctx["evidence"]["sole_incumbent"] = inc
+    raise _ReplacementSearch(
+        "R-SOLE-INCUMBENT",
+        f"{leg} is the sole tested incumbent of ML decision step {inc['slot']} ({inc['line']}) on {account} with no passed "
+        f"replacement; the demotion evidence holds but the step would be left with no live decision (operator amendment "
+        f"2026-11-28: \"we have to have something live for each decision\"). Nothing is demoted: start a replacement search "
+        f"and alert the operator",
+        {"what": f"{leg}'s demotion evidence holds but it is the sole incumbent of {inc['slot']} ({inc['line']}); find or build a "
+                 f"replacement for decision step {inc['slot']} (a plan line in that slot at stage passed_waiting) and alert the operator",
+         "clears_when": f"a {inc['slot']} line other than {leg}'s reaches stage passed_waiting in {ML_PLAN_REL} (the next resolver run "
+                        f"then FIREs the demotion) or the operator decides otherwise",
+         "check_every_days": 1, "next_action": "start_replacement_search"})
 
 
 def _demote_s2(leg: str, root: Path, ctx: Dict[str, Any]) -> None:
