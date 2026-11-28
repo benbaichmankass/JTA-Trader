@@ -176,3 +176,12 @@ def test_weekly_series_matrix():
     assert s["matrix"]["base"] == [0.5, 2.0]
     assert s["matrix"]["arm"] == [0.25, 0.0]
     assert s["n_trades"] == {"arm": 1, "base": 3}
+
+
+def test_long_trend_gate_arm_is_registered():
+    """P2-PR1125-D3 (RQ-20261128-d3e1-01): longs only when the symbol's ret_72 > 0, shorts unchanged; random-mute control."""
+    import ml_entry_fix_arms as A
+    assert "long_trend_gate" in A.ARMS
+    src = (REPO / "scripts/research/ml_entry_fix_arms.py").read_text()
+    body = src[src.index('elif arm == "long_trend_gate"'):src.index('elif arm == "regime_heads"')]
+    assert "test.ret_72" in body and 'tk["control"]' in body and "seq.run(np.where(mute, -np.inf, pl), ps)" in body
