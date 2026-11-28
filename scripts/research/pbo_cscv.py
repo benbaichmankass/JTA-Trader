@@ -114,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--series", nargs="*", default=[])
     ap.add_argument("--blocks", type=int, default=16)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--verdict", action="store_true",
+                    help="also write <out>/verdict.json (research-script-run contract): descriptive, verdict no_action_warranted")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -129,6 +131,15 @@ def main(argv: list[str] | None = None) -> int:
     if a.out:
         Path(a.out).mkdir(parents=True, exist_ok=True)
         (Path(a.out) / "pbo.json").write_text(json.dumps(res, indent=1, default=str) + "\n", encoding="utf-8")
+        if a.verdict:
+            measured = res.get("read_state") == "measured"
+            vj = {"verdict": "no_action_warranted" if measured else "indeterminate",
+                  "read_state": "measured" if measured else "no_data", "n": res.get("n_periods"),
+                  "note": (f"PBO {res.get('pbo')} over {res.get('splits')} CSCV splits, N {res.get('n_configs')} configs, "
+                           f"T {res.get('n_periods')} weeks (descriptive; no rule decides on it, design D-C deferred)"
+                           if measured else f"not measured: {res.get('read_state')}"),
+                  "population": f"weekly net R per configuration from {len(a.series)} series file(s)", "measurement": res}
+            (Path(a.out) / "verdict.json").write_text(json.dumps(vj, indent=1, default=str) + "\n", encoding="utf-8")
     return 0
 
 
