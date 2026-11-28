@@ -170,6 +170,22 @@ Popup answers, 2026-11-17, verbatim:
    - Live results only ADD a way up; they are also what the demotion signal reads.
 5. **Tooling:** a live-bar check script feeds the ladder automatically (pipeline item filed with this section).
 
+### Each decision keeps its tested incumbent until a better one passes (operator, 2026-11-28, binding)
+
+**Gates this adds or changes: none added.** It removes a demotion route for ML decision steps (D1–D10) that leaves a decision with nothing live. It also removes waiting on data accrual as a reason a research unit may not run.
+
+**Incumbent rule.** Operator, 2026-11-28 ~09:50Z, relayed by Manager 2026-11-28b, verbatim on rows `WEEKLY-PLANNING` and `ML-ENTRY-REDESIGN`: *"always feel free to propose a redesign. You don't even need my permission for that ... we go live with something that's passed in testing, and then we have to have something live for each decision. So if there's not a better option yet, then we don't demote ... We find one thing that passes test for each decision, and that basically runs until we can switch it out for something better."*
+- For each ML decision step, the incumbent is the last thing that passed testing. It stays live until a tested replacement beats it.
+- A weak live read, such as ml_entry's first-20-closes check, starts a **replacement search**. It is never a demotion into an empty slot.
+- A session redesigns, rather than adding more levers, whenever its diagnosis says so. It does not ask first.
+
+**No research waits on data accrual; only live-record reads may.** Operator, 2026-11-28 ~09:55Z, relayed by Manager 2026-11-28b, verbatim on row `RESEARCH-NO-WAIT-FOR-DATA`: *"if we're getting stuck in a place where, like, we run out of data and we need to wait months in order to retest something, then we're doing something wrong ... There's tons of free data ... Eventually, we're going to have to retrain models on the same data. That's fine. We just need to figure out how to redesign and retest them in ways that can use the data available ... there's no question where the answer is we need to wait months for more data, except for live trading records"*.
+- A unit blocked on future data is redesigned to run on data available now: longer free history, pooled sibling symbols, venues or timeframes, a holdout re-run inside one run, an upstream labeller retrained on a disjoint span, or a deflated re-read.
+- Every re-read of the same data is recorded and graded against the deflated bar (principle M13; `scripts/research/read_ledger.py`).
+- Only reads whose population is live trading records may wait for those records to accrue.
+
+**Scope.** This applies to ML decision steps and research units. Demotion of a strategy leg on its mirror-window signal (`MD-DEMOTE-S2-S1`) is not changed by this paragraph. Where the two meet (an ML leg that is the only tested incumbent for its decision), the operator decides.
+
 ### Three strategy statuses: testing, production, inactive (operator, 2026-10-28, binding; merged 97dde7e5 #21038)
 
 <!-- STRATEGY-STATUS-CANONICAL: the ONE statement of the status model. Other docs point here. -->
