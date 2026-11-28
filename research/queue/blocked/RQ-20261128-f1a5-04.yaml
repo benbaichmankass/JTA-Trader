@@ -1,0 +1,104 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV, Tier 1), at manager 28a's direction (drain the strategy-leg
+# orphans). ITERATION unit (attempt 1) for orphan subject claude_desk. The rule is the operator's live bar, fixed now as ONE read at the first
+# feed that shows n >= 20, so repeated looks cannot stop on a lucky pass. Gates this adds or changes: none (the live bar is the operator's own
+# rule, OPERATING-PLAN § 2; this unit reads it once).
+id: RQ-20261128-f1a5-04
+title: 'ITERATION 1 of claude_desk (no Stage-0 record): at its FIRST live-bar read with >= 20 confirmed-R closed trades, does the desk clear the operator''s live bar (sum R > 0 and one-sided 80% LCB > 0)?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: When comms/live_bar/latest.json first shows claude_desk with n >= 20 confirmed-R closed trades (R on the declared signal-time risk, net of realized costs), does its feed verdict read pass (sum R > 0 AND mean - 0.8416 sd / sqrt(n) > 0)?
+why_this_matters: 'claude_desk is a testing leg with no Stage-0 evidence record (comms/strategy_evidence/claude_desk.json absent): a discretionary desk has no backtest, so its evidence is its own record, and the operator''s live bar is the path a live record takes to promote (OPERATING-PLAN § 2 "Live-performance promotion path"). Read 2026-11-28 07:0xZ (scripts/research/live_bar.py over the live journal): n 13, sum R +7.68, mean +0.59 R, lcb80 +0.31, verdict n_short; all 13 on bybit_1 (paper); 12 of 13 venue-measured pnl (+7.49 R); only 4 with the stop never moved (lcb80 -0.17). The trend is promising and seven more trades decide it. Without a pre-registered read point, re-checking the bar every day until it passes inflates the false-pass rate; this unit fixes the read at the first n >= 20.'
+iteration:
+  subject: claude_desk
+  subject_kind: strategy_leg
+  from_result: comms/live_bar/latest.json
+  verdict_read: indeterminate
+  diagnosis: 'No Stage-0 record exists for a discretionary desk, so the orphan check reads it indeterminate (a statement about us, not the leg). Its only evidence is live: 13 confirmed-R paper trades on bybit_1 at +0.59 R mean, lcb80 +0.31, short of the 20-trade minimum. The desk''s replayed TRIGGER families (RQ-20261119-f2a4-01/-02, level_break fades) failed declustered, so the desk''s value, if any, is in the judgement layered on top of triggers, which only the live record measures. The stop-unmoved subset (n 4) is negative-biased by construction (winners trail) and is reported, not graded.'
+  hypothesis: the desk's judgement carries edge net of realized cost, visible as a live-bar pass at its first 20 confirmed trades
+  search: 'entry (the desk''s discretionary selection, as traded), graded on the operator''s live bar; one read at the first feed with n >= 20'
+  levers:
+  - entry
+  attempt: 1
+  due_by: '2027-01-31'
+  map_entries:
+  - research/levers/claude_desk.yaml
+blocked_on:
+- kind: data
+  ref: comms/live_bar/latest.json (legs.claude_desk.n)
+  what: claude_desk has 13 confirmed-R closed trades (live read 2026-11-28); the live bar needs 20. The feed itself was stale from 2026-11-25 (live-bar.yml failed on a missing PyYAML; fixed in the same lane's PR).
+  clears_when: comms/live_bar/latest.json has generated_at within the last 26 h AND legs.claude_desk.n >= 20.
+baseline:
+  arm: zero
+  definition: the live bar's own null (sum R = 0 and a non-positive lower bound); no comparison arm, the bar is absolute
+  source: comms/live_bar/latest.json
+power:
+  expected_n: 20
+  min_detectable_effect: 0.67
+  effect_units: metric
+  sd: 1.2
+  design: one_sample
+  alpha: 0.1
+  power: 0.8
+  basis: 'HONEST LIMIT OF THE OPERATOR''S BAR: n is fixed at the live bar''s 20. The 13 trades read give sd ~1.2 R (mean +0.59, lcb80 +0.31). At n 20, alpha 0.10 (the research-queue grader''s loosest supported level, stricter than the bar''s one-sided 0.2) and power 0.8, the smallest reliably detectable mean is 2.487 / sqrt(20) x 1.2 = ~0.67 R/trade, ABOVE the +0.59 observed so far. So a FAIL at n 20 is weak evidence against a real but smaller edge, and is reported that way. A PASS is the operator''s live-bar pass, not a powered Stage-0 result.'
+  feasibility:
+    source: none
+    accrual_basis: '13 confirmed trades since the desk started on bybit_1; about 7 more needed. due_by 2027-01-31 allows for the desk''s observed pace; a slower pace is reported, never graded early.'
+decision_rule:
+  id: RULE-RQ-20261128-f1a5-04
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'scripts/research/live_bar_leg_read.py --leg claude_desk on the FIRST fresh (< 26 h) comms/live_bar/latest.json with legs.claude_desk.n >= 20: the feed''s own live-bar verdict for the leg (scripts/research/live_bar.py: confirmed-R closed trades on the declared_initial basis, demo floor and real money of the same leg pooled, promotion exclusions applied).'
+  rule: 'PASS iff the feed verdict is pass (n >= 20 AND sum R > 0 AND one-sided 80% LCB > 0). FAIL iff the feed verdict is fail. INDETERMINATE iff the read finds n < 20 (n_short), which the blocked_on condition should prevent. A stale, missing or leg-absent feed is no_data (not a result; the dispatcher re-runs it). ONE read: the first run after unblocking is the verdict, and a later feed is never substituted. Reported beside the verdict, never graded: the venue-measured subset and the stop-unmoved subset. A PASS is a Tier-3 proposal input under the live-performance promotion path, never an apply; a FAIL closes this read, not the desk.'
+  what_it_does_not_do: Changes no roster, mode, execution flag or mandate; places no order; reads no journal (the feed is the input).
+practice_precedent: 'none: the rule is the operator''s own live bar, docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Live-performance promotion path" (operator 2026-11-17): the live bar is the rule; fixing a single read point is the standard guard against optional stopping in sequential reads.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 2
+  basis: reads one committed JSON file
+  why_runner: Reads a committed feed file; no network, no secrets.
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.1
+  bucket: structural
+  basis: planning weight; an estimate, not a measurement
+intervention_controls:
+  not_applicable: a read of a live record against an absolute bar, not an in-trade action
+ml_consumer:
+  not_applicable: 'Not an ML unit: the discretionary desk''s live record graded on the live bar.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/live_bar_leg_read.py
+  - --leg
+  - claude_desk
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-f1a5-04
+  timeout_minutes: 15
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- comms/live_bar/latest.json
+- scripts/research/live_bar.py
+- scripts/research/live_bar_leg_read.py
+- .github/workflows/live-bar.yml
+- RQ-20261119-f2a4-01
+- RQ-20261119-f2a4-02
+stated_biases:
+- all 13 trades so far are on bybit_1 (crypto paper); the desk also holds alpaca_paper and ib_paper, which have contributed no confirmed-R trade
+- R uses the declared signal-time risk; trades without it never count (the live bar's own population rule)
+- the venue-measured subset (12 of 13 so far) is reported so a pass resting on estimated pnl is visible
+what_it_does_not_do: Changes no roster, mode, execution flag or mandate; places no order; reads no journal.

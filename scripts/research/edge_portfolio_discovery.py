@@ -374,11 +374,38 @@ def xsec_weights(
                                 cur[s] += 0.5 * w
                             for s, w in side(shorts).items():
                                 cur[s] -= 0.5 * w
+                        elif cfg["mode"] == "lh":  # attempt-5 opt-in (unit RQ-20261128-f1a5-02): long selection, BTC hedge
+                            if "BTCUSDT" not in cur.index:
+                                raise ValueError("mode 'lh' needs a BTCUSDT close column to hedge with")
+                            lw = side(longs)
+                            for s, w in lw.items():
+                                cur[s] += 0.5 * w
+                            cur["BTCUSDT"] -= 0.5 * btc_hedge_ratio(ret, lw, e, cfg.get("hedge", "notional"),
+                                                                     cfg.get("beta_win", 90))
                         else:
                             for s, w in side(longs).items():
                                 cur[s] += w
         W.iloc[t] = cur.values
     return W
+
+
+def btc_hedge_ratio(ret: pd.DataFrame, lw: pd.Series, e: int, kind: str, beta_win: int = 90, ref: str = "BTCUSDT") -> float:
+    """BTC short per unit of long book for mode 'lh'. 'notional' = 1.0; 'beta' = the beta of the weighted long basket's daily
+    return on ``ref`` over the ``beta_win`` rows ending at decision row e (data through e only), clipped to [0, 3]; too little
+    history reads 1.0 (the notional hedge), never 0 (an unhedged book is a different arm)."""
+    if kind == "notional":
+        return 1.0
+    if kind != "beta":
+        raise ValueError(f"unknown hedge kind {kind!r}")
+    if ref not in ret.columns or e - beta_win + 1 < 0 or not len(lw):
+        return 1.0
+    rows = slice(e - beta_win + 1, e + 1)
+    basket = (ret[list(lw.index)].iloc[rows] * lw.values).sum(axis=1, min_count=1)
+    x = ret[ref].iloc[rows]
+    ok = basket.notna() & x.notna()
+    if ok.sum() < max(20, beta_win // 2) or not x[ok].var(ddof=1) > 0:
+        return 1.0
+    return float(min(3.0, max(0.0, np.cov(basket[ok], x[ok], ddof=1)[0, 1] / x[ok].var(ddof=1))))
 
 
 # ----------------------------------------------------------------------------- CARRY
@@ -512,8 +539,19 @@ ITER_GRIDS = {
             "RM2": dict(base="X1", resid="std", beta_win=90),
         },
     },
+    #: ATTEMPT-5 (lane ML-PRIMARY 2026-11-28, unit RQ-20261128-f1a5-02): SHORT-LEG TREATMENT. The X1 short leg lost (-0.21 of
+    #: +1.61) and long-only X6 is alt beta (halves 1.64 / 0.20). HN / HB keep X1's long selection and replace the alt shorts with
+    #: a BTC short: notional 1:1 (HN) or the long basket's trailing-90d beta to BTC (HB). Prior = 10 discovery + 7 d1f3 + 3 62e3
+    #: + 5 fa22-05 regime-gate arms + 2 0104-06 re-runs = 27.
+    "f1a5": {
+        "xsec": {
+            "A0": dict(base="X1"),
+            "HN": dict(base="X1", mode="lh", hedge="notional"),
+            "HB": dict(base="X1", mode="lh", hedge="beta", beta_win=90),
+        },
+    },
 }
-ITER_GRID_PRIOR = {"d1f3": ITER_PRIOR_TRIALS, "62e3": {"tsmom": 9 + 7, "xsec": 10 + 7}}
+ITER_GRID_PRIOR = {"d1f3": ITER_PRIOR_TRIALS, "62e3": {"tsmom": 9 + 7, "xsec": 10 + 7}, "f1a5": {"xsec": 27}}
 
 
 def residual_scores(ret: pd.DataFrame, names: List[str], e: int, L: int, beta_win: int, kind: str,
@@ -622,7 +660,7 @@ def run_iteration(family: str, close, qv, ret, F, fee_rt: float, grid: str = "d1
     base_cfgs = TSMOM_CONFIGS if family == "tsmom" else XSEC_CONFIGS
     out: Dict[str, Any] = {"control": "A0", "grid": grid, "n_arms": len(arms), "n_trials_cumulative": n_cum, "arms": {}}
     for aid, spec in arms.items():
-        cfg = {**base_cfgs[spec["base"]], **{k: spec[k] for k in ("resid", "beta_win") if k in spec}}
+        cfg = {**base_cfgs[spec["base"]], **{k: spec[k] for k in ("resid", "beta_win", "mode", "hedge") if k in spec}}
         kw = {"rebalance": spec.get("rb", 7), "n_univ": spec.get("n", 20)}
         W = tsmom_weights(close, qv, cfg, **kw) if family == "tsmom" else xsec_weights(close, qv, cfg, **kw)
         W = apply_gate(W, close, spec.get("gate"))
@@ -662,6 +700,21 @@ def _self_test() -> int:
         print(("PASS " if cond else "FAIL ") + label)
         ok = ok and bool(cond)
     W = pd.DataFrame(rng.normal(0, 1, close.shape), index=idx, columns=cols)
+    # attempt-5 BTC hedge (unit RQ-20261128-f1a5-02)
+    r_ = close.pct_change()
+    lw_ = pd.Series([0.5, 0.5], index=["S0USDT", "S1USDT"])
+    r2 = r_.copy()
+    r2["S0USDT"] = r2["S1USDT"] = 2.0 * r_["BTCUSDT"]
+    chk("hedge: notional is 1.0", btc_hedge_ratio(r_, lw_, 500, "notional") == 1.0)
+    chk("hedge: a basket that is 2x BTC reads beta 2.0", abs(btc_hedge_ratio(r2, lw_, 500, "beta") - 2.0) < 1e-9)
+    chk("hedge: too little history reads the notional 1.0, never 0", btc_hedge_ratio(r_, lw_, 10, "beta") == 1.0)
+    qv_ = pd.DataFrame(1.0, index=idx, columns=cols)
+    Wl = xsec_weights(close, qv_, {**XSEC_CONFIGS["X1"], "mode": "lh", "hedge": "notional"})
+    row = Wl.iloc[700]
+    chk("lh: the alt long book is +0.5 gross and BTC carries the -0.5 hedge (net of any BTC long)",
+        abs(row.drop("BTCUSDT").clip(lower=0).sum() + row["BTCUSDT"].clip(min=0) - 0.5) < 1e-9 and row["BTCUSDT"] < 0.5 + 1e-9
+        and (row.drop("BTCUSDT") >= 0).all())
+    chk("lh: no alt is ever shorted", (Wl.drop(columns="BTCUSDT") >= 0).all().all())
     btc = close["BTCUSDT"]
     sma = btc.rolling(200).mean()
     up = (btc > sma).where(sma.notna()).shift(1)
