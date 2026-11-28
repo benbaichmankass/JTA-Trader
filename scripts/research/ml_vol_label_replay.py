@@ -557,8 +557,12 @@ def run_replay(
     batch: bool = True,
     audit: bool = True,
     vol_bucket_mode: str = "live",
+    head_override: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Score every dataset bar and write ``{ts, p_volatile, vol_regime}`` JSONL.
+
+    ``head_override``: a head dict built in-process (``replay-refit``: the head's recipe refit on a
+    stated span) used instead of resolving the registry head. Every other step is unchanged.
 
     Returns a manifest dict (also written to ``<out>.manifest.json``) carrying
     the head, threshold, row/label counts, and the fidelity flags. The counts
@@ -567,7 +571,7 @@ def run_replay(
     make the artifact meaningful travel WITH it rather than living only in a
     console log that nobody re-reads.
     """
-    head = resolve_advisory_head(
+    head = head_override if head_override is not None else resolve_advisory_head(
         symbol, model_id=model_id, registry_root=registry_root
     )
     tau = float(threshold) if threshold is not None else live_threshold()
@@ -1161,6 +1165,84 @@ def featdiff_verdict(rep: Dict[str, Any], min_agree_pct: float = FEATDIFF_MIN_AG
 # ---------------------------------------------------------------------------
 
 
+def _ts_date(row: Mapping[str, Any]) -> Optional[str]:
+    t = _parse_ts(row.get("ts"))
+    return t.date().isoformat() if t is not None else None
+
+
+def refit_head(*, manifest: Path, dataset: Path, symbol: str, train_start: str, train_end: str,
+               drop_features: Sequence[str] = ()) -> Dict[str, Any]:
+    """Refit a regime head's RECIPE (``trainer_config`` of an ``ml/configs`` manifest: same features, params,
+    class weights) on dataset rows whose bar date is in [train_start, train_end], and return a head dict
+    ``run_replay(head_override=...)`` scores with. Nothing is written to the registry.
+
+    Why (RESEARCH-NO-WAIT-FOR-DATA, operator 2026-11-28; units RQ-20261128-f1a5-05 / -rc4e-01): the production
+    head is fit on full history, so its labels on older bars are in-sample. A head refit only on a span AFTER
+    the bars it labels never sees them, which makes older history a clean, disjoint grading window now.
+    ``drop_features``: columns absent from the scored span (e.g. the fc_* Chronos side-stream before it existed)
+    are removed from the recipe and listed in the head, never silently imputed."""
+    import yaml  # noqa: PLC0415
+    from ml.predictors.lightgbm import LightGBMMulticlassPredictor  # noqa: PLC0415
+    from ml.trainers.lightgbm_multiclass import LightGBMMulticlassTrainer  # noqa: PLC0415
+
+    man = yaml.safe_load(Path(manifest).read_text(encoding="utf-8")) or {}
+    cfg = dict(man.get("trainer_config") or {})
+    drop = {str(c) for c in drop_features}
+    cfg["feature_columns"] = [c for c in cfg.get("feature_columns", []) if c not in drop]
+    cfg["categorical_columns"] = [c for c in cfg.get("categorical_columns", []) if c not in drop]
+    keep = list(cfg["feature_columns"]) + [str(cfg.get("target_column", "regime_label")),
+                                           str(cfg.get("vol_feature_column", "rolling_log_return_vol")), "ts"]
+    rows = [r for r in iter_projected_rows(Path(dataset), keep)
+            if (d := _ts_date(r)) is not None and train_start <= d <= train_end]
+    if not rows:
+        raise RuntimeError(f"no dataset rows in [{train_start}, {train_end}]: nothing to refit on")
+    state = LightGBMMulticlassTrainer().fit(rows, cfg)
+    pred = LightGBMMulticlassPredictor(state)
+    base_id = str(man.get("model_id") or Path(manifest).stem)
+    return {"predictor": pred, "symbol": symbol.upper(), "timeframe": "",
+            "model_id": f"{base_id}+refit[{train_start}..{train_end}]", "stage": "refit",
+            "resolution": {"mode": "refit", "manifest": str(manifest), "train_start": train_start,
+                           "train_end": train_end, "n_train": state.get("n_train"),
+                           "dropped_features": sorted(drop)}}
+
+
+def label_agreement(a: Mapping[str, Mapping[str, Any]], b: Mapping[str, Mapping[str, Any]]) -> Dict[str, Any]:
+    """Share of bars both label files mark calm/volatile on which the two agree (the refit-vs-live fidelity read)."""
+    both = agree = 0
+    for ts, ra in a.items():
+        rb = b.get(ts)
+        la, lb = ra.get("vol_regime"), (rb or {}).get("vol_regime")
+        if la in (VOL_CALM, VOL_VOLATILE) and lb in (VOL_CALM, VOL_VOLATILE):
+            both += 1
+            agree += la == lb
+    return {"bars_compared": both, "agree_pct": round(100.0 * agree / both, 2) if both else None}
+
+
+def refit_verdict(agreement: Mapping[str, Any], min_agree_pct: float, min_bars: int = 1000) -> Dict[str, Any]:
+    """label_faithful iff >= min_bars compared AND agree_pct >= min_agree_pct; else label_not_live_faithful (the
+    grade reads indeterminate on it). A thin overlap is never a pass."""
+    n, pct = agreement.get("bars_compared") or 0, agreement.get("agree_pct")
+    if n < min_bars or pct is None:
+        return {"state": "label_not_live_faithful", "why": f"only {n} overlapping bars (< {min_bars})"}
+    if pct < min_agree_pct:
+        return {"state": "label_not_live_faithful", "why": f"agree {pct}% < {min_agree_pct}%"}
+    return {"state": "label_faithful", "why": f"agree {pct}% >= {min_agree_pct}% over {n} bars"}
+
+
+def _filtered_jsonl(src: Path, dst: Path, start: str, end: str) -> int:
+    n = 0
+    with open(src, encoding="utf-8") as fi, open(dst, "w", encoding="utf-8") as fo:
+        for line in fi:
+            try:
+                d = _ts_date(json.loads(line))
+            except ValueError:
+                continue
+            if d is not None and start <= d <= end:
+                fo.write(line)
+                n += 1
+    return n
+
+
 def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(
         description="Replay the live ML vol axis offline (per-bar calm/volatile)."
@@ -1194,6 +1276,22 @@ def main(argv: List[str]) -> int:
                         "degrades silently, so this can emit confident wrong labels)")
     r.add_argument("--json", action="store_true")
 
+    rf = sub.add_parser("replay-refit", help="refit a head's recipe on a stated span, then label a DISJOINT span with it")
+    rf.add_argument("--symbol", required=True)
+    rf.add_argument("--manifest", required=True, help="ml/configs/<model>.yaml whose trainer_config is refit")
+    rf.add_argument("--dataset", required=True, help="market_features data.jsonl holding both spans")
+    rf.add_argument("--train-start", required=True)
+    rf.add_argument("--train-end", required=True)
+    rf.add_argument("--score-start", required=True)
+    rf.add_argument("--score-end", required=True)
+    rf.add_argument("--drop-features", default="", help="comma list of recipe columns to drop (absent in the scored span)")
+    rf.add_argument("--live-labels", default=None,
+                    help="labels JSONL from the LIVE head (a `replay` output) over the TRAIN span: the fidelity read")
+    rf.add_argument("--min-agree-pct", type=float, default=85.0)
+    rf.add_argument("--threshold", type=float, default=None)
+    rf.add_argument("--out", required=True, help="output labels JSONL for the SCORE span")
+    rf.add_argument("--json", action="store_true")
+
     a2 = sub.add_parser("audit", help="run ONLY the feature pre-flight against a dataset")
     a2.add_argument("--symbol", required=True)
     a2.add_argument("--dataset", required=True)
@@ -1218,6 +1316,36 @@ def main(argv: List[str]) -> int:
                         "(guards against reading agreement%% off a thin overlap)")
 
     a = p.parse_args(argv)
+
+    if a.cmd == "replay-refit":
+        if not (a.score_end < a.train_start or a.train_end < a.score_start):
+            print("ERROR: the score span overlaps the train span; a refit label must never see the bar it labels",
+                  file=sys.stderr)
+            return 2
+        drops = [c for c in a.drop_features.split(",") if c.strip()]
+        head = refit_head(manifest=Path(a.manifest), dataset=Path(a.dataset), symbol=a.symbol,
+                          train_start=a.train_start, train_end=a.train_end, drop_features=drops)
+        out = Path(a.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        score_src = out.with_suffix(".score_rows.jsonl")
+        _filtered_jsonl(Path(a.dataset), score_src, a.score_start, a.score_end)
+        man = run_replay(dataset=score_src, symbol=a.symbol, out_path=out, threshold=a.threshold,
+                         head_override=head)
+        fidelity: Dict[str, Any] = {"state": "not_measured", "why": "no --live-labels given"}
+        if a.live_labels:
+            ov_src = out.with_suffix(".overlap_rows.jsonl")
+            _filtered_jsonl(Path(a.dataset), ov_src, a.train_start, a.train_end)
+            ov_out = out.with_suffix(".overlap_labels.jsonl")
+            run_replay(dataset=ov_src, symbol=a.symbol, out_path=ov_out, threshold=a.threshold, head_override=head)
+            agr = label_agreement(load_labels(ov_out), load_labels(Path(a.live_labels)))
+            fidelity = {**refit_verdict(agr, a.min_agree_pct), **agr, "min_agree_pct": a.min_agree_pct}
+        man["refit"] = head["resolution"]
+        man["fidelity"] = fidelity
+        man["score_span"] = [a.score_start, a.score_end]
+        Path(str(out) + ".manifest.json").write_text(json.dumps(man, indent=2, default=str) + "\n", encoding="utf-8")
+        print(json.dumps({"labels": str(out), "counts": man.get("counts"), "fidelity": fidelity,
+                          "refit": head["resolution"]}, default=str))
+        return 0
 
     if a.cmd == "audit":
         head = resolve_advisory_head(
