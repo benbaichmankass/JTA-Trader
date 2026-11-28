@@ -128,10 +128,11 @@ intervention_controls:
   hold_to_bracket: true
   hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ
   matched_random:
-    draws: 1
-    note: 'the placebo is the SAME 6 columns permuted across rows within each fold''s train and test (seeded, one draw): it keeps each
-      column''s marginal distribution and breaks its link to the row, so it prices the recipe''s overfit to 6 extra realistic columns (a
-      stricter control than c4e2-04''s N(0,1) columns)'
+    draws: 100
+    note: 'declared, NOT computed by this unit (each draw would be a full refit, as c4e2-04): the control that is computed and graded is
+      ONE seeded permutation placebo, the SAME 6 columns permuted across rows within each fold''s train and test. It keeps each column''s
+      marginal distribution and breaks its link to the row, so it prices the recipe''s overfit to 6 extra realistic columns (a stricter
+      control than c4e2-04''s N(0,1) columns)'
   best_static:
     grid:
     - recipe (20 features, live)
