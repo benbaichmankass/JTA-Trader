@@ -1,0 +1,150 @@
+id: RQ-20261128-lt7a-03
+title: 'CONFIRMATION of ltr-sl-to-structure@new_peak on a DISJOINT corpus: does moving the stop to the 5-bar swing extreme at the first new peak pass RULE-AM-RISK-ADJUSTED-V1
+  on six twin legs the ed2b-03 corpora never held?'
+status: blocked
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On LTR Stage-0 corpora built the same way as comms/strategy_evidence/ltr_corpus (build_ltr_corpus.py --mode harness, closed bar, full cost stack, 2020-06..2026-10)
+  but for six TWIN legs (trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,sol_pullback_2h,avax_pullback_2h,eth_pullback_2h), does sl_to_structure
+  at the new_peak trigger (pivot 5 bars, buffer 0.1 ATR) pass RULE-AM-RISK-ADJUSTED-V1 (R1 cost <= 0.05 R/trade, R2 maxDD or weekly CVaR5 cut >= 15%, R3 >= 4/6 folds,
+  R4 beats >= 95% of 200 matched random-time books, L1 leg-drop)?
+why_this_matters: 'ltr-sl-to-structure is an ORPHAN (Manager 2026-11-28a drain). ed2b-03 PASSED at new_peak (cost 0.021 R/trade, maxDD -19.0%, CVaR5 -13.3%, 4/6 folds,
+  beat 200/200 random books, L1 holds) as one of 9 screened candidates on the 8 committed corpora: chosen on those corpora, so it needs ONE confirmation on a disjoint
+  trade population before it informs the class''s status.'
+iteration:
+  subject: ltr-sl-to-structure
+  subject_kind: ltr_class
+  from_result: RQ-20261113-ed2b-03
+  verdict_read: pass_unconfirmed
+  diagnosis: ed2b-03 passed only at new_peak (r_milestone and swing failed R2/R3) and was 1 of 9 candidates screened on the same 8 corpora with a Bonferroni R4; the
+    pass is a choice made on those corpora (maxDD -19.0% just over the 15% bar, 4 of 6 folds = the minimum), so it must replicate on trades it never saw.
+  hypothesis: locking the stop to the swing extreme at each new peak cuts tail losses generally on trend/pullback legs, not only on the 8 corpus legs
+  levers:
+  - trigger
+  attempt: 2
+  due_by: '2027-01-15'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee 11 bps round trip + slippage + funding
+    per window, as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 4076
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.01
+  power: 0.8
+  basis: 'INFERRED, not measured: the book is the 4076 committed corpus trades (counted 2026-11-13 from the trades.jsonl files); hold net_r sd over them is 1.47 R
+    (measured), and the per-trade paired difference action - hold is assumed about 0.5 R because the action touches only the post-trigger part of a trade. At alpha
+    0.0056 (Bonferroni over 9) and power 0.8 a paired mean difference of about 0.028 R/trade is detectable, below the 0.05 R R1 bar. Trades with no candles or no
+    path are excluded and counted; V1''s n_floor 39 governs. POWER-BLOCK ALPHA: 0.01 is declared because research_queue tabulates only 0.10 / 0.05 / 0.01 (an untabulated
+    alpha is refused, not interpolated); the RULE still grades at the Bonferroni bar 0.9944 (alpha 0.0056), unchanged. At 0.0056 the required n is ~1,303 (z 2.77)
+    vs ~1,168 at 0.01, both below expected_n.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261128-lt7a-03-LTR-STRUCTURE-CONFIRM
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (8 legs, 4,076 trades; each row''s net_r already net of fee
+    + slippage + funding), per pre-registered trigger T in {new_peak, r_milestone, swing}: the book with the stop moved at the bar after T fires to min(adverse R
+    over the last 5 closed bars) - 0.1 ATR (taken only when > -1 R and below the next open; else the trade holds) and replayed to the recorded exit (a stop that is
+    not hit leaves the recorded exit), vs the HOLD book, against 200 matched random-time structure moves on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds
+    hold; n_floor 39) with R4 vs 200 matched random-time books at min_control_beat_frac 0.95 (one candidate: the new_peak trigger chosen by ed2b-03), plus L1 leg-drop.
+    PASS: the candidate clears R1-R4 and L1 on the TWIN corpora. FAIL: it fails a necessary clause (R1, R2, R3) or R4. INDETERMINATE: under the n floor, never fired,
+    carried by one leg, or no_data. Fixed now.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+  pass_action: Report to the manager as the confirmed screen result; a Tier-3 proposal input for ltr-sl-to-structure's advice standing (graduation still waits on
+    BOOK-SIM-REAL-SIZER); no apply authority.
+  fail_action: 'The new_peak pass was corpus-specific: record the trigger as tested-fail on research/levers/ltr-sl-to-structure.yaml; next lever: action_bounds (pivot
+    length / buffer).'
+  proposal_mapping: pass -> Tier-3 input; fail -> trigger closed; indeterminate -> report, stop.
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the
+  same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); the design copies LTR-TRIGGER-CLOSE-S0 (comms/research/ltr_trigger_close_s0/PREREGISTRATION.md).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 'Estimate: 4,076 trades x 3 triggers x 200 random books on CPU; the first run replaces it.'
+  why_runner: Replays committed corpora and candles on CPU.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261113-ed2b-03
+- RQ-20261113-ed2b-01
+- RQ-20261113-ed2b-05
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; the action arms replay on committed candles from the action bar, so a leg's own trail path after the action
+  is not modelled except through its recorded exit
+- a replayed stop fills at its level (a gap fills at the open), which flatters stop-based actions
+- triggers are evaluated on bar closes, live on telemetry passes
+- 8 legs; trend_donchian_eth_prop is 1,182 of 4,076 trades, so L1 (drop the best leg) is a pass condition
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - sl_to_structure
+  - --triggers
+  - new_peak
+  - --corpus-dir
+  - '{out_dir}/twin_corpus'
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.95'
+  - --n-comparisons
+  - '1'
+  - --pivot-bars
+  - '5'
+  - --pivot-buffer-atr
+  - '0.1'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-lt7a-03
+  timeout_minutes: 120
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - sl_to_structure@new_peak
+    - sl_to_structure@r_milestone
+    - sl_to_structure@swing
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+origin: follow_up
+blocked_on:
+- kind: harness
+  ref: scripts/research/build_ltr_corpus.py
+  what: 'No disjoint corpus exists: every committed LTR corpus (8 legs) was in ed2b-03''s book, and build_ltr_corpus.py writes only to comms/strategy_evidence/ltr_corpus
+    from COMMITTED candle CSVs (only ADAUSDT_2h is committed). Needs: an --out-dir flag, and twin-leg candles (fetched in-run or committed) so the six twin corpora
+    can be built beside, not over, the committed ones.'
+  clears_when: build_ltr_corpus.py accepts --out-dir and a run builds the six twin-leg corpora (each __corpus.json with n_trades and trades_sha256) in a directory
+    ltr_action_trigger_s0.py can read via --corpus-dir.
+  owner: row LTR-TWIN-CORPUS (filed with this unit)
