@@ -61,6 +61,30 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 
 **Cadence.** The "Manager lane check-in" routine (`17 */3 * * *`) runs the loop every 3 h; a lane's wake runs it at once. State lives on disk (the checklist, `PIPELINE.jsonl`), never in a session's head. Guard: `manager-pacing-guard` (`scripts/ci/check_manager_pacing.py`).
 
+### Ranking the queue: ML first, never ML only (operator, 2026-11-28, binding) — gates this adds or changes: none
+
+Operator, 2026-11-28 ~10:10Z, verbatim: *"ML gets priority. Always. That's the most important thing, is figuring out how to trade better.
+Unless there's a live money bug, which obviously takes more priority. But there are other work items that need to be in the queue ... I
+don't want to get to the end of the day and realize that we didn't do anything because we've only been dealing with infra ... It still
+gets priority, but that doesn't mean that infra and everything [waits], because otherwise that stuff just never happens, right? It's always
+going to wait for a reset ... we can't push ML because the infra isn't built yet ... or we have to stop doing ML work to deal with the VM
+being at capacity ... that's your job as the manager ... keeping that work queue moving and prioritize correctly."* And: *"if that's not
+like explicitly clear in the manager skills, then you need to make sure that it is."*
+
+How the manager orders work, whatever the lane count:
+1. **A live-money bug pre-empts everything.** Next comes **ML research and testing**, which always gets the larger share of the lanes running.
+2. **ML first is not ML only.** Every lane has ONE ranked queue that mixes ML, infra, ops and backlog. A throttle ("one lane", "low usage")
+   cuts how MUCH runs, never WHICH KINDS run: in a throttled week, infra and ops items still get slots between ML items. A day that ships
+   only ML, or only infra, while the other class has runnable rows is a ranking failure.
+3. **Infra that ML is waiting on ranks as ML.** A build that blocks a research unit or decision step (a dataset, harness, fill model or
+   measurement tool) ranks with the work it unblocks. So does a capacity fix whose absence would stop ML (a saturated VM, an idle backend).
+4. **Never gate a queued item on another lane going idle.** "Do X when the ML lane is waiting" is not a schedule. Give X a position in a
+   queue, on the lane whose class owns it (§ "Assistant managers" classes), and a due date.
+5. **Re-rank at every check-in** against what is actually blocking ML today, and state the per-lane queue in the REPORT line. Ask the
+   operator only when two orderings are genuinely a preference; never ask permission to schedule infra.
+6. **Trigger and handover prompts.** "Builds while ML waits" (11-26 throttle wording) means builds share the lane by rank, not that they
+   run only when ML is idle. Correct any prompt that says otherwise when you meet it.
+
 ### Toolbox
 
 | step | exact command |
