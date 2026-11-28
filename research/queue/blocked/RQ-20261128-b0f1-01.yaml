@@ -1,0 +1,292 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV), row MEASURE-READ-LEDGER-PBO (operator 2026-11-28
+# 'Measurement tools, then new families (Recommended)', relayed by Manager 2026-11-28b; 28b: 'add the --emit-series step for f1a0 so PBO
+# has real series'). Design docs/research/measure-read-ledger-pbo-design-2026-11-28.md test T5. Registered before any run.
+# Gates this adds or changes: none.
+id: RQ-20261128-b0f1-01
+title: 'PBO of the ml_entry fix-arm SELECTION (MEASURE-READ-LEDGER-PBO design T5): over 12 f1a0 arms + the shared base, how often does the in-sample
+  best arm land at or below the out-of-sample median (CSCV, 16 blocks of ISO weeks)?'
+status: blocked
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261124-f1a0-07
+  verdict_read: indeterminate
+  diagnosis: '33 levers / 0 PASS on a +0.003 R/decision base (ML-ENTRY-REDESIGN). Before the redesign is graded, measure how much of any arm-level
+    edge is selection: PBO over the arms already run, on per-week series the original runs did not keep (now emitted by --emit-series, #29742).'
+  search: measurement of the selection, not a new lever
+  levers:
+  - recipe
+  attempt: 1
+  due_by: '2026-12-15'
+  map_entries:
+  - research/levers/ml-entry.yaml
+question: 'Re-run 12 registered f1a0 arms (same recipe, same dev folds, same cost stack, run-date 2026-11-22 pinned) with --emit-series and compute
+  PBO by CSCV over the 13 per-week net-R columns (12 arms + base): PBO, the out-of-sample-on-in-sample degradation slope, and the in-sample winner''s
+  out-of-sample loss rate.'
+why_this_matters: 'Row MEASURE-READ-LEDGER-PBO (operator 2026-11-28 ''Measurement tools, then new families (Recommended)''): the ml_entry redesign
+  (row ML-ENTRY-REDESIGN, rank 2) is graded under the read ledger and PBO; this is the first real PBO and the calibration of what the existing
+  arm grid''s selection is worth.'
+power:
+  expected_n: 200
+  min_detectable_effect: 1.0
+  effect_units: metric
+  sd: 1.0
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'An instrument read, not an inference: PBO is a proportion over C(16,8)=12870 CSCV splits of ~200 ISO weeks (dev folds 2022-01..2025-10);
+    no effect size is estimated. Design T5 prediction registered: PBO >= 0.5 (p 0.6).'
+  feasibility:
+    source: none
+    accrual_basis: 'Nothing accrues: keyless Binance Vision klines fetched in the run, the same dev folds as f1a0.'
+evidence_class:
+  holdout: none_descriptive
+  claim: measurement
+ml_consumer:
+  not_applicable: Measures the selection over research arms; trains and serves nothing.
+baseline:
+  arm: base
+  definition: the registered ml_entry recipe refit per dev fold (ml_entry_fix_arms base column), net of the full cost stack
+  source: research/results/RQ-20261124-f1a0-07
+run:
+  timeout_minutes: 330
+  commands:
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - long_mute
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/long_mute'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - regime_heads
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/regime_heads'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - book_feats
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/book_feats'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - sl_wide
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/sl_wide'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - ev_calib
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/ev_calib'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - ev_cap3
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/ev_cap3'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - sl_wide_retrain
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/sl_wide_retrain'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - ev_calib_recent
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/ev_calib_recent'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - sl_xwide_retrain
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/sl_xwide_retrain'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - sl_xwide_h48_retrain
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/sl_xwide_h48_retrain'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - volsl_retrain
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/volsl_retrain'
+  - - python3
+    - scripts/research/ml_entry_fix_arms.py
+    - --arm
+    - lim_xwide
+    - --fetch
+    - --run-date
+    - '2026-11-22'
+    - --cache
+    - /tmp/ml_entry_klines
+    - --unit
+    - '{unit}'
+    - --emit-series
+    - --out
+    - '{out_dir}/lim_xwide'
+  - - python3
+    - scripts/research/pbo_cscv.py
+    - --series
+    - '{out_dir}/long_mute/series.json'
+    - '{out_dir}/regime_heads/series.json'
+    - '{out_dir}/book_feats/series.json'
+    - '{out_dir}/sl_wide/series.json'
+    - '{out_dir}/ev_calib/series.json'
+    - '{out_dir}/ev_cap3/series.json'
+    - '{out_dir}/sl_wide_retrain/series.json'
+    - '{out_dir}/ev_calib_recent/series.json'
+    - '{out_dir}/sl_xwide_retrain/series.json'
+    - '{out_dir}/sl_xwide_h48_retrain/series.json'
+    - '{out_dir}/volsl_retrain/series.json'
+    - '{out_dir}/lim_xwide/series.json'
+    - --blocks
+    - '16'
+    - --out
+    - '{out_dir}'
+    - --verdict
+  inputs:
+    research_unit: RQ-20261128-b0f1-01
+decision_rule:
+  id: RULE-RQ-20261128-b0f1-01
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'scripts/research/pbo_cscv.py --blocks 16 over the 12 arms'' series.json: pbo, prob_oos_loss_of_is_winner, degradation_slope_oos_on_is,
+    splits, N, T.'
+  rule: 'DESCRIPTIVE (no_action_warranted on a measured read; indeterminate when any arm produced no series or T < 64 weeks). The number is recorded
+    on rows MEASURE-READ-LEDGER-PBO and ML-ENTRY-REDESIGN and in trial_ledger as the ml-entry arm grid''s PBO; it changes no bar (a PBO ceiling
+    is deferred operator proposal D-C). Design T5 prediction: PBO >= 0.5 (p 0.6), graded at the next weekly ML review.'
+  what_it_does_not_do: Edits no config, served model or roster; re-grades no f1a0 verdict (each arm's verdict.json is written as before and is
+    not this unit's result).
+compute: cpu_long
+value:
+  usd_at_stake_per_month: 50
+  confidence: 0.3
+  bucket: ai_trader
+  basis: 'planning weight: calibrates how the D3 redesign is graded; not a P&L measurement'
+intervention_controls:
+  not_applicable: a measurement of configuration selection (CSCV); no in-trade action
+practice_precedent: M13 and R-series (docs/reference/trading-and-model-practice-principles.md); Bailey, Borwein, Lopez de Prado & Zhu (2014) PBO
+  via CSCV (docs/research/measure-read-ledger-pbo-design-2026-11-28.md § 4)
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 10.0
+  est_minutes: 180
+  why_runner: Keyless public Binance Vision data; LightGBM refits on CPU (as f1a0).
+  basis: MEASURED sum of the 12 arms' f1a0 elapsed_s = 8620 s (~2.4 h) + fetch.
+blocked_on:
+- kind: build
+  ref: scripts/research/pbo_cscv.py (lane/ml-primary-pbo-cscv, ML-PRIMARY 2026-11-28)
+  what: the PBO tool this unit's last command runs
+  clears_when: pbo_cscv.py is on main (--help lists --verdict); then git-mv this file to research/queue/ with status queued.
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261124-f1a0-01
+- RQ-20261124-f1a0-07
+- MEASURE-READ-LEDGER-PBO
+- ML-ENTRY-REDESIGN
