@@ -563,6 +563,13 @@ mandates:
       # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
       holdout_required: true
       holdout_min_n: 25
+      # OPERATOR GRANT 2026-11-28 ~09:00Z: popup "Grant it (Recommended)" to Manager Session 2026-11-28b
+      # (session_01AFoLuKWYdjMNUwCApgKHmo) -- grants MD-PROMOTE-S1-S2-LIVE-BAR-AMEND (PR #27086 / #29709):
+      # the live-bar path of OPERATING-PLAN s2 "Live-performance promotion path" may FIRE S1 -> S2 when the
+      # Stage-0 path refuses or needs data. Feed <= 26 h; the venue-measured subset must pass on its own count;
+      # affordability, the 25% cap and never: still bind; a fidelity-check unit rides in the same PR as the roster
+      # edit. Resolver: scripts/ops/mandate_resolver.py LIVE-BAR PATH (#29708). Revert = delete this line.
+      live_bar_path: true
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25
@@ -1749,58 +1756,3 @@ proposed:
       The evidence record for both rules, the parity read, the CUSUM's declared false-alarm rate, and for every
       use an immediate operator notification (what changed, evidence, merged/deployed/observed, the one-line
       revert) plus the brief's section 1.
-
-  - id: MD-PROMOTE-S1-S2-LIVE-BAR-AMEND
-    amends: MD-PROMOTE-S1-S2
-    grants: add_bar_field_live_bar_path_to_MD-PROMOTE-S1-S2
-    direction: add_risk
-    proposed_by: session_01AFoLuJoiTZn52nfU7Q2ynt
-    proposed_at: '2026-11-19'
-    source: >-
-      Lane AM-OPS-5 (GENERAL), row LIVE-BAR-LADDER-FEED part 2 / PI-20261117-LSFHBH4A-0007, dispatched by Manager
-      Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV). The doctrine is the operator's: OPERATING-PLAN § 2
-      "Live-performance promotion path" (operator 2026-11-17 popups, verbatim: "20+ trades, clearly positive
-      (Recommended)", "Live wins + fix backtest (Recommended)", "Both strategies and MLs (Recommended)"; item 5 asks
-      for a live-bar check that "feeds the ladder automatically"). What is NOT the operator's yet is reading that path
-      as a FIRE under this grant, whose text reads "on Stage-0 evidence". Widening a grant is the operator's act, so it
-      is proposed here and the resolver code (scripts/ops/mandate_resolver.py § LIVE-BAR PATH) stays inert until then.
-    recurrence: >-
-      The daily live-bar feed (comms/live_bar/latest.json) re-grades every leg each day. A leg that clears it while its
-      Stage-0 record fails or is missing would otherwise need its own Tier-3 decision each time it clears.
-    fires_when: >-
-      Add `live_bar_path: true` to MD-PROMOTE-S1-S2's `bar:`. Then, for S1 -> S2 only, when the Stage-0 record path
-      answers REFUSE or NEEDS_DATA (anything except a decisive R-AFFORD refusal), the resolver reads the leg's row in
-      comms/live_bar/latest.json. If that feed is <= 26 h old and the row clears the live bar as OPERATING-PLAN § 2
-      "Live-performance promotion path" states it (re-checked from the row's own n, sum R and lower bound by
-      mandate_resolver._live_bar_passes, never restated here) AND its venue-measured-pnl subset clears the same bar
-      on its own count (manager design requirement 2026-11-19),
-      the clause passes in place of the record clauses (record, B1, the bar's n / expectancy / folds, holdout, Stage-1
-      cost fidelity). Affordability (against the committed record's setups; no record = NEEDS_DATA) and the 25% cap
-      still bind, and so does everything in MD-PROMOTE-S1-S2's `never:`.
-    bar:
-      live_bar_path: true
-      live_bar_feed: comms/live_bar/latest.json
-      live_bar_max_age_h: 26
-      live_bar_measured_subset_required: true
-    cap:
-      basis: unchanged -- MD-PROMOTE-S1-S2's 25% auto-promoted declared-risk cap
-      max_auto_share: 0.25
-    never: >-
-      Never carries a decisive affordability refusal. Never on a stale or unreadable feed. Never without a
-      fidelity-check research unit drafted in the SAME PR as the roster edit (conflict rule: live wins, and the unit
-      finds why the backtest disagreed). Never a swap by itself: the swap rule (a demo-floor variant taking a real-money
-      variant's slot) demotes the incumbent, which stays an MD-DEMOTE-S2-S1 decision; same-symbol-allocation-guard
-      still checks the roster PR. Never carries `autoland`. Never a new execution gate.
-    evidence_required: >-
-      The resolver's result (evidence.live_bar with n, sum R, lcb80, pooled accounts, measured-subset verdict and
-      feed age; evidence.stage0_path naming what Stage 0 answered), the drafted fidelity unit, and an immediate
-      operator notification plus the brief's section 1.
-    measured_at_proposal: >-
-      Re-measured 2026-11-28 ~08:30Z (system clock) by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV) on the fresh feed
-      (generated_at 2026-11-28T07:15:57Z; the feed was dead 11-25..11-27, fixed by #29689), resolver report-only, account
-      bybit_2: trend_donchian Stage 0 REFUSE R-B1-C4, live n 46 lcb80 +0.514, measured subset pass at n 30 -> decision FIRE
-      (the ONLY leg that would be FIRE-eligible today, still subject to affordability); trend_donchian_ada_4h n 37 lcb80
-      +0.213, measured n_short 15 -> NEEDS_DATA; trend_donchian_sol_4h n 28 lcb80 +0.105, measured n_short 12 -> NEEDS_DATA;
-      ict_scalp_sol_15m declared-R pass n 55 lcb80 +0.015 but measured subset FAIL at n 24 -> REFUSE; claude_desk n 13 ->
-      NEEDS_DATA; eth_pullback_2h n 74 lcb80 -0.158 -> REFUSE. First proposed 2026-11-19 by AM-OPS-5 (PR #27086, superseded
-      by the PR carrying this re-measure); the soak step it referred to was retired 2026-11-12, so nothing here depends on it.
