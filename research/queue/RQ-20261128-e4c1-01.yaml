@@ -1,0 +1,151 @@
+id: RQ-20261128-e4c1-01
+title: 'D6 ceiling CONFIRMATION on trend_donchian_eth_4h: does the selected cell S10T4 (atr_stop_mult 1.0, tp_r 4.0) out-earn the declared bracket (SL 1.5 ATR / TP
+  4.0R) per trade on the DISJOINT pre-window 2017-09-01..2020-06-30, net of the full cost stack, under the paired grade RQ-20261127-d6c2-01 registered before its
+  run?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+programme_node:
+  programme: P2
+  node: P2-PR1125-D6-ceiling-two-legs
+  goal: G4
+kind: experiment
+iteration:
+  subject: ml-brackets
+  subject_kind: ml_model
+  from_result: RQ-20261127-d6c2-01/46056323510
+  verdict_read: pass
+  attempt: 3
+  due_by: '2026-12-12'
+  diagnosis: 'd6c2-01 PASSED as a SELECTION: S10T4 beat the declared bracket B (net R 141.85 vs 85.58, >= 5/6 folds, within the drawdown tolerance) over 2020-07-01..2026-10-15,
+    chosen among 19 cells on that same window. Its rule states a PASS supports nothing until the selected cell alone passes a paired confirmation on the pre-window
+    2017-09-01..2020-06-30, so this is that read (one cell, no selection).'
+  search: one pre-selected candidate (S10T4) vs the declared bracket B; no grid
+  levers:
+  - bracket
+  map_entries:
+  - research/levers/ml-brackets.yaml
+question: 'On trend_donchian_eth_4h, Binance SPOT 4h candles (a labelled perp proxy: the ETHUSDT perp lists 2019-11-27) over 2017-09-01..2020-06-30, net of the full
+  cost stack, trades paired by entry time: is the mean per-trade net-R difference S10T4 - B > 0 with t >= 2.0, S10T4 ahead in >= 3 of 4 calendar folds, n_paired >=
+  39 and >= 80% of trades paired?'
+why_this_matters: 'A disjoint confirmation is the only route from d6c2-01''s in-sample selection to a Tier-3 bracket proposal on a money leg (OPERATING-PLAN s.2:
+  a number measured only over the grading window never promotes). It also decides whether D6 Pointer has measured headroom on this leg: the learned bracket must beat
+  the best confirmed static cell.'
+power:
+  expected_n: 133
+  min_detectable_effect: 0.1
+  effect_units: R
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 0.4
+  basis: 'n MEASURED 2026-11-28: arm B alone made 133 trades on the spot proxy over 2017-09-01..2020-06-30 (a power count only; no S10T4 run, no comparison, was read
+    before this registration). sd of the paired per-trade dR 0.4 R is an ESTIMATE (most entries share exits; a 1.0 vs 1.5 ATR stop changes R scaling and a minority
+    of exits).'
+  feasibility:
+    source: replay
+    accrual_basis: Replays public Binance spot candles over a pinned past window; nothing accrues.
+evidence_class:
+  claim: edge
+  holdout: out_of_sample
+ml_consumer:
+  consumer: ML-DECISION-MODELS
+  decision: whether the S10T4 bracket goes to a data-backed Tier-3 proposal for trend_donchian_eth_4h, and the static bar a learned entry bracket (Pointer) must beat
+    on this leg
+  legs:
+  - trend_donchian_eth_4h
+  book: money
+baseline:
+  definition: trend_donchian_eth_4h as declared in config/strategies.yaml (atr_stop_mult 1.5, tp_r 4.0, trail_mult 6.0), arm B, same spot-proxy bars and cost stack
+  net_of_cost: true
+intervention_controls:
+  not_applicable: Static bracket geometry fixed at entry; the declared bracket is arm B. The matched-random control belongs to the learned-head units.
+run:
+  timeout_minutes: 120
+  command:
+  - python3
+  - scripts/research/exit_lever_ablation.py
+  - --leg
+  - trend_donchian_eth_4h
+  - --arm
+  - B=
+  - --arm
+  - S10T4=atr_stop_mult=1.0;tp_r=4.0
+  - --spot-proxy
+  - --start
+  - '2017-09-01'
+  - --end
+  - 2020-06-30 23:59
+  - --grade
+  - paired
+  - --baseline
+  - B
+  - --candidate
+  - S10T4
+  - --paired-t-bar
+  - '2.0'
+  - --paired-min-mean
+  - '0.0'
+  - --paired-min-match
+  - '0.8'
+  - --folds
+  - '4'
+  - --fold-majority
+  - '3'
+  - --delta-r
+  - '0'
+  - --n-floor
+  - '39'
+  - --research-unit
+  - RQ-20261128-e4c1-01
+  - --out
+  - '{out_dir}'
+decision_rule:
+  id: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
+  unit_rule_id: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  min_n: 39
+  statistic: exit_lever_ablation.py --grade paired, candidate S10T4 vs baseline B, trades paired by entry time, 4 calendar folds over 2017-09-01..2020-06-30 on Binance
+    spot 4h (perp proxy), full cost stack.
+  rule: 'Registered 2026-11-28 BEFORE any run of S10T4 on this window (only arm B''s trade COUNT was read, for power). PASS (confirmed) iff mean per-trade dR(S10T4
+    - B) > 0 AND t >= 2.0 AND S10T4 out-earns in >= 3 of 4 folds AND n_paired >= 39 AND paired share >= 0.8. FAIL (not replicated) iff the incumbent out-earns per
+    the paired grade at n_paired >= 39: the S10T4 selection does not replicate and the declared bracket stands. INDETERMINATE otherwise (neither side clears, n_paired
+    < 39, match < 0.8, or the producer failed). Thresholds, arms and window are not changed after any result.'
+  what_it_does_not_do: Edits no config, roster or order path. A PASS is the disjoint evidence a Tier-3 bracket proposal needs; the proposal itself is a separate held
+    PR. Spot is a proxy for the perp (no funding in price; the harness still charges the full stack).
+follow_up: PASS -> a held Tier-3 PR proposing atr_stop_mult 1.0 for trend_donchian_eth_4h with d6c2-01 + this record as evidence, and record S10T4 as D6 Pointer's
+  bar on research/levers/ml-brackets.yaml. FAIL -> the declared bracket stands; D6 parks on both money legs (d6c2-02 already FAILED). INDETERMINATE -> record and
+  do not re-run on the same window.
+compute: cpu_long
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 150
+  confidence: 0.25
+  basis: 'ESTIMATE: governs a bracket change on a money leg (d6c2-01 measured +56 R over ~6 years in-sample); not a measurement.'
+practice_precedent: 'T1, T2 (docs/reference/trading-and-model-practice-principles.md): intervention judged against the declared setting, entries fixed, net of cost;
+  a pre-registered grid with the multiplicity stated and the bar raised for it.'
+levers:
+- name: entry_bracket
+  values:
+  - atr_stop_mult 1.0 (S10T4)
+  - atr_stop_mult 1.5 (declared)
+  hypothesised_effect: the tighter stop that won the in-sample grid also out-earns per trade on disjoint data
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 2.0
+  est_minutes: 10
+  basis: 'MEASURED: the arm-B-only power run over this window took ~1-2 min locally; two arms ~2x.'
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261127-d6c2-01
+- RQ-20261127-d6c2-02
+- RQ-20261122-b18a-03
