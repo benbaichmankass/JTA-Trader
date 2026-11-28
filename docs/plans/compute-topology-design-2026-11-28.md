@@ -8,10 +8,10 @@
 ## 0. The answer in six lines
 
 1. **The trainer VM can be retired, and it is now nearly idle**: load 0.01, 306 MB of 5.9 GB used, `ict-drift-retrain` ran **1** time in 7 days (167 in the October profile that justified keeping it). What still ties it down is not compute. It is **three always-on jobs and one single-writer registry** (§ 3).
-2. **The live VM's problem is peaks, not average**: 24 h of completed-run journal CPU is about 68 % of its 2 OCPU (§ 2), but the OCI daily p95 is 98-100 % on every one of the last 7 days. About **a fifth of the timer CPU is three cheap-to-fix jobs** (§ 5, quick wins).
+2. **The live VM's problem is peaks, not average**: 24 h of completed-run journal CPU is about 68 % of its 2 OCPU (§ 2), but the OCI daily p95 is 98-100 % on every one of the last 7 days. The unit-file quick wins (§ 5, S0) can only lower peak contention (priority), not total CPU, because the measured no-change git-sync ticks and the 5-minute alert pass are cheap; **the real CPU is the trader (38 %) and web-api (15 %), so a profiling pass on both is a named P0 item (S0b)** (§ 5).
 3. **Recommended target** (§ 4): live resized 2 → 3 OCPU / 12 → 18 GB; trainer retired; **IB gateway VM kept** and made the home of the small always-on non-compute jobs; training, builds and research on GitHub runners / Kaggle CPU / Kaggle GPU. Merging the IB gateway INTO the live VM is not recommended (§ 6).
 4. **Money to check first**: the OCI Limits API shows 250 cores in the tenancy, not the Always-Free 4 (read 2026-10-13, `comms/cloud/oci_limits.json`). If the tenancy is upgraded, **+1 OCPU on live can be bought now** without retiring anything. Billing is unverified (§ 8, decision D1).
-5. **Usage to execute**: about **30 lane-hours** across 6 lanes, most of it waiting on runs (§ 9). Prep (P0) is about 45 % of that and touches no production path.
+5. **Usage to execute**: about **39 lane-hours** across 7 lanes, most of it waiting on runs (§ 9). Prep (P0) is about 45 % of that and touches no production path.
 6. **Recommendation** (§ 10): do the quick wins and P0 prep **before** the 12-02 reset; start the dual-run, cutover and resize **right after** it.
 
 ## 1. Measured inventory (read 2026-11-28 09:30-09:40Z)
@@ -104,7 +104,8 @@ Why this and not the alternatives: the live VM is the only host whose CPU p95 is
 
 | # | switch | risk | rollback | tier |
 |---|---|---|---|---|
-| S0 | **Quick wins on live** (all Tier-1 repo changes, no VM edit): (a) `ict-git-sync` fetches only when `ls-remote` shows a new SHA (27 s CPU per run today, 269 runs: 4.3 % of the box); (b) prop feed/executor become one long-lived process per account, or share a warm interpreter (16 s + 13 s per 5-minute run: 4.8 %); (c) `work-digest` 93 s per run to 15-minute cadence (2.5 % → 0.8 %); (d) stagger the 5-minute timers so they do not all start on the same second as the :03/:18/:33/:48 shadow run. **ESTIMATE, not measured: 10-12 % of the 2 OCPU box (about 19,000 CPU-s a day) and a lower p95.** | low; (b) is on the prop order path, so it is Tier-2 and needs its own review | revert the unit/script | (a),(c),(d) Tier-1 or Tier-2 timer edit (the unit files are `deploy/`, a Tier-2 deploy); (b) Tier-2 |
+| S0 | **Quick wins on live** (Tier-2 deploy of unit files, manager-approved 2026-11-28): `Nice=10` + `IOSchedulingClass=idle` on `ict-git-sync.service` and `ict-work-digest.service`, and `ict-work-digest.timer` moved from `*:0/5` to `*:4/5` (same cadence). **CORRECTION to the first draft:** the draft proposed an `ls-remote` guard on git-sync and a 15-minute work-digest; the 24 h journal says neither pays. git-sync: 275 runs, 7,542 CPU-s, but the 126 no-change ticks cost 835 CPU-s in total (6.6 s each) and the 149 changed-main ticks cost 6,707 (45 s each), so a guard saves < 0.5 % of the box, not 4.3 %. work-digest: p10 17 s, p50 157 s; the 157 s run is the hourly digest (24/day, 2.2 %), the 5-minute alert pass is cheap, so a 15-minute cadence saves ~0.2 % and triples alert latency. What S0 can do is lower PEAK contention (priority), not total CPU: expected effect on p95 is small and will be measured after deploy. Prop units are not touched (the prop process change is excluded; it needs its own review). | low | revert the PR; the next git-sync tick reinstalls the old units | Tier-2 (`deploy/` units), held PR |
+| S0b | **Profile the trader and web-api** (the real CPU: 38 % and 15 % of the 2 OCPU in the 24 h journal, completed runs only): where per-tick CPU goes (`/api/diag/tick_cost` has the hooks), whole-module imports at start and after each of the ~12 daily auto-deploy restarts, per-request work behind the SPA (`/api/bot/*` handlers that rebuild large structures per call), and the work that runs whole packets of code where a narrower call would do (operator's ask). Output: a ranked list of measured hot paths with a before/after for each fix. **A read-only profiling pass is Tier-1** (py-spy/cProfile on a copy or a sampled run, or the existing tick-cost hooks); each fix is its own PR with its own tier (anything in the order path is Tier-2/3). | the profiling itself: none; each fix: per its tier | n/a | Tier-1 read; fixes per path |
 | S1 | **Parity units for the remaining manifest classes** (HMM, RegimeClassifier, regression, PerStrategyWinRate) on Kaggle CPU/runner, same rule as § 10 of the KAGGLE doc | none to production | n/a | Tier-1 |
 | S2 | **Registry export + live-side puller** with a stale-guard (a stale registry is surfaced, never silently used) | medium: the shadow factory read path | keep the push mirror running during dual-run; revert the puller | Tier-2 |
 | S3 | **Off-trainer dataset build + publish** with a freshness gate (`last_ts` older than 36 h refuses) | medium: feed equivalence (R1) | the trainer build keeps running until cutover | Tier-1 build, Tier-2 to schedule |
@@ -126,7 +127,7 @@ What it is: one A1 VM (1 OCPU / 6 GB) hosting a Docker IB Gateway (`ghcr.io/gnzs
 
 "Production retrain" here means the 00:29Z cycle and the 08:00Z catch-up, which refresh the registry the live shadow factory reads.
 
-1. **P0 (any time, Tier-1, no production change)**: S0 quick wins, S1 parity units, S3 dataset build + freshness gate, the registry export format. Nothing is switched off.
+1. **P0 (any time, Tier-1 except where noted)**: S0 quick wins (Tier-2 unit deploy), S0b profiling pass, S1 parity units, S3 dataset build + freshness gate, the registry export format. Nothing is switched off.
 2. **P1 (dual-run, ≥ 5 consecutive nights)**: the runner trains the same manifests on the same dataset hash; the trainer remains the only writer to the live-readable registry. Pass rule per class: the KAGGLE doc's parity rule (same input hash, counts equal, scores within 0.01, ≥ 0.99 agreement).
 3. **P2 (cutover per timer)**: the cycle first, then catch-up, then lifecycle. Each cut happens the morning after a night in which the runner's output passed and was ingested through the drain as `candidate`. **The trainer timers stay installed (disabled, not deleted) until S7**, so the rollback is one `systemctl enable --now`.
 4. **P3**: S2 puller armed; S6 always-ons moved (orderflow overlap day).
@@ -149,15 +150,16 @@ ESTIMATE (not measured). Basis: comparable lanes on the checklist (`ML-DATA-OFF-
 
 | lane | work | model | lane-hours |
 |---|---|---|---|
-| A | S0 quick wins on live (a, c, d Tier-1/2 timer edits) | Sonnet | 3 |
+| A | S0 unit-file quick wins (small, one PR) + post-deploy before/after measurement | Sonnet | 2 |
+| A2 | **S0b profiling pass on the trader and web-api** (measure, rank hot paths, first 2-3 fixes as separate PRs; order-path fixes need Opus and their own tier) | Opus (the trader is an order path) | 8 (≈ 3 to measure + rank, ≈ 5 for the first fixes; ESTIMATE, the fix count is unknown until measured) |
 | B | S1 parity units for 4 manifest classes + analysis | Sonnet | 6 |
 | C | S3 off-trainer dataset build/publish + freshness gate + feed check | Sonnet | 8 |
 | D | S2 registry export, live puller, stale-guard (touches the shadow-factory read path) | **Opus** | 6 |
 | E | S4-S6 dual-run watch, cutover, always-on moves | Opus | 5 |
 | F | S7-S8 shutdown, archive, resize window | Opus | 3 |
-| | **Total** | 3 Sonnet + 3 Opus lanes | **≈ 31** |
+| | **Total** | 3 Sonnet + 4 Opus lanes | **≈ 39** |
 
-P0 (A, B, C) is ≈ 17 h (55 %); the rest needs the dual-run to have passed first.
+P0 (A, A2, B, C) is ≈ 24 h (≈ 60 %); the rest needs the dual-run to have passed first.
 
 ## 10. Recommendation: before or after the 12-02 reset?
 
