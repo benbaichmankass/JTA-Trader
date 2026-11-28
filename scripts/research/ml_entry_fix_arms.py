@@ -588,6 +588,30 @@ def clf_predict(train: pd.DataFrame, test: pd.DataFrame, n_jobs: int | None = No
     return out[0], out[1], info
 
 
+def weekly_series(cat: dict[str, pd.DataFrame]) -> dict:
+    """Per-configuration per-ISO-week SUM of net R (the T x N matrix PBO/CSCV needs; design
+    docs/research/measure-read-ledger-pbo-design-2026-11-28.md § 4, row MEASURE-READ-LEDGER-PBO).
+
+    One column per taken-trade set in ``cat`` that is ONE configuration. Pooled random-control draws
+    (``control``, DRAWS concatenated) are not a configuration and are left out. Week = ISO week of the
+    entry ``ts`` (the se_week_clustered unit). A week where a configuration took no trade is 0.0 R,
+    stated in ``zero_fill``; a configuration absent from the run is absent, never zero-filled."""
+    cols = {k: v for k, v in cat.items() if k != "control" and isinstance(v, pd.DataFrame) and "net_r" in v and "ts" in v}
+    weeks: set[str] = set()
+    per: dict[str, pd.Series] = {}
+    for k, v in cols.items():
+        ts = pd.to_datetime(v["ts"], utc=True)
+        iso = ts.dt.isocalendar()
+        key = iso["year"].astype(str) + "-W" + iso["week"].astype(str).str.zfill(2)
+        per[k] = v["net_r"].groupby(key.to_numpy()).sum()
+        weeks |= set(per[k].index)
+    order = sorted(weeks)
+    return {"schema": "weekly_net_r/1", "period": "iso_week_of_entry", "zero_fill": "a week with no trade for a config is 0.0",
+            "configs": sorted(per), "weeks": order,
+            "matrix": {k: [round(float(per[k].get(w, 0.0)), 6) for w in order] for k in sorted(per)},
+            "n_trades": {k: int(len(cols[k])) for k in sorted(per)}}
+
+
 def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs: int | None = None, folds_lim: int | None = None) -> dict:
     bounds = [pd.Timestamp(x, tz="UTC") for x in M.DEV_FOLDS] + [pd.Timestamp(M.HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < bounds[-1]]
@@ -820,7 +844,8 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         folds.append(info)
         print(json.dumps({"fold": info["test_start"]} | {k: (info[k]["all"]["n"], info[k]["all"]["mean_net_r"]) for k in tk}), flush=True)
     cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items()}
-    res = {"arm": arm, "folds": folds, "pooled": {k: M.split_by_side(v) | {"bar_risk": M.bar_risk(v)} for k, v in cat.items()}}
+    res = {"arm": arm, "folds": folds, "pooled": {k: M.split_by_side(v) | {"bar_risk": M.bar_risk(v)} for k, v in cat.items()},
+           "_series": weekly_series(cat)}
     if arm in ("bar_split", "rsz_xwide"):
         base = cat["base"] if arm == "bar_split" else cat["fixed"]
         w = np.concatenate([e[1] for e in extra])
@@ -942,6 +967,8 @@ def main(argv=None) -> int:
     ap.add_argument("--fetch", action="store_true")
     ap.add_argument("--run-date", default="2026-11-22")
     ap.add_argument("--folds", type=int, default=None, help="diagnostic only: first N dev folds (never for a registered read)")
+    ap.add_argument("--emit-series", action="store_true",
+                    help="also write <out>/series.json: per-config per-ISO-week net R (the PBO/CSCV input); off by default")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     if a.self_test:
@@ -959,6 +986,9 @@ def main(argv=None) -> int:
     data_fp = cache_fingerprint(cache, M.universe(), fetch_report)
     tab, alt = build(cache, a.arm)
     res = run_arm(tab, a.arm, alt, folds_lim=a.folds)
+    series = res.pop("_series", None)
+    if a.emit_series and series is not None:
+        (out / "series.json").write_text(json.dumps(series | {"arm": a.arm, "unit": a.unit}) + "\n")
     pop = (f"registered recipe refit per dev fold {M.DEV_FOLDS[0]}..{M.HOLDOUT_START} (60-perp frozen universe, {tab.symbol.nunique()} symbols, "
            f"{len(tab)} rows), tau {TAU}, net R fee {M.FEE_BPS}+slip 3+funding 1 bps/8h, week-clustered se; arm {a.arm}"
            + (f"; DIAGNOSTIC first {a.folds} folds only" if a.folds else ""))

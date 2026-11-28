@@ -158,3 +158,21 @@ def test_exit_head_threshold_arms_change_only_tau():
         assert s["tau"] == tau and {k: v for k, v in s.items() if k != "tau"} == {k: v for k, v in L.SHAPE.items() if k != "tau"}
         rows = [{"holding_pays": 1}, {"holding_pays": 0}]
         assert L.with_target(rows, arm) is rows                     # the champion's target, unchanged
+
+
+def test_weekly_series_matrix():
+    """--emit-series: per-config per-ISO-week net R sums; control draws excluded; empty week zero-filled."""
+    import pandas as pd
+
+    import ml_entry_fix_arms as A
+    cat = {
+        "base": pd.DataFrame({"ts": pd.to_datetime(["2025-01-06", "2025-01-07", "2025-01-20"], utc=True), "net_r": [1.0, -0.5, 2.0]}),
+        "arm": pd.DataFrame({"ts": pd.to_datetime(["2025-01-06"], utc=True), "net_r": [0.25]}),
+        "control": pd.DataFrame({"ts": pd.to_datetime(["2025-01-06"], utc=True), "net_r": [9.0]}),
+    }
+    s = A.weekly_series(cat)
+    assert s["configs"] == ["arm", "base"]
+    assert s["weeks"] == ["2025-W02", "2025-W04"]
+    assert s["matrix"]["base"] == [0.5, 2.0]
+    assert s["matrix"]["arm"] == [0.25, 0.0]
+    assert s["n_trades"] == {"arm": 1, "base": 3}
