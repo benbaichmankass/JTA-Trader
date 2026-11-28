@@ -70,5 +70,147 @@
     "doc": "docs/research/prop-retest-2026-11-06/RESULT.md",
     "by": "lane SOAK-BACKLOG-REVIEW, Manager Session 2026-11-06a (operator popup \"Keep both for now\": stay rostered while re-tested)",
     "note": "operator_exception above still governs roster membership; this block reports the fresh grade only"
+  },
+  "regrade_2026_11_28_d6_stop10": {
+    "why": "Tier-3 proposal atr_stop_mult 1.5 -> 1.0 (D6; RQ-20261127-d6c2-01 selection + RQ-20261128-e4c1-01 disjoint PASS) reaches tradeify_1 and velotrade_1 unchanged; prop legs clear a superset, so the stop change is re-graded here BEFORE any merge (Manager Session 2026-11-28a).",
+    "decision_rule": "RULE-P5-GATE-BRK-PER-LEG-V3",
+    "verdict_stop10": "fail_edge",
+    "verdict_stop15_same_run": "fail_edge",
+    "harness": "prop_ev_sim (path mode), 5 seeds x 1000 lives, current-stack cost arm; parameters copied from docs/research/prop-replacement-2026-10-30/run_cells.sh; graded by scripts/research/prop_gate.py",
+    "ledgers": "d6c2-01 run 46056323510 arm ledgers (B = stop 1.5, S10T4 = stop 1.0; arms differ only in atr_stop_mult), cut to 2023-10-15.. and 2025-10-15..2026-10-15",
+    "cells": {
+      "stop15_3y": {
+        "tradeify_1": {
+          "n": 134,
+          "ceiling": 0.75,
+          "p_breach_median": 0.131,
+          "p_breach_worst": 0.145,
+          "ev_net_usd_median": 224.78,
+          "ev_net_usd_worst": 222.12,
+          "edge_mean_r": 0.29058,
+          "edge_ci95": [
+            -0.06572,
+            0.64688
+          ],
+          "v2": "PASS",
+          "v3": "FAIL_EDGE"
+        },
+        "velotrade_1": {
+          "n": 134,
+          "ceiling": 0.73,
+          "p_breach_median": 0.115,
+          "p_breach_worst": 0.135,
+          "ev_net_usd_median": 146.57,
+          "ev_net_usd_worst": 126.75,
+          "edge_mean_r": 0.29058,
+          "edge_ci95": [
+            -0.06572,
+            0.64688
+          ],
+          "v2": "PASS",
+          "v3": "FAIL_EDGE"
+        }
+      },
+      "stop15_365d": {
+        "tradeify_1": {
+          "n": 53,
+          "ceiling": 0.75,
+          "p_breach_median": 0.838,
+          "p_breach_worst": 0.846,
+          "ev_net_usd_median": -113.02,
+          "ev_net_usd_worst": -113.36,
+          "edge_mean_r": -0.19049,
+          "edge_ci95": [
+            -0.64346,
+            0.26249
+          ],
+          "v2": "INDETERMINATE",
+          "v3": "INDETERMINATE"
+        },
+        "velotrade_1": {
+          "n": 53,
+          "ceiling": 0.73,
+          "p_breach_median": 0.787,
+          "p_breach_worst": 0.797,
+          "ev_net_usd_median": -50.09,
+          "ev_net_usd_worst": -51.16,
+          "edge_mean_r": -0.19049,
+          "edge_ci95": [
+            -0.64346,
+            0.26249
+          ],
+          "v2": "INDETERMINATE",
+          "v3": "INDETERMINATE"
+        }
+      },
+      "stop10_3y": {
+        "tradeify_1": {
+          "n": 141,
+          "ceiling": 0.75,
+          "p_breach_median": 0.214,
+          "p_breach_worst": 0.22,
+          "ev_net_usd_median": 479.28,
+          "ev_net_usd_worst": 445.76,
+          "edge_mean_r": 0.38689,
+          "edge_ci95": [
+            -0.07148,
+            0.84526
+          ],
+          "v2": "PASS",
+          "v3": "FAIL_EDGE"
+        },
+        "velotrade_1": {
+          "n": 141,
+          "ceiling": 0.73,
+          "p_breach_median": 0.347,
+          "p_breach_worst": 0.357,
+          "ev_net_usd_median": 174.55,
+          "ev_net_usd_worst": 159.67,
+          "edge_mean_r": 0.38689,
+          "edge_ci95": [
+            -0.07148,
+            0.84526
+          ],
+          "v2": "PASS",
+          "v3": "FAIL_EDGE"
+        }
+      },
+      "stop10_365d": {
+        "tradeify_1": {
+          "n": 55,
+          "ceiling": 0.75,
+          "p_breach_median": 0.799,
+          "p_breach_worst": 0.808,
+          "ev_net_usd_median": -78.56,
+          "ev_net_usd_worst": -88.94,
+          "edge_mean_r": -0.14164,
+          "edge_ci95": [
+            -0.72846,
+            0.44518
+          ],
+          "v2": "INDETERMINATE",
+          "v3": "INDETERMINATE"
+        },
+        "velotrade_1": {
+          "n": 55,
+          "ceiling": 0.73,
+          "p_breach_median": 0.814,
+          "p_breach_worst": 0.83,
+          "ev_net_usd_median": -38.54,
+          "ev_net_usd_worst": -40.14,
+          "edge_mean_r": -0.14164,
+          "edge_ci95": [
+            -0.72846,
+            0.44518
+          ],
+          "v2": "INDETERMINATE",
+          "v3": "INDETERMINATE"
+        }
+      }
+    },
+    "record": "docs/research/d6-eth4h-prop-regrade-2026-11-28/summary.json",
+    "doc": "docs/research/d6-eth4h-prop-regrade-2026-11-28/RESULT.md",
+    "by": "lane ML-PRIMARY session_01AFoLuLpCY5gABbqk3EBUeV",
+    "note": "operator_exception above still governs roster membership; this block reports the grade of the proposed stop only"
   }
 }

@@ -29,8 +29,9 @@ def test_declared_rule_and_width_resolve_exactly_as_tested():
     assert tr.rule_params(leg) == {"width_mult": 0.5}
     assert tr.RULE_DONCHIAN_MEASURED_MOVE in tr.RULES
     assert '"tp_revision"' in inspect.getsource(td.order_package)
-    # Tested arm A geometry is unchanged by this packet.
-    assert leg["atr_stop_mult"] == 1.5 and leg["trail_mult"] == 6.0 and leg["donchian"] == 20
+    # Geometry: stop 1.0 since the D6 proposal (RQ-20261127-d6c2-01 selection + RQ-20261128-e4c1-01 disjoint PASS); both
+    # runs carried this same measured-move revision (width 0.5) in both arms, so the TP packet stays tested at stop 1.0.
+    assert leg["atr_stop_mult"] == 1.0 and leg["trail_mult"] == 6.0 and leg["donchian"] == 20
 
 
 def test_leg_on_live_and_mirror_off_general_paper_and_pair_stays_equal():
