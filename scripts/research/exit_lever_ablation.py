@@ -1056,6 +1056,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--non-crypto-source", choices=("auto", "dukascopy"), default="auto",
                     help="non-crypto candle lane: auto = the evidence builder's yfinance fetch; dukascopy = the lane "
                          "research-script-run.yml installs (history from ~2018 for US ETF CFDs)")
+    ap.add_argument("--spot-proxy", action="store_true",
+                    help="USDT crypto legs only: read Binance SPOT candles over [--start, --end] (plus warm-up) as a "
+                         "labelled perp proxy, so a window BEFORE the perp listing (ETHUSDT perp 2019-11-27) can be "
+                         "graded; the full cost stack is still charged (ml_overlay_noninferior.fetch_spot_proxy_csv)")
     ap.add_argument("--control", default=None, help="LABEL=<committed __bt.json> the arm must reproduce")
     ap.add_argument("--control-tol-n", type=float, default=0.02)
     ap.add_argument("--control-tol-r", type=float, default=0.5)
@@ -1242,7 +1246,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     csv = a.data_csv or str(wd / f"{a.leg}__data.csv")
     feed: dict[str, Any] = {"resample": base.get("timeframe"), "source": "explicit --data-csv"}
-    if not a.data_csv:
+    if a.spot_proxy and not a.data_csv:
+        if not (a.start and a.end):
+            print("ERROR: --spot-proxy needs --start and --end (the spot fetch is pinned to the window)", file=sys.stderr)
+            return 2
+        from ml_overlay_noninferior import fetch_spot_proxy_csv
+        feed = fetch_spot_proxy_csv(a.leg, {**base, "timeframe": native_tf}, start=a.start, end=a.end, csv=Path(csv))
+        feed["resample"] = base.get("timeframe")
+    elif not a.data_csv:
         feed = fetch_candles(a.leg, {**base, "timeframe": native_tf}, a.days, csv, non_crypto_source=a.non_crypto_source)
         feed["resample"] = base.get("timeframe")
     split = a.grade == "stage0" and a.stage0_holdout_start is not None
