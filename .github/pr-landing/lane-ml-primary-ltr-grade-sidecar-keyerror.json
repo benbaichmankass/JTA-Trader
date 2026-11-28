@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "LTR-MIRROR-SKIPPED-ROWS-1128, item 3 (manager 28a dispatch): the non-fatal live_review_grade.py:179 KeyError. Tooling + CI only; no order path, no runtime. Cause: main() prices the refused-dispatchable sidecar rows (LTR-GRADE-APPLIED) into results, but grade() built its review lookup from reviews.jsonl only, so a sidecar call with a judgement_confidence (or a closed-trade hold) raised KeyError at _cal_points. Consequence beyond the traceback: the workflow's price step exited early on the failure, after append_outcomes had written outcomes but before changed= was set, so those outcomes never landed unless the mirror also mirrored a row. Fix: grade(reviews, results, side_reviews=side) looks sidecar reviews up too (main's row wins on an id clash; population counts main's reviews plus n_refused_dispatchable_reviews beside it); the price step now warns and carries on to the records check and changed= instead of exiting. Tests: both new tests fail on main and pass here; 56 grader/counterfactual tests and 50 mirror/commit-to-main tests pass. Revert: git revert.",
+  "why": "Grade the refused-dispatchable calls the grader already prices instead of crashing, and let appended outcomes land when the report fails."
+}

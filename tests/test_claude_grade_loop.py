@@ -225,3 +225,25 @@ def test_claude_feature_gate_passes_only_on_an_oos_edge_record(tmp_path):
     assert lint.use_rule_problems(m, root=tmp_path)
     (tmp_path / "ev.json").write_text(json.dumps({"verdict": "EDGE", "out_of_sample": True}))
     assert lint.use_rule_problems(m, root=tmp_path) == []
+
+
+def test_a_refused_dispatchable_sidecar_call_is_graded_not_a_keyerror():
+    """LTR-MIRROR-SKIPPED-ROWS-1128: main() prices sidecar rows into results; grade() must find their reviews."""
+    rvs = [_rv(0, conf=0.8)]
+    side = [_rv(1, conf=0.7), _rv(2, "hold", 0.6, open_r=0.4)]   # a priced altering call and a closed-trade hold
+    res = [_res(0, delta=0.3), _res(1, delta=-0.2), _res(2, "hold", net_r=1.0)]
+    try:
+        gr.grade(rvs, res)
+    except KeyError:
+        pass
+    else:  # the failure this fixes: without the sidecar the lookup cannot find LR-1
+        raise AssertionError("grade() without side_reviews no longer raises; re-check the fixture")
+    g = gr.grade(rvs, res, side_reviews=side)
+    assert g["calibration"]["tighten_sl/all"]["n"] == 2 and g["hold_vs_close"]["n"] == 1
+    assert g["population"]["n_reviews"] == 1 and g["population"]["n_refused_dispatchable_reviews"] == 2
+
+
+def test_a_main_review_wins_over_a_sidecar_copy_with_the_same_id():
+    main_rv, side_rv = _rv(0, conf=0.8, src="main"), _rv(0, conf=0.8, src="sidecar")
+    g = gr.grade([main_rv], [_res(0, delta=0.3)], side_reviews=[side_rv])
+    assert "tighten_sl/main" in g["calibration"] and "tighten_sl/sidecar" not in g["calibration"]
