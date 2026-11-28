@@ -14,7 +14,9 @@ Description=Trigger ict-work-digest every 5 minutes (alert_watch pass; hourly di
 # a little more settled in").
 # ALERT-LEDGER-TO-MANAGER: the alert_watch pass needs a VM clock fast enough to reach the manager inside
 # 10 min (F3: GitHub cron is not that clock). The digest's own latch/cadence gate keep it hourly.
-OnCalendar=*:0/5
+# S0 stagger (2026-11-28): was *:0/5, which started with git-sync's tick; :4/5 sits in the slot no other 5-min timer uses
+# (prop-feed :1, work-store-import :2, prop-executor :3). Same 5-minute cadence.
+OnCalendar=*:4/5
 # Spreads the send off the top of the hour, where ict-hourly-snapshot already
 # fires, so the two do not hit the Telegram bridge in the same second.
 RandomizedDelaySec=45

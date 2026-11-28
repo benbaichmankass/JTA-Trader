@@ -34,6 +34,9 @@ Environment=PYTHONPATH=/home/ubuntu/ict-trading-bot
 # move the writer to /data/bot-data/runtime_logs while the reader kept looking
 # at the repo path, which is the writer/reader split that hid the
 # hourly-snapshot balance stall for ~3 weeks (BL-20260611-M15-2).
+# COMPUTE-TOPOLOGY-REVIEW S0 (2026-11-28): the hourly digest is a ~157 s CPU run (24/day, MEASURED 2026-11-28); the 5-min alert_watch pass is ~17 s.
+Nice=10
+IOSchedulingClass=idle
 ExecStart=/usr/bin/python3 /home/ubuntu/ict-trading-bot/scripts/ops/work_digest_now.py
 StandardOutput=journal
 StandardError=journal

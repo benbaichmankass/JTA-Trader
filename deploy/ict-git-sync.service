@@ -18,6 +18,10 @@ WorkingDirectory=/home/ubuntu/ict-trading-bot
 # because the env vars weren't set in the systemd unit's environment).
 # `-` prefix tolerates the file being absent on a fresh VM bootstrap.
 EnvironmentFile=-/home/ubuntu/ict-trading-bot/.env
+# COMPUTE-TOPOLOGY-REVIEW S0 (2026-11-28): a changed-main tick is a 45 s CPU burst (fetch + reset --hard + sparse + notify + diff; MEASURED 149 of 275
+# ticks, 24 h to 2026-11-28T09:40Z, vs 6.6 s for a no-change tick). Run it behind the trader at peak; it never needs to win a CPU race.
+Nice=10
+IOSchedulingClass=idle
 ExecStart=/bin/bash /home/ubuntu/ict-trading-bot/scripts/deploy_pull_restart.sh
 StandardOutput=journal
 StandardError=journal

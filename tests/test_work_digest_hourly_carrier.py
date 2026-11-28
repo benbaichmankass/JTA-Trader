@@ -195,7 +195,7 @@ def test_both_units_exist_so_the_installer_glob_picks_them_up():
     assert (DEPLOY / "ict-work-digest.service").is_file()
     assert (DEPLOY / "ict-work-digest.timer").is_file()
     timer = (DEPLOY / "ict-work-digest.timer").read_text()
-    assert "OnCalendar=*:0/5" in timer  # ALERT-LEDGER-TO-MANAGER: 5-min carrier; the digest stays hourly via its own latch
+    assert "OnCalendar=*:4/5" in timer  # S0 stagger 2026-11-28 (was *:0/5, git-sync collision); ALERT-LEDGER-TO-MANAGER: 5-min carrier; the digest stays hourly via its own latch
     assert "Unit=ict-work-digest.service" in timer
 
 
