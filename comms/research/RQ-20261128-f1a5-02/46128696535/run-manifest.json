@@ -1,0 +1,71 @@
+{
+  "unit": "RQ-20261128-f1a5-02",
+  "run_id": "46128696535",
+  "commit_sha": "bfb09327c2008916fe5ce17c5ab8b1d652a70c91",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/46128696535",
+  "timeout_minutes": 150,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261122.9.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "2f2185647172",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/edge_portfolio_discovery.py",
+        "--family",
+        "xsec",
+        "--iteration",
+        "--grid",
+        "f1a5",
+        "--expect-control-sharpe",
+        "1.325",
+        "--build-data",
+        "--data-root",
+        "comms/research/_scratch_edge_data",
+        "--out",
+        "comms/research/RQ-20261128-f1a5-02/46128696535"
+      ],
+      "log": "comms/research/RQ-20261128-f1a5-02/46128696535/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 300.9,
+      "seconds": 321.3
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}
