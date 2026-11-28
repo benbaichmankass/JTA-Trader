@@ -5,7 +5,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO)]
 
-import fill_model as FM
+import fill_model as FM  # noqa: E402
 
 
 def test_self_test():

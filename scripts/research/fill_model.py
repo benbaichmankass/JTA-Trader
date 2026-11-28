@@ -46,7 +46,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import desk_maker_fills as DMF
+import desk_maker_fills as DMF  # noqa: E402
 
 KAPPAS = (0.0, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, float("inf"))
 LOOKBACK_S = 3600.0
@@ -76,7 +76,10 @@ def parse_sized(raw_csv: bytes) -> SizedPrints:
         if i_rpi is not None and f[i_rpi].strip() not in ("", "0"):
             n_rpi += 1
             continue
-        ts.append(float(f[i_ts])); px.append(float(f[i_px])); buy.append(f[i_side] == "Buy"); sz.append(float(f[i_sz]))
+        ts.append(float(f[i_ts]))
+        px.append(float(f[i_px]))
+        buy.append(f[i_side] == "Buy")
+        sz.append(float(f[i_sz]))
     o = np.argsort(np.asarray(ts, dtype=float), kind="stable")
     return SizedPrints(np.asarray(ts, dtype=float)[o], np.asarray(px, dtype=float)[o], np.asarray(buy, dtype=bool)[o],
                        np.asarray(sz, dtype=float)[o], n_rpi)
@@ -204,7 +207,8 @@ def breakeven_kappa(cv: list[dict], bar_bps: float) -> dict:
 def run(a) -> int:
     symbols = [s.strip().upper() for s in a.symbols.split(",") if s.strip()]
     days = [date.fromisoformat(d) for d in a.days.split(",")] if a.days else DMF.sample_days()[: a.max_days]
-    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
     cache = Path(a.cache) if a.cache else None
     windows = tuple(int(w) for w in a.windows.split(","))
     rows, cells = [], {}
@@ -262,8 +266,10 @@ def _self_test() -> None:
     rng = np.random.default_rng(1)
     pp = DMF.Prints(p.ts, p.price, p.is_buy, 0, len(p.ts))
     for _ in range(300):
-        t0 = float(rng.uniform(100, 80000)); t1 = t0 + 300
-        L = float(np.round(rng.choice(p.price), 2)); long = bool(rng.random() < 0.5)
+        t0 = float(rng.uniform(100, 80000))
+        t1 = t0 + 300
+        L = float(np.round(rng.choice(p.price), 2))
+        long = bool(rng.random() < 0.5)
         for kap, strict in ((float("inf"), True),):
             assert first_fill_q(p, t0, t1, L, tick, long, kap) == DMF.first_fill(pp, t0, t1, L, tick, long, strict)
         # optimistic DMF fills on ANY print at/through L (either aggressor); kappa 0 requires the hitting side at L, so it is <= optimistic
@@ -273,7 +279,9 @@ def _self_test() -> None:
         assert (fs is None) or (f0 is not None and f0 <= fs)
     # 2) monotone: fill time is non-decreasing (and fill prob non-increasing) in queue_ahead
     for _ in range(300):
-        t0 = float(rng.uniform(100, 80000)); L = float(np.round(rng.choice(p.price), 2)); long = bool(rng.random() < 0.5)
+        t0 = float(rng.uniform(100, 80000))
+        L = float(np.round(rng.choice(p.price), 2))
+        long = bool(rng.random() < 0.5)
         prev = -1.0
         for qa in (0.0, 0.5, 2.0, 10.0, float("inf")):
             f = first_fill_q(p, t0, t0 + 300, L, tick, long, qa)
