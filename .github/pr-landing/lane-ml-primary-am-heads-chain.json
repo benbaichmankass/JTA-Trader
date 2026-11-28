@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "AM-HEADS-ARTIFACT-REMATERIALISE close-out. (1) am-action-value.yml gains heads_corpus_sha (empty = corpus_sha, so every existing dispatch is unchanged): the heads job pins the corpus the labels were built on, so a grading run can replay the tree (corpus_sha '') on heads refit from pinned-corpus labels; without it the heads job would join 1eb164f4 labels to a different corpus. (2) research/queue/RQ-20261126-c7e5-01.yaml: the stale 'precondition tracked in PIPELINE.jsonl' line is replaced by a HEADS CHAIN run note with the exact 2-dispatch recipe. No rule, threshold, input or not_before changes. PROOF (observed): cf-bar-labels run 46094810889 (corpus 1eb164f4, max_fwd 48, context false) -> am-action-value heads_only run 46097406646 rebuilt all 72 model files byte-identical to am-heads-45384292963; manifest.json differs only by the added feats_kind key and wall-clock elapsed_s (field diff of the three manifests). Follow-up filed: PI-20261128-QK3EBUEV-0001 (due 2027-06-01: run the chain before c7e5-01 grades, since the dispatcher's automatic dispatch would fail at the expired heads download). R5 cannot vouch for research/queue/, so the manager merges. Revert: git revert.",
+  "why": "Make RQ-20261126-c7e5-01's 2027-06-15 grade dispatchable after am-heads-45384292963 expires, on a proven-deterministic heads rebuild."
+}

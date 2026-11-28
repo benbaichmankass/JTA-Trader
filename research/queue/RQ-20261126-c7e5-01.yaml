@@ -104,8 +104,14 @@ decision_rule:
     the 93k-trade family needs ~176k trades for 0.002 R.'
   - 'CORPUS: corpus_sha empty = the repo tree at dispatch (the pinned 1eb164f4 holds no post-2026-11-23 entry). The run log records the checkout sha.'
   - 'MODELS: the model-free class only uses the value models to fix the population; the last heads fold is open-ended (test_end null), so post-2026-11-23
-    trades get a fold. The heads artifact am-heads-45384292963 is kept only to 2026-12-24 and the value models are rebuilt here (av_run_id empty), so the
-    dispatch needs a live heads artifact: precondition tracked in docs/claude/work/PIPELINE.jsonl (re-materialise before expiry).'
+    trades get a fold. The heads artifact am-heads-45384292963 expires 2026-12-24 and the value models are rebuilt here (av_run_id empty).'
+  - 'HEADS CHAIN (run note, AM-HEADS-ARTIFACT-REMATERIALISE, 2026-11-28): no artifact lives to 2027-06-15, so this dispatch rebuilds the heads itself in two
+    dispatches, the first within 14 days of the second (label artifacts keep 14 d): (1) cf-bar-labels with corpus_sha 1eb164f4ae641bea82ac34692af9cb7031640a62,
+    max_fwd 48, context false, run_id cfbl-c7e5-01-<date>; (2) am-action-value with this unit''s run.inputs plus labels_run_id=<run 1>,
+    labels_prefix=cfbl-c7e5-01-<date>, head_feats base, heads_corpus_sha 1eb164f4ae641bea82ac34692af9cb7031640a62 (corpus_sha stays empty for the replay).
+    PROVEN deterministic: cf-bar-labels run 46094810889 -> am-action-value heads_only run 46097406646 rebuilt all 72 model files byte-identical to
+    am-heads-45384292963 (manifest.json differs only by the added feats_kind key and wall-clock elapsed_s); refit from the original labels, run 46093862231,
+    matched the same 72/72.'
   - 'HOLDOUT: family AM-HEADS, 2026-11-24..end, symbols [BTCUSDT], claimed by the reduce step BEFORE the holdout books are built.'
   min_n: 283
 compute: cpu_long
