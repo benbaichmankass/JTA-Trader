@@ -1,6 +1,6 @@
 # D6 prop re-grade: trend_donchian_eth_4h, stop 1.5 vs 1.0, on the prop accounts
 
-> **Doc status:** `live` · category `evidence` · last verified `2026-11-28` · lane ML-PRIMARY (Tier 1 evidence; no config, roster, order or mode)
+> **Doc status:** `unknown` · category `evidence` · last verified `never` · registered in [`docs/DOCUMENT-INDEX.md`](../../DOCUMENT-INDEX.md) · lane ML-PRIMARY (Tier 1 evidence; no config, roster, order or mode)
 
 **Gates this adds or changes:** none (applies the existing prop gate, `RULE-P5-GATE-BRK-PER-LEG-V3`, to a proposed stop change).
 

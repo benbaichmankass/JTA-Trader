@@ -2,7 +2,6 @@
 """Cut the d6c2-01 arm ledgers (B = stop 1.5, S10T4 = stop 1.0; committed, run 46056323510) to the trailing 3y and
 365d windows ending at that run's end (2026-10-15), the windows the current prop record was graded on. Read-only."""
 import json
-import subprocess
 from pathlib import Path
 
 SRC = "comms/research/RQ-20261127-d6c2-01/46056323510/arms/{arm}__trades.jsonl"
