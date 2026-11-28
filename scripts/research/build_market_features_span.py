@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wiring: research/queue/blocked/RQ-20261128-f1a5-05.yaml (research-script-run-trainer.yml); RESEARCH-NO-WAIT-FOR-DATA
+# wiring: manual-only - run by research units RQ-20261128-f1a5-05 / -rc4e-01 (held PR #29723) once merged; RESEARCH-NO-WAIT-FOR-DATA
 """Build a one-off market_raw + market_features dataset for ONE symbol/timeframe over a STATED span, into --out.
 
 Why: the research runners allow only ``python3 scripts/research/*.py`` (script_run.py), so a unit cannot call
