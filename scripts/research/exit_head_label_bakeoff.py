@@ -54,6 +54,14 @@ TARGETS = {
     "holding_pays_neg25": ("future_r_delta", lambda v: 1 if float(v) >= -0.25 else 0),
 }
 DEFAULT_ARMS = ("holding_pays_0", "more_mfe")   # aadc-04's registered arms
+# THRESHOLD family (lane ML-PRIMARY, 2026-11-28; research/levers/ml-exit-head-donchian-1h.yaml `threshold: untested`; orphan drain):
+# the champion TARGET and FEATURES, a different firing threshold `tau` on the live below_half_r policy (live tau 0.10). One knob.
+THRESHOLD_ARMS = {"thr_tau05": 0.05, "thr_tau20": 0.20, "thr_tau30": 0.30}
+
+
+def arm_shape(arm: str) -> dict:
+    """The policy shape an arm replays with: SHAPE, with tau replaced for a THRESHOLD arm."""
+    return {**SHAPE, "tau": THRESHOLD_ARMS[arm]} if arm in THRESHOLD_ARMS else SHAPE
 # FEATURE family (lane ML-PRIMARY-17, 2026-11-20; research/levers/ml-exit-head-donchian-1h.yaml `features: untested` after the
 # neg25 label lever closed): same champion TARGET and hyper-parameters, a different FEATURE LIST. Each arm is a pure function of
 # train_exit_head.FEATURES / FEATURES_EXH, resolved at run time. Every listed column is emitted by the live
@@ -146,7 +154,7 @@ def peak_derivable_share(src: Dict[str, Any]) -> float:
 
 def with_target(rows: List[dict], arm: str) -> Optional[List[dict]]:
     """Copies of `rows` carrying the arm's target under train_exit_head.TARGET's name; None if the source column is absent."""
-    if arm == CHAMPION or arm in FEATURE_ARMS:
+    if arm == CHAMPION or arm in FEATURE_ARMS or arm in THRESHOLD_ARMS:
         return rows
     src, fn = TARGETS[arm]
     have = [r for r in rows if r.get(src) is not None]
@@ -244,7 +252,7 @@ def run_leg(strategy: str, symbol: str, rows: List[dict], arms: List[str], a, ha
             if feature_coverage(tr, feats, teh.FEATURES) < FEATURE_COVERAGE_MIN:
                 continue   # could_not_look: the added columns are absent from these rows; never trained on NaN
             booster = train_with_features(teh, tr, feats)
-            art = {"features": feats, "shape": SHAPE}
+            art = {"features": feats, "shape": arm_shape(arm)}
 
             def predict(vec, _b=booster):
                 # provenance: predict_proba — P(class=1) (was .predict = the class label, fixed 2026-11-18) of the binary booster for this arm's target (holding_pays-shaped)
@@ -313,7 +321,7 @@ def run_pooled(legs: List[tuple], rows: List[dict], arms: List[str], a, conf) ->
             if feature_coverage(tr, feats, teh.FEATURES) < FEATURE_COVERAGE_MIN:
                 continue
             booster = train_with_features(teh, tr, feats)
-            art = {"features": feats, "shape": SHAPE}
+            art = {"features": feats, "shape": arm_shape(arm)}
 
             def predict(vec, _b=booster):
                 # provenance: predict_proba — P(class=1) of the binary booster for this arm's target (as run_leg)
@@ -389,6 +397,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--candles-dir", default=None, help="local override: <dir>/<SYM>_<tf>.csv instead of the trainer resolver")
     ap.add_argument("--arms", default=",".join(DEFAULT_ARMS), help=f"label arms vs the champion, from {sorted(TARGETS)}; 'none' = feature arms only")
     ap.add_argument("--feature-arms", default="", help=f"feature arms vs the champion (champion target), from {sorted(FEATURE_ARMS)}")
+    ap.add_argument("--threshold-arms", default="", help=f"threshold arms vs the champion (champion target + features), from {sorted(THRESHOLD_ARMS)}")
     ap.add_argument("--unit", default=UNIT)
     ap.add_argument("--exclude-train-symbol", action="append", default=[],
                     help="drop rows.jsonl rows of this symbol from every fold's training (a held-out-symbol read); repeatable")
@@ -417,8 +426,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     unknown_f = [x for x in feat_arms if x not in FEATURE_ARMS]
     if unknown_f:
         ap.error(f"unknown feature arm(s) {unknown_f}; known {sorted(FEATURE_ARMS)}")
-    if not label_arms and not feat_arms:
-        ap.error("no arm to judge: pass --arms and/or --feature-arms")
+    thr_arms = [x for x in a.threshold_arms.split(",") if x]
+    unknown_t = [x for x in thr_arms if x not in THRESHOLD_ARMS]
+    if unknown_t:
+        ap.error(f"unknown threshold arm(s) {unknown_t}; known {sorted(THRESHOLD_ARMS)}")
+    if not label_arms and not feat_arms and not thr_arms:
+        ap.error("no arm to judge: pass --arms, --feature-arms and/or --threshold-arms")
     try:
         from scripts.ml._heavy_queue import take_heavy_queue
         _lock = take_heavy_queue("exit-head-label-bakeoff")   # noqa: F841 — held for the process lifetime
@@ -437,10 +450,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     excl = set(a.exclude_train_symbol)
     if excl:
         rows = [r for r in rows if str(r.get("symbol") or "unknown") not in excl]
-    arms = [CHAMPION] + label_arms + feat_arms
+    arms = [CHAMPION] + label_arms + feat_arms + thr_arms
     coverage = {arm: (sum(1 for r in rows if r.get(TARGETS[arm][0]) is not None) / len(rows) if rows else 0.0)
                 for arm in label_arms}
     coverage.update({arm: round(feature_coverage(rows, arm_features(teh, arm), teh.FEATURES), 4) for arm in feat_arms})
+    coverage.update({arm: 1.0 for arm in thr_arms})   # same rows, target and features as the champion
     arm_feature_lists = {arm: arm_features(teh, arm) for arm in arms}
     conf = yaml.safe_load(open(os.path.join(_REPO_ROOT, "config/strategies.yaml"), encoding="utf-8"))
     legs = [tuple(x.split(":")) for x in a.legs.split(",") if x]
@@ -454,7 +468,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         cost[symbol] = _apply_venue_cost_policy(harness, symbol)
         out_legs.append(run_leg(strategy, symbol, rows, arms, a, harness, conf))
     recs = [r for lg in out_legs for r in lg.get("records", [])]
-    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms + feat_arms}
+    arm_d = {arm: [r[f"r_{arm}"] - r[f"r_{CHAMPION}"] for r in recs if f"r_{arm}" in r] for arm in label_arms + feat_arms + thr_arms}
     j = judge(arm_d, a.z, a.pass_dr)
     context = {arm: paired([r[f"r_{arm}"] - r["baseline_r"] for r in recs if f"r_{arm}" in r]) for arm in arms}
     fired = {arm: sum(1 for r in recs if r.get(f"fired_{arm}")) for arm in arms}

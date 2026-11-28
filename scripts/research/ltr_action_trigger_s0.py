@@ -235,7 +235,7 @@ def build_trades(corpora: List[Tuple[str, dict, List[dict]]], *, action: str, tr
             atr_r = atr_r_series(df, path)
             bars = [{"close": c} for c in path["close"][:last]]
             fires = s0.first_fires(bars, atr_r[:last], side=1.0, entry=0.0, r_dist=1.0,
-                                   tp=tp_r, tf=tf, cfg=cfg)
+                                   tp=tp_r, tf=tf, cfg=cfg, research=True)
             kw = dict(frac=opts["partial_frac"], keep=opts["tp_keep"], tp_r=tp_r, pivot_bars=opts["pivot_bars"],
                       buffer_atr=opts["pivot_buffer_atr"], atr_r=atr_r,
                       be_plus_r=opts.get("be_plus_r", 0.25), min_room_atr=opts.get("min_room_atr", 1.0))
@@ -362,9 +362,9 @@ def run(args: argparse.Namespace, candle_loader: Optional[Callable[..., Any]] = 
         corpora: Optional[List[Tuple[str, dict, List[dict]]]] = None) -> Dict[str, Any]:
     cfg = yaml.safe_load((REPO / "config/live_trade_review.yaml").read_text())["due"]
     triggers = [x for x in args.triggers.split(",") if x]
-    bad = [x for x in triggers if x not in s0.TRIGGERS]
+    bad = [x for x in triggers if x not in s0.ALL_TRIGGERS]
     if bad:
-        raise SystemExit(f"unknown trigger(s) {bad}; known: {s0.TRIGGERS}")
+        raise SystemExit(f"unknown trigger(s) {bad}; known: {s0.ALL_TRIGGERS}")
     corpora = corpora if corpora is not None else load_corpora(Path(args.corpus_dir), args.legs.split(",") if args.legs else None)
     opts = {"partial_frac": args.partial_frac, "tp_keep": args.tp_keep, "pivot_bars": args.pivot_bars,
             "pivot_buffer_atr": args.pivot_buffer_atr, "max_real_tp_r": args.max_real_tp_r,
@@ -459,6 +459,19 @@ def _self_test() -> int:
     check("tighten_be is refused when the level is not a tighten (be_plus_r <= -1R)",
           price_tighten_be(rows[0], path, 5, be_plus_r=-1.0, min_room_atr=0.0, atr_r=atr) is None)
     check("tighten_be is refused when ATR is unread", price_tighten_be(rows[0], path, 5, atr_r=[None] * 99) is None)
+    # research triggers (ltr-tighten-sl verdict-A review 2026-11-28): gated, causal, fire on the declared bar
+    cfg_ = yaml.safe_load((REPO / "config/live_trade_review.yaml").read_text())["due"]
+    flat = [{"close": 0.0}] * 30
+    f0 = s0.first_fires(flat, [1.0] * 30, side=1.0, entry=0.0, r_dist=1.0, tp=None, tf="2h", cfg=cfg_)
+    check("research triggers are absent unless research=True", "age" not in f0 and "vol_expansion" not in f0)
+    f1 = s0.first_fires(flat, [1.0] * 9 + [1.6] * 21, side=1.0, entry=0.0, r_dist=1.0, tp=None, tf="2h", cfg=cfg_,
+                        research=True)
+    check("age fires at k+1 == 12 bars on 2h", f1.get("age") == 11)
+    check("vol_expansion fires on the first bar with ATR >= 1.5x the first bar's", f1.get("vol_expansion") == 9)
+    f2 = s0.first_fires(flat[:5], [1.0] * 5, side=1.0, entry=0.0, r_dist=1.0, tp=None, tf="1d", cfg=cfg_, research=True)
+    check("age on 1d needs 5 bars; vol_expansion silent with flat ATR", f2.get("age") == 4 and "vol_expansion" not in f2)
+    check("TRIGGERS (the close harness's K) is unchanged by the research triggers",
+          "age" not in s0.TRIGGERS and set(s0.ALL_TRIGGERS) == set(s0.TRIGGERS) | {"age", "vol_expansion"})
     # end-to-end planted positive: partial at +1R on trades that all revert to the stop must pass the screen
     man = {"leg": "syn", "params": {"timeframe": "1h", "tp_r": 3.0}}
     loader = lambda m, s, tf, r, c: (df, "synthetic")  # noqa: E731
@@ -492,7 +505,7 @@ def _self_test() -> int:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--action", choices=ACTIONS)
-    ap.add_argument("--triggers", default="", help="comma list of ltr_trigger_close_s0.TRIGGERS (pre-registered by the unit)")
+    ap.add_argument("--triggers", default="", help="comma list of ltr_trigger_close_s0.ALL_TRIGGERS (pre-registered by the unit)")
     ap.add_argument("--corpus-dir", default=str(REPO / lro.LTR_CORPUS_DIR))
     ap.add_argument("--legs", default="", help="comma list restricting the corpora (default: every committed corpus)")
     ap.add_argument("--partial-frac", type=float, default=0.5)

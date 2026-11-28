@@ -1,0 +1,128 @@
+id: RQ-20261128-eb3c-01
+title: 'exit-holdbias CONFIRMATION on a DISJOINT corpus: does the head-calibration-shrink recipe that passed on corpus B (11d7-02) also clear the unchanged 78fc-05
+  clauses on six twin legs whose trades corpus B never contained?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On action-grid labels built the same way as corpus B (desk_lifecycle_driver action-grid --corpus stage0, window 2020-07-01..2026-10-15, config-exact harness
+  paths) but for six DIFFERENT legs (trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,sol_pullback_2h,avax_pullback_2h,eth_pullback_2h), does exit_holdbias.py
+  --shrink (6 purged calendar folds, act at >= 0.15 R, first action per trade) satisfy (a) trade-bootstrap 95% LB of the pooled mean dR > -0.01 R/trade, (b) held-out
+  advice rate <= 15%, (c) no leg's mean dR < -0.05 R/trade?
+why_this_matters: '11d7-02 PASSED (mean dR +0.0050 R/trade, LB95 -0.0047, advice rate 2.0%, 145 acted trades of 2,554) as the third read of this head on corpus B,
+  so it is a choice made on that corpus and its pass_action asks for ONE disjoint confirmation before any Tier-3 advice-standing proposal on money legs. A disjoint
+  read on the SAME legs needs ~500 new trades (about 14 months at corpus B''s ~415 trades/year), so this reads the recipe on twin legs of the same two families (donchian
+  4h, pullback 2h) over the same window: a disjoint TRADE population, the same mechanics. Disposes of the ml-holdbias-exit orphan (Manager 2026-11-28a orphan drain).'
+iteration:
+  subject: ml-holdbias-exit
+  subject_kind: ml_model
+  from_result: RQ-20261126-11d7-02
+  verdict_read: pass_unconfirmed
+  diagnosis: '11d7-02 passed only as a non-inferiority read (LB95 -0.0047 > -0.01) with a thin positive mean (+0.0050 R) and acts on 2% of trades, mostly widen_sl_0p5r
+    (116 of 145): the shrink recipe was chosen on corpus B after two fails (78fc-05 advice rate 0.717, 2780-05 margin), so the pass may be corpus-specific.'
+  hypothesis: the calibration shrink removes the over-acting generally, not just on corpus B's six legs; a disjoint trade population under the same mechanics shows
+    the same non-inferiority
+  levers:
+  - calibration
+  attempt: 4
+  due_by: '2026-12-05'
+power:
+  expected_n: 2554
+  min_detectable_effect: 0.02
+  effect_units: r_multiple
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  sd: 1.0
+  basis: 'MEASURED: 78fc-05 and 2780-05 graded 2,554 held-out trades on this corpus and these folds; the lever changes actions, not the population.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the committed corpus-B action-grid labels; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261128-eb3c-01-HOLDBIAS-SHRINK-DISJOINT
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  min_n: 500 held-out trades
+  statistic: 'scripts/research/exit_holdbias.py --shrink on comms/research/desk_lifecycle/action-grid/corpus-b/grid_labels.jsonl.gz (the 78fc-05 corpus). Per fold:
+    the calibration slopes are estimated from out-of-fold predictions on that fold''s training trades only, then the heads fit on the full outer train mask are shrunk
+    by them before the argmax at tau 0.15 R; first action per trade, rest hold-to-bracket. Clauses read on the pooled held-out trades exactly as 78fc-05.'
+  rule: 'PASS iff (a) trade-bootstrap 95% LB of the pooled mean dR > -0.01 R/trade AND (b) held-out advice rate <= 15% AND (c) no leg''s mean dR < -0.05 R/trade (the
+    78fc-05 clauses, unchanged), on the TWIN corpus. FAIL otherwise at >= 500 held-out trades. INDETERMINATE below 500 held-out trades or if the producer (the label
+    build or the head) fails. Reported, never graded: matched-random policy, per-fold detail, per-leg dR, action mix. Thresholds, legs and the shrink setting are
+    fixed before the run and not changed after any result.'
+  pass_action: A Tier-3 proposal (to the manager) giving the shrink head ADVICE standing on the money legs (no close authority), citing 11d7-02 and this record; each
+    non-hold class stays advice-only until DESK-V1 section 5b passes per leg x regime.
+  fail_action: 'The shrink recipe''s pass was corpus-specific: record calibration as tested on research/levers/ml-holdbias-exit.yaml (fail on disjoint data); next
+    lever from the map (features), never a re-run of this setting.'
+  what_it_does_not_do: Promotes nothing and grants no close authority. Twin legs share symbols with corpus B for ADA and SOL (different leg and timeframe, so different
+    trades); the population is disjoint in trades, not in instruments.
+  proposal_mapping: pass -> Tier-3 advice-standing proposal; fail -> calibration lever closed for this head; indeterminate -> report the realised n / producer state,
+    stop.
+practice_precedent: 'T1, M6, M13 (docs/reference/trading-and-model-practice-principles.md): a lever fixed or estimated inside training folds only, purged; the held-out
+  folds read once.'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 8.0
+  est_minutes: 200
+  basis: 'ESTIMATE: corpus B labels (2,627 trades, 1.53M rows) were built once by the same driver; the head fit on them (11d7-02) ran inside its 120-min estimate.
+    Twin corpus ~ the same size: ~80 min labels + ~100 min heads; 330 allowed.'
+  why_runner: 'GitHub runner: the label build fetches public Binance Vision klines (network) and replays ~2,500 trades; then the LightGBM heads.'
+value:
+  usd_at_stake_per_month: 250
+  confidence: 0.15
+  bucket: ai_trader
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+run:
+  workflow: research-script-run.yml
+  timeout_minutes: 330
+  inputs:
+    research_unit: RQ-20261128-eb3c-01
+  commands:
+  - - python3
+    - scripts/research/desk_lifecycle_driver.py
+    - action-grid
+    - --corpus
+    - stage0
+    - --stage0
+    - v1
+    - --legs
+    - trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,sol_pullback_2h,avax_pullback_2h,eth_pullback_2h
+    - --out
+    - '{out_dir}/twin_grid'
+  - - python3
+    - scripts/research/exit_holdbias.py
+    - --labels
+    - '{out_dir}/twin_grid/grid_labels.jsonl.gz'
+    - --shrink
+    - --out
+    - '{out_dir}'
+intervention_controls:
+  not_applicable: an offline model evaluation; the consumer's own gate applies any action
+ml_consumer:
+  consumer: scripts/ops/live_review_apply.py
+  decision: hold vs act advice on the real-money legs' open packages
+  legs:
+  - xrp_pullback_2h
+  - trend_donchian_eth_4h
+  - trend_donchian_xrp_4h
+  - ada_pullback_2h
+  - trend_donchian_sol_prop
+  book: money
+related:
+- RQ-20261126-11d7-02
+- RQ-20261126-11d7-01
+- RQ-20261119-2780-05
+- RQ-20261101-78fc-05
+origin: follow_up
+population: Action-grid check-ins of the config-exact Stage-0 trades of trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,sol_pullback_2h,avax_pullback_2h,eth_pullback_2h,
+  2020-07-01..2026-10-15, Binance Vision 1h USD-M perp klines, full cost stack.

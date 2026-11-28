@@ -1,0 +1,103 @@
+# research/family_reviews/cost-levers-live-legs.yaml -- family-retirement record (policy v3, scripts/research/family_retirement_policy.yaml).
+# Decided by Manager Session 2026-11-28b (option (a), "fold it": 28b -> ML-PRIMARY, 2026-11-28 07:07Z); drafted by lane ML-PRIMARY
+# (session_01AFoLuLpCY5gABbqk3EBUeV). The subject is the COST OVERLAY "cost levers (maker entries, lower frequency) on the legs on real
+# money". Retiring it retires the overlay, never a leg: every open lever is an EDGE lever of a specific leg and is named below with the
+# leg and the unit that owns it. Gates this adds or changes: none.
+family: cost-levers-live-legs
+decided_at: '2026-11-28'
+reviewed_by: lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV); decision Manager Session 2026-11-28b (session_01AFoLuKWYdjMNUwCApgKHmo)
+verdict: C
+subject_kind: strategy_leg
+supporting_population: >-
+  RQ-20261101-58e4-04 failure attribution (research/levers/cost-levers-live-legs.yaml, computed by scripts/research/edge_failure_attribution.py):
+  64 closed real-money trades over ~4 months on 6 legs (ada_pullback_2h n 18, trend_donchian_eth_4h n 18, xrp_pullback_2h n 17,
+  trend_donchian_xrp_4h n 7, trend_donchian_sol_prop n 3, iaum_pullback_1d n 1). Net -71.01 USD = gross -65.84 - estimated cost 5.17
+  (62 of 64 cost rows estimated). Cost is 7.3% of the net loss (5.17 / 71.01); every cost lever is bounded by the 5.17 it could save.
+  Plus RQ-20261117-617c-01: xrp_pullback_2h pre-development window 2019-01-01..2021-11-10, n 130 control trades, net of fee + slippage +
+  funding.
+lever_map:
+  sizing_vs_cost:
+    tested:
+    - id: RQ-20261101-58e4-04 (entry order type, maker vs taker)
+      n: 64
+      power: 'exact bound, not a sampled estimate: at 100% maker fill with NO adverse selection the saving is at most 2.70 USD vs a -71.01 net (net after -68.31)'
+      verdict: fail
+      cost_basis: full
+  filter:
+    tested:
+    - id: RQ-20261117-617c-01 (signal-strength threshold min_confidence 0.5 / 0.75 on xrp_pullback_2h)
+      n: 130
+      power: '0.8 at d 0.23 (declared, n 150 planned; 130 realised)'
+      verdict: fail
+      cost_basis: full
+  entry:
+    irrelevant_because: 'not a cost lever: entry selection changes GROSS edge, which is where 93% of the loss is. Owned per leg: ada_pullback_2h RQ-20261031-7b6f-27 (cold-vol entry skip transfer) and RQ-20261106-5b7a-01 (holdout re-run); trend_donchian_xrp_4h RQ-20261106-033 (walk-forward entry lever); trend_donchian_sol_prop RQ-20261106-032.'
+  exit:
+    irrelevant_because: 'not a cost lever: exit geometry changes gross edge. Owned per leg: ada_pullback_2h RQ-20261119-a7f1-10 (M20 exit-lever re-run) and RQ-20261105-007; trend_donchian_eth_4h RQ-20261119-a7f1-07 and RQ-20261128-e4c1-01; trend_donchian_xrp_4h RQ-20261126-182; xrp_pullback_2h RQ-20261106-036; iaum_pullback_1d RQ-20260929-007.'
+  regime_gating:
+    irrelevant_because: 'not a cost lever: a regime gate changes which trades are taken (gross). Owned per leg: ada_pullback_2h RQ-20261031-7b6f-27 (cold-vol skip); the regime programme (config/regime_policy.yaml cells, e.g. trend_donchian fa22-04 in held PR #29682).'
+  timeframe:
+    irrelevant_because: 'not a cost lever in isolation: a coarser bar lowers turnover AND changes the signal; the change of signal dominates. Owned per leg: ada_pullback_2h RQ-20261126-102 (4h timeframe twin, PASS) with fresh-window confirmation research/queue/blocked/RQ-20261126-f68f-01; trend_donchian_sol_prop RQ-20261126-63b9-01 (4h twin confirmation).'
+  symbol_set:
+    irrelevant_because: 'not a cost lever: symbol pruning or widening changes gross edge. Owned per leg: ada_pullback_2h RQ-20261126-6358-01 (AVAX twin confirmation); trend_donchian_eth_4h RQ-20261126-8b0f-01 / -da88-01; trend_donchian_xrp_4h RQ-20261126-5dd7-01; trend_donchian_sol_prop RQ-20261126-2d77-01.'
+  direction:
+    irrelevant_because: 'not a cost lever: side selection changes gross edge. Owned per leg: trend_donchian_sol_prop RQ-20261126-181 (walk-forward next lever: direction).'
+  session:
+    irrelevant_because: 'not a cost lever: a time-of-day filter changes which trades are taken; the overlay cannot reach it without the leg. The 6 legs are 24/7 crypto (iaum_pullback_1d is daily bars, n 1), and no leg in the population has a session hypothesis on file; a session test belongs to a leg''s own iteration if one is diagnosed.'
+test_design_review:
+  first_skeptic_flaw: >-
+    "64 live trades is far too few, and 62 of 64 cost rows are estimates." It does not apply to THIS conclusion, which is a bound and not an
+    estimate. A cost lever can recover at most the cost paid. With cost set to ZERO (every cost lever's ceiling at once) net = gross = -65.84,
+    still negative, so neither n nor the estimate's accuracy can change the sign. The pre-development window (617c-01, n 130) independently
+    fails the one cost lever that ALSO selects trades (signal strength).
+  checks:
+    window_vs_mechanism: 'the mechanism (cost <= cost paid) holds in any window; two disjoint windows read it: the 2026-07..11 live window (58e4-04) and 2019-01..2021-11 (617c-01)'
+    metric_vs_baseline: 'net USD vs net USD on the same trades; the baseline cannot be beaten by chance because the bound is arithmetic (saving <= cost)'
+    label_vs_payoff: 'graded on realised net P&L, the payoff itself; no label'
+    gate_vs_size: 'fixed live sizing, no gate in the overlay; sizing scales gross and cost together, so the sign is size-invariant'
+    harness_validity: 'attribution by scripts/research/edge_failure_attribution.py on journal rows; 617c-01 by exit_lever_ablation.py on the venue-aware cost stack; no known defect at run time'
+    reference_distribution: 'not needed for the bound (deterministic); 617c-01 graded on its registered fold rule (3 folds, majority 2, n floor 39)'
+breadth:
+  primary_axis: cost per trade (fee + slippage + funding) vs gross per trade
+  windows:
+  - {id: '2026-07..2026-11 live real money (RQ-20261101-58e4-04)', n: 64, power: 'exact bound (cost 5.17 < |gross| 65.84)', verdict: fail}
+  - {id: '2019-01-01..2021-11-10 pre-development (RQ-20261117-617c-01)', n: 130, power: '0.8 at d 0.23 (declared)', verdict: fail}
+  instruments:
+  - {id: ada_pullback_2h, n: 18, power: 'exact bound (cost 1.58 < |gross| 15.91)', verdict: fail}
+  - {id: xrp_pullback_2h, n: 17, power: 'exact bound (cost 1.29 < |gross| 35.87)', verdict: fail}
+  - {id: trend_donchian_xrp_4h, n: 7, power: 'exact bound (cost 0.54 < |gross| 10.19)', verdict: fail}
+  - {id: trend_donchian_sol_prop, n: 3, power: 'exact bound (cost 0.49 < |gross| 8.27)', verdict: fail}
+  configs:
+  - {id: maker entry p=1.0 (58e4-04), n: 64, power: exact bound, verdict: fail}
+  - {id: min_confidence 0.5 (617c-01), n: 130, power: '0.8 at d 0.23', verdict: fail}
+  - {id: min_confidence 0.75 (617c-01), n: 130, power: '0.8 at d 0.23', verdict: fail}
+positive_control:
+  test: 'RQ-20261101-58e4-04 per-leg row trend_donchian_eth_4h: the same cost accounting reads the one gross-positive leg as net-positive (gross +8.82, cost 1.27, net +7.54, n 18), so the measurement can see a positive'
+  passed: true
+outside_evidence:
+  sources:
+  - source: 'Novy-Marx & Velikov (2016), A Taxonomy of Anomalies and Their Trading Costs, Review of Financial Studies 29(1):104-147'
+    url: https://www.nber.org/papers/w20721
+    primary: true
+    finding: 'cost mitigation (buy/hold spreads, lower turnover) preserves net spreads only for strategies with a gross spread to preserve; transaction costs always reduce profitability. Mitigation is bounded by the cost it removes, which here is 7% of the loss, so it names no condition that could flip a gross-negative leg.'
+  - source: 'Frazzini, Israel & Moskowitz, Trading Costs (SSRN 3229719)'
+    url: https://papers.ssrn.com/abstract=3229719
+    primary: true
+    finding: 'live institutional execution costs are far smaller than model estimates; if our 5.17 estimate is too high, the true cost lever ceiling is even smaller, strengthening the bound.'
+  - source: 'Albers, Cucuringu, Howison & Shestopaloff, The Market Maker''s Dilemma / To Make, or to Take (arXiv 2502.18625), live experiment on the Binance BTC perpetual'
+    url: https://arxiv.org/abs/2502.18625v2
+    primary: true
+    finding: 'maker fill probability is negatively correlated with post-fill returns (adverse selection), so the 58e4-04 maker ceiling (100% fill, no adverse selection) overstates what a maker-entry lever can recover.'
+not_tested:
+  horizon: {covered_by: 'ada_pullback_2h RQ-20261126-102 (4h twin PASS) -> research/queue/blocked/RQ-20261126-f68f-01'}
+  instrument: {covered_by: 'per-leg symbol twins RQ-20261126-6358-01, -8b0f-01, -da88-01, -5dd7-01, -2d77-01; the Alpaca equity legs now on real money (index_capitulation_1x, slv_trend_1h, tlt_pullback_1h, tqqq_trend_long_1d, ml_entry_eq_struct) are commission-free with a slippage-only stack (1 bp/side in edge_portfolio_discovery.py), so their cost-lever ceiling is smaller still'}
+  conditioning: {covered_by: 'ada_pullback_2h RQ-20261031-7b6f-27 (cold-vol entry skip); xrp_pullback_2h RQ-20261124-bd30-04 (adx_max / cooldown filter iteration)'}
+  cost: {irrelevant_because: 'a measured cost (COST-BROKER-SOURCED) can only move the 5.17 estimate between 0 and its true value; at cost 0 net is -65.84, so the sign does not depend on it'}
+  label: {irrelevant_because: 'no model and no label: realised P&L is graded directly'}
+  sizing: {irrelevant_because: 'sizing scales gross and cost by the same factor; the sign of net is size-invariant'}
+  exit: {covered_by: 'M20 exit-lever re-runs RQ-20261119-a7f1-10 (ada_pullback_2h), RQ-20261119-a7f1-07 (trend_donchian_eth_4h); walk-forward exit units RQ-20261105-007, RQ-20261126-182, RQ-20261106-036'}
+  regime: {covered_by: 'ada_pullback_2h RQ-20261031-7b6f-27; config/regime_policy.yaml cells (held PR #29682 for trend_donchian)'}
+  holding_period: {covered_by: 'ada_pullback_2h RQ-20261105-007 (walk-forward exit lever) and the timeframe twin confirmation RQ-20261126-f68f-01'}
+reason_idea_dead: >-
+  A cost lever can recover at most the cost a leg pays, and on these legs that cost is about 7% of a gross loss, so no maker, frequency
+  or fee lever can change the sign: the loss is in the signal, which each leg's own iteration owns.

@@ -1653,7 +1653,15 @@ strategies:
     #   held-back span: C3 n=75 +19.23 R (0.256 R/trade) vs declared A n=70 +17.01 R
     #   (0.243 R/trade), net of fee 7.5 + slippage 3 bps rt + funding 1 bps/8h.
     #   ROLLBACK: atr_stop_mult 2, trail_mult 5.0.
-    atr_stop_mult: 1.5  # was 2 (M20 e35 re-check 2026-08-29: cell sm2, path_b_wf_pass, wf 6/6, d_net_r +28.7348; was 2.5 before that)
+    # atr_stop_mult 1.5 -> 1.0 (Tier-3 PROPOSAL, D6 / lane ML-PRIMARY 2026-11-28, HOLD for manager/operator merge).
+    #   Selection: RQ-20261127-d6c2-01 run 46056323510 (2020-07-01 .. 2026-10-15): arm S10T4 (stop 1.0, tp_r 4.0)
+    #   net 141.85 R n=289 vs incumbent B 85.58 R n=275, maxDD 23.18 vs 21.14 R. Chosen on that window, so it is
+    #   NOT the promotion evidence. Confirmation on DISJOINT data: RQ-20261128-e4c1-01 run 46098068644 (rule
+    #   RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM, registered before the run), Binance spot 4h as a perp proxy
+    #   2017-09-01 .. 2020-06-30, paired S10T4 vs B: mean dR +0.258 (t 2.28 >= 2.0), n_paired 132 >= 39, match 0.99,
+    #   4/4 folds -> PASS. The two arms differ ONLY in atr_stop_mult (tp_r 4.0 in both = this config). Full cost stack.
+    #   ROLLBACK: atr_stop_mult 1.5.
+    atr_stop_mult: 1.0  # was 1.5 (see above); 1.5 was 2 (M20 e35 re-check 2026-08-29), 2.5 before that
     trail_mult: 6.0
     # trail_decay stall 10 / tight 1.8 (Tier-3 PROPOSAL, lane ACTIVE-MGMT-DRIVE-1018, HOLD for operator
     #   approval). Evidence: RQ-20261016-006 (P1-Q4-eth4h-stalldecay-rerun; rule RULE-P1-Q4-ETH4H-STALLDECAY-RERUN,

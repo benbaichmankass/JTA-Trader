@@ -37,6 +37,19 @@ TF_S = {"5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400,
 TRIGGERS = ["adverse_r_0.5", "adverse_r_0.75", "giveback", "new_peak", "r_milestone", "near_target", "swing", "stall",
             "momentum_flip", "structure_break"]
 K = len(TRIGGERS)
+#: RESEARCH-ONLY triggers (lane ML-PRIMARY 2026-11-28, ltr-tighten-sl verdict-A review,
+#: docs/research/ltr-tighten-sl-family-review-2026-11-28.md). Never in config/live_trade_review.yaml, never in TRIGGERS
+#: (so this harness's own K / Bonferroni is unchanged); first_fires emits them only with research=True. Values fixed
+#: 2026-11-28 BEFORE any hold-time or outcome data was read for them:
+#:   age            the trade has DEVELOPED: k+1 >= one trading day of bars intraday, one week on 1d (RQ-20261125-c7e3-05's
+#:                  measured mechanism: tighten value sits after the first bars, first-bar fires cut eventual winners)
+#:   vol_expansion  a regime switch against the entry regime: ATR(k) >= 1.5 x ATR at the first bar (Lo & Remorov 2017:
+#:                  stops pay when volatility rises in the adverse regime and switches are infrequent)
+RESEARCH_TRIGGERS: Dict[str, Dict[str, Any]] = {
+    "age": {"bars_by_timeframe": {"5m": 48, "15m": 32, "30m": 16, "1h": 24, "2h": 12, "4h": 6, "1d": 5}, "default_bars": 12},
+    "vol_expansion": {"atr_ratio": 1.5, "min_bars": 2},
+}
+ALL_TRIGGERS = TRIGGERS + list(RESEARCH_TRIGGERS)
 
 
 def _ts(v: Any) -> Optional[float]:
@@ -108,9 +121,14 @@ def wilder_atr(bars: List[dict], n: int = 14) -> List[Optional[float]]:
 
 
 def first_fires(path: List[dict], atrs: List[Optional[float]], *, side: float, entry: float, r_dist: float,
-                tp: Optional[float], tf: str, cfg: dict) -> Dict[str, int]:
-    """Index (into ``path``) of the first CLOSED bar on which each trigger fires. ``path`` = closed bars after entry."""
+                tp: Optional[float], tf: str, cfg: dict, research: bool = False) -> Dict[str, int]:
+    """Index (into ``path``) of the first CLOSED bar on which each trigger fires. ``path`` = closed bars after entry.
+
+    ``research=True`` also emits RESEARCH_TRIGGERS (causal: bar count and ATR up to bar k only)."""
     ev = cfg["events"]
+    age_bars = (RESEARCH_TRIGGERS["age"]["bars_by_timeframe"].get(tf) or RESEARCH_TRIGGERS["age"]["default_bars"])
+    vx = RESEARCH_TRIGGERS["vol_expansion"]
+    atr0 = atrs[0] if atrs else None
     stall_bars = (ev["stall"].get("bars_by_timeframe") or {}).get(tf, ev["stall"].get("default_bars", 8))
     fires: Dict[str, int] = {}
     peak = -math.inf
@@ -151,6 +169,11 @@ def first_fires(path: List[dict], atrs: List[Optional[float]], *, side: float, e
         if ext_against is not None and k >= sb["min_bars"] and atr and side * (ext_against - c) > sb["buffer_atr"] * atr:
             hit("structure_break")
         ext_against = c if ext_against is None else (min(ext_against, c) if side > 0 else max(ext_against, c))
+        if research:
+            if k + 1 >= age_bars:
+                hit("age")
+            if k + 1 >= vx["min_bars"] and atr and atr0 and atr >= vx["atr_ratio"] * atr0:
+                hit("vol_expansion")
     return fires
 
 

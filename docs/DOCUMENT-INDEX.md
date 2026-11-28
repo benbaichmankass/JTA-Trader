@@ -896,6 +896,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/crypto-finetune-proposals-2026-07-30.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d1-cost-stack-verification-2026-09-25.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/d3-realized-slippage-2026-09-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/d6-eth4h-prop-regrade-2026-11-28/RESULT.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/declare-the-9-cannot-be-valued-yet-2026-08-24.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18c-edge-optimization-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/desk-18e-live-proposal-rate-2026-10-27.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
@@ -1004,6 +1005,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/research/loss-disposition-expiring-artifacts-2026-11-25.md` | evidence | unknown | — | 2026-11-25 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/loss-disposition-research-store-bundle-43689172680.md` | evidence | unknown | — | 2026-11-15 | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/ltr-tighten-optimize-2026-10-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
+| `docs/research/ltr-tighten-sl-family-review-2026-11-28.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m15-phase0-results-2026-06-10.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m15-soak-report-2026-06-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |
 | `docs/research/m15-ws-b-spy-qqq-walkforward-2026-06-11.md` | evidence | unknown | — | never | `dir:research-is-measurement / not-assessed` | — |

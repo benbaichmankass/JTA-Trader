@@ -347,6 +347,7 @@ def run(a) -> int:
                  "--pass-dr", str(a.pass_dr), "--num-folds", str(a.num_folds), "--embargo-days", str(a.embargo_days),
                  "--lookback", str(a.lookback), "--registered-at", a.registered_at, "--json", str(bj)]
                 + (["--feature-arms", a.feature_arms] if a.feature_arms else [])
+                + (["--threshold-arms", a.threshold_arms] if a.threshold_arms else [])
                 + (["--pool-folds"] if a.pool_folds else [])
                 + (["--random-control", str(a.random_control)] if a.random_control else []))
     row = json.loads(bj.read_text())
@@ -424,6 +425,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pass-dr", type=float, default=0.01)
     ap.add_argument("--num-folds", type=int, default=5)
     ap.add_argument("--feature-arms", default="", help="feature arms vs the champion (exit_head_label_bakeoff.FEATURE_ARMS)")
+    ap.add_argument("--threshold-arms", default="", help="threshold arms vs the champion (exit_head_label_bakeoff.THRESHOLD_ARMS)")
     ap.add_argument("--embargo-days", type=float, default=7.0)
     ap.add_argument("--lookback", type=int, default=500)
     ap.add_argument("--registered-at", default=REGISTERED_AT, help="the unit's decision_rule.registered_at")

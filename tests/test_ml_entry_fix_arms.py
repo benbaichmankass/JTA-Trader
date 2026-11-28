@@ -147,3 +147,14 @@ def test_cal_arms_on_cli_paired_and_counted_in_the_family_bar():
     assert "*CAP_ARMS, *CAL_ARMS]" in src
     assert 'pairs["cal_bin10"] = {"vs_base": "base", "vs_random": "random_cal_bin10"}' in src
     assert "or x in CAL_ARMS)" in src
+
+
+def test_exit_head_threshold_arms_change_only_tau():
+    """THRESHOLD arms (lever `threshold` on ml-exit-head-donchian-1h): champion target and features, tau replaced."""
+    import exit_head_label_bakeoff as L
+    assert L.arm_shape("holding_pays") == L.SHAPE
+    for arm, tau in L.THRESHOLD_ARMS.items():
+        s = L.arm_shape(arm)
+        assert s["tau"] == tau and {k: v for k, v in s.items() if k != "tau"} == {k: v for k, v in L.SHAPE.items() if k != "tau"}
+        rows = [{"holding_pays": 1}, {"holding_pays": 0}]
+        assert L.with_target(rows, arm) is rows                     # the champion's target, unchanged
