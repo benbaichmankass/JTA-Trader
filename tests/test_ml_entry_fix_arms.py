@@ -176,3 +176,58 @@ def test_weekly_series_matrix():
     assert s["matrix"]["base"] == [0.5, 2.0]
     assert s["matrix"]["arm"] == [0.25, 0.0]
     assert s["n_trades"] == {"arm": 1, "base": 3}
+
+
+def _meta_frames(n=4000, seed=7):
+    import numpy as np
+    import pandas as pd
+
+    import ml_decision_entry as M
+    rng = np.random.default_rng(seed)
+    df = pd.DataFrame({f: rng.normal(size=n) for f in M.FEATURES})
+    df["ts"] = pd.date_range("2022-01-01", periods=n, freq="h", tz="UTC")
+    # planted: the rule side's net R is positive iff the first feature is high (a learnable take/skip signal)
+    edge = np.where(df[M.FEATURES[0]] > 0, 0.5, -0.5) + rng.normal(scale=0.5, size=n)
+    df["net_long"], df["net_short"] = edge, edge
+    return df.iloc[: n // 2].reset_index(drop=True), df.iloc[n // 2:].reset_index(drop=True)
+
+
+def test_meta_take_proba_learns_a_planted_take_signal_linear_and_gbdt():
+    """ML-ENTRY-REDESIGN R1: the model decides take/skip on the RULE side; a planted signal must be found by both families."""
+    import ml_decision_entry as M
+    import ml_entry_fix_arms as A
+    tr, te = _meta_frames()
+    want = te[M.FEATURES[0]].to_numpy() > 0
+    for linear in (True, False):
+        p = A.meta_take_proba(tr, te, linear=linear)
+        assert p.shape == (len(te),) and ((p > A.META_P) == want).mean() > 0.8, linear
+    assert {"meta_rule_linear", "meta_rule_gbdt"} <= set(A.ARMS)
+    assert A.META_RULE["min_delta_r"] == 0.010 and A.META_RULE["min_t"] == 2.24
+
+
+def test_xs_book_is_market_neutral_and_ridge_finds_a_planted_cross_sectional_signal():
+    """ML-ENTRY-REDESIGN R2: daily long top-k / short bottom-k; a planted relative signal must lift the book over random."""
+    import numpy as np
+    import pandas as pd
+
+    import ml_decision_entry as M
+    import ml_entry_fix_arms as A
+    rng = np.random.default_rng(3)
+    days, syms = 120, [f"S{i}" for i in range(30)]
+    rows = []
+    for d in range(days):
+        ts = pd.Timestamp("2023-01-01", tz="UTC") + pd.Timedelta(days=d)
+        mkt = rng.normal(scale=1.0)                                    # common market move: cancels in a neutral book
+        for s in syms:
+            f = {c: rng.normal() for c in M.FEATURES}
+            rel = 0.4 * f[M.FEATURES[0]] + rng.normal(scale=0.5)       # planted relative edge on feature 0
+            rows.append({**f, "ts": ts, "symbol": s, "net_long": mkt + rel, "net_short": -mkt - rel,
+                         "gross_long": mkt + rel, "gross_short": -mkt - rel, "cost_long": 0.0, "cost_short": 0.0})
+    df = pd.DataFrame(rows)
+    tr, te = df[df.ts < df.ts.min() + pd.Timedelta(days=60)], df[df.ts >= df.ts.min() + pd.Timedelta(days=60)]
+    book = A.xs_book(te, A.xs_scores(tr, te, ridge=True))
+    per_bar = book.groupby("ts").size()
+    assert (per_bar == 2 * A.XS_K).all() and set(book.side) == {"long", "short"}
+    rnd = A.xs_book(te, rng.random(len(te)))
+    assert book.net_r.sum() > rnd.net_r.sum() + 5.0                    # the model book beats a random book
+    assert {"xs_rank_ridge", "xs_rank_gbdt"} <= set(A.ARMS)

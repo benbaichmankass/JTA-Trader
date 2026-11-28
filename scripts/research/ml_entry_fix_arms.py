@@ -123,7 +123,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["h8_retrain", "clf_target", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
+ARMS = ["h8_retrain", "clf_target", "meta_rule_linear", "meta_rule_gbdt", "xs_rank_ridge", "xs_rank_gbdt", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -151,6 +151,90 @@ MAKER_BPS, TAKER_BPS = 2.0, 5.5       # Bybit linear per side, the same constant
 H48 = 48                              # sl_xwide_h48_retrain: the label / time-stop horizon in 1h bars (registered 24)
 H8 = 8                                # h8_retrain: the SHORT horizon form (registered fail_action of f1a0-31/33), registered 2/3 ATR bracket
 LEVER = dict(M.LEVER_RULE, id="RULE-ML-ENTRY-FIX-ARMS-20261124")
+#: ML-ENTRY-REDESIGN R1 (docs/research/ml-entry-redesign-2026-11-28.md § 2.1 / § 3, registered 2026-11-28 before any run): a
+#: fixed causal rule picks the SIDE (sign of ret_168); the model only decides take/skip. Graded vs taking the rule's trade
+#: every time ("rule_always") and a random take at the same rate. Bar: +0.010 R/decision, t >= 2.24 (Sidak k = 2 graded arms).
+META_RULE = dict(LEVER, id="RULE-ML-ENTRY-REDESIGN-R1-20261128", min_delta_r=0.010, min_t=2.24)
+META_P = 0.5                           # take iff P(net R of the rule side > 0) > 0.5 (fixed, not tuned)
+META_ARMS = ("meta_rule_linear", "meta_rule_gbdt")
+
+
+#: ML-ENTRY-REDESIGN R2 (design § 2.1): a market-neutral cross-sectional book. Once a day (00:00 UTC bars) rank the
+#: universe by the model's score; long the top XS_K (their net_long bracket R) and short the bottom XS_K (net_short).
+#: Each leg row carries leg R / XS_K so a bar's rows sum to the book R. Baseline: the same book ranked by raw ret_24 with
+#: its sign (momentum vs reversal) chosen on the TRAIN fold only. Control: random ranks. Same META_RULE bar.
+XS_ARMS = ("xs_rank_ridge", "xs_rank_gbdt")
+XS_K = 5
+XS_HOUR = 0
+
+
+def _xs_rank_gauss(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """Per-decision-bar cross-sectional rank of each feature, mapped to N(0,1) quantiles (missing -> 0, the median)."""
+    from scipy.stats import norm  # noqa: PLC0415
+    g = df.groupby("ts")[cols]
+    r = g.rank(method="average")
+    n = g.transform("count")
+    z = norm.ppf(((r - 0.5) / n).clip(1e-6, 1 - 1e-6))
+    return pd.DataFrame(z, index=df.index, columns=cols).fillna(0.0)
+
+
+def xs_scores(train: pd.DataFrame, test: pd.DataFrame, ridge: bool) -> np.ndarray:
+    """Score each test row by its predicted cross-sectionally demeaned directional payoff ((net_long - net_short) / 2 minus
+    the bar mean), fit on train rows only. ridge: RidgeCV on rank-gaussianised features; else a LightGBM twin (descriptive)."""
+    feats = list(M.FEATURES)
+    y = (train.net_long.to_numpy() - train.net_short.to_numpy()) / 2.0
+    y = y - pd.Series(y, index=train.index).groupby(train.ts).transform("mean").to_numpy()
+    xtr, xte = _xs_rank_gauss(train, feats), _xs_rank_gauss(test, feats)
+    if ridge:
+        from sklearn.linear_model import RidgeCV  # noqa: PLC0415
+        return RidgeCV(alphas=[1.0, 10.0, 100.0, 1000.0]).fit(xtr, y).predict(xte)
+    import lightgbm as lgb  # noqa: PLC0415
+    m = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.03, num_leaves=31, min_child_samples=500, subsample=0.8,
+                          subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1)
+    return m.fit(xtr, y).predict(xte)
+
+
+def xs_book(test: pd.DataFrame, score: np.ndarray, k: int = XS_K, hour: int = XS_HOUR) -> pd.DataFrame:
+    """The daily market-neutral book: per 00:00 UTC bar with >= 2k symbols, long top-k / short bottom-k by score."""
+    t = test.assign(_s=score)
+    t = t[pd.to_datetime(t.ts, utc=True).dt.hour == hour]
+    rows = []
+    for ts, g in t.groupby("ts", sort=True):
+        if len(g) < 2 * k:
+            continue
+        g = g.sort_values("_s", kind="stable")
+        for side, sub, col in (("long", g.tail(k), "net_long"), ("short", g.head(k), "net_short")):
+            for _, r in sub.iterrows():
+                rows.append({"symbol": r["symbol"], "ts": ts, "side": side, "net_r": float(r[col]) / k,
+                             "gross_r": float(r[col.replace("net", "gross")]) / k if col.replace("net", "gross") in r else np.nan,
+                             "cost_r": float(r[col.replace("net", "cost")]) / k if col.replace("net", "cost") in r else np.nan,
+                             "reason": 0, "pred": float(r["_s"])})
+    return pd.DataFrame(rows, columns=["symbol", "ts", "side", "net_r", "gross_r", "cost_r", "reason", "pred"])
+
+
+def meta_take_proba(train: pd.DataFrame, test: pd.DataFrame, linear: bool) -> np.ndarray:
+    """P(net R of the RULE side > 0) for each test row, fit on train rows only. linear: elastic-net logistic regression on
+    quantile-normalised features, penalty chosen on 3 time-ordered inner folds of the training span; else a LightGBM
+    classifier twin (descriptive). Missing values take the TRAIN median."""
+    side_tr = train.ret_168.to_numpy() > 0
+    y = (np.where(side_tr, train.net_long.to_numpy(), train.net_short.to_numpy()) > 0).astype(int)
+    med = train[M.FEATURES].median()
+    xtr, xte = train[M.FEATURES].fillna(med), test[M.FEATURES].fillna(med)
+    if linear:
+        from sklearn.linear_model import LogisticRegressionCV  # noqa: PLC0415
+        from sklearn.model_selection import TimeSeriesSplit  # noqa: PLC0415
+        from sklearn.preprocessing import QuantileTransformer  # noqa: PLC0415
+        order = np.argsort(train.ts.to_numpy(), kind="stable")
+        qt = QuantileTransformer(n_quantiles=1000, output_distribution="normal", random_state=SEED).fit(xtr)
+        clf = LogisticRegressionCV(Cs=[0.01, 0.1, 1.0], penalty="elasticnet", solver="saga", l1_ratios=[0.5],
+                                   cv=TimeSeriesSplit(n_splits=3), max_iter=300, random_state=SEED, n_jobs=-1)
+        clf.fit(qt.transform(xtr.iloc[order]), y[order])
+        return clf.predict_proba(qt.transform(xte))[:, 1]
+    import lightgbm as lgb  # noqa: PLC0415
+    clf = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.03, num_leaves=31, min_child_samples=500, subsample=0.8,
+                             subsample_freq=1, colsample_bytree=0.8, random_state=SEED, verbose=-1)
+    clf.fit(xtr, y)
+    return clf.predict_proba(xte)[:, 1]
 SPLIT_RULE = {"id": "RULE-ML-ENTRY-FIX-ARMS-20261124", "noninferiority_margin_r": 0.0068, "min_t": 2.0, "min_bars": 3000,
               "max_dd_ratio": 0.7, "min_folds_sharpe_better": 5}
 
@@ -638,6 +722,25 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
             tk["short_only"] = seq.run(np.full(len(pl), -np.inf), ps)
             tk["long_tau_020"] = seq.run(np.where(pl > 0.20, pl, -np.inf), ps)
             info |= {"mute_rate_of_long_candidates": rate, "rows_in_mute_cell": float(mute.mean())}
+        elif arm in META_ARMS:
+            side_te = test.ret_168.to_numpy() > 0
+            ones = np.ones(len(test))
+            rule_l, rule_s = np.where(side_te, ones, -np.inf), np.where(~side_te, ones, -np.inf)
+            tk["rule_always"] = seq.run(rule_l, rule_s)
+            take = meta_take_proba(train, test, linear=arm == "meta_rule_linear") > META_P
+            tk["arm"] = seq.run(np.where(take, rule_l, -np.inf), np.where(take, rule_s, -np.inf))
+            rate = float(take.mean()) if len(take) else 0.0
+            tk["control"] = pd.concat([seq.run(np.where(r, rule_l, -np.inf), np.where(r, rule_s, -np.inf))
+                                       for r in (rng.random(len(take)) < rate for _ in range(DRAWS))], ignore_index=True)
+            info |= {"take_rate": rate, "rule_long_share": float(side_te.mean())}
+        elif arm in XS_ARMS:
+            # train-only sign of the raw ret_24 baseline (momentum +1 / reversal -1), chosen on the TRAIN book's net R
+            tr_mom = xs_book(train, train.ret_24.to_numpy())
+            sign = 1.0 if (tr_mom.net_r.sum() if len(tr_mom) else 0.0) >= 0 else -1.0
+            tk["xs_baseline"] = xs_book(test, sign * test.ret_24.to_numpy())
+            tk["arm"] = xs_book(test, xs_scores(train, test, ridge=arm == "xs_rank_ridge"))
+            tk["control"] = pd.concat([xs_book(test, rng.random(len(test))) for _ in range(DRAWS)], ignore_index=True)
+            info |= {"baseline_sign": sign, "book_bars": int(tk["arm"].ts.nunique()) if len(tk["arm"]) else 0}
         elif arm == "regime_heads":
             up_tr = train.btc_ret168.to_numpy() >= 0
             up_te = test.btc_ret168.to_numpy() >= 0
@@ -865,7 +968,7 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         res |= {"diffs": {"split_vs_base_per_1R": d}, "bar_sharpe": sh, "drawdown": dd, "folds_sharpe_better": folds_sh,
                 "verdict": v, "why": why, "n": len(bb), "rule": SPLIT_RULE if arm == "bar_split" else RSZ_RULE}
         return res
-    ref = "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
+    ref = "rule_always" if arm in META_ARMS else "xs_baseline" if arm in XS_ARMS else "uniform" if arm == "rsw_xwide_h48" else ("fixed" if arm in ("volsl_retrain", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose") else "base")      # rsw: the one factor is the weighting, so the comparator is the same recipe unweighted
     diffs = {"vs_base": M.arm_diff(cat["arm"], cat[ref]), "vs_control": M.arm_diff(cat["arm"], cat["control"])}
     if arm == "rsw_xwide_h48":
         diffs["uniform_vs_registered_base"] = M.arm_diff(cat["uniform"], cat["base"])
@@ -873,9 +976,10 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
         diffs["control_alt_vs_base_bracket"] = M.arm_diff(cat["control"], cat["control_base_bracket"])
     fb, yearly, ys = years_and_folds(cat, folds, "arm", ref)
     ctl_gates = arm not in ("sl_wide", "sl_wide_retrain", "sl_xwide_retrain", "sl_xwide_h48_retrain", "volsl_retrain", "lim_fallback", "h8_retrain")
-    v, why = M.lever_verdict(diffs, fb, ys, rule=LEVER, control="vs_control" if ctl_gates else None)
+    rule = META_RULE if arm in META_ARMS + XS_ARMS else LEVER
+    v, why = M.lever_verdict(diffs, fb, ys, rule=rule, control="vs_control" if ctl_gates else None)
     res |= {"diffs": diffs, "folds_better": fb, "n_folds": len(folds), "yearly_delta": yearly, "years_positive": ys,
-            "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": LEVER, "control_gates": ctl_gates}
+            "verdict": v, "why": why, "n": diffs["vs_base"]["n_a"], "rule": rule, "control_gates": ctl_gates}
     return res
 
 

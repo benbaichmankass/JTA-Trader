@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "ML-ENTRY-REDESIGN arm R1 (operator 2026-11-28 'Step back: redesign (Recommended)', relayed by Manager 2026-11-28b; design docs/research/ml-entry-redesign-2026-11-28.md). scripts/research/ml_entry_fix_arms.py gains meta_rule_linear / meta_rule_gbdt: the SIDE is fixed by sign(ret_168), the model (elastic-net logistic on quantile-normalised features, penalty on 3 time-ordered inner folds; gbdt twin descriptive) decides only take/skip, graded vs taking the rule every time and a random take at the same rate under META_RULE (+0.010 R/decision, t >= 2.24). research/queue/RQ-20261128-a1e0-01 runs both with --emit-series (rule registered before any run). A dev PASS opens one confirming read at the deflated bar; nothing promotes here. research/queue is unvouchable, so the manager merges. Revert: git revert.",
+  "why": "33 levers / 0 PASS and a regime-driven side: take the side away from the model."
+}

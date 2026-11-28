@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "ML-ENTRY-REDESIGN arm R2 (stacked on R1, #29764): scripts/research/ml_entry_fix_arms.py gains xs_rank_ridge / xs_rank_gbdt: a daily market-neutral book (00:00 UTC; long top-5 / short bottom-5 by the model's predicted cross-sectionally demeaned payoff; RidgeCV on per-bar rank-gaussianised features; gbdt twin descriptive) vs the same book ranked by raw ret_24 (sign chosen on train) and random ranks, under META_RULE. research/queue/RQ-20261128-a1e0-02 runs both with --emit-series (rule registered before any run). A PASS feeds a new paired-entry D3 variant via one deflated confirming read. research/queue is unvouchable, so the manager merges. Revert: git revert.",
+  "why": "A side-neutral book removes the market-beta bet behind the live long deficit."
+}
