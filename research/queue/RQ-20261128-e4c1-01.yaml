@@ -47,8 +47,8 @@ power:
     before this registration). sd of the paired per-trade dR 0.4 R is an ESTIMATE (most entries share exits; a 1.0 vs 1.5 ATR stop changes R scaling and a minority
     of exits).'
   feasibility:
-    source: replay
-    accrual_basis: Replays public Binance spot candles over a pinned past window; nothing accrues.
+    source: none
+    accrual_basis: Replays public Binance spot candles over a pinned past window; nothing accrues. n is the measured arm-B trade count (133) on that window.
 evidence_class:
   claim: edge
   holdout: out_of_sample
@@ -104,6 +104,8 @@ run:
   - RQ-20261128-e4c1-01
   - --out
   - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-e4c1-01
 decision_rule:
   id: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
   unit_rule_id: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
