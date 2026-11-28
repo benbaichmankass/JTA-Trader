@@ -38,6 +38,8 @@ if command -v snap >/dev/null 2>&1; then
   t snap changes
   echo "--- snap list --all snapd core22 ---"
   t snap list --all snapd core22
+  echo "--- snap list --all lxd (revisions; the active one is not marked 'disabled') ---"
+  t snap list --all lxd
   echo "--- snap refresh --time (when snapd refreshes) ---"
   t snap refresh --time
 else
@@ -67,13 +69,34 @@ done
 
 echo
 echo "===== 3. the two units named in the alerts (explicit) ====="
-for n in snap-snapd-28331.mount snap-core22-3130.mount; do
+for n in snap-snapd-28331.mount snap-core22-3130.mount snap.lxd.user-daemon.unix.socket; do
   if [ -e "/etc/systemd/system/${n}" ]; then
     echo "${n}: present, mtime $(stat -c %y "/etc/systemd/system/${n}" 2>/dev/null || echo could_not_look)"
   else
     echo "${n}: ABSENT (could have been removed by a later refresh; see section 1 for the revisions now installed)"
   fi
 done
+
+echo
+echo "===== 3b. snap.lxd.* units in /etc/systemd/system (2026-11-28 alert: snap.lxd.user-daemon.unix.socket CHANGED) ====="
+LXD_UNITS=(/etc/systemd/system/snap.lxd.*)
+echo "snap.lxd.* files found: ${#LXD_UNITS[@]}"
+for u in "${LXD_UNITS[@]}"; do
+  n="$(basename "$u")"
+  echo
+  echo "--- ${n} ---"
+  t ls -l --time-style=full-iso "$u"
+  echo -n "sha256: "; t sha256sum "$u"
+  echo "file text (snapd-generated unit; no secrets):"; t cat "$u" | sed 's/^/    /'
+  echo -n "systemctl: "; t systemctl show -p FragmentPath -p ActiveState -p ActiveEnterTimestamp --no-pager "$n" | tr '\n' ' '; echo
+done
+echo
+echo "--- is lxd used here? (read-only) ---"
+t systemctl is-active snap.lxd.daemon.service snap.lxd.activate.service
+t systemctl list-units --all --no-pager 'snap.lxd*'
+if command -v lxc >/dev/null 2>&1; then t lxc list --format csv; else echo "(lxc not on PATH)"; fi
+t ls -ld /var/snap/lxd/common/lxd/containers /var/snap/lxd/common/lxd/virtual-machines
+echo -n "snap.lxd.* mounts of the lxd snap: "; t findmnt -rn -o TARGET,SOURCE | grep -c '/snap/lxd' || true
 
 echo
 echo "===== 4. refresh schedule ====="
