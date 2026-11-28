@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier2_deploy_unit_files",
+  "hold_text": "COMPUTE-TOPOLOGY-REVIEW S0 (manager-approved 2026-11-28 incl. the deploy/ unit-file deploy): Nice=10 + IOSchedulingClass=idle on ict-git-sync.service and ict-work-digest.service, and ict-work-digest.timer moved from *:0/5 to *:4/5 (same 5-minute cadence). No prop unit, no order path, no config. Deploys through ict-git-sync's install_systemd_units.sh. Revert: git revert the PR; the next git-sync tick reinstalls the old units.",
+  "why": "Lower contention between two CPU bursts (a 45 s changed-main git-sync tick, a 157 s hourly digest) and the trader at peak; p95 effect to be measured after deploy."
+}
