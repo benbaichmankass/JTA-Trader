@@ -114,6 +114,14 @@ def test_dukascopy_lane_is_runner_only_and_other_units_are_untouched(monkeypatch
     assert cr.runner_only_reason(csv) is None                                   # a --data-csv unit fetches nothing
 
 
+def test_spot_proxy_fetch_is_runner_only_even_when_the_perp_window_is_covered(monkeypatch):
+    # RQ-20261128-e4c1-01: --spot-proxy reads Binance SPOT over a pinned pre-perp window; the Kaggle kernel has no internet.
+    monkeypatch.setattr(cd, "load_coverage", lambda p=None: _cov())
+    u = _unit(extra=("--spot-proxy",))
+    del u["routing"]["why_runner"]
+    assert "spot-proxy" in cr.runner_only_reason(u)
+
+
 def test_build_records_failure_and_continues(tmp_path, monkeypatch):
     def fake(key, days, out):
         if key[1] == "BADUSDT":
