@@ -1,0 +1,986 @@
+{
+  "judge": {
+    "verdict": "indeterminate",
+    "chosen": null,
+    "why": "an arm is below n_oos or between the pass bar and the fail floor",
+    "arms": {
+      "thr_tau05": {
+        "n": 2802,
+        "mean": 0.00858,
+        "se": 0.015,
+        "ci": [
+          -0.02734,
+          0.0445
+        ],
+        "z": 2.394
+      },
+      "thr_tau20": {
+        "n": 2802,
+        "mean": 0.00257,
+        "se": 0.01806,
+        "ci": [
+          -0.04068,
+          0.04581
+        ],
+        "z": 2.394
+      },
+      "thr_tau30": {
+        "n": 2802,
+        "mean": -0.03703,
+        "se": 0.02422,
+        "ci": [
+          -0.09501,
+          0.02094
+        ],
+        "z": 2.394
+      }
+    }
+  },
+  "arm_dr_vs_hold_context": {
+    "holding_pays": {
+      "n": 2802,
+      "mean": 0.03803,
+      "se": 0.0183,
+      "ci": [
+        0.00217,
+        0.07389
+      ],
+      "z": 1.96
+    },
+    "thr_tau05": {
+      "n": 2802,
+      "mean": 0.04661,
+      "se": 0.01025,
+      "ci": [
+        0.02653,
+        0.06669
+      ],
+      "z": 1.96
+    },
+    "thr_tau20": {
+      "n": 2802,
+      "mean": 0.04059,
+      "se": 0.0258,
+      "ci": [
+        -0.00998,
+        0.09116
+      ],
+      "z": 1.96
+    },
+    "thr_tau30": {
+      "n": 2802,
+      "mean": 0.00099,
+      "se": 0.0305,
+      "ci": [
+        -0.05878,
+        0.06077
+      ],
+      "z": 1.96
+    }
+  },
+  "fired": {
+    "holding_pays": 1770,
+    "thr_tau05": 1312,
+    "thr_tau20": 2190,
+    "thr_tau30": 2353
+  },
+  "target_coverage": {
+    "thr_tau05": 1.0,
+    "thr_tau20": 1.0,
+    "thr_tau30": 1.0
+  },
+  "arm_features": {
+    "holding_pays": [
+      "age_bars",
+      "open_r",
+      "mfe_r",
+      "mae_r",
+      "giveback_r",
+      "chop_frac_so_far",
+      "stagnation_run",
+      "dist_to_stop_r",
+      "vol_ratio_vs_entry",
+      "atr_ratio_vs_entry",
+      "donchian_mid_dist_atr",
+      "hour_of_day",
+      "dayofweek",
+      "is_long"
+    ],
+    "thr_tau05": [
+      "age_bars",
+      "open_r",
+      "mfe_r",
+      "mae_r",
+      "giveback_r",
+      "chop_frac_so_far",
+      "stagnation_run",
+      "dist_to_stop_r",
+      "vol_ratio_vs_entry",
+      "atr_ratio_vs_entry",
+      "donchian_mid_dist_atr",
+      "hour_of_day",
+      "dayofweek",
+      "is_long"
+    ],
+    "thr_tau20": [
+      "age_bars",
+      "open_r",
+      "mfe_r",
+      "mae_r",
+      "giveback_r",
+      "chop_frac_so_far",
+      "stagnation_run",
+      "dist_to_stop_r",
+      "vol_ratio_vs_entry",
+      "atr_ratio_vs_entry",
+      "donchian_mid_dist_atr",
+      "hour_of_day",
+      "dayofweek",
+      "is_long"
+    ],
+    "thr_tau30": [
+      "age_bars",
+      "open_r",
+      "mfe_r",
+      "mae_r",
+      "giveback_r",
+      "chop_frac_so_far",
+      "stagnation_run",
+      "dist_to_stop_r",
+      "vol_ratio_vs_entry",
+      "atr_ratio_vs_entry",
+      "donchian_mid_dist_atr",
+      "hour_of_day",
+      "dayofweek",
+      "is_long"
+    ]
+  },
+  "peak_is_in_source": null,
+  "cost_basis": {
+    "BTCUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "ETHUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "SOLUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "LINKUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "BNBUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "XRPUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "ADAUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    },
+    "AVAXUSDT": {
+      "fee_bps_roundtrip": 7.5,
+      "slippage_bps_roundtrip": 3.0,
+      "funding_bps_per_window": 1.0,
+      "funding_window_hours": 8.0
+    }
+  },
+  "lookback": 500,
+  "rows_by_symbol": {
+    "BTCUSDT": 15081,
+    "ETHUSDT": 28156,
+    "SOLUSDT": 12390,
+    "LINKUSDT": 13953,
+    "BNBUSDT": 13045,
+    "XRPUSDT": 10191,
+    "ADAUSDT": 11609,
+    "AVAXUSDT": 11550
+  },
+  "excluded_train_symbols": [],
+  "train_rows_after_exclusion": 115975,
+  "z": 2.394,
+  "pass_dr": 0.03,
+  "legs": [
+    {
+      "leg": "trend_donchian",
+      "symbol": "BTCUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/BTCUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56904
+      },
+      "read_state": "measured",
+      "n_total_trades": 452,
+      "block_n": 113,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 113,
+          "train_rows_n": 31060,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 65,
+            "thr_tau05": 45,
+            "thr_tau20": 70,
+            "thr_tau30": 77
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 113,
+          "train_rows_n": 58629,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 64,
+            "thr_tau05": 46,
+            "thr_tau20": 86,
+            "thr_tau30": 89
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 113,
+          "train_rows_n": 87283,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 67,
+            "thr_tau05": 50,
+            "thr_tau20": 87,
+            "thr_tau30": 96
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "symbol": "ETHUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/ETHUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56904
+      },
+      "read_state": "measured",
+      "n_total_trades": 743,
+      "block_n": 185,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 185,
+          "train_rows_n": 31726,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 125,
+            "thr_tau05": 108,
+            "thr_tau20": 153,
+            "thr_tau30": 157
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 185,
+          "train_rows_n": 57348,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 115,
+            "thr_tau05": 81,
+            "thr_tau20": 151,
+            "thr_tau30": 165
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 185,
+          "train_rows_n": 87016,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 105,
+            "thr_tau05": 78,
+            "thr_tau20": 147,
+            "thr_tau30": 160
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian_sol",
+      "symbol": "SOLUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/SOLUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 54257
+      },
+      "read_state": "measured",
+      "n_total_trades": 363,
+      "block_n": 90,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 90,
+          "train_rows_n": 34592,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 62,
+            "thr_tau05": 50,
+            "thr_tau20": 75,
+            "thr_tau30": 81
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 90,
+          "train_rows_n": 59328,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 62,
+            "thr_tau05": 36,
+            "thr_tau20": 75,
+            "thr_tau30": 85
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 90,
+          "train_rows_n": 88648,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 51,
+            "thr_tau05": 33,
+            "thr_tau20": 66,
+            "thr_tau30": 74
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "LINKUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/LINKUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56904
+      },
+      "read_state": "measured",
+      "n_total_trades": 426,
+      "block_n": 106,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 106,
+          "train_rows_n": 30270,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 73,
+            "thr_tau05": 52,
+            "thr_tau20": 84,
+            "thr_tau30": 89
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 106,
+          "train_rows_n": 58855,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 71,
+            "thr_tau05": 48,
+            "thr_tau20": 83,
+            "thr_tau30": 89
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 106,
+          "train_rows_n": 88653,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 67,
+            "thr_tau05": 47,
+            "thr_tau20": 79,
+            "thr_tau30": 88
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "BNBUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/BNBUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56904
+      },
+      "read_state": "measured",
+      "n_total_trades": 476,
+      "block_n": 119,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 119,
+          "train_rows_n": 30920,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 75,
+            "thr_tau05": 63,
+            "thr_tau20": 89,
+            "thr_tau30": 93
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 119,
+          "train_rows_n": 58301,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 75,
+            "thr_tau05": 55,
+            "thr_tau20": 98,
+            "thr_tau30": 105
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 119,
+          "train_rows_n": 88768,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 79,
+            "thr_tau05": 49,
+            "thr_tau20": 98,
+            "thr_tau30": 100
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "XRPUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/XRPUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56784
+      },
+      "read_state": "measured",
+      "n_total_trades": 448,
+      "block_n": 112,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 112,
+          "train_rows_n": 27800,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 73,
+            "thr_tau05": 66,
+            "thr_tau20": 89,
+            "thr_tau30": 94
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 112,
+          "train_rows_n": 56793,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 71,
+            "thr_tau05": 55,
+            "thr_tau20": 89,
+            "thr_tau30": 96
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 112,
+          "train_rows_n": 88788,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 77,
+            "thr_tau05": 55,
+            "thr_tau20": 88,
+            "thr_tau30": 96
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "ADAUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/ADAUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 56904
+      },
+      "read_state": "measured",
+      "n_total_trades": 418,
+      "block_n": 104,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 104,
+          "train_rows_n": 29344,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 70,
+            "thr_tau05": 54,
+            "thr_tau20": 85,
+            "thr_tau30": 90
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 104,
+          "train_rows_n": 56889,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 67,
+            "thr_tau05": 41,
+            "thr_tau20": 81,
+            "thr_tau30": 86
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 104,
+          "train_rows_n": 86592,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 60,
+            "thr_tau05": 51,
+            "thr_tau20": 77,
+            "thr_tau30": 83
+          }
+        }
+      ]
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "AVAXUSDT",
+      "candle_source": {
+        "path": "/tmp/exithead_kaggle_tzw3rvkm/candles/AVAXUSDT_1h.csv",
+        "resampled_to": null,
+        "bars": 54161
+      },
+      "read_state": "measured",
+      "n_total_trades": 423,
+      "block_n": 105,
+      "folds": [
+        {
+          "fold_index": 1,
+          "n_test_trades": 105,
+          "train_rows_n": 31060,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 65,
+            "thr_tau05": 50,
+            "thr_tau20": 77,
+            "thr_tau30": 86
+          }
+        },
+        {
+          "fold_index": 2,
+          "n_test_trades": 105,
+          "train_rows_n": 59594,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 64,
+            "thr_tau05": 47,
+            "thr_tau20": 81,
+            "thr_tau30": 88
+          }
+        },
+        {
+          "fold_index": 3,
+          "n_test_trades": 105,
+          "train_rows_n": 89814,
+          "read_state": "measured",
+          "arms_trained": [
+            "holding_pays",
+            "thr_tau05",
+            "thr_tau20",
+            "thr_tau30"
+          ],
+          "n_fired": {
+            "holding_pays": 67,
+            "thr_tau05": 52,
+            "thr_tau20": 82,
+            "thr_tau30": 86
+          }
+        }
+      ]
+    }
+  ],
+  "rows_source": "harness_only (backtest-source rows; NO journal trades: nothing OURS is read or published)",
+  "published_shard_spans": {
+    "BTCUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56904,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "ETHUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56904,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "SOLUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 54257,
+      "first_ts": "2020-09-14T07:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "LINKUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56904,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "BNBUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56904,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "XRPUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56784,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "ADAUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 56904,
+      "first_ts": "2020-06-01T00:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    },
+    "AVAXUSDT": {
+      "source": "binance_vision_um_perp_klines",
+      "read_state": "measured",
+      "bars": 54161,
+      "first_ts": "2020-09-23T07:00:00Z",
+      "last_ts": "2026-11-27T23:00:00Z",
+      "has_volume": true
+    }
+  },
+  "harness_legs": [
+    {
+      "leg": "trend_donchian",
+      "symbol": "BTCUSDT",
+      "read_state": "measured",
+      "n_trades": 452,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian_eth",
+      "symbol": "ETHUSDT",
+      "read_state": "measured",
+      "n_trades": 743,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian_sol",
+      "symbol": "SOLUSDT",
+      "read_state": "measured",
+      "n_trades": 363,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "LINKUSDT",
+      "read_state": "measured",
+      "n_trades": 426,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "BNBUSDT",
+      "read_state": "measured",
+      "n_trades": 476,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "XRPUSDT",
+      "read_state": "measured",
+      "n_trades": 448,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "ADAUSDT",
+      "read_state": "measured",
+      "n_trades": 418,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    },
+    {
+      "leg": "trend_donchian",
+      "symbol": "AVAXUSDT",
+      "read_state": "measured",
+      "n_trades": 423,
+      "cost_basis": {
+        "fee_bps_roundtrip": 7.5,
+        "slippage_bps_roundtrip": 3.0,
+        "funding_bps_per_window": 1.0,
+        "funding_window_hours": 8.0
+      }
+    }
+  ],
+  "rows_build": {
+    "rc": 0,
+    "rows_path": "/tmp/exithead_kaggle_tzw3rvkm/rows/donchian/rows.jsonl",
+    "rows_exist": true,
+    "rows_by_source": {
+      "harness": 115975
+    },
+    "build_report": {
+      "generated_at": "2026-11-28T09:09:44.365055+00:00",
+      "tf": "1h",
+      "trades_in": 3749,
+      "skipped": {
+        "no_candles": 0,
+        "unresolvable": 128
+      },
+      "entry_alignment": "live_fill_bar_v2",
+      "skipped_at_load": {},
+      "rows_seen_at_load": 3749,
+      "rows_loaded_at_load": 3749,
+      "per_family_load": {
+        "donchian": {
+          "seen": 3749,
+          "loaded": 3749
+        }
+      },
+      "families_starved": [],
+      "holding_pays_threshold_r": 0.25,
+      "families": {
+        "donchian": {
+          "rows": 115975,
+          "trades": {
+            "harness": 3621
+          },
+          "holding_pays_pos": 29606,
+          "holding_pays_rate": 0.2553,
+          "rows_by_source": {
+            "harness": 115975
+          },
+          "rows_by_year": {
+            "2020": 10203,
+            "2021": 20121,
+            "2022": 17041,
+            "2023": 16345,
+            "2024": 19828,
+            "2025": 17807,
+            "2026": 14630
+          }
+        }
+      }
+    }
+  }
+}
