@@ -56,7 +56,7 @@ decision_rule:
   statistic: 'scripts/research/live_bar_leg_read.py --leg claude_desk on the FIRST fresh (< 26 h) comms/live_bar/latest.json with legs.claude_desk.n >= 20: the feed''s own live-bar verdict for the leg (scripts/research/live_bar.py: confirmed-R closed trades on the declared_initial basis, demo floor and real money of the same leg pooled, promotion exclusions applied).'
   rule: 'PASS iff the feed verdict is pass (n >= 20 AND sum R > 0 AND one-sided 80% LCB > 0). FAIL iff the feed verdict is fail. INDETERMINATE iff the read finds n < 20 (n_short), which the blocked_on condition should prevent. A stale, missing or leg-absent feed is no_data (not a result; the dispatcher re-runs it). ONE read: the first run after unblocking is the verdict, and a later feed is never substituted. Reported beside the verdict, never graded: the venue-measured subset and the stop-unmoved subset. A PASS is a Tier-3 proposal input under the live-performance promotion path, never an apply; a FAIL closes this read, not the desk.'
   what_it_does_not_do: Changes no roster, mode, execution flag or mandate; places no order; reads no journal (the feed is the input).
-practice_precedent: 'OPERATING-PLAN § 2 "Live-performance promotion path" (operator 2026-11-17): the live bar is the rule; fixing a single read point is the standard guard against optional stopping in sequential reads.'
+practice_precedent: 'none: the rule is the operator''s own live bar, docs/plans/OPERATING-PLAN-2026-09-21.md § 2 "Live-performance promotion path" (operator 2026-11-17): the live bar is the rule; fixing a single read point is the standard guard against optional stopping in sequential reads.'
 compute: cpu_light
 routing:
   needs_trainer_resident_data: false
