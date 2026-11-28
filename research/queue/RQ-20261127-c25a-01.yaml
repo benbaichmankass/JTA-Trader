@@ -3,7 +3,7 @@
 id: RQ-20261127-c25a-01
 title: 'ml_entry compact derivatives state P25 (F2c+F5c, 8 cols) RE-READ on a DISJOINT window: 2021 monthly folds (each trained only on earlier rows), single arm
   vs its matched 8-column placebo. Does the 26ac-01 lead (+0.0335, t 1.89 on the dev folds that chose it) hold out of window?'
-status: queued
+status: done
 cadence: once
 theme: ml_health
 priority: 1
@@ -125,3 +125,17 @@ related:
 population: 60 frozen perps (those listed in 2021), pooled ENTRY recipe, 2021 monthly walk-forward test folds trained from 2020-07-01, net of fee + slippage + funding
 what_it_does_not_do: Changes no served model, config or order path; reads no dev or sealed row as a test row; a PASS is not a promotion; adds no gate.
 last_dispatched_at: '2026-11-27T22:51:25+00:00'
+grading:
+  attested: RULE-RQ20261127-c25a-01-P25-PREDEV
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-c25a-01-P25-PREDEV
+  evidence:
+  - research/results/RQ-20261127-c25a-01/46079140430.jsonl
+  graded_at: '2026-11-28'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

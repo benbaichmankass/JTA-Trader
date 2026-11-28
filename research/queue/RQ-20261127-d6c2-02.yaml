@@ -4,7 +4,7 @@ id: RQ-20261127-d6c2-02
 title: 'D6 Pointer CEILING on xrp_pullback_2h (demo-floor (testing) leg, after the ada_pullback_2h b18a-03 FAIL): does ANY static entry bracket (atr_stop_mult x tp_r,
   19 cells) beat the declared bracket (SL 2.5 ATR / TP 3.0R) net of the full cost stack under the registered replace rule? A flat surface means a learned bracket
   has no headroom on this leg'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -188,3 +188,16 @@ related:
 - RQ-20261118-04a5-02
 - RQ-20261101-c692-02
 last_dispatched_at: '2026-11-27T19:28:52+00:00'
+grading:
+  attested: RULE-RQ20261127-d6c2-02-BRACKET-CEILING
+  auto: true
+  decision_rule_id: RULE-RQ20261127-d6c2-02-BRACKET-CEILING
+  evidence:
+  - research/results/RQ-20261127-d6c2-02/46056320247.jsonl
+  graded_at: '2026-11-28'
+  grader: scripts/research/queue_grade.py
+  note: 'hand-written unit, every row graded under its own registered rule: FAIL closes it (no template
+    confirmatory re-run)'
+  reason: 1 row(s), all measured, all fail
+  rows: 1
+  verdict: fail
