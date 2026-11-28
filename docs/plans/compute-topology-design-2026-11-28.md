@@ -54,7 +54,7 @@ Reading: (a) the trader and its API are 54 % of the box; (b) **the 5-minute time
 
 ## 3. The trainer VM, per workload: what it does now and where each piece goes
 
-Population: `deploy/trainer/*.service` + `*.timer`, `trainer-vm-diag` #29729 (units, timers, sizes), #29736 (CPU per unit, filled in § 3.1).
+Population: `deploy/trainer/*.service` + `*.timer`, `trainer-vm-diag` #29729 (units, timers, sizes), #29745 (CPU per unit, § 3.1).
 
 | workload | cadence | what it touches | destination | transfer path / blocker |
 |---|---|---|---|---|
@@ -73,18 +73,21 @@ Population: `deploy/trainer/*.service` + `*.timer`, `trainer-vm-diag` #29729 (un
 
 ### 3.1 Trainer activity by unit (7 days)
 
-Population: `journalctl --since '7 days ago'` run counts per unit, `trainer-vm-diag` #29729 (09:34Z). **CPU-hours per unit: NOT MEASURED** (the first command's `Consumed` pattern missed decimal values; the corrected read is issue #29736, which sat in the runner queue for over 15 minutes at the time this was written; if it has returned, its table supersedes this one).
+Population: `journalctl --since '7 days ago'` per unit, summing systemd's `Consumed … CPU time` line, `trainer-vm-diag` #29729 (run counts) and #29745 (CPU hours, read 2026-11-28 ~10:10Z). Completed runs only; `ict-orderflow-capture` (a long-running service) and `jta-console-connector` are not in the table.
 
-| unit | runs in 7 days | October profile (runs / 7 d) |
-|---|---|---|
-| `ict-trainer-publish` (2-min mirror) | 3,620 | 4,704 |
-| `ict-trainer-forecast` (15 min) | 529 | 672 |
-| `ict-trainer-lifecycle` (6-hourly) | 22 | n/a |
-| `ict-trainer`, `-catchup`, `ict-promotion-readiness`, `ict-candle-refresh` (daily) | 6 each | 7 |
-| **`ict-drift-retrain`** | **1** | **167 (63.7 % of the trainer's service CPU)** |
-| `ict-offload-drain`, `ict-pm-snapshot`, `ict-orderflow-capture` | 0 logged completed runs (orderflow is a long-running service, up now) | n/a |
+| unit | runs / 7 d | CPU-h / 7 d | longest run | October profile (CPU-h) |
+|---|---|---|---|---|
+| `ict-promotion-readiness` (daily) | 6 | **5.93** | 64.6 min | 0.06 |
+| `ict-trainer` (daily cycle) | 6 | 4.67 | 61.1 min | 8.82 |
+| `ict-trainer-catchup` | 6 | 2.36 | 24.0 min | 6.29 |
+| `ict-trainer-publish` (2-min mirror) | 3,628 | 1.69 | 0.1 min | 0.72 |
+| `ict-trainer-forecast` (15 min) | 530 | 1.18 | 0.3 min | 1.44 |
+| `ict-trainer-lifecycle` (6-hourly) | 22 | 0.74 | 3.7 min | n/a |
+| `ict-candle-refresh` | 6 | 0.14 | 1.4 min | ~0.01 |
+| **`ict-drift-retrain`** | **1** | 0.01 | 0.4 min | **30.45 (63.7 %)** |
+| **Total measured** | | **16.7** | | 47.8 |
 
-What the counts say: the October profile's biggest consumer, drift retraining, has effectively stopped (1 run vs 167), which is why the host is at load 0.01 between the daily bursts. The remaining recurring load is the daily cycle, catch-up and lifecycle (the part that moves to runners) and the two cheap high-frequency units (forecast, mirror publish).
+Reading, against 168 OCPU-h a week: the trainer's measured service CPU is **10 %**, down from 28 % in October, because drift retraining has effectively stopped (1 run vs 167). The remaining weight is **`ict-promotion-readiness` at 5.9 CPU-h**, now the largest single unit (it was 0.06 in October; it reads the journal copy and the shadow track record). **Open question for the manager, not answered here:** the promotion step was retired on 2026-11-12 (`docs/reference/vm-topology.md` banner), so either this sweep still feeds something that is read, or it is a candidate to retire outright, which would remove 35 % of the trainer's remaining CPU before any migration. The cycle and catch-up together are 7.0 CPU-h, about 4 % of one OCPU-week, i.e. small enough that a runner or Kaggle CPU job covers them with large headroom (the KAGGLE doc's own estimate was ~1 runner-hour per night); the two cheap high-frequency units (forecast, mirror publish) add 2.9 CPU-h.
 
 ## 4. Target topology (recommended)
 
@@ -167,7 +170,7 @@ P0 (A, A2, B, C) is ≈ 24 h (≈ 60 %); the rest needs the dual-run to have pas
 
 ## 11. Not verified (stated, not hidden)
 
-- Trainer per-unit CPU hours: not measured (§ 3.1 has run counts only); the October table (`docs/research/trainer-workload-2026-10-13.md`) is the older reference.
+- Whether `ict-promotion-readiness` (5.9 CPU-h / 7 d, 64 min per run) still feeds anything now that the promotion step is retired (§ 3.1).
 - Whether any LIVE decision reads `fc_*` (D2).
 - The CPU of `ict-prop-feed@velotrade_1` (it runs but logs no `Consumed` line, so § 2 excludes it).
 - The gateway's 99 % CPU p95 against a low load average.
