@@ -1373,6 +1373,42 @@ ARM_SPECS: dict[str, dict] = {
     "xgb_d8": {"kind": "xgb", "params": {"max_depth": 8, "n_estimators": 2000, "learning_rate": 0.02}},
     "xgb_d10": {"kind": "xgb", "params": {"max_depth": 10, "n_estimators": 3000, "learning_rate": 0.01}},
 }
+# SCORE-BAND CAP arms (lever map research/levers/ml-entry.yaml declared lever `score_band_cap`, hypothesis "the top band is
+# over-confident and loses"; never tested). The registered model abstains on a bar whose better-side predicted net R is above the
+# CAP quantile of the TRAIN fold's in-sample better-side predictions that clear tau (fitted on train rows only, no test row read).
+# Control: abstain on the same NUMBER of above-tau bars drawn at random (seeded), so the arm must beat removing that many trades
+# blindly, not just removing trades. One knob changes: the upper bound; tau, recipe, costs and sequencing are the registered ones.
+CAP_ARMS = {"cap95": 0.95, "cap90": 0.90, "cap80": 0.80}
+
+
+def cap_threshold(train_best: np.ndarray, tau: float, q: float) -> float | None:
+    """The q-quantile of the train-fold in-sample better-side predictions above tau; None if fewer than 50 clear tau."""
+    above = train_best[train_best > tau]
+    return float(np.quantile(above, q)) if len(above) >= 50 else None
+
+
+def capped(p_long: np.ndarray, p_short: np.ndarray, cap: float | None) -> tuple[np.ndarray, np.ndarray]:
+    """Abstain (both sides -inf) on rows whose better side is above ``cap``; None -> unchanged."""
+    if cap is None:
+        return p_long, p_short
+    over = np.maximum(p_long, p_short) > cap
+    return np.where(over, -np.inf, p_long), np.where(over, -np.inf, p_short)
+
+
+def random_capped(p_long: np.ndarray, p_short: np.ndarray, tau: float, cap: float | None,
+                  rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    """The control: abstain on as many above-tau rows as ``capped`` removes, drawn uniformly from the above-tau rows."""
+    if cap is None:
+        return p_long, p_short
+    best = np.maximum(p_long, p_short)
+    k = int((best > cap).sum())
+    pool = np.flatnonzero(best > tau)
+    drop = np.zeros(len(best), bool)
+    if k and len(pool):
+        drop[rng.choice(pool, size=min(k, len(pool)), replace=False)] = True
+    return np.where(drop, -np.inf, p_long), np.where(drop, -np.inf, p_short)
+
+
 XGB_BASE = {"tree_method": "hist", "subsample": 0.8, "colsample_bytree": 0.8, "min_child_weight": 50.0, "reg_lambda": 5.0,
             "random_state": SEED, "verbosity": 0}
 
@@ -1554,6 +1590,18 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             tl, ts_ = fit_predict(tr2, te2, FEATURES + TSFM_FEATURES, n_jobs)
             nl, ns = fit_predict(tr2, te2, FEATURES + TSFM_NOISE, n_jobs)
             tk["tsfm"], tk["placebo_tsfm"] = policy(test, tl, ts_, tau), policy(test, nl, ns, tau)
+        cap_arms = [x for x in arms if x in CAP_ARMS]
+        if cap_arms:
+            both = pd.concat([test, train], ignore_index=True)
+            bl, bs = fit_predict(train, both, None, n_jobs)
+            tl_, ts2 = bl[:len(test)], bs[:len(test)]
+            tr_best = np.maximum(bl[len(test):], bs[len(test):])
+            rng_c = np.random.default_rng(SEED + 1128 + int(a.timestamp()) % 9973)
+            for arm in cap_arms:
+                cap = cap_threshold(tr_best, tau, CAP_ARMS[arm])
+                rec[f"cap_{arm}"] = cap
+                tk[arm] = policy(test, *capped(tl_, ts2, cap), tau)
+                tk[f"random_{arm}"] = policy(test, *random_capped(tl_, ts2, tau, cap, rng_c), tau)
         for arm in (x for x in arms if x in ARM_SPECS):
             spec = ARM_SPECS[arm]
             al, as_ = fit_predict_spec(train, test, spec, a, n_jobs, xgb_device=xgb_device)
@@ -1570,6 +1618,8 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
     res = {"folds": folds, "pooled": {k: split_by_side(v) | {"bar_risk": bar_risk(v)} for k, v in cat.items()}, "arms": {}}
     pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"},
              "tsfm": {"vs_base": "base", "vs_placebo": "placebo_tsfm"}}
+    for arm in (x for x in arms if x in CAP_ARMS):
+        pairs[arm] = {"vs_base": "base", "vs_random": f"random_{arm}"}
     for arm in (x for x in arms if x in ARM_SPECS):
         pairs[arm] = ({"vs_base": "base", "vs_placebo": f"placebo_{arm}"} if ARM_SPECS[arm]["kind"] == "recency"
                       else {"vs_base": "base"})
@@ -1611,7 +1661,7 @@ def lever_arms_cmd(args) -> int:
     tab = build_table(cache, universe())
     arms = args.arm or ["regime", "top1"]
     rule = dict(LEVER_RULE)
-    k_new = sum(1 for x in arms if x in ARM_SPECS)   # the registered regime/top1 units keep their exact rule
+    k_new = sum(1 for x in arms if x in ARM_SPECS or x in CAP_ARMS)   # the registered regime/top1 units keep their exact rule
     if k_new > 1:   # several arms graded in one unit: the family bar (Sidak) applies to each arm's t
         rule |= {"min_t": round(max(LEVER_RULE["min_t"], sidak_t(k_new)), 4), "n_arms": k_new}
     xgb_device = getattr(args, "xgb_device", "cpu")
@@ -1884,7 +1934,7 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
     ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
     ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
-    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", "tsfm", *ARM_SPECS],
+    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", "tsfm", *ARM_SPECS, *CAP_ARMS],
                     help="lever-arms: which arm(s); default regime + top1")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
                     help="lever-arms: published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")

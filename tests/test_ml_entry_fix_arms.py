@@ -87,3 +87,38 @@ def test_h8_retrain_relabels_on_the_registered_bracket_with_an_8h_time_stop(tmp_
     assert lab8["net_long"].notna().all() and len(lab8) == len(tab)
     assert lab8[["bars_long", "bars_short"]].max().max() <= 8
     assert lab24[["bars_long", "bars_short"]].max().max() > 8
+
+
+def test_score_band_cap_threshold_and_control_remove_the_same_count():
+    """CAP arms (lever `score_band_cap`): the cap is fitted on TRAIN predictions only, abstains above it, and the random control
+    removes exactly as many above-tau rows, so the arm is graded against blind removal of the same size."""
+    import numpy as np
+    import ml_decision_entry as M
+    rng = np.random.default_rng(0)
+    train_best = rng.normal(0.15, 0.1, 5000)
+    cap = M.cap_threshold(train_best, 0.10, 0.90)
+    above = train_best[train_best > 0.10]
+    assert abs(cap - np.quantile(above, 0.90)) < 1e-12
+    assert M.cap_threshold(np.full(10, 0.5), 0.10, 0.9) is None            # < 50 above tau -> no cap, arm == base
+    pl, ps = rng.normal(0.12, 0.1, 2000), rng.normal(0.12, 0.1, 2000)
+    cl, cs = M.capped(pl, ps, cap)
+    removed = np.isinf(cl) & np.isinf(cs)
+    assert removed.sum() == int((np.maximum(pl, ps) > cap).sum()) and removed.sum() > 0
+    assert not np.isinf(cl[~removed]).any()                                 # every other row untouched
+    rl, rs = M.random_capped(pl, ps, 0.10, cap, np.random.default_rng(1))
+    r_removed = np.isinf(rl) & np.isinf(rs)
+    assert r_removed.sum() == removed.sum()                                 # same count
+    assert (np.maximum(pl, ps)[r_removed] > 0.10).all()                     # drawn only from above-tau rows
+    assert M.capped(pl, ps, None)[0] is pl and M.random_capped(pl, ps, 0.1, None, np.random.default_rng(1))[0] is pl
+
+
+def test_cap_arms_are_on_the_cli_and_paired_with_their_random_control():
+    src = (REPO / "scripts/research/ml_decision_entry.py").read_text()
+    assert "*ARM_SPECS, *CAP_ARMS]" in src
+    assert 'pairs[arm] = {"vs_base": "base", "vs_random": f"random_{arm}"}' in src
+
+
+def test_cap_arms_count_toward_the_sidak_family_bar():
+    """Three cap arms in one unit must be graded at the k=3 family bar (t >= 2.3909), not the single-arm 2.0."""
+    src = (REPO / "scripts/research/ml_decision_entry.py").read_text()
+    assert "k_new = sum(1 for x in arms if x in ARM_SPECS or x in CAP_ARMS)" in src
