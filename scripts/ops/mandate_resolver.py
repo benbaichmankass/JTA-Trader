@@ -1524,18 +1524,32 @@ def _venue_fee_bps(symbol: Any) -> Optional[float]:
 # held-back window. The count and the M13 bar it implies are reported beside the decision, and a disagreement is named
 # R-HOLDOUT-LEDGER-MISMATCH. It NEVER changes the decision: making the ledger's count decisive is operator proposal D-A.
 READ_LEDGER_REL = "comms/research/read_ledger.json"
+#: The weekly trial-ledger unit also writes read_ledger.json into its run dir (comms/research/<unit>/<run>/); the newest
+#: copy is read when no canonical snapshot is committed.
+READ_LEDGER_RUN_GLOB = "comms/research/RQ-20261016-6013-01/*/read_ledger.json"
 LEDGER_MISMATCH_CLAUSE = "R-HOLDOUT-LEDGER-MISMATCH"
+
+
+def _read_ledger_path(root: Path) -> Optional[Path]:
+    canon = root / READ_LEDGER_REL
+    if canon.is_file():
+        return canon
+    runs = sorted(root.glob(READ_LEDGER_RUN_GLOB), key=lambda p: p.parent.name)
+    return runs[-1] if runs else None
 
 
 def _ledger_read(leg: str, hc: Dict[str, Any], root: Path) -> Dict[str, Any]:
     """Overlapping graded reads of the record's held-back window, from the committed read ledger, with a read_state."""
     out: Dict[str, Any] = {"ledger": READ_LEDGER_REL, "read_state": "could_not_look", "n_reads": None,
                            "n_unclaimed": None, "next_bar": None, "mismatch": None, "decisive": False}
-    doc = _json(root / READ_LEDGER_REL)
+    lp = _read_ledger_path(root)
+    doc = _json(lp) if lp is not None else None
+    if lp is not None:
+        out["ledger"] = str(lp.relative_to(root))
     hold = hc.get("holdout") if isinstance(hc, dict) else None
     s, e = (_parse_ts((hold or {}).get("start")), _parse_ts((hold or {}).get("end"))) if isinstance(hold, dict) else (None, None)
     if not isinstance(doc, dict) or not isinstance(doc.get("subjects"), list):
-        out["why"] = f"{READ_LEDGER_REL} is absent or unreadable"
+        out["why"] = f"no read ledger ({READ_LEDGER_REL} or {READ_LEDGER_RUN_GLOB}) is committed or readable"
         return out
     if s is None or e is None:
         out["why"] = "the record's holdout window is not stated"

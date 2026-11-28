@@ -1776,3 +1776,12 @@ def test_ledger_agreement_and_absence_are_stated_not_collapsed(repo):
     _ledger(root, 3, subject="some_other_leg")
     led = _s1s2(root)["evidence"]["holdout"]["ledger"]
     assert led["read_state"] == "no_reads" and led["n_reads"] == 0
+
+
+def test_ledger_falls_back_to_the_newest_weekly_run_copy(repo):
+    root = _h_repo(repo)
+    for run, n in (("100", 2), ("200", 4)):
+        _w(root, f"comms/research/RQ-20261016-6013-01/{run}/read_ledger.json", {"schema": 1, "subjects": [{"subject": LEG,
+           "windows": [{"start": "2025-01-01", "end": "2026-12-31", "n_reads": n, "n_unclaimed": 0}]}]})
+    led = _s1s2(root)["evidence"]["holdout"]["ledger"]
+    assert led["n_reads"] == 4 and led["ledger"].endswith("/200/read_ledger.json")
