@@ -75,19 +75,19 @@
   "live_review": {
    "brier_by_class": {
     "expired": {
-     "brier": 0.156,
-     "n": 158
+     "brier": 0.1566,
+     "n": 159
     },
     "invalidation_first": {
      "brier": 0.148,
      "n": 158
     },
     "target_first": {
-     "brier": 0.3354,
-     "n": 162
+     "brier": 0.335,
+     "n": 164
     }
    },
-   "brier_overall": 0.2142,
+   "brier_overall": 0.2146,
    "brier_ref_constant_0_5": 0.25,
    "calibration_bins": [
     {
@@ -105,11 +105,11 @@
      "target_first_rate": 0.2751
     },
     {
-     "mean_p": 0.4527,
-     "n": 270,
+     "mean_p": 0.4528,
+     "n": 273,
      "p_hi": 0.6,
      "p_lo": 0.4,
-     "target_first_rate": 0.3778
+     "target_first_rate": 0.381
     },
     {
      "mean_p": 0.6042,
@@ -127,25 +127,25 @@
     }
    ],
    "classes": {
-    "expired": 158,
+    "expired": 159,
     "invalidation_first": 158,
-    "no_data": 18,
-    "pending": 0,
-    "target_first": 162,
+    "no_data": 14,
+    "pending": 1,
+    "target_first": 164,
     "tie_unresolved": 0
    },
    "direction_hit_rate": {
-    "n": 462,
-    "rate": 0.4935
+    "n": 465,
+    "rate": 0.4946
    },
    "n": 496,
-   "n_graded": 478,
+   "n_graded": 481,
    "n_packages": 175,
-   "n_scored_with_p": 478,
+   "n_scored_with_p": 481,
    "unresolved_ties": 0
   }
  },
- "computed_at": "2026-11-27T18:16:45Z",
+ "computed_at": "2026-11-28T02:20:07Z",
  "inventory": {
   "desk_entry": {
    "no_trade_without_forecast": 216,
@@ -158,23 +158,31 @@
   },
   "ml_prediction_logs": "none found carrying target/invalidation/horizon (grep invalidation_px|target_px over *.py, *.jsonl, *.yaml outside docs/tests: only the review, desk and ML-family readers)"
  },
- "pending": [],
+ "pending": [
+  {
+   "fid": "LR-20261127T1806Z-pkg-76ee0d87ff404bcb",
+   "horizon_end": "2026-11-28T06:10:00Z",
+   "source": "live_review",
+   "symbol": "SOLUSDT",
+   "time_remaining_s": 13792
+  }
+ ],
  "pooled": {
   "brier_by_class": {
    "expired": {
-    "brier": 0.1537,
-    "n": 173
+    "brier": 0.1543,
+    "n": 174
    },
    "invalidation_first": {
     "brier": 0.1475,
     "n": 164
    },
    "target_first": {
-    "brier": 0.3366,
-    "n": 173
+    "brier": 0.3362,
+    "n": 175
    }
   },
-  "brier_overall": 0.2138,
+  "brier_overall": 0.2142,
   "brier_ref_constant_0_5": 0.25,
   "calibration_bins": [
    {
@@ -192,11 +200,11 @@
     "target_first_rate": 0.278
    },
    {
-    "mean_p": 0.4507,
-    "n": 286,
+    "mean_p": 0.4508,
+    "n": 289,
     "p_hi": 0.6,
     "p_lo": 0.4,
-    "target_first_rate": 0.3776
+    "target_first_rate": 0.3806
    },
    {
     "mean_p": 0.6042,
@@ -214,21 +222,21 @@
    }
   ],
   "classes": {
-   "expired": 173,
+   "expired": 174,
    "invalidation_first": 164,
-   "no_data": 18,
-   "pending": 0,
-   "target_first": 173,
+   "no_data": 14,
+   "pending": 1,
+   "target_first": 175,
    "tie_unresolved": 0
   },
   "direction_hit_rate": {
-   "n": 492,
-   "rate": 0.5
+   "n": 495,
+   "rate": 0.501
   },
   "n": 528,
-  "n_graded": 510,
+  "n_graded": 513,
   "n_packages": 175,
-  "n_scored_with_p": 510,
+  "n_scored_with_p": 513,
   "unresolved_ties": 0
  },
  "population": "528 forecasts: live_review=496, desk_entry=32 (every record carrying target+invalidation+horizon+probability)",
@@ -241,7 +249,7 @@
   },
   "ledger": "comms/desk/forecast_ledger.jsonl",
   "live_review": {
-   "main_reviews": 848,
+   "main_reviews": 852,
    "rows_branch": 552,
    "union": 894
   },

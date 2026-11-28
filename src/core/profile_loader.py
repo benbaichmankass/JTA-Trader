@@ -62,13 +62,16 @@ def load_instrument_profiles(
     Returns:
         Dict keyed by symbol. Falls back to {BTCUSDT: <pre-built>} on FileNotFoundError.
     """
-    import yaml
     from src.core.instrument_profile import InstrumentProfile
 
     resolved = path or _DEFAULT_INSTRUMENTS_PATH
     try:
-        with open(resolved, "r") as f:
-            raw = yaml.safe_load(f) or {}
+        # VM-CONTROL-1127: the shared parse memo (src/utils/yaml_parse_cache). MEASURED 2026-11-27: py-spy on the live
+        # VM caught the trader's reconciliation-loop and the web-api's account-read threads in this safe_load, reached
+        # from venue_capability._profiles on every account_open_positions; symbols_for_account_id('bybit_1') parsed
+        # the 77 KB file 29x per call (3.85 s, x86). The file is still read every call, so an edit is seen at once.
+        from src.utils.yaml_parse_cache import safe_load_path
+        raw = safe_load_path(resolved) or {}
         profiles: dict[str, InstrumentProfile] = {}
         for symbol, data in raw.get("instruments", {}).items():
             profiles[symbol] = InstrumentProfile(

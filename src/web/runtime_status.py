@@ -105,9 +105,11 @@ def _read_strategy_names(strategies_yaml: Path) -> List[str]:
     process holds is in the ``process`` block.
     """
     try:
-        import yaml
-        with strategies_yaml.open(encoding="utf-8") as fh:
-            raw = yaml.safe_load(fh) or {}
+        # VM-CONTROL-1127: the shared parse memo. MEASURED 2026-11-27: 147 ms per parse of the 244 KB file (x86), run
+        # by write_status on every run_pipeline (once per symbol per tick); py-spy caught the live trader's MainThread
+        # here. The file is still read every call, so an edit is seen at once.
+        from src.utils.yaml_parse_cache import safe_load_path
+        raw = safe_load_path(strategies_yaml) or {}
     except Exception as exc:  # noqa: BLE001
         _swallow_runtime_status("strategies_yaml_read_failed", exc,
                                 path=str(strategies_yaml))

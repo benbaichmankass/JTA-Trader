@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Web-api read path (src/web/api/routers/dashboard.py), which R5 names Tier-2 by path, so the manager merges. 27a classed web-api/read-path changes as Tier 1 for WEBAPP-API-SLOW-1127. Bounds one GET /api/bot/positions build at 6 s; a row whose broker uPnL read has not answered renders unrealizedPnl null (existing 'unavailable' source) plus additive unrealizedPnlReadState 'timed_out'; a stuck row read is joined by later builds, not queued again. No order path, trader, strategy/risk config or writes. Deploy: pull-and-deploy restarts ict-web-api. Revert: git revert.",
+  "why": "Stop a slow Bybit read (> 25 s measured 2026-11-27) from holding /positions and the SPA Overview."
+}

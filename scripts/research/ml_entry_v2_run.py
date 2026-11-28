@@ -12,6 +12,7 @@
     python3 scripts/research/ml_entry_v2_run.py ablation_macro <unit> <out_dir>  # F8 cross-asset family vs A / A2, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py ablation_compact <unit> <out_dir>  # 26ac-01: compact F2c/F5c vs matched-width placebos, DEV FOLDS ONLY
     python3 scripts/research/ml_entry_v2_run.py ablation_dvol <unit> <out_dir>  # 26ac-02: BTC DVOL (F9, Deribit) vs a 3-column placebo, DEV FOLDS ONLY
+    python3 scripts/research/ml_entry_v2_run.py reread_p25_predev <unit> <out_dir>  # c25a-01: P25 vs N8 on 2021 monthly folds (pre-dev, disjoint)
 
 Steps: install the PINNED lightgbm (the live pin; a no-op once the runner image carries it, row RESEARCH-RUNNER-ML-DEPS / #22143),
 fetch the Binance Vision streams (vision_streams.py), build the family table, run the arms in parallel (dev folds only), combine.
@@ -36,7 +37,7 @@ def run(*args: str) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "ablation_macro", "ablation_compact", "ablation_dvol", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
+    if len(argv) != 3 or argv[0] not in ("ablation", "ablation_trend", "ablation_macro", "ablation_compact", "ablation_dvol", "reread_p25_predev", "forward", "recipe", "labels", "ensemble", "levers", "timeframe"):
         print(__doc__)
         return 2
     mode, unit, out = argv[0], argv[1], Path(argv[2])
@@ -82,6 +83,22 @@ def main(argv: list[str]) -> int:
         write_compact_verdict(unit, out, result_name="dvol.json",
                               population="BTC 30-day implied vol (Deribit DVOL: level, 24h log change, 168h z) added to the 20-feature "
                                          "pooled ENTRY recipe vs a seeded N(0,1) placebo of the same width (3 columns)")
+        return 0
+    if mode == "reread_p25_predev":
+        # RQ-20261127-c25a-01: the 26ac-01 lead P25 vs N8 on 2021 (monthly folds, trained only on earlier rows). The fetch STOPS
+        # at 2021-12-31, so no dev-window (2022-01..2025-09) or sealed row is even downloaded.
+        run(vs, "--out", str(streams), "--streams", "klines12,funding,premium", "--start", "2020-07-01", "--end", "2021-12-31", "--workers", "24")
+        run(v2, "build-table", "--streams", str(streams), "--out", str(work))
+        procs = [subprocess.Popen([sys.executable, v2, "arm", "--arm", a, "--predev", "--out", str(work), "--n-jobs", "1"])
+                 for a in ("A", "P25", "N8")]
+        if any(p.wait() for p in procs):
+            return 1
+        run(v2, "combine-predev", "--out", str(work))
+        for f in list(work.glob("predev.json")) + list(work.glob("arm_*.json")):
+            shutil.copy(f, out / f.name)
+        write_compact_verdict(unit, out, result_name="predev.json",
+                              population="P25 (F2c+F5c, 8 columns) vs its 8-column N(0,1) placebo, 2021 monthly folds (disjoint from the "
+                                         "2022-01..2025-09 dev folds that selected it), each fold trained only on rows from 2020-07-01")
         return 0
     if mode == "ablation_compact":
         # COMPACT-DERIVS (RQ-20261127-26ac-01): dev-only fetch (no date after 2025-09-30 is downloaded), the fs01 table

@@ -117,6 +117,16 @@ EXTRA_ARMS = EXTRA_ARMS + GPU_ARMS
 #: matched-n control, so a capped TabICL is compared with the same rows and the cap is not confounded with the learner.
 EXTRA_ARMS = EXTRA_ARMS + ("rawcap",)
 LEARNER_ARMS["rawcap"] = "raw"
+#: fttmc (ML-ENTRY-FINETUNE; plan node P2-MPA1126-d3-ftt-matched-coverage, 2026-11-27): the FT-Transformer at MATCHED COVERAGE.
+#: f7c1-06's ftt took 15,590 decisions vs RAW's 10,810 at the served tau (long -0.060 vs +0.038), so its delta mixed the learner
+#: with a larger, worse decision set (a DESIGN confound, not a learner verdict). fttmc removes it the way lrank does: per side the
+#: FTT (FTT_CFG, unchanged) and a RAW LightGBM are fit on PROPER + CAL-A (the conf slices); on CAL-B, s*_side = the FTT-score
+#: quantile admitting as many rows as RAW's prediction > tau admits there; the served score is ftt - s*_side + tau. No refit on
+#: CAL-B (it would move the score scale). Nothing reads the test window. GPU arm: complete only on cuda to the declared schedule.
+GPU_ARMS = GPU_ARMS + ("fttmc",)
+EXTRA_ARMS = EXTRA_ARMS + ("fttmc",)
+LEARNER_ARMS["fttmc"] = "raw"
+TAU_ARMS = TAU_ARMS + ("fttmc",)
 
 
 # ----------------------------------------------------------------------------------------------- target
@@ -174,6 +184,8 @@ def fit_arm(train: pd.DataFrame, arm: str, sample: int | None = None, tau: float
         return fit_gross(train)
     if arm == "lrank":
         return fit_lrank(train, tau if tau is not None else 0.0)
+    if arm == "fttmc":
+        return fit_gpu_arm(train, "fttmc", tau=tau if tau is not None else 0.0)
     if arm in GPU_ARMS:
         return fit_gpu_arm(train, arm, max_rows=TABICL_MAX_ROWS if arm == "tabicl" else None)
     if arm == "rawcap":
@@ -482,7 +494,40 @@ TABICL_MAX_ROWS: int | None = None
 BASELINE_ARM = "raw"
 
 
+def _coverage_threshold(score: np.ndarray, n_target: int) -> float:
+    """The score s* so that ``score > s*`` admits ~n_target rows (the lrank rule; ties can move the count by a row)."""
+    if n_target <= 0:
+        return float(np.max(score)) + 1.0
+    if n_target >= len(score):
+        return float(np.min(score)) - 1.0
+    return float(np.quantile(score, 1.0 - n_target / len(score)))
+
+
+def fit_fttmc(train: pd.DataFrame, tau: float, cfg: dict | None = None, device: str = "auto") -> dict:
+    """fttmc: FTT per side on PROPER + CAL-A, shifted so its CAL-B coverage matches RAW's count above tau (see FTT_CFG note)."""
+    import lightgbm as lgb
+    proper, cal_a, cal_b = _slices(train)
+    fit_rows = pd.concat([proper, cal_a]).sort_values("ts", kind="mergesort")
+    out: dict = {}
+    info: dict = {"n_rows": [len(fit_rows), len(cal_b)]}
+    for side in ("long", "short"):
+        y = f"y_{side}_raw"
+        ftt, fi = fit_ftt(fit_rows, y, cfg=cfg, device=device)
+        rw = lgb.LGBMRegressor(**E.LGB_PARAMS).fit(fit_rows[E.FEATURES], fit_rows[y])
+        # provenance: predict -- RAW regressed net R on CAL-B (the coverage reference) and the FTT regressed net R there
+        n_raw = int((rw.predict(cal_b[E.FEATURES]) > tau).sum())
+        sc = ftt.predict(cal_b[E.FEATURES])
+        s_star = _coverage_threshold(sc, n_raw)
+        out[side] = _Shifted(ftt, s_star, tau)
+        info[side] = {**fi, "n_cal_b_raw": n_raw, "n_cal_b_ftt_at_tau": int((sc > tau).sum()),
+                      "n_cal_b_matched": int((sc > s_star).sum()), "s_star": s_star}
+    out["_fttmc"] = info
+    return out
+
+
 def fit_gpu_arm(train: pd.DataFrame, arm: str, device: str = "auto", **kw) -> dict:
+    if arm == "fttmc":
+        return fit_fttmc(train, kw.get("tau", 0.0), cfg=kw.get("cfg"), device=device)
     out, info = {}, {}
     for side in ("long", "short"):
         if arm == "ftt":
@@ -501,7 +546,7 @@ def gpu_arm_complete(info: dict | None, arm: str) -> bool:
         i = info.get(side) or {}
         if i.get("status") != "ok" or i.get("device") != "cuda":
             return False
-        if arm == "ftt" and not i.get("schedule_complete"):
+        if arm in ("ftt", "fttmc") and not i.get("schedule_complete"):
             return False
         if arm == "tabicl" and not i.get("full_n"):
             # a capped fit counts ONLY when the run declared that cap (--tabicl-max-rows) and the fit used exactly it
@@ -664,7 +709,7 @@ def replay(tab: pd.DataFrame, tau: float, frozen: dict | None = None, start: str
                 t0 = _time.time()
                 t_fit = None
                 try:
-                    m = fit(train, arm)
+                    m = fit(train, arm, tau=tau) if arm in TAU_ARMS else fit(train, arm)
                     t_fit = _time.time() - t0
                     # provenance: predict -- regressed target of each side (policy() thresholds at tau), not a probability
                     taken = E.policy(win, m["long"].predict(win[E.FEATURES]), m["short"].predict(win[E.FEATURES]), tau)
@@ -950,7 +995,7 @@ def self_test() -> int:
 
     def fit_g(t, arm, **kw):
         if arm in GPU_ARMS:
-            return fit_gpu_arm(t.sample(min(len(t), 4000), random_state=0), arm, device="cpu", cfg=tiny, max_rows=2000)
+            return fit_gpu_arm(t.sample(min(len(t), 4000), random_state=0), arm, device="cpu", cfg=tiny, max_rows=2000, **kw)
         return fit_arm(t, arm, sample=15000, **kw)
 
     if have_torch:
@@ -964,6 +1009,23 @@ def self_test() -> int:
         d7 = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_g, arms=("raw", "ftt"))
         assert d7["gpu_arm_complete"] == {"ftt": False} and d7["verdict"] == "INDETERMINATE", (d7["verdict"], d7["gpu_arm_complete"])
         assert all(w["ftt_info"]["long"]["device"] == "cpu" for w in d7["windows"])
+        # fttmc (P2-MPA1126-d3-ftt-matched-coverage): CAL-B coverage matched to RAW's count above tau per side, the served score
+        # is the shifted FTT, a CPU fit is never complete, and a replay grades INDETERMINATE on CPU
+        mm = fit_g(tab, "fttmc", tau=0.0)
+        for side in ("long", "short"):
+            ii = mm["_fttmc"][side]
+            assert ii["status"] == "ok" and ii["device"] == "cpu" and np.isfinite(ii["s_star"]), ii
+            assert abs(ii["n_cal_b_matched"] - ii["n_cal_b_raw"]) <= 2, ii
+        # provenance: predict -- the shifted FTT score of the long side (a self-test identity check of the shift)
+        assert np.allclose(mm["long"].predict(tab[E.FEATURES].head(40)),
+                           mm["long"].m.predict(tab[E.FEATURES].head(40)) - mm["_fttmc"]["long"]["s_star"])
+        assert not gpu_arm_complete(mm["_fttmc"], "fttmc")
+        ok_c = {s: {**mm["_fttmc"][s], "device": "cuda"} for s in ("long", "short")}
+        assert gpu_arm_complete(ok_c, "fttmc")
+        assert not gpu_arm_complete({**ok_c, "long": {**ok_c["long"], "schedule_complete": False}}, "fttmc")
+        d7m = replay(tab, 0.0, start=start, end=end, step_days=14, fit=fit_g, arms=("raw", "fttmc"))
+        assert d7m["gpu_arm_complete"] == {"fttmc": False} and d7m["verdict"] == "INDETERMINATE", d7m["verdict"]
+        assert all(w["fttmc_info"]["long"]["device"] == "cpu" and "n_cal_b_raw" in w["fttmc_info"]["long"] for w in d7m["windows"])
     # tabicl with NO checkpoint: contained per window as status=unavailable, the verdict INDETERMINATE, never a crash or a FAIL
     import os
     old_dir = os.environ.pop("TABICL_MODEL_DIR", None)
@@ -1060,7 +1122,8 @@ def main(argv=None) -> int:
     ap.add_argument("--rule-id", dest="rule_id", default="")
     ap.add_argument("--registered-at", dest="registered_at", default="")
     ap.add_argument("--arms", default=",".join(ARMS), help="comma list; default = the RQ-20261112-4654-01 arms (raw,resid,placebo). "
-                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY), lrank (RQ-20261118-f7c1-05) are EXTRA arms for their own units; "
+                    "xsdemean (FRONTIER-Q-XSEC-RANK-ENTRY), ens,ridge (FRONTIER-Q-ENS-RIDGE-ENTRY) and conf (FRONTIER-Q-CONFORMAL-ENTRY), lrank (RQ-20261118-f7c1-05), "
+                    "fttmc (FT-Transformer at matched coverage, P2-MPA1126-d3-ftt-matched-coverage) are EXTRA arms for their own units; "
                     "the verdict is on the first extra arm listed")
     a = ap.parse_args(argv)
     global TABICL_MAX_ROWS, BASELINE_ARM

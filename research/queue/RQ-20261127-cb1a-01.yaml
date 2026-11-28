@@ -1,0 +1,135 @@
+# Hand-authored 2026-11-27 by lane ML-PRIMARY (Tier 1 research) on Manager 26a's order (18:17Z item 3 / 18:21Z step 4): a trainer unit.
+# Rule registered before any run. Gates this adds or changes: none.
+id: RQ-20261127-cb1a-01
+title: 'ml_entry CLOSE-AT-BAR-1 vs HOLD on the trades it actually took (live + paper): on every closed ml_entry / ml_entry_v2 package, would closing one bar after
+  entry have beaten holding to the bracket, on the mean AND the worst decile? (trainer, synced journal)'
+status: done
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+iteration:
+  subject: ml-entry
+  subject_kind: ml_model
+  from_result: live_review 2026-11-27 (three ml_entry real-money longs SOL/ADA/XRP reviewed CLOSE ~1 bar after entry)
+  verdict_read: indeterminate
+  attempt: 1
+  due_by: '2026-12-04'
+  diagnosis: 'Manager 26a (2026-11-27 18:17Z, item 3): three ml_entry real-money longs were reviewed CLOSE about one bar after entry, and the per-leg priced tables
+    (live_review_outcomes.py, Stage-0 history) show close dominating hold on both mean and worst R right after entry. If that holds on the LIVE book it is a named
+    cause of the post-11-01 loss (c4e2-01: longs -0.46 R/decision) and an in-trade action class for active management; if it does not, the priced tables overstate
+    the edge of an early close.'
+  search: one fixed policy (close at the first path row one full bar after the entry bar); no grid of bars or thresholds
+  levers:
+  - exit
+  map_entries:
+  - research/levers/ml-entry.yaml
+question: On every closed, non-backtest ml_entry / ml_entry_v2 order package in the synced trade_journal.db (one per package, any account class), is mean (R at one
+  bar after entry - realised R) >= +0.10 R with a day-clustered t >= 2, AND is the 10th percentile of the bar-1 R >= that of the realised R?
+why_this_matters: It tests the live-review CLOSE calls against the trades themselves, not the backtest. PASS makes early close an evidence-backed in-trade action
+  class for ml_entry (advice-only until its own net-of-cost test passes, ARCHITECTURE § Active management); FAIL says the priced tables overstate it on the live book.
+evidence_class:
+  holdout: none
+  claim: diagnosis
+power:
+  expected_n: 80
+  min_detectable_effect: 0.1
+  effect_units: R
+  sd: 0.9
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'ESTIMATE: ~70-90 closed ml_entry packages since go-live (the newest 1000 trades rows held 72 closed ml_entry and 14 ml_entry_v2 rows over 11-16..11-27,
+    several packages duplicated across accounts); se(delta) ~ 0.9/sqrt(80) ~ 0.10 before day clustering, so a true +0.10 is likely INDETERMINATE; stated now. n <
+    40 or coverage < 70% grades INDETERMINATE.'
+  feasibility:
+    source: none
+    accrual_basis: Closed ml_entry packages accrue at ~5-8 per day on the live + paper books.
+decision_rule:
+  id: RULE-RQ20261127-cb1a-01-CLOSE-BAR1
+  registered_at: '2026-11-27'
+  registered_before_run: true
+  baseline: 'HOLD: the same package''s realised exit (the declared bracket / exits as traded).'
+  statistic: 'scripts/research/ml_entry_close_bar1.py: per package delta = open_r on the earliest path row with bars_held >= 2 (one full bar after the entry bar)
+    minus R_hold = sign x (exit - entry) / |entry - stop_loss| on the trade''s own signal-time stop; a path that never reached 2 bars => delta 0; no path rows =>
+    excluded (coverage). Day-clustered se; p10 of each arm.'
+  rule: PASS iff n >= 40 packages AND coverage >= 0.70 AND mean delta >= +0.10 R AND day-clustered t >= 2.0 AND p10(R_bar1) >= p10(R_hold). FAIL iff n >= 40 AND coverage
+    >= 0.70 AND mean delta + 2.0 x se < +0.10. INDETERMINATE otherwise. Thresholds are not changed after any result.
+  pass_action: record on research/levers/ml-entry.yaml and author the net-of-cost replay of an early-close action class on the Stage-0 corpus (the active-management
+    test a class must pass before it leaves advice-only); no live change from this unit.
+  fail_action: record that early close does not dominate on the live book; the live-review priced tables for ml_entry get a fidelity note (their CLOSE calls overstate
+    the edge) on LTR-CORPUS rows.
+  what_it_does_not_do: 'Changes no config, model, bracket or order path. A PASS is not an apply: active-management classes stay advice-only until their own net-of-cost
+    test passes. It reads the live window that motivated it, so it never promotes (OPERATING-PLAN § 2: a number measured only over the grading window never promotes).'
+  min_n: 40
+compute: needs_vm_data
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 200
+  confidence: 0.1
+  basis: 'ESTIMATE: ml_entry real-money closes 11-16..11-24 summed -5.8 R over 26 trades (docs/research/ml-entry-review-2026-11-24.md); this reads one candidate cause.'
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 0.5
+  est_minutes: 5
+  basis: 'ESTIMATE: two SELECTs over the trainer''s synced trade_journal.db (a few hundred packages); the same shape as RQ-20261125-cf48-03 (est 5 min).'
+run:
+  command:
+  - python3
+  - scripts/research/ml_entry_close_bar1.py
+  - --db
+  - data/trade_journal.db
+  - --unit
+  - '{unit}'
+  - --rule-id
+  - RULE-RQ20261127-cb1a-01-CLOSE-BAR1
+  - --registered-at
+  - '2026-11-27'
+  - --where
+  - trainer
+  - --out
+  - '{out_dir}'
+  timeout_minutes: 15
+  inputs:
+    research_unit: RQ-20261127-cb1a-01
+ml_consumer:
+  consumer: ML-ENTRY-LIVE-ADAPTER
+  decision: whether early close becomes an evidence-backed in-trade action class for ml_entry (advice-only until its own net-of-cost test passes); no change from
+    this unit
+  legs:
+  - ml_entry
+  book: money
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: the comparator IS each package's own realised hold; entries are identical
+  not_applicable: matched-random belongs to the Stage-0 replay a PASS authors; this is a paired per-package read of one fixed rule
+practice_precedent: 'T1/T2 (docs/reference/trading-and-model-practice-principles.md): an intervention judged against the declared exit on the same entries, worst-case
+  reported beside the mean.'
+related:
+- RQ-20261125-cf48-03
+- scripts/research/live_review_outcomes.py
+- docs/research/ml-entry-review-2026-11-24.md
+population: closed non-backtest ml_entry / ml_entry_v2 order packages in the trainer's synced trade_journal.db, one per package, any account class
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+last_dispatched_at: '2026-11-27T20:49:49+00:00'
+grading:
+  attested: RULE-RQ20261127-cb1a-01-CLOSE-BAR1
+  auto: true
+  awaiting: more_data
+  decision_rule_id: RULE-RQ20261127-cb1a-01-CLOSE-BAR1
+  evidence:
+  - research/results/RQ-20261127-cb1a-01/46066294478.jsonl
+  graded_at: '2026-11-28'
+  grader: scripts/research/queue_grade.py
+  note: 'indeterminate is the pre-registered under-powered/null outcome: complete, but NOT a pass and
+    NOT a kill'
+  reason: 1 row(s), all measured, all indeterminate
+  rows: 1
+  verdict: indeterminate

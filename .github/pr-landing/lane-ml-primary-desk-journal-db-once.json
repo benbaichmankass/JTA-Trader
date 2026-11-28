@@ -1,0 +1,6 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "why": "Tier-2 runtime perf (Manager 26a 19:11Z: diagnose the claude_desk cost after #29500). The claude_desk builder built a new Database() on every call (~42/tick), and Database() runs create_tables() (~58 CREATE ... IF NOT EXISTS + commit) on construction. MEASURED (tick_cost 19:23Z, 41 ticks since the 18:18Z restart): 1,722 calls, mean 118.7 ms, max 3,090.6 ms (= the 3 s busy_timeout), 4.98 s/tick, the largest builder. Fix: one Database per (journal path, class) for the builder; the consumed-ids query still opens a fresh connection and re-reads on every call, so the no-second-package invariant is unchanged. Not caused by #29500's memo (that read was never memoised; the memo removes config + queue reads only). Tests: the new test fails on the old code (10 constructions vs 1) and passes; 866 tests across every claude_desk suite pass. Gates this adds or changes: none."
+}
