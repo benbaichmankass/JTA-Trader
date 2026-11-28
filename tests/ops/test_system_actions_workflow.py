@@ -55,6 +55,8 @@ EXPECTED_ACTIONS = {
     # Read-only per-process / per-unit CPU over a /proc sample window (LIVE-VM-CPU-SATURATION-1112).
     "vm-cpu-sample": "vm_cpu_sample.sh",
     "vm-latency-probe": "vm_latency_probe.sh",
+    # Read-only snapd refresh evidence for snap-*.mount security-watch alerts (2026-11-28).
+    "snap-units-report": "snap_units_report.sh",
     # Read-only listening-port + host-firewall inventory (security audit 2026-06-28).
     "list-listening-ports": "list_listening_ports.sh",
     "pull-latest-logs": "pull_logs.sh",
