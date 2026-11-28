@@ -67,14 +67,27 @@ last_dispatched_at: '2026-11-28T02:26:06+00:00'
 grading:
   auto: true
   confirm_unit: RQ-20261016-d37f-01
+  confirmation: not_replicated
   decision_rule_id: RULE-EXIT-REFINEMENT-P2-GATE
-  discovery: unconfirmed
+  discovery: not_replicated
   evidence:
-  - research/results/RQ-20260928-019/40803180087.jsonl
-  graded_at: '2026-11-12'
+  - research/results/RQ-20260928-019/46097529890.jsonl
+  - research/results/RQ-20260928-019/46098070890.jsonl
+  graded_at: '2026-11-28'
   grader: scripts/research/queue_grade.py
+  holdout:
+    base_trades: 97
+    boundary: '2025-05-23'
+    confirmation: not_replicated
+    confirmed_cells: []
+    selected_from: 25
+    share_used: 0.2506
+    state: ok
   latest: true
   needs_review: false
-  reason: 1 row(s), all measured, all no_action_warranted
-  rows: 1
-  verdict: no_action_warranted
+  note: 'discovery on the span before 2025-05-23, confirmation on the held-back span in the SAME run:
+    not_replicated. Only `confirmed` may feed a Tier-3 proposal.'
+  reason: 2 row(s), all measured, all pass
+  rows: 2
+  selected_from_cells: 25
+  verdict: pass
