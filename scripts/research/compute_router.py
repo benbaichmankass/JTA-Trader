@@ -278,6 +278,9 @@ def uncovered_fetch_reason(entry: Dict[str, Any]) -> Optional[str]:
         from scripts.research import candle_dataset as cd  # noqa: PLC0415
         if "--non-crypto-source" in [str(c) for c in cmd]:
             return "fetches the network-only --non-crypto-source lane (not in the Kaggle candle dataset)"
+        if "--spot-proxy" in [str(c) for c in cmd]:
+            # RQ-20261128-e4c1-01: Binance SPOT candles over a pinned pre-perp window; never in the (perp) candle dataset.
+            return "fetches Binance spot candles (--spot-proxy), network-only and not in the Kaggle candle dataset"
         if cd.unit_feed(entry) is None:
             return None
         ok, why = cd.covers(entry)
