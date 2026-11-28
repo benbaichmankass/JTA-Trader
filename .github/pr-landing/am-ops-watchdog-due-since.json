@@ -1,0 +1,5 @@
+{
+  "tier": 1,
+  "landing": "self",
+  "why": "Tier-1 research-watchdog fix (manager 28b go, operator incident rule 11-25): due_since() returned None when the newest dispatcher utilization record showed nothing due, so check_backend fell back to minutes-since-last-start and raised a false 'github_runner idle 354 min' with 7 units that had only just become due. It now returns the newest record's own time (work became due after it). scripts/research + one test with a control; no src/, no order path, no strategy/risk config."
+}
