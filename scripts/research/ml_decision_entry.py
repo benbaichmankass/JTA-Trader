@@ -1433,7 +1433,7 @@ def calib_map(pred_slice: np.ndarray, real_slice: np.ndarray, kind: str, rng: np
     return lambda x: means[np.clip(np.searchsorted(edges, x, side="right") - 1, 0, len(edges) - 2)]
 
 
-def calibrated_preds(train: pd.DataFrame, test: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None,
+def calibrated_preds(train: pd.DataFrame, pl: np.ndarray, ps: np.ndarray, n_jobs: int | None,
                      rng: np.random.Generator) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """{arm: (p_long, p_short)} for cal_iso, cal_bin10 and the control random_cal_bin10; the slice never sees a test row."""
     tr = train.sort_values("ts")
@@ -1630,7 +1630,7 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             nl, ns = fit_predict(tr2, te2, FEATURES + TSFM_NOISE, n_jobs)
             tk["tsfm"], tk["placebo_tsfm"] = policy(test, tl, ts_, tau), policy(test, nl, ns, tau)
         if any(x in CAL_ARMS for x in arms):
-            cp = calibrated_preds(train, test, pl, ps, n_jobs, np.random.default_rng(SEED + 1129 + int(a.timestamp()) % 9973))
+            cp = calibrated_preds(train, pl, ps, n_jobs, np.random.default_rng(SEED + 1129 + int(a.timestamp()) % 9973))
             for arm in (x for x in arms if x in CAL_ARMS):
                 tk[arm] = policy(test, *cp[arm], tau)
             if "cal_bin10" in arms:
