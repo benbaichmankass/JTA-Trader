@@ -50,6 +50,13 @@ on:
       head_feats:
         description: "base | rich (rich needs a --context labels run): the feature set the heads job dumps"
         default: "base"
+      heads_only:
+        description: "AM-HEADS-ARTIFACT-REMATERIALISE: run plan + heads only (no labelling, fit, replay or grade). Needs labels_run_id."
+        type: boolean
+        default: false
+      compare_heads_run_id:
+        description: "With labels_run_id: download am-heads-<this id> and compare its file hashes with the heads just fitted (determinism proof); empty = no compare"
+        default: ""
       av_run_id:
         description: "Reuse the am-av-models-<id> artifact of this earlier am-action-value run instead of labelling + fitting again; empty = build here"
         default: ""
@@ -151,6 +158,27 @@ jobs:
         env:
           FEATS: ${{ inputs.head_feats }}
         run: python3 scripts/research/am_heads_fit.py dump --labels labels --corpus . --out heads --rows-per-fold 400000 --feats "$FEATS"
+      - name: Download the heads to compare against (determinism proof)
+        if: ${{ inputs.compare_heads_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: am-heads-${{ inputs.compare_heads_run_id }}
+          path: heads_ref
+          run-id: ${{ inputs.compare_heads_run_id }}
+          github-token: ${{ github.token }}
+      - name: Compare the refit heads with the reference artifact (file list + sha256)
+        if: ${{ inputs.compare_heads_run_id != '' }}
+        run: |
+          set -euo pipefail
+          (cd heads && find . -type f | sort | xargs sha256sum) > refit.sha
+          (cd heads_ref && find . -type f | sort | xargs sha256sum) > ref.sha
+          echo "refit files: $(wc -l < refit.sha)   reference files: $(wc -l < ref.sha)"
+          if diff -u ref.sha refit.sha > heads.diff; then
+            echo "HEADS_IDENTICAL: every file byte-identical to am-heads-${{ inputs.compare_heads_run_id }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "HEADS_DIFFER: $(grep -c '^[-+][0-9a-f]' heads.diff || true) differing lines vs am-heads-${{ inputs.compare_heads_run_id }}" | tee -a "$GITHUB_STEP_SUMMARY"
+            head -60 heads.diff
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: am-heads-${{ github.run_id }}
@@ -159,7 +187,7 @@ jobs:
 
   label:
     needs: [plan, heads]
-    if: ${{ always() && inputs.av_run_id == '' && needs.plan.result == 'success' && (needs.heads.result == 'success' || needs.heads.result == 'skipped') }}
+    if: ${{ always() && !inputs.heads_only && inputs.av_run_id == '' && needs.plan.result == 'success' && (needs.heads.result == 'success' || needs.heads.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
@@ -272,7 +300,7 @@ jobs:
     needs: [plan, heads, fit_merge]
     # runs whenever the plan did: a failed heads / fit stage makes the model download fail here, so reduce fails and the record lands producer_failed
     # ("we looked and it broke") instead of the whole chain skipping silently
-    if: ${{ always() && needs.plan.result == 'success' }}
+    if: ${{ always() && !inputs.heads_only && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
