@@ -1,0 +1,122 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV, Tier 1), at manager 28a's direction ("The ltr-tighten-sl
+# family_review record: write it properly"). The review came out VERDICT A (tested wrong), not C: outside evidence and an in-repo measurement
+# name two conditions none of the five graded tighten units tested (docs/research/ltr-tighten-sl-family-review-2026-11-28.md). This unit is
+# the pre-registered re-test the policy requires for A. Decision rule registered BEFORE any run; no performance output was read for these two
+# triggers (the harness self-test runs on synthetic paths only). Gates this adds or changes: none.
+id: RQ-20261128-f1a5-01
+title: 'ITERATION 5 of ltr-tighten-sl (family-review verdict A): does the -0.5 R tighten, fired only once the trade has DEVELOPED (age: one trading day of bars, one week on 1d) or on a VOLATILITY REGIME SWITCH against the entry (ATR >= 1.5x entry ATR), clear RULE-AM-RISK-ADJUSTED-V1 vs hold and vs a random-time tighten on the Stage-0 corpus?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: Over the committed Stage-0 per-trade corpora (8 legs), does moving the stop to -0.5 R at the first `age` trigger (k+1 >= 24 bars on 1h, 12 on 2h, 6 on 4h, 5 on 1d) or the first `vol_expansion` trigger (ATR(k) >= 1.5 x ATR at the first bar), taken only when that level is >= 1 ATR below the next open, cut maxDD or weekly CVaR5 by >= 15% at <= 0.05 R/trade net of the full cost stack, hold in >= 4 of 6 folds, and beat the same tighten at a random bar?
+why_this_matters: 'Five graded tighten units failed (43b6-05, c8e1-01, d4a9-01/-02/-03): every arm failed R2 and R3, 0/6 folds each. The lever map reads exhausted at the policy granularity (trigger, timing, action_bounds), so a C retirement was drafted, and it did not survive its own protocol. (1) Every trigger tested was a PRICE EVENT (r_milestone, giveback, momentum_flip, structure_break, near_target); none conditioned on trade AGE or on REGIME. (2) RQ-20261125-c7e3-05 (ml-brackets, queued) MEASURED on 108,922 dev trades that a uniformly placed tighten beat HOLD (+7,180 R vs -10,282 R) while first-bar fires cost -16,376 R: the value sits after the trade develops. (3) Lo & Remorov (2017, J. Financial Markets 34) find stops pay in regime-switching markets when volatility rises in the adverse regime, and that tight stops lose to costs; Kaminski & Lo (2014) find stops add value only with serial correlation. Both name conditions our tests did not cover, which makes the verdict A (re-test), never C. Level -0.5 R is the middle of the d4a9 dose (the -0.75 R arm beat the random tighten on mean per-trade R, edge CI +0.013..+0.036, yet failed R2 and R4, which are judged on the risk cut), wide enough to respect the "tight stops lose to costs" finding.'
+iteration:
+  subject: ltr-tighten-sl
+  subject_kind: ltr_class
+  from_result: research/results/RQ-20261122-d4a9-03/45093028931.jsonl
+  verdict_read: fail
+  diagnosis: 'd4a9-01/-02/-03 (stop level -0.75 / -0.5 / 0.0 R at r_milestone), 43b6-05 (BE+0.25 R at r_milestone) and c8e1-01 (four momentum-failure triggers) all failed R2/R3 with 0/6 folds; mean dT vs hold ran from -0.011 R (-0.75 R level, CI -0.025..+0.001) to -0.103 R (giveback). The drawdown never fell (dd_cut -0.3% to -5.5%) because the book''s drawdown is made of full -1 R losers that never reach a +1 R trigger, which a price-event tighten cannot touch. What was never tested: a trigger keyed to trade age (c7e3-05 measured that tighten value appears after the first bars) or to an adverse volatility-regime switch (Lo & Remorov 2017). Both reach trades that never went +1 R, which is where the drawdown is.'
+  search: 'trigger family, two untested conditions: age (fixed bars per timeframe, declared 2026-11-28 before any data read) and vol_expansion (ATR ratio 1.5); action_bounds fixed at -0.5 R; room condition fixed (>= 1 ATR); n_comparisons 2'
+  levers:
+  - trigger
+  map_entries:
+  - research/levers/ltr-tighten-sl.yaml#levers.timing.open_r_at_tighten
+  attempt: 5
+  due_by: '2026-12-05'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee + slippage + funding per window, as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 4076
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.025
+  power: 0.8
+  basis: 'INFERRED: same 4,076-trade book as d4a9 (3,921 priced). age fires on every trade that lives past the declared bar count, so n_fired is expected to exceed r_milestone''s ~1,400; vol_expansion is unknown before the run. The d4a9 per-trade CIs (half-width ~0.013 R at n ~1,400) put a 0.05 R effect well inside detection; V1''s n_floor 39 governs.'
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and committed candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261128-f1a5-01
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (8 legs), at EACH research trigger in {age, vol_expansion} (ltr_trigger_close_s0.RESEARCH_TRIGGERS, first firing per trade, values fixed in the script 2026-11-28): the book with the stop moved at bar j0+1 to -0.5 R, taken only when that level is >= 1 ATR below the next open (else the trade holds) and is a tighten (level > -1 R), replayed to the recorded exit with lro.replay_tighten, vs the HOLD book, against 200 matched random-time tightens to the same level rule on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5 cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books at min_control_beat_frac 0.975 (Bonferroni over 2 trigger arms), plus L1: a pass must keep r_cost <= 0.05 R/trade after dropping the leg with the largest favourable contribution. Two pre-registered candidates (n_comparisons 2). PASS: at least one tighten_be@<trigger> clears R1-R4 and L1 (a discovery; SCREEN pass, graduation_eligible false until BOOK-SIM-REAL-SIZER; a Tier-3 proposal input, never an apply; the two conditions were chosen from other data (c7e3-05 and the outside literature), not from this corpus, and a confirming out-of-time unit still follows before any proposal). FAIL: every candidate fails a read necessary clause (R1, R2 or R3) or is beaten by its random control (R4); then the regime and age conditions are counted tested in the family review''s lever map and not_tested list. INDETERMINATE: under the n floor, never fired, carried by one leg (L1 fails), or no trade could be priced. Fixed now; not changed after a run.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); same harness and design as RQ-20261122-d4a9-01/-02/-03 and RQ-20261122-c8e1-01.'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: Estimate from RQ-20261122-c8e1-01 (same harness, 4 triggers x 200 random books, ran inside its 120-minute budget); the first run replaces it.
+  why_runner: Replays committed corpora and candles on CPU; the corpus builder runs the committed harness on committed candle CSVs (no fetch, no secrets).
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- LTR-CLASS-GRADE
+- BOOK-SIM-REAL-SIZER
+- scripts/research/ltr_action_trigger_s0.py
+- docs/research/ltr-tighten-sl-family-review-2026-11-28.md
+- RQ-20261122-d4a9-01
+- RQ-20261122-c8e1-01
+- RQ-20261125-c7e3-05
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; the tightened stop is replayed on committed candles from the action bar and fills at its level (a gap fills at the open), which flatters stop-based actions
+- triggers are evaluated on bar closes, live on telemetry passes
+- 8 legs; trend_donchian_eth_prop is 1,182 of 4,076 trades, so L1 is a pass condition
+- the age bar counts are a design choice (one trading day intraday, one week on 1d) fixed before any data read, not tuned; a FAIL closes these values, not every age
+- the c7e3-05 finding is on the AM counterfactual corpus with tighten_half, a different population and action; it motivated the condition and is not evidence for this arm
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+ml_consumer:
+  not_applicable: 'Not an ML unit: a rule-based live-review action class graded offline.'
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tighten_be@age(level=-0.5)
+    - tighten_be@vol_expansion(level=-0.5)
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - tighten_be
+  - --triggers
+  - age,vol_expansion
+  - --be-plus-r=-0.5
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.975'
+  - --n-comparisons
+  - '2'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-f1a5-01
+  timeout_minutes: 120
