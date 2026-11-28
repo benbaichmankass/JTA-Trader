@@ -61,6 +61,66 @@ register, never in a session's head or a trigger prompt: a new manager inherits 
 
 **Cadence.** The "Manager lane check-in" routine (`17 */3 * * *`) runs the loop every 3 h; a lane's wake runs it at once. State lives on disk (the checklist, `PIPELINE.jsonl`), never in a session's head. Guard: `manager-pacing-guard` (`scripts/ci/check_manager_pacing.py`).
 
+### Ranking the queue: ML first, never ML only (operator, 2026-11-28, binding) — gates this adds or changes: none
+
+Operator, 2026-11-28 ~10:10Z, verbatim: *"ML gets priority. Always. That's the most important thing, is figuring out how to trade better.
+Unless there's a live money bug, which obviously takes more priority. But there are other work items that need to be in the queue ... I
+don't want to get to the end of the day and realize that we didn't do anything because we've only been dealing with infra ... It still
+gets priority, but that doesn't mean that infra and everything [waits], because otherwise that stuff just never happens, right? It's always
+going to wait for a reset ... we can't push ML because the infra isn't built yet ... or we have to stop doing ML work to deal with the VM
+being at capacity ... that's your job as the manager ... keeping that work queue moving and prioritize correctly."* And: *"if that's not
+like explicitly clear in the manager skills, then you need to make sure that it is."*
+
+How the manager orders work, whatever the lane count:
+1. **A live-money bug pre-empts everything.** Next comes **ML research and testing**, which always gets the larger share of the lanes running.
+2. **ML first is not ML only.** Every lane has ONE ranked queue that mixes ML, infra, ops and backlog. A throttle ("one lane", "low usage")
+   cuts how MUCH runs, never WHICH KINDS run: in a throttled week, infra and ops items still get slots between ML items. A day that ships
+   only ML, or only infra, while the other class has runnable rows is a ranking failure.
+3. **Infra that ML is waiting on ranks as ML.** A build that blocks a research unit or decision step (a dataset, harness, fill model or
+   measurement tool) ranks with the work it unblocks. So does a capacity fix whose absence would stop ML (a saturated VM, an idle backend).
+4. **Never gate a queued item on another lane going idle.** "Do X when the ML lane is waiting" is not a schedule. Give X a position in a
+   queue, on the lane whose class owns it (§ "Assistant managers" classes), and a due date.
+5. **Re-rank at every check-in** against what is actually blocking ML today, and state the per-lane queue in the REPORT line. Ask the
+   operator only when two orderings are genuinely a preference; never ask permission to schedule infra.
+6. **Trigger and handover prompts.** "Builds while ML waits" (11-26 throttle wording) means builds share the lane by rank, not that they
+   run only when ML is idle. Correct any prompt that says otherwise when you meet it.
+7. **Throttle vs bare minimum: two different modes.** Operator, 2026-11-28 ~10:20Z, verbatim: *"Sometimes really, that's what I mean by
+   throttle only, but that's only when we're like really at the bare minimum. We need to keep the research queue going. At this point,
+   we're not there yet, and we do need to still keep pushing the general work plan forward, not just the bare minimum of keeping things
+   running until the reset."*
+   - **Throttle** = the STEADY stage of rule 8: fewer lanes, but the FULL mixed plan advances by rank (rules 1-5).
+   - **Bare minimum** = the RESERVE stage of rule 8: the one ML lane keeps the research queue moving, plus live-money incidents and the
+     standing reviews. Nothing else runs.
+   - The manager names the mode from the `spend_meter.py --capacity` reading, states it in the REPORT line, and never drops into bare
+     minimum just because a lane count is low. If the operator's word is ambiguous, read it as throttle, not bare minimum.
+8. **Capacity modes are defined by headroom per day, not by feel** (operator, 2026-11-28 ~10:30Z, verbatim: *"we should be working with
+   more specific definitions, which should probably define something along the lines of usage left per day until the reset ... less than
+   5% per day left ... is when we should be getting down to like the bare minimum ... usually we end up throttling down around, say, 85%,
+   and then push a little bit more to say 90% ... we do still want to make sure that we're not being too conservative and that we're
+   getting to 99 or 100% by the reset ... look at the history of the workflows and the usage updates and what's worked best ... come up
+   with some data-driven rules"*). Headroom per day = `(100 - weekly %) / days to reset`, from the latest reading.
+
+   Operator, 2026-11-28 ~10:45Z, verbatim: *"The full throttle down and the bare minimum are the same thing. That is one stage. We have
+   the surge at the beginning of the week, which is kicking off the work queue, kicking off the reviews, doing the planning, and getting
+   the big work items done. Then once we finish that, or once we hit 40%, we go to medium throttle, which is when we start limiting
+   ourselves to between 1 and 3 lanes, depending on how much capacity we have left per day. And only once we get down to 85 or 90%, which
+   again, we're talking about 5% per day, that's the rule ... if we hit, say, 70% on Saturday and the reset is on Wednesday, then ... we
+   need to start doing a throttle down to the bare minimum ... the rules for those are we surge until 40% maximum, if not less. The full
+   throttle runs until we have 5% headroom left per day ... And then after we hit that, we go down to the bare minimum, which is just
+   keeping things operational and keeping the research queue flowing."*
+
+   THREE stages. Headroom per day = `(100 - weekly %) / days to reset`.
+
+   | stage | enters when | what runs |
+   |---|---|---|
+   | **SURGE** | the weekly reset | kick off the work queue and the reviews, do the planning, get the big work items done; as wide as the work allows. Ends when that work is done or at **40% weekly at the latest**; shorter is better, so more lanes stay available afterwards |
+   | **STEADY** (medium throttle) | the surge ends (done, or 40%) | **1-3 lanes**, sized by headroom per day, running the FULL mixed plan by rank (rules 1-5) |
+   | **RESERVE** (bare minimum) | headroom per day **below 5%**, whatever the date (usually 85-90% near the end of the week, but e.g. 70% on a Saturday before a Wednesday reset already qualifies) | keep things operational and keep the research queue flowing: one ML lane, live-money incidents, standing reviews; nothing else |
+
+   The aim is to finish the week at 99-100%, not to stop early: under-spending is a failure, as overshooting is. The thresholds above are
+   provisional until row `CAPACITY-MODES-CALIBRATE` fits them to the reading history (`docs/claude/work/USAGE-READINGS.jsonl`) and lane
+   history, and makes `spend_meter.py --capacity` print the mode. The calibrated numbers then replace this table.
+
 ### Toolbox
 
 | step | exact command |
