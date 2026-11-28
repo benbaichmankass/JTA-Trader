@@ -134,7 +134,12 @@ How the manager orders work, whatever the lane count:
      run-out warnings cluster below about 9 pp/day. Across the 59 readings that have a same-week reading 3-30 h earlier, the warning is
      recorded on 18 of 38 readings whose headroom is below 0.9 x the trailing burn against 5 of 21 at or above it: a modest separation.
    - **SURGE is below 40% weekly** and ends sooner when the big work is done (the manager's call; the meter cannot see it).
-   - Refit these numbers as soon as lane-hours per day are recorded beside the readings (the meter prints its own basis each time).
+   - **Operator ruling on the RESERVE line, ~10:35Z 2026-11-28, verbatim:** *"The 5%/day line (Recommended)"*. RESERVE starts strictly below
+     5 pp/day; exactly 5.0 is still STEADY (the meter's self-test pins it).
+   - **Record the lanes beside every reading from now on:** `spend_meter.py --record ... --lanes <n running now> --lane-hours-24h <lane-hours in
+     the 24 h before>` (both optional; absent means not recorded, never 0). One more week of readings with these fields refits the 12 / 8 pp/day
+     lane cut points; until then they stay PROVISIONAL.
+   - The meter prints its own basis each time.
 
 ### Toolbox
 

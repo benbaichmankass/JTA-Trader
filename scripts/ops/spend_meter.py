@@ -85,7 +85,7 @@ already uses for its MCP-only inputs.** This module accepts an OPTIONAL
 Self-test:  python3 scripts/ops/spend_meter.py --self-test
 Check:      python3 scripts/ops/spend_meter.py --check
 Record:     python3 scripts/ops/spend_meter.py --record --window weekly \\
-                --percent 68 --read-at 2026-09-21T14:00:00Z --recorded-by operator
+                --percent 68 --read-at 2026-09-21T14:00:00Z --recorded-by operator [--lanes 2 --lane-hours-24h 41.5]
 Section 5:  python3 scripts/ops/spend_meter.py --section-5 [--session-costs FILE]
 Capacity:   python3 scripts/ops/spend_meter.py --capacity [--reset-at ISO] [--pp-per-lane-hour X]
                 [--live-open N]
@@ -195,6 +195,17 @@ def validate_reading(rec: dict, *, now: datetime | None = None) -> dict:
 
     if "note" in rec and rec["note"] is not None and not isinstance(rec["note"], str):
         raise MeterError("note: must be a string when present")
+
+    # Lane count / lane-hours beside the reading (CAPACITY-MODES-CALIBRATE data fix, 2026-11-28): the 67 readings of
+    # 2026-10-18..11-27 carried none, so the lane thresholds could not be fitted. Optional; absent = "not recorded",
+    # never 0.
+    for key in ("lanes", "lane_hours_24h"):
+        if key in rec and rec[key] is not None:
+            v = rec[key]
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
+                raise MeterError(f"{key}: must be a non-negative number when present, got {v!r}")
+            if key == "lanes" and int(v) != v:
+                raise MeterError("lanes: must be a whole number when present")
 
     return rec
 
@@ -1082,6 +1093,17 @@ def _selftest() -> int:
           live_open=7)["reserve_source"] == "bound")
     check("unreadable log -> None, not 0", review_runs_per_day(Path("/nonexistent/x")) is None)
     check("render says KEEP N LANES", "KEEP " in "\n".join(render_capacity(cmr)))
+    print("— lanes beside the reading (calibration data) —")
+    ok_rec = base(window="weekly", percent=50.0, read_at="2026-10-18T08:40:00Z")
+    check("a reading with lanes and lane_hours_24h is accepted",
+          validate_reading(dict(ok_rec, lanes=2, lane_hours_24h=41.5))["lanes"] == 2)
+    check("a reading without them is still accepted (not recorded is never 0)", "lanes" not in validate_reading(dict(ok_rec)))
+    for bad in (dict(lanes=-1), dict(lanes=1.5), dict(lanes=True), dict(lane_hours_24h=-2.0), dict(lane_hours_24h="x")):
+        try:
+            validate_reading(dict(ok_rec, **bad))
+            check(f"refused: {bad}", False)
+        except MeterError:
+            check(f"refused: {bad}", True)
     print("— capacity stage: surge / steady (1-3 lanes) / reserve —")
     check("headroom under 5 pp/day is RESERVE whatever the date or %", capacity_stage(20.0, 4.9, 1.0)["stage"] == "reserve"
           and capacity_stage(20.0, 4.9, 1.0)["lanes_cap"] == 1)
@@ -1192,6 +1214,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--read-at", help="ISO timestamp for WHEN the operator read Settings > Usage")
     ap.add_argument("--recorded-by", default="operator")
     ap.add_argument("--note", default=None)
+    ap.add_argument("--lanes", type=int, default=None,
+                    help="with --record: lanes running when the reading was taken (calibration data; absent = not recorded)")
+    ap.add_argument("--lane-hours-24h", type=float, default=None,
+                    help="with --record: lane-hours run in the 24 h before the reading (calibration data)")
 
     ap.add_argument("--section-5", action="store_true", help="render brief section 5")
     ap.add_argument("--capacity", action="store_true",
@@ -1231,6 +1257,8 @@ def main(argv: list[str] | None = None) -> int:
                 "read_at": args.read_at,
                 "recorded_by": args.recorded_by,
                 "note": args.note,
+                **({"lanes": args.lanes} if args.lanes is not None else {}),
+                **({"lane_hours_24h": args.lane_hours_24h} if args.lane_hours_24h is not None else {}),
             }, store)
         except MeterError as exc:
             print(f"spend_meter: REFUSED — {exc}", file=sys.stderr)
