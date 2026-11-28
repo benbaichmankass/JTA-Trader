@@ -1093,7 +1093,9 @@ def _selftest() -> int:
     check("exactly 5 pp/day is STEADY, not RESERVE", capacity_stage(80.0, 5.0, None)["stage"] == "steady")
     check("burn unknown is named, never read as 0", "burn unknown" in capacity_stage(60.0, 9.0, None)["pace"])
     check("far above the burn flags underspending", capacity_stage(60.0, 20.0, 8.0).get("underspending") is True)
-    rd = lambda pct, ts: base(window="weekly", percent=pct, read_at=ts, note="reset Wed 2026-10-21 18:00Z")
+    def rd(pct, ts):
+        return base(window="weekly", percent=pct, read_at=ts, note="reset Wed 2026-10-21 18:00Z")
+
     r_new, r_old = rd(73.0, "2026-10-18T08:40:00Z"), rd(55.0, "2026-10-18T05:39:00Z")
     check("trailing burn = pp between the readings over their span in days",
           abs(trailing_burn_pp_day([r_old, r_new], r_new) - 18 / (3.0167 / 24)) < 0.5)
