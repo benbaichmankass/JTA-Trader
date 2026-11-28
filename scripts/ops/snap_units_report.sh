@@ -94,7 +94,8 @@ echo
 echo "--- is lxd used here? (read-only) ---"
 t systemctl is-active snap.lxd.daemon.service snap.lxd.activate.service
 t systemctl list-units --all --no-pager 'snap.lxd*'
-if command -v lxc >/dev/null 2>&1; then t lxc list --format csv; else echo "(lxc not on PATH)"; fi
+# NOT `lxc list`: it socket-activates a stopped lxd daemon (2026-11-28 run touched /var/snap/lxd/common/lxd at 10:17). The
+# daemon state above (is-active / list-units) and the dirs below are the read-only evidence of use.
 t ls -ld /var/snap/lxd/common/lxd/containers /var/snap/lxd/common/lxd/virtual-machines
 echo -n "snap.lxd.* mounts of the lxd snap: "; t findmnt -rn -o TARGET,SOURCE | grep -c '/snap/lxd' || true
 
