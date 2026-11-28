@@ -37,16 +37,16 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional, Sequence
 
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(REPO), str(REPO / "scripts" / "research")]
-import desk_maker_fills as DMF  # noqa: E402
+import desk_maker_fills as DMF
 
 KAPPAS = (0.0, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, float("inf"))
 LOOKBACK_S = 3600.0
@@ -82,7 +82,7 @@ def parse_sized(raw_csv: bytes) -> SizedPrints:
                        np.asarray(sz, dtype=float)[o], n_rpi)
 
 
-def unit_volume(p: SizedPrints, T: float, long: bool, lookback_s: float = LOOKBACK_S) -> Optional[float]:
+def unit_volume(p: SizedPrints, T: float, long: bool, lookback_s: float = LOOKBACK_S) -> float | None:
     """u: median per-minute size of the aggressor side that hits a resting order (Sell for a buy limit) over the lookback; None if empty."""
     a = int(np.searchsorted(p.ts, T - lookback_s, side="right"))
     b = int(np.searchsorted(p.ts, T, side="right"))
@@ -98,7 +98,7 @@ def unit_volume(p: SizedPrints, T: float, long: bool, lookback_s: float = LOOKBA
     return float(np.median(nz)) if len(nz) else None
 
 
-def first_fill_q(p: SizedPrints, t0: float, t1: float, limit: float, tick: float, long: bool, queue_ahead: float) -> Optional[float]:
+def first_fill_q(p: SizedPrints, t0: float, t1: float, limit: float, tick: float, long: bool, queue_ahead: float) -> float | None:
     """Time of the first print in (t0, t1] that fills a resting limit given ``queue_ahead`` (same units as print size); None if none does.
 
     queue_ahead = 0 -> optimistic (first print at the level fills); inf -> strict (only a trade-through fills)."""
@@ -216,7 +216,7 @@ def run(a) -> int:
                 tick = DMF.infer_tick(p.price)
                 r = decision_rows_q(p, sym, day, tick, windows=windows)
                 rows.extend(r)
-                cells[key] = {"state": "measured", "n_prints": int(len(p.ts)), "tick": tick, "rows": len(r)}
+                cells[key] = {"state": "measured", "n_prints": len(p.ts), "tick": tick, "rows": len(r)}
             except Exception as exc:  # noqa: BLE001 -- recorded per cell, never dropped  # allow-silent: written to the cell as producer_failed and counted in cells_failed
                 cells[key] = {"state": "producer_failed", "error": str(exc)[:300]}
             finally:
