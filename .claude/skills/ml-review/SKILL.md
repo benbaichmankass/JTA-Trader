@@ -186,6 +186,8 @@ is always noise / expected variation), run the discriminating test, and record w
   - Cite the gate packet (`ready`, `blocking[]`) **and** the C3 decision value.
   - A head that changes no order is a wiring-or-retire question, not a promotion question.
   - Never `promote` on `ready: false`.
+  - A demotion is proposed only when a passed alternative takes the slot; otherwise a weak read is a replacement-search
+    input (operator 2026-11-28; OPERATING-PLAN § 2 "Each decision keeps its tested incumbent until a better one passes").
   - Promotion into `advisory` (from `candidate` or `shadow` — there is no shadow step) and every demotion are Tier-3,
     data-backed per canonical § "Data-backed Tier-2/3 decisions" when a committed evidence record settles them.
     Live-row gates (`shadow_soak`, `live_parity`, `labels_accruing`, `drift_clean`, live AUC/brier) are reported, never
@@ -270,8 +272,8 @@ Priority `high` only if an advisory head is decaying on labelled data.
   Canonical text and verbatim quote: [`drift-remediation` § "A live model is the baseline"](../drift-remediation/SKILL.md).
 - **Three stage labels, no ladder** — `candidate` · `shadow` · `advisory`. Normalize legacy names with
   `ml.manifest.canonical_stage` and report the canonical stage. A model whose committed offline evidence clears the gates goes
-  `candidate → advisory` directly; `shadow` holds only a model DEMOTED from `advisory`, soaking to keep generating data while it is
-  iterated on. Operator, chat 2026-11-12, verbatim: *"you're going to retire the step from the ML. Everything goes through the new
+  `candidate → advisory` directly; `shadow` holds only a model REPLACED in `advisory` by a passed challenger (never demoted into an empty slot, operator
+  2026-11-28), soaking to keep generating data while it is iterated on. Operator, chat 2026-11-12, verbatim: *"you're going to retire the step from the ML. Everything goes through the new
   flow, back testing, live money, and then if it gets demoted, it soaks to still generate data while we iterate on it. That is the
   only acceptable flow. There is nothing in between proving edge on back testing and real money. Absolutely no steps."*
 - **Refine, do not abandon** ([`docs/claude/model-refinement-lifecycle.md`](../../../docs/claude/model-refinement-lifecycle.md)):
