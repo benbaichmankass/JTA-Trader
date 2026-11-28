@@ -361,18 +361,64 @@ _HOLDOUT_INPUTS = {
 #: window input (9 such units on 2026-11-25, not_before 2027-01).
 _HOLDOUT_COMMANDS: Dict[str, Dict[str, Any]] = {
     "scripts/research/exit_lever_ablation.py": {
-        "workflows": ("research-script-run.yml",),
+        "workflows": ("research-script-run.yml", ""),    # "": the compute router picks at dispatch (2026-11-28)
         "grade_from": "sweep", "grade_to": "sweep_holdout", "holdout_frac": "0.25",
     },
 }
 
 
-def holdout_command(run: Dict[str, Any], child_id: str) -> Optional[Tuple[List[str], str]]:
+#: STAGE-0 holdout (RESEARCH-NO-WAIT-FOR-DATA, operator 2026-11-28 ~09:55Z, relayed by Manager 2026-11-28b): an
+#: `exit_lever_ablation.py --grade stage0` PASS (a config-exact twin: nothing is selected on the data) is confirmed by
+#: re-running the SAME command NOW with the harness's own one-run split `--stage0-holdout-start <boundary>`
+#: (discovery = the same stage0 clauses on [start, boundary); holdout = trades entered on/after it, >= 25, net R > 0).
+#: boundary = the PASS run's end minus `holdout_frac` of its span (span = [--start or end - --days, end]). Before this
+#: map every such PASS opened a forward-wait unit `blocked` ~60 days out (72 units on 2026-11-28, not_before 2027-01).
+#: A workflow left unset is the compute router's choice at dispatch (dispatch_queue injects it), so "" is accepted.
+_STAGE0_HOLDOUT: Dict[str, Dict[str, Any]] = {
+    "scripts/research/exit_lever_ablation.py": {
+        "workflows": ("research-script-run.yml", ""), "holdout_frac": "0.25", "default_days": 740,
+    },
+}
+
+
+def _stage0_holdout_command(run: Dict[str, Any], cmd: List[Any], child_id: str,
+                            after: Optional[datetime]) -> Optional[Tuple[List[str], str]]:
+    spec = _STAGE0_HOLDOUT.get(str(cmd[1]))
+    if spec is None or after is None or str(run.get("workflow") or "") not in spec["workflows"]:
+        return None
+    i = cmd.index("--grade")
+    if i + 1 >= len(cmd) or str(cmd[i + 1]) != "stage0":
+        return None
+    if any(str(t).startswith(("--holdout-", "--stage0-")) or str(t) == "--research-unit" for t in cmd):
+        return None    # the run already declares its own holdout / unit stamp: a session's design, not ours
+
+    def flag(name: str) -> Optional[str]:
+        return str(cmd[cmd.index(name) + 1]) if name in cmd and cmd.index(name) + 1 < len(cmd) else None
+    start = _parse_ts(flag("--start")) if flag("--start") else None
+    if start is None:
+        try:
+            days = int(flag("--days") or spec["default_days"])
+        except ValueError:
+            return None
+        start = after - timedelta(days=days)
+    if not start < after:
+        return None
+    frac = spec["holdout_frac"]
+    boundary = (after - (after - start) * float(frac)).date().isoformat()
+    return [str(t) for t in cmd] + ["--stage0-holdout-start", boundary, "--research-unit", child_id], frac
+
+
+def holdout_command(run: Dict[str, Any], child_id: str,
+                    after: Optional[datetime] = None) -> Optional[Tuple[List[str], str]]:
     """(the command re-pointed at its holdout grade, holdout_frac) when the unit's run can hold out
-    (`_HOLDOUT_COMMANDS`), else None. Pure; the command keeps every flag of the PASS run."""
+    (`_HOLDOUT_COMMANDS`, or `_STAGE0_HOLDOUT` given the PASS run's end `after`), else None. Pure; the
+    command keeps every flag of the PASS run."""
     cmd = run.get("command")
     if not isinstance(cmd, list) or len(cmd) < 2 or "--grade" not in cmd:
         return None
+    s0 = _stage0_holdout_command(run, cmd, child_id, after)
+    if s0 is not None:
+        return s0
     spec = _HOLDOUT_COMMANDS.get(str(cmd[1]))
     if spec is None or str(run.get("workflow") or "") not in spec["workflows"]:
         return None
@@ -400,11 +446,23 @@ _POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a
            "discovery; it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal")
 
 
+#: Template families whose PASS is a PRODUCER-HEALTH check, not an edge claim: a fresh-window confirmation of such a
+#: PASS confirms nothing, so none is opened and an unfired one is retired (RESEARCH-NO-WAIT-FOR-DATA, operator
+#: 2026-11-28, relayed by Manager 2026-11-28b: 5 leg-corpus-s1 confirmations sat blocked to 2027-01).
+_NO_CONFIRM_FAMILIES: Dict[str, str] = {
+    "leg-corpus-s1": ("a producer-health check (coverage / fidelity / cost completeness of the family's money-leg "
+                      "corpora; the template's own power basis: 'no edge claim is made'), so a fresh-window "
+                      "confirmation confirms nothing"),
+}
+
+
 def template_cell(unit: Dict[str, Any]) -> bool:
     """A cell generated from a research/templates family. Programme nodes (`programme:*`) are not:
-    their DAG registers its own confirmation nodes (P3's best-of-3 -> one fresh window)."""
+    their DAG registers its own confirmation nodes (P3's best-of-3 -> one fresh window). Nor are
+    `_NO_CONFIRM_FAMILIES` (producer-health checks: nothing to confirm)."""
     gen = unit.get("generated")
-    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    return isinstance(gen, dict) and not fam.startswith("programme:") and fam not in _NO_CONFIRM_FAMILIES
 
 
 def confirmation_of(unit: Dict[str, Any]) -> Optional[str]:
@@ -481,7 +539,7 @@ def confirmation_unit(unit: Dict[str, Any], g: Dict[str, Any], child_id: str,
     wf = str(run.get("workflow") or "")
     if wf in _HOLDOUT_INPUTS:
         return _holdout_rerun_unit(unit, g, child_id, run, header)
-    hc = holdout_command(run, child_id)
+    hc = holdout_command(run, child_id, after)
     if hc is not None:
         return _holdout_rerun_unit(unit, g, child_id, {**run, "command": hc[0]}, header, frac=hc[1])
     window_fn = _FRESH_WINDOW_INPUTS.get(wf)
@@ -841,7 +899,7 @@ def _rearm_forward_wait(root: Path, unit: Dict[str, Any], text: str,
     pg = parent.get("grading") if isinstance(parent.get("grading"), dict) else {}
     if not isinstance(parent, dict) or pg.get("verdict") != "pass":
         return None
-    if holdout_command(_swap_id(parent.get("run") or {}, pid, cid), cid) is None:
+    if holdout_command(_swap_id(parent.get("run") or {}, pid, cid), cid, _parse_ts(parent.get("last_dispatched_at"))) is None:
         return None
     g = {"cells_swept": pg.get("selected_from_cells"), "passing_cells": pg.get("passing_cells") or []}
     child = confirmation_unit(parent, g, cid)
@@ -857,12 +915,39 @@ def _rearm_forward_wait(root: Path, unit: Dict[str, Any], text: str,
     return new, (cid, child)
 
 
+def _retire_no_confirm(root: Path, unit: Dict[str, Any], text: str, graded_at: str) -> Optional[str]:
+    """An unfired forward-wait confirmation whose parent is a `_NO_CONFIRM_FAMILIES` cell: retired (new text), else None."""
+    pid = confirmation_of(unit)
+    if not pid or confirmation_mode(unit) != "forward_wait" or unit.get("status") not in ("queued", "blocked") \
+            or unit.get("last_dispatched_at"):
+        return None
+    ppath = root / QUEUE / f"{pid}.yaml"
+    if not ppath.is_file():
+        return None
+    yaml = _yaml()
+    try:
+        parent = yaml.safe_load(ppath.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None
+    gen = parent.get("generated") if isinstance(parent, dict) else None
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    if fam not in _NO_CONFIRM_FAMILIES:
+        return None
+    new = apply_text(text, {"status": "retired", "reset_stamp": False, "grading": {
+        "auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py", "verdict": None,
+        "note": (f"retired, never dispatched: {pid} is a {fam} cell, {_NO_CONFIRM_FAMILIES[fam]} "
+                 "(RESEARCH-NO-WAIT-FOR-DATA, operator 2026-11-28)")}})
+    return new if new != text else None
+
+
 def grade_unit_full(root: Path, unit_id: str, text: str,
                     graded_at: str) -> Optional[Tuple[str, Optional[Tuple[str, str]]]]:
     """(new unit text, (child id, child text) | None), or None when nothing is to be written. The
     child is the fresh-window confirmation unit a template-cell PASS opens (`confirmation_unit`)."""
     yaml = _yaml()
     unit = yaml.safe_load(text)
+    if isinstance(unit, dict) and (nc := _retire_no_confirm(root, unit, text, graded_at)):
+        return nc, None
     if isinstance(unit, dict) and (re_ := _rearm_forward_wait(root, unit, text, graded_at)):
         return re_
     if isinstance(unit, dict) and (sup := _superseded_by(root, unit)):
