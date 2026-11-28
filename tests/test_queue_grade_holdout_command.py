@@ -153,3 +153,51 @@ def test_verify_reproduces_the_rearm(tmp_path):
     p.write_text(p.read_text().replace("sweep_holdout", "sweep"))
     _git(r, "commit", "-q", "-am", "tamper")
     assert any("does not reproduce" in x for x in qg.verify(r, "main"))
+
+
+# ---- STAGE-0 holdout (RESEARCH-NO-WAIT-FOR-DATA, 2026-11-28) ----------------------------------------------------
+S0 = ["python3", "scripts/research/exit_lever_ablation.py", "--leg", "leg_x", "--arm", "A=", "--days", "1830",
+      "--grade", "stage0", "--baseline", "A", "--delta-r", "0", "--folds", "4", "--fold-majority", "3",
+      "--n-floor", "39", "--out", "{out_dir}"]
+
+
+def test_stage0_pass_gets_a_one_run_holdout_boundary_from_its_own_span():
+    from datetime import datetime, timezone
+    after = datetime(2026, 11, 26, 14, 11, tzinfo=timezone.utc)
+    for wf in (None, "research-script-run.yml"):
+        hc, frac = qg.holdout_command({"workflow": wf, "command": S0}, "RQ-C", after)
+        assert frac == "0.25" and hc[hc.index("--grade") + 1] == "stage0"           # same grade, same rule
+        assert hc[-4:] == ["--stage0-holdout-start", "2025-08-26", "--research-unit", "RQ-C"]   # end - 25% of 1830 d
+        assert hc[:len(S0)] == S0                                                     # every PASS flag kept
+    # no end known -> no boundary (forward-wait path keeps its old behaviour)
+    assert qg.holdout_command({"workflow": None, "command": S0}, "RQ-C") is None
+    # a run that already declares its own split, a trainer run, or another script is left alone
+    own = S0 + ["--stage0-holdout-start", "2025-01-01"]
+    assert qg.holdout_command({"workflow": None, "command": own}, "RQ-C", after) is None
+    assert qg.holdout_command({"workflow": "research-script-run-trainer.yml", "command": S0}, "RQ-C", after) is None
+    other = list(S0)
+    other[1] = "scripts/research/leg_corpus_s1.py"
+    assert qg.holdout_command({"workflow": None, "command": other}, "RQ-C", after) is None
+    # an explicit --start sets the span
+    st = S0 + ["--start", "2022-11-26"]
+    hc, _ = qg.holdout_command({"workflow": None, "command": st}, "RQ-C", after)
+    assert hc[hc.index("--stage0-holdout-start") + 1] == "2025-11-26"
+
+
+def test_blocked_stage0_forward_wait_is_rearmed(tmp_path):
+    r = _repo(tmp_path)
+    ptext = _parent(cmd=S0, verdict="pass")
+    (r / "research" / "queue" / f"{PID}.yaml").write_text(ptext)
+    u = yaml.safe_load(ptext)
+    saved = dict(qg._STAGE0_HOLDOUT)
+    qg._STAGE0_HOLDOUT.clear()
+    try:
+        fid = qg.confirm_unit_id(PID, "2030-01-01")
+        ftext = qg.confirmation_unit(u, {"cells_swept": 1}, fid)
+    finally:
+        qg._STAGE0_HOLDOUT.update(saved)
+    assert "status: blocked" in ftext
+    new, (cid, ctext) = qg.grade_unit_full(r, fid, ftext, "2030-02-01")
+    cu = yaml.safe_load(ctext)
+    assert yaml.safe_load(new)["status"] == "retired" and cu["confirmation"]["mode"] == "holdout_rerun"
+    assert "--stage0-holdout-start" in cu["run"]["command"] and "not_before" not in cu
