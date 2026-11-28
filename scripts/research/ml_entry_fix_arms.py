@@ -123,7 +123,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import ml_decision_entry as M  # noqa: E402
 
-ARMS = ["h8_retrain", "clf_target", "long_mute", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
+ARMS = ["h8_retrain", "clf_target", "long_mute", "long_trend_gate", "bar_split", "regime_heads", "book_feats", "sl_wide", "ev_calib", "ev_cap3", "sl_wide_retrain", "ev_calib_recent", "sl_xwide_retrain", "sl_xwide_h48_retrain", "rsw_xwide_h48", "volsl_retrain", "rsz_xwide", "lim_xwide", "lim_paired", "lim_fallback", "lim_choose", "fund_feats", "oi_feats"]
 CALIB_BLOCKS = 4                      # time blocks of the training window for the cross-fitted calibration map
 EV_TAU = 0.0                          # ev_calib / ev_cap3 trade iff the CALIBRATED expected net R (full cost stack) > 0
 CAP_K = 3
@@ -638,6 +638,16 @@ def run_arm(tab: pd.DataFrame, arm: str, alt: pd.DataFrame | None = None, n_jobs
             tk["short_only"] = seq.run(np.full(len(pl), -np.inf), ps)
             tk["long_tau_020"] = seq.run(np.where(pl > 0.20, pl, -np.inf), ps)
             info |= {"mute_rate_of_long_candidates": rate, "rows_in_mute_cell": float(mute.mean())}
+        elif arm == "long_trend_gate":
+            # P2-PR1125-D3 (registered 2026-11-28, RQ-20261128-d3e1-01): a LONG is taken only when the symbol's own 4h
+            # trend is aligned (ret_72 > 0: the trailing ~18 four-hour bars are up); shorts unchanged. Control: the same
+            # share of long candidates muted at random (as long_mute), so the arm must beat muting that many arbitrary longs.
+            mute = ~(test.ret_72.to_numpy() > 0)
+            cand = (pl >= ps) & (pl > TAU)
+            rate = float(mute[cand].mean()) if cand.any() else 0.0
+            tk["arm"] = seq.run(np.where(mute, -np.inf, pl), ps)
+            tk["control"] = pd.concat([seq.run(np.where(rng.random(len(pl)) < rate, -np.inf, pl), ps) for _ in range(DRAWS)], ignore_index=True)
+            info |= {"mute_rate_of_long_candidates": rate, "rows_trend_not_aligned": float(mute.mean())}
         elif arm == "regime_heads":
             up_tr = train.btc_ret168.to_numpy() >= 0
             up_te = test.btc_ret168.to_numpy() >= 0
