@@ -1,0 +1,19 @@
+Fetching ETHUSDT 240 candles 2017-05-04 -> 2020-06-30 (source=binance_vision) …
+Binance-vision fetch failed: HTTPSConnectionPool(host='data.binance.vision', port=443): Max retries exceeded with url: /data/spot/monthly/klines/ETHUSDT/4h/ETHUSDT-4h-2017-05.zip (Caused by NameResolutionError("HTTPSConnection(host='data.binance.vision', port=443): Failed to resolve 'data.binance.vision' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1673, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/tmp/repo/scripts/research/exit_lever_ablation.py", line 1254, in main
+    feed = fetch_spot_proxy_csv(a.leg, {**base, "timeframe": native_tf}, start=a.start, end=a.end, csv=Path(csv))
+  File "/tmp/repo/scripts/research/ml_overlay_noninferior.py", line 148, in fetch_spot_proxy_csv
+    subprocess.run([sys.executable, str(REPO / "scripts/ops/fetch_backtest_candles.py"), "--symbol", feed["ticker"],
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    "--interval", feed["interval"], "--start-date", t0, "--end-date", t1, "--output", str(csv),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    "--source", "binance_vision", "--vision-market", "spot"], check=True, cwd=str(REPO))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/repo/scripts/ops/fetch_backtest_candles.py', '--symbol', 'ETHUSDT', '--interval', '240', '--start-date', '2017-05-04', '--end-date', '2020-06-30', '--output', '/tmp/exit_lever_ablation_zlgt_e47/trend_donchian_eth_4h__data.csv', '--source', 'binance_vision', '--vision-market', 'spot']' returned non-zero exit status 1.
