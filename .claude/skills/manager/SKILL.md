@@ -93,6 +93,22 @@ How the manager orders work, whatever the lane count:
      the one ML lane keeps the research queue moving, plus live-money incidents and the standing reviews. Nothing else runs.
    - The manager names the mode from the `spend_meter.py --capacity` reading, states it in the REPORT line, and never drops into bare
      minimum just because a lane count is low. If the operator's word is ambiguous, read it as throttle, not bare minimum.
+8. **Capacity modes are defined by headroom per day, not by feel** (operator, 2026-11-28 ~10:30Z, verbatim: *"we should be working with
+   more specific definitions, which should probably define something along the lines of usage left per day until the reset ... less than
+   5% per day left ... is when we should be getting down to like the bare minimum ... usually we end up throttling down around, say, 85%,
+   and then push a little bit more to say 90% ... we do still want to make sure that we're not being too conservative and that we're
+   getting to 99 or 100% by the reset ... look at the history of the workflows and the usage updates and what's worked best ... come up
+   with some data-driven rules"*). Headroom per day = `(100 - weekly %) / days to reset`, from the latest reading.
+
+   | mode | when (PROVISIONAL, from the operator's numbers) | what runs |
+   |---|---|---|
+   | **full / surge** | headroom per day comfortably above the measured burn of the planned lanes | the whole plan, as many lanes as the work allows |
+   | **throttle** | weekly % roughly 85-90 with 2-3 days left, or headroom per day near the planned burn | fewer lanes, the FULL mixed plan by rank (rules 1-5) |
+   | **bare minimum** | headroom per day below ~5% | one ML lane keeps the research queue moving, plus live-money incidents and standing reviews |
+
+   The aim is to finish the week at 99-100%, not to stop early: under-spending is a failure, as overshooting is. The thresholds above are
+   provisional until row `CAPACITY-MODES-CALIBRATE` fits them to the reading history (`docs/claude/work/USAGE-READINGS.jsonl`) and lane
+   history, and makes `spend_meter.py --capacity` print the mode. The calibrated numbers then replace this table.
 
 ### Toolbox
 
