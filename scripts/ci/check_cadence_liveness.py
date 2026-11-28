@@ -538,13 +538,52 @@ REGISTERED_AFTER_BASELINE: frozenset[str] = frozenset({
     # 11-25..11-27 (ModuleNotFoundError yaml, fixed #29689) its receipt went 86 h stale and this guard stayed green,
     # because a baselined stale receipt fails only under --strict. Named 2026-11-28 (Manager 2026-11-28b).
     "live-bar.yml",
+    # CADENCE-BASELINE-POST-0922-ENTRIES (2026-11-28, Manager 2026-11-28b): the remaining graded entries registered after
+    # the baseline and never named, dated from git history (first commit adding each key, read at eaf124643e, the
+    # 2026-11-19 tree, where history is not squashed). Every one graded FRESH or schedule_unknown when named.
+    "grade-closed-trades.yml",          # 2026-09-29 680265816b
+    "live-replay-parity.yml",           # 2026-10-03 264cafc9ab
+    "compute-util-telemetry.yml",       # 2026-10-13 e33155b795
+    "research-slo.yml",                 # 2026-10-16 c52edaa690
+    "news-gdelt-panel.yml",             # 2026-10-16 ec13bc3e2b
+    "sp500-membership-refresh.yml",     # 2026-11-02 d339f3a377 (monthly cron: schedule_unknown, never stale here)
+    "kaggle-backups.yml",               # 2026-11-05 59e8ced631
+    "feature-impact.yml",               # 2026-11-11 7268869662
+    "afford-snapshot.yml",              # after 2026-11-19 (absent from the 11-19 tree)
+    "earnings-calendar-snapshot.yml",   # after 2026-11-19
+    "macro-cot-snapshot.yml",           # after 2026-11-19
 })
 
-BASELINE_2026_09_22: dict[str, str] = {
-    name: (NO_RECEIPT if spec["receipt"] is None else FRESH)
-    for name, spec in CADENCE_REGISTRY.items()
-    if name not in REGISTERED_AFTER_BASELINE
-}
+#: ⚠️ THE ROOT FIX (CADENCE-BASELINE-POST-0922-ENTRIES, 2026-11-28). Naming late entries by hand failed twice (E57 on
+#: 09-24, live-bar.yml on 11-28) because the baseline was DERIVED from the live registry, so every new registration
+#: joined it by default. The baseline is now the FROZEN day-one population: the 38 names CADENCE_REGISTRY held at
+#: 308b75b6c4 (2026-09-22, the commit that introduced this module; the docstring's "38 in-repo cadence declarations").
+#: A name outside this set is NEVER baselined, whether or not anyone remembers to list it above, so a newly registered
+#: receipt is freshness-graded from its first day. The set may only shrink (an entry that leaves the tree fails as
+#: BASELINE STALE, one that recovers a receipt fails as BASELINE RECOVERED).
+DAY_ONE_2026_09_22: frozenset[str] = frozenset({
+    "alpaca-settlement-soak-watch.yml", "broker-bracket-reconcile.yml", "diag-relay-sweep.yml", "doc-audit-weekly.yml",
+    "econ-calendar-produce.yml", "econ-event-study.yml", "health-snapshot.yml", "ict-db-integrity.timer",
+    "ict-devnull-guard.timer", "ict-exchange-fills-pull.timer", "ict-exchange-funding-pull.timer", "ict-git-sync.timer",
+    "ict-health-snapshot.timer", "ict-heartbeat.timer", "ict-hourly-snapshot.timer", "ict-ib-executions-pull.timer",
+    "ict-ib-gateway-reset.timer", "ict-ib-gateway-watchdog.timer", "ict-insights-generator-strategies.timer",
+    "ict-insights-generator.timer", "ict-liveness-watchdog.timer", "ict-mes-ibkr-pull.timer",
+    "ict-research-results-gate.timer", "ict-shadow-log-rotate.timer", "ict-trainer-git-sync.timer",
+    "ict-web-api-watchdog.timer", "ict-work-digest.timer", "macro-producer-liveness.yml", "macro-valuation-snapshot.yml",
+    "main-tree-watch.yml", "oci-inventory.yml", "purge-artifacts.yml", "replay-pregate-nightly.yml",
+    "research-backtest-augment.yml", "research-queue-dispatch.yml", "stale-automation-sweep.yml",
+    "strategy-review-packets.yml", "trainer-capture-watch.yml",
+})
+
+
+def derive_baseline(registry: dict) -> dict[str, str]:
+    """The baselined debt: day-one names only, minus anything named post-baseline. Never derived from the registry alone."""
+    return {name: (NO_RECEIPT if spec["receipt"] is None else FRESH)
+            for name, spec in registry.items()
+            if name in DAY_ONE_2026_09_22 and name not in REGISTERED_AFTER_BASELINE}
+
+
+BASELINE_2026_09_22: dict[str, str] = derive_baseline(CADENCE_REGISTRY)
 
 
 def _git(root: Path, *args: str) -> tuple[int, str]:
@@ -892,6 +931,15 @@ def _self_test() -> int:
         check("P16 a baseline entry that RECOVERED a receipt FAILS, so the list "
               "cannot rot", any("BASELINE RECOVERED" in x for x in findings(r3)),
               str(findings(r3)))
+        # P17 (CADENCE-BASELINE-POST-0922-ENTRIES): a registration the day-one set does not hold is NEVER baselined,
+        # even when nobody names it in REGISTERED_AFTER_BASELINE -- the hole E57 and live-bar.yml both fell through.
+        fresh_reg = {"brand-new-feed.yml": {"receipt": "docs/x.json", "why": "x"},
+                     "trainer-capture-watch.yml": {"receipt": "docs/y.json", "why": "y"}}
+        b = derive_baseline(fresh_reg)
+        check("P17 a registration absent from the frozen day-one set is never baselined",
+              "brand-new-feed.yml" not in b and b.get("trainer-capture-watch.yml") == FRESH, str(b))
+        check("P18 the frozen day-one set is the 38 names of 308b75b6c4", len(DAY_ONE_2026_09_22) == 38,
+              str(len(DAY_ONE_2026_09_22)))
     finally:
         CADENCE_REGISTRY.clear()
         CADENCE_REGISTRY.update(saved_reg)
