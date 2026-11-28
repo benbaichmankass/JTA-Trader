@@ -1749,3 +1749,56 @@ proposed:
       The evidence record for both rules, the parity read, the CUSUM's declared false-alarm rate, and for every
       use an immediate operator notification (what changed, evidence, merged/deployed/observed, the one-line
       revert) plus the brief's section 1.
+
+  - id: MD-PROMOTE-S1-S2-LIVE-BAR-AMEND
+    amends: MD-PROMOTE-S1-S2
+    grants: add_bar_field_live_bar_path_to_MD-PROMOTE-S1-S2
+    direction: add_risk
+    proposed_by: session_01AFoLuJoiTZn52nfU7Q2ynt
+    proposed_at: '2026-11-19'
+    source: >-
+      Lane AM-OPS-5 (GENERAL), row LIVE-BAR-LADDER-FEED part 2 / PI-20261117-LSFHBH4A-0007, dispatched by Manager
+      Session 2026-11-15a (session_01AFoLuHbhd9wFuGJfWRqyoV). The doctrine is the operator's: OPERATING-PLAN § 2
+      "Live-performance promotion path" (operator 2026-11-17 popups, verbatim: "20+ trades, clearly positive
+      (Recommended)", "Live wins + fix backtest (Recommended)", "Both strategies and MLs (Recommended)"; item 5 asks
+      for a live-bar check that "feeds the ladder automatically"). What is NOT the operator's yet is reading that path
+      as a FIRE under this grant, whose text reads "on Stage-0 evidence". Widening a grant is the operator's act, so it
+      is proposed here and the resolver code (scripts/ops/mandate_resolver.py § LIVE-BAR PATH) stays inert until then.
+    recurrence: >-
+      The daily live-bar feed (comms/live_bar/latest.json) re-grades every leg each day. A leg that clears it while its
+      Stage-0 record fails or is missing would otherwise need its own Tier-3 decision each time it clears.
+    fires_when: >-
+      Add `live_bar_path: true` to MD-PROMOTE-S1-S2's `bar:`. Then, for S1 -> S2 only, when the Stage-0 record path
+      answers REFUSE or NEEDS_DATA (anything except a decisive R-AFFORD refusal), the resolver reads the leg's row in
+      comms/live_bar/latest.json. If that feed is <= 26 h old and the row passes (n >= 20 closed trades with R on the
+      declared signal-time risk, sum R > 0, one-sided 80% lower bound > 0, re-checked from the row's own numbers)
+      AND its venue-measured-pnl subset passes the same bar at n >= 20 (manager design requirement 2026-11-19),
+      the clause passes in place of the record clauses (record, B1, the bar's n / expectancy / folds, holdout, Stage-1
+      cost fidelity). Affordability (against the committed record's setups; no record = NEEDS_DATA) and the 25% cap
+      still bind, and so does everything in MD-PROMOTE-S1-S2's `never:`.
+    bar:
+      live_bar_path: true
+      live_bar_feed: comms/live_bar/latest.json
+      live_bar_max_age_h: 26
+      live_bar_measured_subset_required: true
+    cap:
+      basis: unchanged -- MD-PROMOTE-S1-S2's 25% auto-promoted declared-risk cap
+      max_auto_share: 0.25
+    never: >-
+      Never carries a decisive affordability refusal. Never on a stale or unreadable feed. Never without a
+      fidelity-check research unit drafted in the SAME PR as the roster edit (conflict rule: live wins, and the unit
+      finds why the backtest disagreed). Never a swap by itself: the swap rule (a demo-floor variant taking a real-money
+      variant's slot) demotes the incumbent, which stays an MD-DEMOTE-S2-S1 decision; same-symbol-allocation-guard
+      still checks the roster PR. Never carries `autoland`. Never a new execution gate.
+    evidence_required: >-
+      The resolver's result (evidence.live_bar with n, sum R, lcb80, pooled accounts, measured-subset verdict and
+      feed age; evidence.stage0_path naming what Stage 0 answered), the drafted fidelity unit, and an immediate
+      operator notification plus the brief's section 1.
+    measured_at_proposal: >-
+      2026-11-19 ~01:50Z (system clock), resolver on main (report-only): trend_donchian (n45, lcb80 +0.535, measured subset pass),
+      trend_donchian_ada_4h (n34, +0.253) and trend_donchian_avax_4h (n29, +0.063) pass the declared-R bar and REFUSE
+      on Stage 0 at R-B1-C4; trend_donchian_sol_4h (n27, +0.154) stops at R-AFFORD because the bybit_2 snapshot is
+      12.2 d old (row AFFORD-SNAPSHOT-REFRESH). Venue-measured subsets: trend_donchian pass at n29 (lcb80 +0.035);
+      ada_4h n12, avax_4h n8, sol_4h n11, all n_short. So granting this today would make ONLY trend_donchian
+      FIRE-eligible, subject to affordability on a fresh snapshot. trend_donchian_ada_4h would also meet
+      same-symbol-allocation-guard against ada_pullback_2h (the swap question) once its measured subset reaches 20.
