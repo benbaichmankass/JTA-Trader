@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -70,6 +71,10 @@ PACKETS = "comms/live_review/packets"
 #: main's record of rows-branch rows dispositioned as killed (LTR-PACKET-ECHO item 4)
 KILLED = "comms/live_review/killed_rows.json"
 ALERT_MARKER = "ltr-mirror-refused"
+#: LTR-MIRROR-SKIPPED-ROWS-1128: how a correction row declares the earlier review it replaces (the review schema has
+#: no field for it, and the rows branch is append-only, so a pushed row cannot gain one). Measured case:
+#: LR-20261127T1815Z-pkg-76ee0d87ff404bcb, context_flags "correction: supersedes LR-20261127T1806Z-pkg-... (hold)".
+SUPERSEDES_FLAG = re.compile(r"\bsupersedes (LR-\d{8}T\d{4}Z-[A-Za-z0-9_-]+)")
 
 
 def git_show(ref: str, path: str, cwd: Path = ROOT) -> Optional[bytes]:
@@ -167,6 +172,37 @@ def _branch_lines(read_rows: Callable[[str], Optional[bytes]], row_files: List[s
     return legacy + [(r["review_id"], json.dumps(r, separators=(",", ":"), ensure_ascii=False)) for r in extra]
 
 
+def declared_supersedes(row: dict) -> Optional[str]:
+    """The review_id this row declares it supersedes: ONE ``supersedes <review_id>`` in ``context_flags`` (the review
+    schema has no top-level ``supersedes``; that field is the outcomes chain's). None when none, or more than one."""
+    found = {m for f in (row.get("context_flags") or []) if isinstance(f, str) for m in SUPERSEDES_FLAG.findall(f)}
+    return found.pop() if len(found) == 1 else None
+
+
+def superseded_packet(row: dict, rid: str, read_rows: Callable[[str], Optional[bytes]],
+                      branch_rows: Dict[str, dict]) -> Tuple[Optional[bytes], str]:
+    """LTR-MIRROR-SKIPPED-ROWS-1128: the packet a row with NO packet under its own id may stand on, or (None, why).
+
+    Accepted ONLY when (a) the row declares it supersedes an earlier review_id on the SAME order package (that
+    review's row is on the rows branch with the same ``order_package_id``), (b) that review's packet is on the
+    branch, and (c) the row's ``packet_sha`` equals that packet's canonical sha (``packet_blob_problems``, the same
+    check main's CI applies, so handoff / packet_defects rules hold too). Everything else stays a hard skip."""
+    sup = declared_supersedes(row)
+    if not sup or sup == rid:
+        return None, "declares no earlier review it supersedes"
+    prior = branch_rows.get(sup)
+    if not isinstance(prior, dict) or not row.get("order_package_id") \
+            or prior.get("order_package_id") != row.get("order_package_id"):
+        return None, f"declared superseded review {sup} is not a row on the rows branch for the same order package"
+    blob = read_rows(f"{PACKETS}/{sup}.json")
+    if blob is None:
+        return None, f"superseded review {sup} has no packet on the rows branch either"
+    bad = rules.packet_blob_problems(row, blob)
+    if bad:
+        return None, f"packet_sha does not equal superseded review {sup}'s packet: " + "; ".join(bad)
+    return blob, sup
+
+
 def dispatchable(row: object) -> bool:
     """True when the VM's dispatcher could have applied this row: a dispatchable route, mechanics match, an action
     that changes the trade. Mirrors live_review_dispatch's route/mechanics clauses (read, not imported: the mirror
@@ -201,6 +237,15 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
     side_text = side_path.read_text() if side_path.exists() else ""
     side_have = {rid for rid, _ in _ids(side_text) if rid}
     side_lines: List[str] = []
+    branch_rows: Dict[str, dict] = {}
+    for brid, bline in branch:
+        try:
+            parsed = json.loads(bline)
+        except ValueError:
+            continue
+        if brid and isinstance(parsed, dict):
+            branch_rows[brid] = parsed
+    inherited: List[Dict[str, str]] = []
     for rid, line in branch:
         if not rid:
             skipped.append({"review_id": None, "why": "row without a review_id / not JSON"})
@@ -225,6 +270,14 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
         why = None
         for p in cited(line):
             blob = read_rows(p)
+            if blob is None and p == f"{PACKETS}/{rid}.json":
+                blob, sup = superseded_packet(row, rid, read_rows, branch_rows)
+                if blob is None:
+                    why = f"cited file {p} missing on the rows branch ({sup})"
+                    break
+                # main's record needs packets/<review_id>.json (check_live_review_records.packet_problems): the
+                # superseded review's packet, sha-verified above, lands under this row's id byte for byte.
+                inherited.append({"review_id": rid, "packet_from": sup})
             if blob is None:
                 why = f"cited file {p} missing on the rows branch"
                 break
@@ -260,7 +313,8 @@ def mirror(root: Path, read_rows: Callable[[str], Optional[bytes]],
         side_path.write_text(side_text + sep + "\n".join(side_lines) + "\n")
     return {"state": "ok", "mirrored": len(new_lines), "files": sorted(files),
             "review_ids": [json.loads(x)["review_id"] for x in new_lines], "skipped": skipped, "killed": killed_seen,
-            "refused_dispatchable": [json.loads(x)["review_id"] for x in side_lines]}
+            "refused_dispatchable": [json.loads(x)["review_id"] for x in side_lines],
+            "packet_inherited": [x for x in inherited if x["review_id"] in {json.loads(y)["review_id"] for y in new_lines}]}
 
 
 def load_killed(root: Path) -> Dict[str, str]:
