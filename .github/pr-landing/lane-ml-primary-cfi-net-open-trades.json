@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "landing": "hold",
+  "hold_reason": "tier_2_3_needs_approval",
+  "hold_text": "CFI-NET-OPEN-TRADES (manager 28a dispatch). Alert-only runtime monitor (src/runtime/closed_flat_invariant.py); no order path, no flatten, no config. (1) A venue position on the same account+symbol+side as a recently closed trade is netted against OPEN DB trades; only an uncovered residual alerts. MEASURED false alerts: ib_paper MGC +35 = open #8655 (alert named closed #8634); bybit_1 ETHUSDT -16.1 = open #8641 (alert named closed #8642). (2) The window anchors on the trade's own close time (t.closed_at, then notes.closed_at) before order_packages.updated_at: #8634 closed 15:54Z but its package updated_at read 21:55:42Z, which put it back in the window. Both degrade to the previous behaviour when the columns are absent. Tests: both measured cases, a real residual still alerts, an opposite-side open trade does not cover, the window anchor; 3 of the new tests fail on main and pass here; 51 closed_flat tests pass. Deploy: pull-and-deploy restarts the trader. Revert: git revert.",
+  "why": "Stop false 'closed in DB but open on venue' alerts when an open DB trade owns the venue position, while still alerting on a real residual."
+}
