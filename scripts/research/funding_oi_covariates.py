@@ -28,9 +28,9 @@ import csv
 import json
 import math
 import sys
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Sequence
 
 import numpy as np
 
@@ -96,7 +96,8 @@ def covariates(bar_open: Sequence[float], bar_seconds: int, stream, lag_seconds:
 
 
 def build(a) -> int:
-    bars = [_to_epoch(r["ts"]) for r in csv.DictReader(open(a.bars, newline=""))]
+    with open(a.bars, newline="") as bf:
+        bars = [_to_epoch(r["ts"]) for r in csv.DictReader(bf)]
     p = Path(a.funding_oi)
     if not p.exists():
         rows = [{"ts": datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **{c: None for c in COLUMNS[1:]}} for t in bars]
@@ -117,8 +118,8 @@ def build(a) -> int:
 def _self_test() -> None:
     H = 3600
     base = 1_700_000_000 - (1_700_000_000 % H)
-    f = [(base + 8 * H * k, 1e-4 * (k % 5 - 2)) for k in range(0, 30)]          # settlements every 8h
-    o = [(base + H * k, 1000.0 + 10 * k) for k in range(0, 240)]                  # hourly OI
+    f = [(base + 8 * H * k, 1e-4 * (k % 5 - 2)) for k in range(30)]          # settlements every 8h
+    o = [(base + H * k, 1000.0 + 10 * k) for k in range(240)]                  # hourly OI
     def stream(fp, op):
         return (np.array([x[0] for x in fp], float), np.array([x[1] for x in fp], float), np.array([x[0] for x in op], float), np.array([x[1] for x in op], float))
     bars = [base + H * k for k in range(60, 200)]

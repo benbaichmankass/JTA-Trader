@@ -5,7 +5,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / "scripts" / "research"), str(REPO)]
 
-import funding_oi_covariates as C  # noqa: E402
+import funding_oi_covariates as C
 
 
 def test_self_test():
