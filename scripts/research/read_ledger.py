@@ -203,6 +203,31 @@ def build(root: Path = ROOT, ledger: Path | None = None) -> dict:
     }
 
 
+def read_block(unit_id: str, measurement, root: Path = ROOT, ledger_doc: dict | None = None) -> dict:
+    """The block a NEW result row carries (stamped by script_run.derive_record into measurement.json): its subject and
+    window, the graded reads of that subject that already overlap the window, and the M13 bar THIS read faces
+    (``holdout_lock.bar_for(prior + 1)``). Report-only; ``read_state`` is window_unstated / measured, never a silent 0."""
+    units = _units(root)
+    text = units.get(unit_id)
+    subj = resolve_subject(measurement, text)
+    s, e, basis = resolve_window(measurement, text)
+    out = {"subject": subj, "window": [s, e], "window_basis": basis, "decisive": False}
+    if s is None:
+        return out | {"read_state": "window_unstated", "prior_reads": None, "bar": None}
+    doc = ledger_doc if ledger_doc is not None else build(root)
+    # prior reads = DISTINCT other units that read a window overlapping this one (this unit's own re-asks excluded)
+    seen: set[str] = set()
+    for sub in doc.get("subjects") or []:
+        if sub.get("subject") != subj:
+            continue
+        for w in sub.get("windows") or []:
+            if holdout_lock._overlap(w["start"], w["end"], s, e):
+                seen |= {u for u in w.get("units") or [] if u != unit_id}
+    prior = len(seen)
+    return out | {"read_state": "measured", "prior_reads": prior, "prior_units": sorted(seen)[:50],
+                  "bar": holdout_lock.bar_for(prior + 1)}
+
+
 def self_test() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -230,6 +255,9 @@ def self_test() -> None:
         assert s["window_unstated"]["units"] == ["U3"], s["window_unstated"]            # counted, not dropped
         assert out["claimed_families"][0]["n_tries"] == 1
         assert json.dumps(build(root, led), sort_keys=True) == json.dumps(out, sort_keys=True)   # T2 determinism
+        b = read_block("U3", {"data_start": "2025-11-01", "data_end": "2025-12-01"}, root, out)
+        assert b["read_state"] == "measured" and b["prior_reads"] == 2 and b["bar"] == holdout_lock.bar_for(3), b
+        assert read_block("U3", {}, root, out)["read_state"] == "window_unstated"
     print("read-ledger self-test OK")
 
 
