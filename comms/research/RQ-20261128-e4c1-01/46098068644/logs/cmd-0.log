@@ -1,0 +1,45 @@
+Fetching ETHUSDT 240 candles 2017-05-04 -> 2020-06-30 (source=binance_vision) …
+  vision monthly 2017-08: 89 bars (89 kept)
+  vision monthly 2017-09: 179 bars (268 kept)
+  vision monthly 2017-10: 186 bars (454 kept)
+  vision monthly 2017-11: 180 bars (634 kept)
+  vision monthly 2017-12: 186 bars (820 kept)
+  vision monthly 2018-01: 186 bars (1006 kept)
+  vision monthly 2018-02: 161 bars (1167 kept)
+  vision monthly 2018-03: 186 bars (1353 kept)
+  vision monthly 2018-04: 180 bars (1533 kept)
+  vision monthly 2018-05: 186 bars (1719 kept)
+  vision monthly 2018-06: 178 bars (1897 kept)
+  vision monthly 2018-07: 185 bars (2082 kept)
+  vision monthly 2018-08: 186 bars (2268 kept)
+  vision monthly 2018-09: 180 bars (2448 kept)
+  vision monthly 2018-10: 186 bars (2634 kept)
+  vision monthly 2018-11: 179 bars (2813 kept)
+  vision monthly 2018-12: 186 bars (2999 kept)
+  vision monthly 2019-01: 186 bars (3185 kept)
+  vision monthly 2019-02: 168 bars (3353 kept)
+  vision monthly 2019-03: 185 bars (3538 kept)
+  vision monthly 2019-04: 180 bars (3718 kept)
+  vision monthly 2019-05: 184 bars (3902 kept)
+  vision monthly 2019-06: 180 bars (4082 kept)
+  vision monthly 2019-07: 186 bars (4268 kept)
+  vision monthly 2019-08: 185 bars (4453 kept)
+  vision monthly 2019-09: 180 bars (4633 kept)
+  vision monthly 2019-10: 186 bars (4819 kept)
+  vision monthly 2019-11: 180 bars (4999 kept)
+  vision monthly 2019-12: 186 bars (5185 kept)
+  vision monthly 2020-01: 186 bars (5371 kept)
+  vision monthly 2020-02: 173 bars (5544 kept)
+  vision monthly 2020-03: 186 bars (5730 kept)
+  vision monthly 2020-04: 180 bars (5910 kept)
+  vision monthly 2020-05: 186 bars (6096 kept)
+  vision monthly 2020-06: 180 bars (6276 kept)
+  vision monthly 2020-07: 186 bars (6276 kept)
+Wrote 6276 rows (2017-08-17 -> 2020-06-30) to /tmp/exit_lever_ablation_y0acdc59/trend_donchian_eth_4h__data.csv
+[B] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.5 --trail-mult 6.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261128-e4c1-01/46098068644/arms/B__trades.jsonl --json comms/research/RQ-20261128-e4c1-01/46098068644/arms/B__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 4.0 --tp-revision donchian_measured_move --tp-revision-width-mult 0.5 --start 2017-09-01 --end 2020-06-30 23:59
+[S10T4] /opt/hostedtoolcache/Python/3.11.18/x64/bin/python3 /home/runner/work/JTA-Trader/JTA-Trader/scripts/backtest_trend.py --donchian 20 --data <data> --symbol ETHUSDT --resample 4h --atr-period 14 --atr-stop-mult 1.0 --trail-mult 6.0 --min-confidence 0.6 --fee-bps-roundtrip 11.0 --emit-trades comms/research/RQ-20261128-e4c1-01/46098068644/arms/S10T4__trades.jsonl --json comms/research/RQ-20261128-e4c1-01/46098068644/arms/S10T4__bt.json --trail-decay-stall-bars 10 --trail-decay-tight-mult 1.8 --tp-cap-pct 0.099 --tp-r 4.0 --tp-revision donchian_measured_move --tp-revision-width-mult 0.5 --start 2017-09-01 --end 2020-06-30 23:59
+{
+ "verdict": "pass",
+ "label": "candidate_beats_incumbent",
+ "why": "paired dR mean 0.2581 (t=2.28, n=132) and the candidate out-earns in 4/4 folds: the candidate (S10T4) clears the registered bar"
+}
