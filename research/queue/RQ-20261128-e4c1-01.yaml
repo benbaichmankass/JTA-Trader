@@ -2,7 +2,7 @@ id: RQ-20261128-e4c1-01
 title: 'D6 ceiling CONFIRMATION on trend_donchian_eth_4h: does the selected cell S10T4 (atr_stop_mult 1.0, tp_r 4.0) out-earn the declared bracket (SL 1.5 ATR / TP
   4.0R) per trade on the DISJOINT pre-window 2017-09-01..2020-06-30, net of the full cost stack, under the paired grade RQ-20261127-d6c2-01 registered before its
   run?'
-status: queued
+status: done
 cadence: once
 theme: live_strategy
 priority: 1
@@ -152,3 +152,15 @@ related:
 - RQ-20261127-d6c2-02
 - RQ-20261122-b18a-03
 last_dispatched_at: '2026-11-28T02:26:06+00:00'
+grading:
+  attested: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
+  auto: true
+  decision_rule_id: RULE-RQ20261128-e4c1-01-D6-ETH-CONFIRM
+  evidence:
+  - research/results/RQ-20261128-e4c1-01/46096172095.jsonl
+  - research/results/RQ-20261128-e4c1-01/46098068644.jsonl
+  graded_at: '2026-11-28'
+  grader: scripts/research/queue_grade.py
+  reason: 1 row(s), all measured, all pass (1 earlier producer_failed / re-graded wiring_only row(s) superseded)
+  rows: 1
+  verdict: pass
