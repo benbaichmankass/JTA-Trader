@@ -84,6 +84,15 @@ How the manager orders work, whatever the lane count:
    operator only when two orderings are genuinely a preference; never ask permission to schedule infra.
 6. **Trigger and handover prompts.** "Builds while ML waits" (11-26 throttle wording) means builds share the lane by rank, not that they
    run only when ML is idle. Correct any prompt that says otherwise when you meet it.
+7. **Throttle vs bare minimum: two different modes.** Operator, 2026-11-28 ~10:20Z, verbatim: *"Sometimes really, that's what I mean by
+   throttle only, but that's only when we're like really at the bare minimum. We need to keep the research queue going. At this point,
+   we're not there yet, and we do need to still keep pushing the general work plan forward, not just the bare minimum of keeping things
+   running until the reset."*
+   - **Throttle** (the default under reduced capacity): fewer lanes, but the FULL mixed plan advances by rank (rules 1-5).
+   - **Bare minimum** (only when the capacity reading says the remaining weekly budget covers little more than keeping things running):
+     the one ML lane keeps the research queue moving, plus live-money incidents and the standing reviews. Nothing else runs.
+   - The manager names the mode from the `spend_meter.py --capacity` reading, states it in the REPORT line, and never drops into bare
+     minimum just because a lane count is low. If the operator's word is ambiguous, read it as throttle, not bare minimum.
 
 ### Toolbox
 
