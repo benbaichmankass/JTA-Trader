@@ -1,0 +1,145 @@
+# Regime × strategy × direction policy table — PHASE 3 (HARD GATE, LIVE since 2026-06-28).
+#
+# Seeded from `docs/research/regime-roster-matrix-2026-06-01.md` and the
+# decision rationale in `docs/research/regime-router-design-2026-06-01.md`
+# (§ 4.2). The aggregator evaluates this table per tick. As of the Design-A
+# vol-gate go-live (2026-06-28) the 1-D `off` cells are HARD-ENFORCED —
+# `Coordinator.aggregate_intents` DROPS every `off`-cell candidate intent and
+# emits a `regime_hard_gate` audit row with `enforced: true` (kill-switch
+# `REGIME_ROUTER_DISABLED` reverts to shadow-log-only). Editing a cell is a
+# LIVE order-routing change → **Tier-3, operator-gated** (see CLAUDE.md
+# § Environment Variables → `REGIME_ROUTER_DISABLED`). Phase 4 graduates
+# `weight: N.N` cells to soft confidence multipliers (not active yet).
+#
+# DEFAULT (unlisted cells)
+# ------------------------
+# Permissive `on` — matches the YAML-default philosophy of the two
+# execution gates (`accounts.yaml::mode` + `strategies.yaml::execution`).
+# Never strand a strategy/direction silently — a regime profile we haven't
+# measured yet defaults to ON, not OFF.
+#
+# CELL SEMANTICS (phase 2)
+# ------------------------
+#   { long: on,  short: off }
+#         ^^         ^^^
+#         allow     log a would-gate event if a short intent fires in this regime
+#
+# Phase 3 will add `{ weight: 0.5 }` as a soft-multiplier alternative; phase 2
+# only reads `on` / `off` and ignores anything else with a logged warning.
+#
+# THRESHOLDS
+# ----------
+# Regime classification uses ADX-14 with the cut-points encoded in
+# `src/runtime/regime/detector.py` (CHOP_MAX_ADX = 20, TREND_MIN_ADX = 25).
+# Per-strategy timeframe — each strategy's regime is the ADX-14 read of its
+# own candles (matches how the matrix was measured).
+#
+# 2-D VOL AXIS — `trend_vol` block (S-MLOPT-S15b, OBSERVE-ONLY)
+# ------------------------------------------------------------
+# The top-level regime blocks below (`trending`/`transitional`/`chop`) are the
+# 1-D TREND axis. S15b adds a second, orthogonal VOLATILITY axis (`calm` /
+# `volatile`) from `src/runtime/regime/vol_detector.py` — the live rolling vol
+# bucketed against the deployed regime head's frozen `vol_bucket` edges per
+# `(symbol, timeframe)`. The optional `trend_vol` block at the BOTTOM of this
+# file holds 2-D `trend × vol` cells; `would_gate(..., vol_regime=...)`
+# evaluates them ALONGSIDE (never instead of) the 1-D cell and emits the vol
+# verdict on the same `regime_shadow_gate` audit row (`vol_gated`/`vol_cell`,
+# `enforced: false`). It is shipped EMPTY: the 2-D OFF cells require a
+# vol-split of the regime-roster matrix (evidence accruing now via the stamped
+# `vol_regime` on every intent + would-gate row). Until cells are authored the
+# vol axis is fully permissive and the 1-D behaviour is unchanged. Same cell
+# semantics + permissive-default rule as the 1-D blocks. Authoring a 2-D OFF
+# cell — like the 1-D table — is a Tier-3 decision.
+
+schema_version: 2
+
+trending:
+  trend_donchian:        { long: on,  short: off }   # short −28 (matrix net R)
+  squeeze_breakout_4h:   { long: on,  short: on  }   # +5 net
+  # 2026-07-30: long OFF on walk-forward evidence (#7968, operator-approved).
+  # long_stable_drag TRUE  -- negative 3/4 folds, pooled -6.85R over n=42.
+  # short stays OFF: short_stable_drag was FALSE (so the OFF cell is NOT
+  # affirmatively justified) but flipping it ON is a PERMISSIVE change resting
+  # on one fold -- pooled +7.89R is ~147% attributable to fold 3 alone, and
+  # ex-fold-3 the short leg is -3.70R. Operator directive: take long->off, HOLD
+  # short->on pending its own evidence pass. Authoring evidence for the old
+  # 'long +30' comment was the 2026-06-01 matrix, superseded by the corrected-cost
+  # re-measure. See docs/research/regime-debt-matrix-corrected-cost-2026-07-30.md A5.
+  htf_pullback_trend_2h: { long: off, short: off }   # was long:on (long +30 @2026-06-01); re-measured -6.85R
+  fade_breakout_4h:      { long: off, short: off }   # ADX-gated by strategy anyway
+  fvg_range_15m:         { long: off, short: off }
+  vwap:                  { long: off, short: off }   # net −6,179 in trending; no-edge any regime
+  gld_pullback_1h:       { long: on,  short: off }   # rec #5 (2026-07-29): trending short −15.68R@36, negative 4/4 walk-forward folds; long +32.98R kept. Evidence: docs/research/regime-cell-walkforward-2026-07-29.md (#7920)
+
+transitional:
+  trend_donchian:        { long: on,  short: off }   # short −24
+  squeeze_breakout_4h:   { long: on,  short: on  }
+  htf_pullback_trend_2h: { long: on,  short: off }   # long +13, short −4
+  fade_breakout_4h:      { long: on,  short: on  }   # +5 net
+  vwap:                  { long: off, short: off }   # net −1,903 in transitional
+
+chop:
+  trend_donchian:        { long: on,  short: on  }   # short +16 ← reclaims long-only drop
+  fade_breakout_4h:      { long: on,  short: on  }   # +14
+  squeeze_breakout_4h:   { long: on,  short: on  }   # +11
+  htf_pullback_trend_2h: { long: off, short: off }   # long −8 / short −4, same shape as fvg
+  fvg_range_15m:         { long: off, short: off }   # −17 loser, keep off everywhere
+  vwap:                  { long: off, short: off }   # net −2,642 in chop
+
+# ---------------------------------------------------------------------------
+# 2-D trend × vol cells (S-MLOPT-S15b) — OBSERVE-ONLY, shipped EMPTY.
+# ---------------------------------------------------------------------------
+# Shape:  trend_vol: { <trend_regime>: { <vol_regime>: { <strategy>: { long: on|off, short: on|off } } } }
+#   <trend_regime> ∈ {chop, transitional, trending}   (the ADX-14 axis above)
+#   <vol_regime>   ∈ {calm, volatile}                  (the vol_detector axis)
+#
+# Authoring a cell mirrors the 1-D blocks (`off` logs a would-gate; unlisted →
+# permissive `on`). The cells below were authored from the Design-A vol-split
+# (S-REGIME-A-VOLVERDICT-LIVE) — see CELL EVIDENCE.
+#
+# CELL EVIDENCE (Design-A, 2026-06-27) — BTC per-(strategy,trend,vol,side) net-PnL
+# -------------------------------------------------------------------------------
+# Authored from `docs/research/A-vol-gating-OFFcell-design-2026-06-27.md`
+# (cell-attribution vol-split, ML vol label = the v2 advisory regime head).
+#   • Confirmation A/B (full BTC history): evidence cells + ML vol label lifted
+#     the book $353 → $1526 (4.3×) while TRIMMING maxDD; the SAME cells under the
+#     frozen vol label LOSE money (−$32) — so these cells are correct ONLY when
+#     the vol axis is ML-driven (REGIME_ML_VERDICT_MODE=use).
+#   • Walk-forward (4 non-overlapping BTC year-folds): ev-ml ≥ ungated net AND
+#     lower maxDD in EVERY fold (PASS 4/4); ML>frozen 2/4 (aggregate-driven).
+#
+# These cells are a behavioural NO-OP for live orders until BOTH gates are on:
+#   (1) REGIME_ML_VERDICT_MODE=use   — drives the vol axis from the ML head
+#                                       (these cells assume the ML label, NOT frozen)
+#   (2) the regime hard gate is active — it is BASELINE-ON (2026-06-28); the
+#       kill-switch is REGIME_ROUTER_DISABLED (set truthy → shadow-log only).
+#       (Legacy REGIME_ROUTER_ENABLED=true is redundant now, still honoured.)
+# With the router disabled they only emit `regime_shadow_gate` would-gate rows; with
+# REGIME_ML_VERDICT_MODE=off/shadow the vol label is frozen (the WRONG label for
+# these cells). The enforce flip is the Tier-3 live-trading switch.
+trend_vol:
+  trending:
+    volatile:
+      # −$224 / 136t.  THE vol refinement: trend_donchian long is +$1238/252t in
+      # trending+CALM but −$224 in trending+VOLATILE — a violent "trend" is
+      # false-breakout territory for a Donchian long; keep calm, gate volatile.
+      trend_donchian:      { long: off }
+      # ict_scalp_5m Phase-4 gate (2026-07-20, operator-approved packet:
+      # docs/research/ict_scalp_5m-phase4-regime-gate-PROPOSAL-2026-07-20.md).
+      # Net-of-fee bleed cell: expR −0.039 (n=166, Run B live-exit backtest);
+      # k-fold OOS for the two-cell gate +20.3R (5m frozen label) / +29.1R
+      # (15m label = ML-verdict proxy), 3/4 folds positive.
+      ict_scalp_5m:        { long: off, short: off }
+    calm:
+      squeeze_breakout_4h: { short: off }   # −$55 / 30t  (breakout-short into a calm uptrend)
+  transitional:
+    calm:
+      trend_donchian:      { long: off }    # −$356 / 43t (Donchian long without a real trend)
+  chop:
+    calm:
+      trend_donchian:      { long: off }    # −$218 / 11t (trend strat long in chop = no trend to ride)
+    volatile:
+      # ict_scalp_5m Phase-4 gate (2026-07-20, same packet as the trending/
+      # volatile cell above). The WORST net-of-fee cell: expR −0.104 (n=155,
+      # Run B live-exit backtest).
+      ict_scalp_5m:        { long: off, short: off }

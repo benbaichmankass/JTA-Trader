@@ -1,6 +1,10 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV). REDESIGNED the same day under RESEARCH-NO-WAIT-FOR-DATA
+# (operator ~09:55Z, relayed by Manager 2026-11-28b, who approved this design): instead of waiting for the post-freeze fold to reach
+# 2027-04-01, it grades the ML-keyed trend_vol OFF-cell BOOK on BTC 2020-04..2022-06, BEFORE the 2026-06-27 A/B folds that authored the
+# cells (2022-07-01..2026-06-01), keyed by vol labels from the btc-regime-15m-lgbm-v2 RECIPE refit only on 2022-07-01..2026-11-27.
+# Registered before any run. Gates this adds or changes: none.
 id: RQ-20261128-rc4e-01
-title: 'ml-btc-router-cells POWERED re-read: on the post-freeze BTC fold extended to 2027-04-01 (~60 ungated trades), does the book with the ML-keyed trend_vol OFF-cells
-  have net >= the ungated book AND maxDD% <= it?'
+title: 'ml-btc-router-cells read at power WITHOUT waiting: on BTC 2020-04..2022-06 (before the A/B that authored the cells), keyed by labels from the v2 head recipe refit only on 2022-07..2026-11, does the ML-keyed trend_vol OFF-cell book have net >= the ungated book AND maxDD% <= it?'
 status: blocked
 cadence: once
 roadmap:
@@ -13,22 +17,19 @@ iteration:
   subject_kind: ml_model
   from_result: RQ-20261119-c8e2-02
   verdict_read: indeterminate
-  diagnosis: 'c8e2-02''s fresh fold held 34 ungated trades, under the ~60 its power basis assumed, and the two book metrics split (net -1.57, maxDD -1.69 pp): the
-    rule maps a split to MIXED. At the measured 34 trades per 5.6 months the fold reaches ~60 at 2027-04-01.'
+  diagnosis: 'c8e2-02''s fresh fold held 34 ungated trades, under the ~60 its power basis assumed, and the two book metrics split (net -1.57, maxDD -1.69 pp): the rule maps a split to MIXED. The binding limit is n. Waiting to 2027-04 is ruled out (RESEARCH-NO-WAIT-FOR-DATA); 2.25 years of BTC history before the cells'' authoring window holds several times that n, labelled by a labeller fit only after it.'
   hypothesis: the MIXED read is sampling noise on 34 trades; at ~60 the cells either hold (net and DD) or do not
   levers:
   - regime_cells
   attempt: 2
-  due_by: '2027-04-30'
-question: On the fresh fold 2026-06-01:2027-04-01 (scripts/backtest_system.py, BTC data/backtest_BTCUSDT_5m.csv, roster trend_donchian, squeeze_breakout_4h, htf_pullback_trend_2h,
-  live config/regime_policy.yaml at dispatch), does the ML-keyed (btc-regime-15m-lgbm-v2) OFF-cell book have net >= the ungated book AND max drawdown % <= the ungated
-  book? Same harness and rule as c8e2-02, graded on the longer fold.
+  due_by: '2026-12-31'
+question: On the disjoint fold 2020-04-01:2022-06-30 (scripts/backtest_system.py over a BTC 5m candle file built in the run from 2020-03, roster trend_donchian, squeeze_breakout_4h, htf_pullback_trend_2h, live config/regime_policy.yaml at dispatch), with the ml arm keyed on vol labels from the btc-regime-15m-lgbm-v2 recipe REFIT only on 2022-07-01..2026-11-27 (backtest_system --vol-verdict labels), does the ML-keyed OFF-cell book have net >= the ungated book AND max drawdown % <= the ungated book? Same harness and two-metric rule as c8e2-02; the read counts only if the refit labels agree with the live head's on >= 85% of overlapping bars.
 why_this_matters: 'ml-btc-router-cells is an ORPHAN (Manager 2026-11-28a drain). Its reads so far: classification lift -0.0001 vs the +0.10 bar (75b2-16); per-cell
   marginal FAIL for trend_donchian chop/calm/long (fa22-04: n 101, added R -1.72, matched-drop p 0.41; the other 7 cells underpowered); and the book read c8e2-02
   MIXED on 34 ungated trades (cells cost 1.57 net, buy 1.69 pp maxDD; ML keying +216.88 vs frozen). The MIXED read is an n problem (34 < the 60 its own power basis
   assumed), so the next read is the same rule at power, not a new lever.'
 evidence_class:
-  holdout: fresh_window
+  holdout: out_of_time_backward
   claim: regime_cell
 power:
   expected_n: 60
@@ -37,11 +38,10 @@ power:
   design: paired
   alpha: 0.05
   power: 0.8
-  basis: 'MEASURED: c8e2-02 fresh fold 2026-06-01..2026-11-19 = 34 ungated trades (5.6 months) -> ~6.1/month -> ~60 at 2027-04-01. d = 0.37 SD detectable at n = 60,
-    alpha 0.05, power 0.8 (paired, required_n 57.3), as c8e2-02''s own basis. The decision is the two-metric book criterion with a 50-trade floor.'
+  basis: 'MEASURED rate: c8e2-02 fresh fold 2026-06-01..2026-11-19 = 34 ungated trades in 5.6 months (~6.1/month) -> ~165 on the 27-month disjoint fold if the rate holds (an ESTIMATE; the run reports the n). d = 0.37 SD detectable at n = 60 (paired, alpha 0.05, power 0.8), so the fold is powered above the 50-trade floor.'
   feasibility:
     source: none
-    accrual_basis: Replays trainer-resident candles through the system backtest; nothing accrues.
+    accrual_basis: 'Nothing accrues: BTC 5m candles from 2020-03 and 15m features from 2020-03 are built in the run (scripts/research/build_market_features_span.py, Bybit linear-perp klines; the adapter clamps to listing).'
 baseline:
   definition: The ungated book (--regime-router off), same roster, window, data and harness cost model as the gated arms.
   net_of_cost: true
@@ -50,16 +50,13 @@ decision_rule:
   registered_at: '2026-11-28'
   registered_before_run: true
   baseline: the ungated book on the same fold
-  statistic: 'scripts/research/vol_offcell_fresh_wf.py grade(): on the fresh fold, ml.net - ungated.net and ml.maxdd_pct - ungated.maxdd_pct (scripts/backtest_system.py
-    --json net_pnl / max_drawdown_pct). The four 2026-06-27 folds and ml vs frozen are reported, decide nothing.'
-  rule: HOLDS (pass) iff on the fold 2026-06-01:2027-04-01 the ML-keyed book has net >= the ungated book AND maxDD% <= the ungated book, with >= 50 ungated trades.
-    DOES_NOT_HOLD (fail) iff net < ungated AND maxDD% > ungated at >= 50 ungated trades. MIXED (indeterminate) otherwise; INDETERMINATE below 50 ungated trades or
-    if any arm fails. The 2026-06-27 year-folds re-run beside it as context, never graded.
-  pass_action: Record the cells as holding on post-freeze data at power on REGIME-PROGRAM; no config change (they are live).
+  statistic: 'scripts/research/vol_offcell_fresh_wf.py grade() with --vol-labels (refit labels): on the fold 2020-04-01:2022-06-30, ml.net - ungated.net and ml.maxdd_pct - ungated.maxdd_pct (scripts/backtest_system.py --json net_pnl / max_drawdown_pct), plus the refit FIDELITY read in the labels manifest (refit vs live labels on 2022-07-01..2026-11-27). The sub-folds and ml vs frozen are reported, decide nothing.'
+  rule: FIRST the fidelity gate (fidelity.state == label_faithful, >= 85% agreement over >= 1000 bars, else INDETERMINATE label_not_live_faithful). Then HOLDS (pass) iff on the fold 2020-04-01:2022-06-30 the ML-keyed book has net >= the ungated book AND maxDD% <= the ungated book, with >= 50 ungated trades. DOES_NOT_HOLD (fail) iff net < ungated AND maxDD% > ungated at >= 50 ungated trades. MIXED (indeterminate) otherwise; INDETERMINATE below 50 ungated trades or if any arm fails. Backward out-of-time read, stated; registered in the read ledger by its result row.
+  pass_action: Record the cells as holding out of time at power on REGIME-PROGRAM; no config change (they are live and stay the incumbent).
   fail_action: A data-backed Tier-3 proposal (held PR to the manager) to set the trend_vol cells' enforcement off (shadow-log only), citing c8e2-02 and this record
     (regime-selectivity Rule 1).
-  min_n: 30 ungated trades on the fresh fold
-  proposal_mapping: holds -> recorded; does_not_hold -> Tier-3 cells-off proposal; mixed/indeterminate -> report and stop (no third read on this rule).
+  min_n: 50 ungated trades on the disjoint fold
+  proposal_mapping: holds -> recorded; does_not_hold -> Tier-3 cells-off proposal; mixed/indeterminate -> report; next is a redesign of the cells (no third read of this rule on this span).
   what_it_does_not_do: Changes no config. Grades the cell BOOK, not individual cells (fa22-04 graded those); the trend_donchian chop/calm/long removal is a separate
     Tier-3 proposal.
 practice_precedent: confirm a single-window pass on data the decision never saw (weekly audit 2026-11-18 Q3; docs/reference/trading-and-model-practice-principles.md)
@@ -94,25 +91,29 @@ routing:
   needs_trainer_resident_data: true
   needs_gpu: false
   peak_memory_gb: 2.0
-  est_minutes: 45
-  why_runner: data/backtest_BTCUSDT_5m.csv and the ML registry are trainer-resident
+  est_minutes: 150
+  why_runner: the live-label replay needs the trainer registry head btc-regime-15m-lgbm-v2 and the trainer-resident BTCUSDT 15m v002 dataset (fidelity overlap); the span builds and refit need the trainer lightgbm venv
   basis: 'ESTIMATE: 5 folds x 3 arms = 15 system-backtest runs over a 5m BTC series.'
 run:
   workflow: research-script-run-trainer.yml
-  timeout_minutes: 150
-  command:
-  - python3
-  - scripts/research/vol_offcell_fresh_wf.py
-  - --data
-  - data/backtest_BTCUSDT_5m.csv
-  - --policy
-  - config/regime_policy.yaml
-  - --fresh-fold
-  - 2026-06-01:2027-04-01
-  - --unit
-  - RQ-20261128-rc4e-01
-  - --json
-  - '{out_dir}/verdict.json'
+  timeout_minutes: 240
+  commands:
+  - [python3, scripts/research/build_market_features_span.py, --symbol, BTCUSDT, --timeframe, 5m, --start, '2020-03-01',
+     --end, '2022-07-31', --out, '{out_dir}/ds5', --raw-only, --candles-csv, '{out_dir}/BTCUSDT_5m_2020_2022.csv']
+  - [python3, scripts/research/build_market_features_span.py, --symbol, BTCUSDT, --timeframe, 15m, --start, '2020-03-01',
+     --end, '2026-11-27', --out, '{out_dir}/ds15', --version, v901]
+  - [python3, scripts/research/ml_vol_label_replay.py, replay, --symbol, BTCUSDT, --dataset,
+     datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl, --model-id, btc-regime-15m-lgbm-v2, --out,
+     '{out_dir}/BTCUSDT_live_labels.jsonl', --json]
+  - [python3, scripts/research/ml_vol_label_replay.py, replay-refit, --symbol, BTCUSDT, --manifest,
+     ml/configs/btc-regime-15m-lgbm-v2.yaml, --dataset, '{out_dir}/ds15/market_features/BTCUSDT/15m/v901/data.jsonl',
+     --train-start, '2022-07-01', --train-end, '2026-11-27', --score-start, '2020-03-25', --score-end, '2022-06-30',
+     --live-labels, '{out_dir}/BTCUSDT_live_labels.jsonl', --min-agree-pct, '85', --out,
+     '{out_dir}/BTCUSDT_refit_labels.jsonl', --json]
+  - [python3, scripts/research/vol_offcell_fresh_wf.py, --data, '{out_dir}/BTCUSDT_5m_2020_2022.csv', --policy,
+     config/regime_policy.yaml, --vol-labels, '{out_dir}/BTCUSDT_refit_labels.jsonl', --folds,
+     '2020-04-01:2021-04-01,2021-04-01:2022-04-01,2022-04-01:2022-06-30', --fresh-fold, '2020-04-01:2022-06-30', --unit,
+     RQ-20261128-rc4e-01, --json, '{out_dir}/verdict.json']
   inputs:
     research_unit: RQ-20261128-rc4e-01
 lands:
@@ -126,7 +127,7 @@ related:
 - RQ-20261012-75b2-16
 origin: follow_up
 blocked_on:
-- kind: data
-  ref: data/backtest_BTCUSDT_5m.csv (trainer)
-  what: The post-freeze BTC fold needs ~60 ungated trades; c8e2-02 measured 34 on 2026-06-01..2026-11-19 (5.6 months).
-  clears_when: data/backtest_BTCUSDT_5m.csv on the trainer covers 2027-04-01 (its last bar >= 2027-04-01T00:00Z), so the fold 2026-06-01:2027-04-01 replays in full.
+- kind: build
+  ref: scripts/research/ml_vol_label_replay.py replay-refit + scripts/research/build_market_features_span.py (lane/ml-primary-replay-refit) and backtest_system.py --vol-verdict labels + vol_offcell_fresh_wf.py --vol-labels (lane/ml-primary-bt-vol-labels), ML-PRIMARY 2026-11-28
+  what: 'Tier-1 tooling PRs opened the same day; nothing waits on data.'
+  clears_when: 'both branches are on main (backtest_system.py --help lists --vol-verdict labels; ml_vol_label_replay.py --help lists replay-refit); then git-mv this file to research/queue/ with status queued.'

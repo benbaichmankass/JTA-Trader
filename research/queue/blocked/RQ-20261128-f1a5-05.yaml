@@ -1,0 +1,112 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV, Tier 1), at Manager 2026-11-28b's direction. #29682
+# removed trend_donchian:chop/calm/long (merged c6ae90bae9; operator popup ~09:12Z "Remove the block (Recommended)", relayed by Manager
+# 2026-11-28b). REDESIGNED the same day under RESEARCH-NO-WAIT-FOR-DATA (operator ~09:55Z: no research waits months for data): instead of
+# waiting for post-removal trades (first look 2027-03), it reads BTC history BEFORE the window that chose the cell (d7c2-01's tagged
+# trades span 2022-11-23..2026-11-04), labelled by the head's recipe REFIT only on 2022-11-23..2026-11-27, so the labeller never sees a bar
+# it labels. Registered before any run; grades against the pinned pre-removal policy. Gates this adds or changes: none.
+id: RQ-20261128-f1a5-05
+title: 'DISJOINT read of the REMOVED cell trend_donchian:chop/calm/long (BTC) on 2020-03..2022-11-22 history, labelled by a head refit ONLY on 2022-11-23..2026-11-27: would vetoing the cell have earned R (re-author it) or lost R (the removal stands), the fa22-04 rule unchanged?'
+status: blocked
+cadence: once
+theme: regime
+priority: 2
+roadmap:
+- L-ML-LIVE
+programme: P2
+kind: experiment
+question: On trend_donchian BTCUSDT harness trades ENTERED 2020-03-25..2022-11-22 (before RQ-20261120-d7c2-01's window 2022-11-23..2026-11-04 that chose the cell and fa22-04 graded), with vol labels from the btc-regime-15m-lgbm-fc-pcv-v2 RECIPE refit only on 2022-11-23..2026-11-27 (fc_* dropped; it does not exist that early), would the removed chop/calm/long OFF-cell have added_r = -(sum net R of the trades it would veto) > 0 at n >= 25 with control_p <= 0.05 and >= 2/3 of active folds (RE-AUTHOR it), or <= 0 at n >= 25 (the removal stands, confirmed out of time)? The read counts only if the refit labels agree with the LIVE head's labels on >= 85% of 2022-11-23..2026-11-27 bars.
+why_this_matters: 'fa22-04 (RQ-20261122-fa22-04) FAILED this cell on d7c2-01''s committed trades (n >= 25, added_r <= 0) and #29682 removed it (operator 2026-11-28 ~09:12Z, after the hold reason was corrected: trend_donchian''s exit_head_action is annotate, so the replay without the head matches live). What does remain is that the FAIL was measured on a single window. OPERATING-PLAN § 2 "A number measured only over the grading window never promotes" asks for disjoint data; this unit is that read, on history BEFORE the choosing window with labels from a head refit only AFTER it (RESEARCH-NO-WAIT-FOR-DATA, operator 2026-11-28).'
+iteration:
+  subject: ml-btc-router-cells
+  subject_kind: ml_model
+  from_result: research/results/RQ-20261122-fa22-04/45015566879.jsonl
+  verdict_read: fail
+  diagnosis: 'fa22-04 graded 8 authored BTC OFF-cells on the committed d7c2-01 trades (1460 d to 2026-11-20, full cost stack) and FAILED one: trend_donchian chop/calm/long lost R when vetoed (its vetoed trades were net positive). The cell is removed (#29682); the open question is whether that loss holds out of time or was a feature of the one window. The replay is faithful (exit head annotate on this leg since 2026-10-29), so the only lever is the sample; history before the choosing window, labelled by a labeller fit only on the later span, is that sample now (no wait).'
+  search: 'out-of-time sample WITHOUT waiting: the same cell, rule and harness on the pre-2022-11-23 BTC history, labelled by the head recipe refit on the disjoint later span (ml_vol_label_replay replay-refit)'
+  levers:
+  - regime_gating
+  attempt: 3
+  due_by: '2027-06-30'
+  map_entries:
+  - research/levers/ml-btc-router-cells.yaml
+blocked_on:
+- kind: build
+  ref: scripts/research/ml_vol_label_replay.py replay-refit + scripts/research/build_market_features_span.py (branch lane/ml-primary-replay-refit, ML-PRIMARY, 2026-11-28)
+  what: 'The refit labeller mode this unit runs. It is a Tier-1 tooling PR opened the same day; nothing here waits on data.'
+  clears_when: 'replay-refit is on main (ml_vol_label_replay.py --help lists replay-refit); then git-mv this file to research/queue/ with status queued.'
+baseline:
+  arm: no_veto
+  definition: 'the same leg''s harness trades with the cell switched off, each trade''s net_r net of the FULL cost stack (fee + slippage + funding per symbol, stamped by the harness); control = a matched random drop of the same leg and side (the fa22-04 control, unchanged)'
+  source: research/results/RQ-20261122-fa22-04/45015566879.jsonl
+power:
+  expected_n: 25
+  min_detectable_effect: 0.84
+  effect_units: metric
+  sd: 1.5
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'INFERRED: the rule''s floor is n >= 25 vetoed trades (fa22-04 MIN_N). At n 25 and per-trade sd ~1.5 R (d7c2-01 power basis), a one-sample test at alpha 0.05 detects |mean| ~0.84 R/trade at power 0.8; smaller effects read INDETERMINATE, said so. The run is a confirmation of an existing FAIL, so a FAIL here needs only added_r <= 0 at the floor (the fa22-04 rule).'
+  feasibility:
+    source: none
+    accrual_basis: 'Nothing accrues: BTC 15m history from 2020-03 is built in the run by build_market_features_span.py (Bybit linear-perp klines, the adapter clamps to listing); trend_donchian made ~60 BTC harness trades a year (34 in 2026-06-01..11-19), so ~160 trades in 2.7 years; the cell''s share is unknown until the run.'
+decision_rule:
+  id: RULE-RQ-20261128-f1a5-05
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'regime_cell_marginal_grade.py --policy comms/research/RQ-20261128-f1a5-05/regime_policy_pre_29682.yaml on a d2_family_consumer_run replay of trend_donchian BTCUSDT tagged with the REFIT labels (labels exist only on 2020-03-25..2022-11-22, so only trades entered there carry a vol label and are graded), for the ONE cell trend_donchian chop/calm/long: n vetoed, added_r, control_p (matched random drop), active folds and wins. Plus the refit FIDELITY read in labels manifest `fidelity` (refit vs live labels on 2022-11-23..2026-11-27). Other cells reported, not graded.'
+  rule: 'FIRST the fidelity gate: if fidelity.state != label_faithful (agree < 85% or < 1000 overlapping bars) the run is INDETERMINATE (label_not_live_faithful), never a verdict. Otherwise the fa22-04 per-cell rule, unchanged, for this cell only: FAIL (the removal stands, confirmed out of time) iff n >= 25 AND added_r <= 0. PASS (RE-AUTHOR calm: { trend_donchian: { long: off } }) iff n >= 25 AND added_r > 0 AND control_p <= 0.05 AND >= 3 active folds AND wins >= ceil(2/3 of active). INDETERMINATE otherwise, including n < 25. A PASS is a Tier-3 input, never an apply. The window is read once and registered in the read ledger (scripts/research/read_ledger.py counts the result row; a holdout_lock claim does not apply because the labeller span is AFTER the window, a backward out-of-time read, stated). Fixed now; not changed after a run.'
+  what_it_does_not_do: Edits no config, no regime_policy cell, no roster and no registry artifact (the refit head lives only in the run); places no order.
+practice_precedent: 'M2, M4 (docs/reference/trading-and-model-practice-principles.md): a rule registered before the run, one factor; the same harness and per-cell rule as RQ-20261122-fa22-04 (.claude/skills/regime-selectivity/SKILL.md Rule 1); OPERATING-PLAN § 2 "A number measured only over the grading window never promotes" (disjoint confirmation).'
+compute: cpu_long
+routing:
+  needs_trainer_resident_data: true
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 200
+  why_runner: 'The live-label replay needs the trainer registry artifact of btc-regime-15m-lgbm-fc-pcv-v2 and the trainer-resident BTCUSDT 15m v002 dataset (the fidelity overlap); the 2020-03+ dataset build and the refit need the trainer lightgbm venv.'
+  basis: 'ESTIMATE from RQ-20261120-d7c2-01 (label replay + 3 legs, 150 min budget); one leg here.'
+value:
+  usd_at_stake_per_month: 30
+  confidence: 0.2
+  bucket: ai_trader
+  basis: planning weight; a demo-floor regime cell decision; an estimate, not a measurement
+intervention_controls:
+  not_applicable: 'an offline per-cell veto grade of an entry regime gate (no in-trade action); its control is the fa22-04 matched random drop of the same leg and side, built into regime_cell_marginal_grade.py'
+ml_consumer:
+  not_applicable: 'Reads the existing advisory BTC regime head''s labels; trains and serves nothing.'
+run:
+  workflow: research-script-run-trainer.yml
+  commands:
+  - [python3, scripts/research/build_market_features_span.py, --symbol, BTCUSDT, --timeframe, 15m, --start, '2020-03-01',
+     --end, '2026-11-27', --out, '{out_dir}/ds', --version, v901]
+  - [python3, scripts/research/ml_vol_label_replay.py, replay, --symbol, BTCUSDT, --dataset,
+     datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl, --model-id, btc-regime-15m-lgbm-fc-pcv-v2, --out,
+     '{out_dir}/BTCUSDT_live_labels.jsonl', --json]
+  - [python3, scripts/research/ml_vol_label_replay.py, replay-refit, --symbol, BTCUSDT, --manifest,
+     ml/configs/btc-regime-15m-lgbm-fc-pcv-v2.yaml, --dataset, '{out_dir}/ds/market_features/BTCUSDT/15m/v901/data.jsonl',
+     --train-start, '2022-11-23', --train-end, '2026-11-27', --score-start, '2020-03-25', --score-end, '2022-11-22',
+     --drop-features, 'fc_ret_med,fc_range_rel,fc_up_prob,fc_skew,fc_q10_rel,fc_q90_rel', --live-labels,
+     '{out_dir}/BTCUSDT_live_labels.jsonl', --min-agree-pct, '85', --out, '{out_dir}/BTCUSDT_refit_labels.jsonl', --json]
+  - [python3, scripts/research/d2_family_consumer_run.py, --out, '{out_dir}/legs', --days, '2450', --since, '2020-03-25',
+     --cells-per-leg, --leg, 'trend_donchian={out_dir}/BTCUSDT_refit_labels.jsonl']
+  - [python3, scripts/research/regime_cell_marginal_grade.py, --legs-dir, '{out_dir}/legs', --since, '2020-03-25', --policy,
+     comms/research/RQ-20261128-f1a5-05/regime_policy_pre_29682.yaml, --out, '{out_dir}']
+  inputs:
+    research_unit: RQ-20261128-f1a5-05
+  timeout_minutes: 300
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261122-fa22-04
+- RQ-20261120-d7c2-01
+- RQ-20261119-c8e2-02
+- research/queue/blocked/RQ-20261128-rc4e-01.yaml
+- REGIME-PROGRAM
+stated_biases:
+- the cell's live behaviour on bybit_1 is a demo-floor book; the harness replay is the measured population, not live fills
+- labels come from the advisory head as it stands at run time; a retrained head would re-label old bars, so the run pins whatever model_id the registry serves, said so in the result
+- 'the cell was removed by #29682 (c6ae90bae9) on 2026-11-28; an INDETERMINATE leaves it removed'
+what_it_does_not_do: Edits no config or roster; places no order.
