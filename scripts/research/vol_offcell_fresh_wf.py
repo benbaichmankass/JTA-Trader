@@ -72,7 +72,7 @@ def _arm(py: str, data: str, policy: str, s: str, e: str, flags: list[str]) -> d
                 "data_start": d.get("data_start"), "data_end": d.get("data_end")}
 
 
-def run(data: str, policy: str, mid: str, folds: list[str]) -> dict:
+def run(data: str, policy: str, mid: str, folds: list[str], fresh: str = FRESH_FOLD) -> dict:
     py = sys.executable
     rows = []
     for f in folds:
@@ -83,7 +83,8 @@ def run(data: str, policy: str, mid: str, folds: list[str]) -> dict:
                      "ml": _arm(py, data, policy, s, e, ["--regime-router", "on", "--vol-verdict", "ml",
                                                         "--ml-model-id", mid])})
         print(json.dumps(rows[-1]), flush=True)
-    return contract_result(grade(rows), rows, f"BTC system backtest, roster {ROSTER}, live {policy}, data {data}")
+    return contract_result(grade(rows, fresh=fresh), rows, f"BTC system backtest, roster {ROSTER}, live {policy}, data {data}",
+                           fresh=fresh)
 
 
 #: The rule's outcome -> script_run.py's verdict.json contract (VERDICTS / READ_STATES). The rule's own word is kept
@@ -92,15 +93,17 @@ def run(data: str, policy: str, mid: str, folds: list[str]) -> dict:
 CONTRACT_VERDICT = {"holds": "pass", "does_not_hold": "fail", "mixed": "indeterminate", "indeterminate": "indeterminate"}
 
 
-def contract_result(g: dict, rows: list, description: str) -> dict:
-    fresh = next((f for f in rows if f.get("fold") == FRESH_FOLD), None)
+def contract_result(g: dict, rows: list, description: str, fresh_fold: str | None = None, fresh: str | None = None) -> dict:
+    """``fresh`` (or its alias ``fresh_fold``) = the graded fold; default FRESH_FOLD (c8e2-02's)."""
+    ff = fresh or fresh_fold or FRESH_FOLD
+    fresh = next((f for f in rows if f.get("fold") == ff), None)
     readable = bool(fresh) and all(isinstance(fresh.get(a), dict) and fresh[a].get("net") is not None
                                    for a in ("ungated", "ml"))
     g = {**g, "rule_outcome": g["verdict"]}
     return {"read_state": "measured" if readable else "no_data",
             "verdict": CONTRACT_VERDICT[g["verdict"]],
             "n": fresh["ungated"].get("trades") if readable else None,
-            "population": f"{description}; graded on the fresh fold {FRESH_FOLD} (n = ungated trades there)",
+            "population": f"{description}; graded on the fresh fold {ff} (n = ungated trades there)",
             "grade": g, "folds": rows}
 
 
@@ -129,6 +132,11 @@ def _self_test() -> int:
         (gone["read_state"] == "no_data" and gone["n"] is None and "n" in gone, "contract: no fold -> no_data, n null"),
         (isinstance(mixed["population"], str) and mixed["population"].strip() != "", "contract: population is a string"),
     ]
+    later = "2026-06-01:2027-04-01"
+    lf = [{**fold(100, 10, 120, 9)[0], "fold": later}]
+    checks += [(contract_result(grade(lf, fresh=later), lf, "t", fresh=later)["verdict"] == "pass"
+                and contract_result(grade(lf), lf, "t")["read_state"] == "no_data",
+                "--fresh-fold: grades the named fold; the default fold is absent -> no_data")]
     ok = all(c for c, _ in checks)
     for c, label in checks:
         print(("PASS " if c else "FAIL ") + label)
@@ -142,13 +150,18 @@ def main() -> int:
     ap.add_argument("--policy", default="config/regime_policy.yaml")
     ap.add_argument("--ml-model-id", default="btc-regime-15m-lgbm-v2")
     ap.add_argument("--folds", default=",".join(DEFAULT_FOLDS))
+    ap.add_argument("--fresh-fold", default=FRESH_FOLD,
+                    help="START:END of the graded post-freeze fold (default c8e2-02's); appended to --folds if absent")
     ap.add_argument("--unit", default=None)
     ap.add_argument("--json", dest="json_out", default=None)
     a = ap.parse_args()
     if a.self_test:
         return _self_test()
     os.environ.setdefault("PYTHONPATH", str(REPO))
-    res = run(a.data, a.policy, a.ml_model_id, a.folds.split(","))
+    folds = a.folds.split(",")
+    if a.fresh_fold not in folds:
+        folds.append(a.fresh_fold)
+    res = run(a.data, a.policy, a.ml_model_id, folds, fresh=a.fresh_fold)
     res["unit"] = a.unit
     if a.json_out:
         Path(a.json_out).parent.mkdir(parents=True, exist_ok=True)
