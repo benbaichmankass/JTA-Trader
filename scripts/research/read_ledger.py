@@ -35,7 +35,7 @@ import os
 import re
 import sys
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,7 +47,6 @@ SCHEMA = 1
 _DATE = r"([0-9]{4}-[0-9]{2}-[0-9]{2})"
 _CMD_START = re.compile(r"--(?:since|start|from|start-date|holdout-start|test-start|oos-start)[ =]" + _DATE)
 _CMD_END = re.compile(r"--(?:until|end|to|end-date|holdout-end|test-end|oos-end)[ =]" + _DATE)
-_SUBJECT = re.compile(r"^\s+subject:\s*['\"]?([A-Za-z0-9_.:\-]+)", re.M)
 OPEN_END = "9999-12-31"
 
 
@@ -89,11 +88,24 @@ def resolve_window(measurement, unit_text: str | None) -> tuple[str | None, str 
     return None, None, "window_unstated"
 
 
+def _iteration_subject(unit_text: str | None) -> str | None:
+    """The unit's ``iteration.subject`` read from the parsed YAML (a bare regex also matched unrelated ``subject:`` keys)."""
+    if not unit_text or "iteration:" not in unit_text:
+        return None
+    try:
+        import yaml  # noqa: PLC0415
+        u = yaml.safe_load(unit_text)
+    except Exception:  # noqa: BLE001  # allow-silent: an unparseable unit falls back to the next subject source, stated in the docstring
+        return None
+    it = u.get("iteration") if isinstance(u, dict) else None
+    sub = it.get("subject") if isinstance(it, dict) else None
+    return str(sub) if sub else None
+
+
 def resolve_subject(measurement, unit_text: str | None) -> str:
-    if unit_text:
-        ms = _SUBJECT.search(unit_text)
-        if ms:
-            return ms.group(1)
+    sub = _iteration_subject(unit_text)
+    if sub:
+        return sub
     m = measurement if isinstance(measurement, dict) else {}
     if isinstance(m.get("leg"), str) and m["leg"]:
         return f"leg:{m['leg']}"
@@ -141,10 +153,18 @@ def build(root: Path = ROOT, ledger: Path | None = None) -> dict:
                 claimed = any(holdout_lock._overlap(cs, ce, s, e) for cs, ce in claimed_units.get(unit, []))
                 reads[key] = {"unit": unit, "subject": subj, "start": s, "end": e, "basis": basis, "claimed": claimed}
 
+    # A claim whose unit names no iteration.subject takes the subject most claims of its holdout FAMILY name (e.g. ENTRY ->
+    # ml-entry), so one subject is not split across two keys; with no such claim it stays family:<FAMILY>, stated.
+    fam_subj: dict[str, Counter] = defaultdict(Counter)
+    for c in claims:
+        sub = _iteration_subject(units.get(c.get("unit")))
+        if sub:
+            fam_subj[holdout_lock.family_of(c)][sub] += 1
     for c in claims:                            # every claim is a read of its window
         unit = c.get("unit") or "unit_unstated"
-        text = units.get(unit)
-        subj = resolve_subject({}, text) if text and _SUBJECT.search(text) else f"family:{holdout_lock.family_of(c)}"
+        fam = holdout_lock.family_of(c)
+        subj = _iteration_subject(units.get(unit)) or (
+            fam_subj[fam].most_common(1)[0][0] if fam_subj.get(fam) else f"family:{fam}")
         key = (unit, c["start"], c["end"])
         prev = reads.get(key)
         reads[key] = {"unit": unit, "subject": prev["subject"] if prev else subj, "start": c["start"], "end": c["end"],
