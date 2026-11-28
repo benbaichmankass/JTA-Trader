@@ -662,8 +662,19 @@ def derive_record(p: Plan, *, repo: Path = _REPO) -> Dict[str, Any]:
                 n="null" if n is None else str(n),
                 note=str(verdict.get("note") or ""))
     if isinstance(verdict.get("measurement"), dict) and verdict["measurement"]:
+        meas = dict(verdict["measurement"])
+        # READ LEDGER (row MEASURE-READ-LEDGER-PBO, design § 5a): REPORT-ONLY. The read's subject and window, the graded
+        # reads that already overlap it, and the M13 bar this read faces. It never changes the verdict above; a failure to
+        # compute it is recorded as could_not_look.
+        try:
+            sys.path.insert(0, str(repo / "scripts" / "research"))
+            import read_ledger  # noqa: PLC0415
+            meas.setdefault("read_ledger", read_ledger.read_block(p.unit, meas, repo))
+        except Exception as exc:  # noqa: BLE001  # allow-silent: report-only stamp; the failure itself is recorded in the block
+            meas.setdefault("read_ledger", {"read_state": "could_not_look", "why": f"{type(exc).__name__}: {exc}"[:200],
+                                            "decisive": False})
         mpath = out_dir / "measurement.json"
-        mpath.write_text(json.dumps(verdict["measurement"], indent=2) + "\n", encoding="utf-8")
+        mpath.write_text(json.dumps(meas, indent=2) + "\n", encoding="utf-8")
         base["measurement_file"] = (p.out_dir / "measurement.json").as_posix()
     if records:
         rpath = out_dir / "records.jsonl"
