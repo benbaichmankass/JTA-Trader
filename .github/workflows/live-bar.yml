@@ -36,6 +36,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # scripts/ops/promotion_exclusions.py (imported by live_bar.py since W48 Q3, 2026-11-25) needs PyYAML;
+      # without it every run since 11-25 died with ModuleNotFoundError and the feed went stale.
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
 
       - name: Compute the live bar and write the feed
         env:
