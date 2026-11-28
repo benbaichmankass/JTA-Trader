@@ -39,16 +39,16 @@ baseline:
   source: comms/live_bar/latest.json
 power:
   expected_n: 20
-  min_detectable_effect: 0.3
+  min_detectable_effect: 0.67
   effect_units: metric
-  sd: 1.0
+  sd: 1.2
   design: one_sample
-  alpha: 0.2
+  alpha: 0.1
   power: 0.8
-  basis: 'INFERRED: the live bar is a one-sided 80% bound (alpha 0.2). At n 20 and a per-trade R sd near 1.0 (the 13 trades read: mean +0.59, lcb80 +0.31 implies sd ~1.2), the bound clears zero for a true mean above ~0.19-0.23 R; the observed +0.59 sits well above that, so 20 trades is adequate for the bar as the operator set it. The bar is weaker than a Stage-0 rule by design; a pass is a live-bar pass, said so.'
+  basis: 'HONEST LIMIT OF THE OPERATOR''S BAR: n is fixed at the live bar''s 20. The 13 trades read give sd ~1.2 R (mean +0.59, lcb80 +0.31). At n 20, alpha 0.10 (the research-queue grader''s loosest supported level, stricter than the bar''s one-sided 0.2) and power 0.8, the smallest reliably detectable mean is 2.487 / sqrt(20) x 1.2 = ~0.67 R/trade, ABOVE the +0.59 observed so far. So a FAIL at n 20 is weak evidence against a real but smaller edge, and is reported that way. A PASS is the operator''s live-bar pass, not a powered Stage-0 result.'
   feasibility:
-    source: live_bar_feed
-    accrual_basis: '13 confirmed trades since the desk started on bybit_1 (2026-11-0x); about 7 more needed. due_by 2027-01-31 allows for the desk''s observed pace; a slower pace is reported, never graded early.'
+    source: none
+    accrual_basis: '13 confirmed trades since the desk started on bybit_1; about 7 more needed. due_by 2027-01-31 allows for the desk''s observed pace; a slower pace is reported, never graded early.'
 decision_rule:
   id: RULE-RQ-20261128-f1a5-04
   registered_at: '2026-11-28'
