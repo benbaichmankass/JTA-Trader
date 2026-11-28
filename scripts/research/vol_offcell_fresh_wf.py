@@ -72,7 +72,16 @@ def _arm(py: str, data: str, policy: str, s: str, e: str, flags: list[str]) -> d
                 "data_start": d.get("data_start"), "data_end": d.get("data_end")}
 
 
-def run(data: str, policy: str, mid: str, folds: list[str], fresh: str = FRESH_FOLD) -> dict:
+def ml_arm_flags(mid: str, vol_labels: str | None = None) -> list[str]:
+    """The `ml` arm's harness flags: the registry head (as live), or with `vol_labels` a precomputed labels file
+    (`backtest_system --vol-verdict labels`, e.g. a head refit on a disjoint span; RQ-20261128-rc4e-01)."""
+    if vol_labels:
+        return ["--regime-router", "on", "--vol-verdict", "labels", "--vol-labels", vol_labels]
+    return ["--regime-router", "on", "--vol-verdict", "ml", "--ml-model-id", mid]
+
+
+def run(data: str, policy: str, mid: str, folds: list[str], fresh: str = FRESH_FOLD,
+        vol_labels: str | None = None) -> dict:
     py = sys.executable
     rows = []
     for f in folds:
@@ -80,8 +89,7 @@ def run(data: str, policy: str, mid: str, folds: list[str], fresh: str = FRESH_F
         rows.append({"fold": f,
                      "ungated": _arm(py, data, policy, s, e, ["--regime-router", "off"]),
                      "frozen": _arm(py, data, policy, s, e, ["--regime-router", "on", "--vol-verdict", "frozen"]),
-                     "ml": _arm(py, data, policy, s, e, ["--regime-router", "on", "--vol-verdict", "ml",
-                                                        "--ml-model-id", mid])})
+                     "ml": _arm(py, data, policy, s, e, ml_arm_flags(mid, vol_labels))})
         print(json.dumps(rows[-1]), flush=True)
     return contract_result(grade(rows, fresh=fresh), rows, f"BTC system backtest, roster {ROSTER}, live {policy}, data {data}",
                            fresh=fresh)
@@ -149,6 +157,8 @@ def main() -> int:
     ap.add_argument("--data", default="data/backtest_BTCUSDT_5m.csv")
     ap.add_argument("--policy", default="config/regime_policy.yaml")
     ap.add_argument("--ml-model-id", default="btc-regime-15m-lgbm-v2")
+    ap.add_argument("--vol-labels", default=None,
+                    help="key the ml arm on this labels JSONL instead of the registry head (backtest_system --vol-verdict labels)")
     ap.add_argument("--folds", default=",".join(DEFAULT_FOLDS))
     ap.add_argument("--fresh-fold", default=FRESH_FOLD,
                     help="START:END of the graded post-freeze fold (default c8e2-02's); appended to --folds if absent")
@@ -161,7 +171,7 @@ def main() -> int:
     folds = a.folds.split(",")
     if a.fresh_fold not in folds:
         folds.append(a.fresh_fold)
-    res = run(a.data, a.policy, a.ml_model_id, folds, fresh=a.fresh_fold)
+    res = run(a.data, a.policy, a.ml_model_id, folds, fresh=a.fresh_fold, vol_labels=a.vol_labels)
     res["unit"] = a.unit
     if a.json_out:
         Path(a.json_out).parent.mkdir(parents=True, exist_ok=True)
