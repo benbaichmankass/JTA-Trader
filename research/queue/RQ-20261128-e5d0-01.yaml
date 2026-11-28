@@ -1,4 +1,4 @@
-id: RQ-20261128-xt5d-01
+id: RQ-20261128-e5d0-01
 title: 'ml-exit-head-donchian-1h THRESHOLD lever: on the 8-symbol Binance-Vision donchian 1h corpus, does firing the champion head at tau 0.05 / 0.20 / 0.30 instead
   of the live 0.10 beat the champion by +0.03 R per OOS trade?'
 status: queued
@@ -51,7 +51,7 @@ baseline:
     on the SAME OOS trades with the live predicate; each trade net of fee + slippage + funding. Hold (no head) is reported as context.
   net_of_cost: true
 decision_rule:
-  id: RULE-RQ20261128-xt5d-01-EXITHEAD-THRESHOLD
+  id: RULE-RQ20261128-e5d0-01-EXITHEAD-THRESHOLD
   registered_at: '2026-11-28'
   registered_before_run: true
   baseline: the holding_pays champion at the live tau 0.10 on identical folds and trades
@@ -134,9 +134,9 @@ run:
   - --registered-at
   - '2026-11-28'
   - --rule-id
-  - RULE-RQ20261128-xt5d-01-EXITHEAD-THRESHOLD
+  - RULE-RQ20261128-e5d0-01-EXITHEAD-THRESHOLD
   inputs:
-    research_unit: RQ-20261128-xt5d-01
+    research_unit: RQ-20261128-e5d0-01
 ml_consumer:
   book: demo_floor
   consumer: src/runtime/exit_head_apply.py
