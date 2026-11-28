@@ -1595,8 +1595,100 @@ def pca_fit_project(train_x: np.ndarray, test_x: np.ndarray, k: int = TSFM_K, ma
     return proj(train_x), proj(test_x)
 
 
+# ZERO-SHOT TSFM FORECAST arm (frontier reopen, RQ-20261128-e2c0-01; the ts_foundation_model family after c4e2-04's Chronos
+# encoder came back INDETERMINATE at +0.0097 R, t 1.27). A FROZEN TiRex-2 (NX-AI/TiRex-2, Apache-2.0, LICENSE + NOTICE read on the
+# Hub 2026-11-28) forecasts each decision row's next TIREX_H hourly closes from its trailing TIREX_CONTEXT closes; its 9 quantiles
+# are turned into TIREX_K scale-free columns (log-return median, spread, skew, signal-to-spread) added to the registered 20 features.
+# Unlike the Chronos arm there is no PCA: the columns are the model's forecast itself. Control: the SAME columns permuted across
+# rows within each fold's train and test separately (seeded), which keeps their marginal and breaks their link to the row.
+# Point-in-time: a context ends at bar t's close, the same bar every registered feature reads. Nothing is fine-tuned.
+TIREX_CONTEXT = 512
+TIREX_H = 24
+TIREX_FEATURES = ["tx_med_4", "tx_med_24", "tx_spread_4", "tx_spread_24", "tx_skew_24", "tx_snr_24"]
+TIREX_PERM = [f"{c}_perm" for c in TIREX_FEATURES]
+TIREX_PREFIX = "tirex-2__"               # how the model files travel flat in the Kaggle bundle (sub-directories are skipped)
+
+
+def tirex2_model_dir() -> str | None:
+    """$TIREX2_MODEL_DIR, else the flat bundle files under $TIREX2_BUNDLE_DIR re-assembled as a model dir; None = unavailable."""
+    import os
+    if os.environ.get("TIREX2_MODEL_DIR"):
+        return os.environ["TIREX2_MODEL_DIR"]
+    src = os.environ.get("TIREX2_BUNDLE_DIR")
+    if not src:
+        return None
+    files = sorted(Path(src).glob(TIREX_PREFIX + "*"))
+    names = {f.name[len(TIREX_PREFIX):] for f in files}
+    if not {"config.json", "model.safetensors"} <= names:
+        return None
+    dst = Path("/tmp/tirex-2")
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in files:
+        link = dst / f.name[len(TIREX_PREFIX):]
+        if not link.exists():
+            link.symlink_to(f)
+    return str(dst)
+
+
+def tirex2_quantile_features(q: np.ndarray, last: np.ndarray) -> np.ndarray:
+    """[n, 9 quantiles (0.1..0.9), H] price forecasts + [n] last close -> [n, TIREX_K] scale-free columns (NaN where undefined):
+    median log return at h 4 / 24, q90-q10 log spread at h 4 / 24, Bowley skew at h 24, median / spread at h 24."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r = np.log(np.clip(q, 1e-12, None) / last[:, None, None])
+        lo, med, hi = r[:, 0, :], r[:, 4, :], r[:, 8, :]
+        h4, h24 = min(3, r.shape[2] - 1), r.shape[2] - 1
+        sp4, sp24 = hi[:, h4] - lo[:, h4], hi[:, h24] - lo[:, h24]
+        skew = np.where(sp24 > 0, (hi[:, h24] + lo[:, h24] - 2 * med[:, h24]) / sp24, np.nan)
+        snr = np.where(sp24 > 0, med[:, h24] / sp24, np.nan)
+        out = np.column_stack([med[:, h4], med[:, h24], sp4, sp24, skew, snr]).astype(np.float32)
+    out[~np.isfinite(out)] = np.nan
+    return out
+
+
+def tirex2_features(cache: Path, tab: pd.DataFrame, model_dir: str | None = None, context: int = TIREX_CONTEXT, horizon: int = TIREX_H,
+                    batch: int = 512, device: str = "cuda", forecast_fn=None, hole_safe: bool = True,
+                    deadline: float | None = None) -> tuple[np.ndarray, dict]:
+    """TIREX_K forecast columns per row of ``tab`` (float32 [len(tab), K]); NaN rows lack a full context. ``forecast_fn`` (tests)
+    maps a float32 [b, context] array to [b, 9, horizon] quantile prices; otherwise TiRex-2 is loaded from ``model_dir``. Past
+    ``deadline`` (epoch s) it stops and reports ``budget_cut`` so the caller records INDETERMINATE, never a partial verdict."""
+    info = {"context": context, "horizon": horizon, "device": device, "batches": 0, "rows_no_context": 0, "budget_cut": False}
+    if forecast_fn is None:
+        import torch
+        from tirex2 import TimeseriesType, load_model
+        model = load_model(model_dir, device=device)
+
+        def forecast_fn(x: np.ndarray) -> np.ndarray:
+            ts = [TimeseriesType(target=torch.from_numpy(c).unsqueeze(0), past_covariates=None, future_covariates=None) for c in x]
+            f = model.forecast(ts, prediction_length=horizon, output_type="numpy", batch_size=len(x))
+            return np.stack(f)[:, 0, :, :]
+    out = np.full((len(tab), len(TIREX_FEATURES)), np.nan, dtype=np.float32)
+    for sym, g in tab.groupby("symbol", sort=False):
+        df = pd.read_pickle(cache / f"{sym}.pkl").reset_index(drop=True)
+        if hole_safe:
+            df = regrid_hourly(df)
+        closes = df["close"].astype(float).to_numpy()
+        ctx, ok = tsfm_contexts(closes, g["i"].to_numpy().astype(int), context)
+        info["rows_no_context"] += int((~ok).sum())
+        pos = g.index.to_numpy()[ok]
+        for a in range(0, len(ctx), batch):
+            if deadline is not None and time.time() > deadline:
+                info["budget_cut"] = True
+                return out, info
+            x = ctx[a:a + batch]
+            fin = np.isfinite(x).all(axis=1)          # a regridded hole inside the window: that row stays NaN (LightGBM missing)
+            if fin.any():
+                out[pos[a:a + batch][fin]] = tirex2_quantile_features(forecast_fn(x[fin]), x[fin][:, -1].astype(float))
+            info["batches"] += 1
+    return out, info
+
+
+def permute_within(x: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Rows of ``x`` in a seeded random order (the placebo keeps each column's marginal, breaks its link to the row)."""
+    return x[rng.permutation(len(x))]
+
+
 def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | None = None, rule: dict = LEVER_RULE,
-               xgb_device: str = "cpu", tsfm_emb: np.ndarray | None = None) -> dict:
+               xgb_device: str = "cpu", tsfm_emb: np.ndarray | None = None, tirex_x: np.ndarray | None = None) -> dict:
     """Dev folds only (DEV_FOLDS .. HOLDOUT_START), registered recipe refit per fold, same tau / cost stack / sequencing."""
     d_bounds = [pd.Timestamp(x, tz="UTC") for x in DEV_FOLDS] + [pd.Timestamp(HOLDOUT_START, tz="UTC")]
     dev = tab[tab.ts < d_bounds[-1]]
@@ -1629,6 +1721,15 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
             tl, ts_ = fit_predict(tr2, te2, FEATURES + TSFM_FEATURES, n_jobs)
             nl, ns = fit_predict(tr2, te2, FEATURES + TSFM_NOISE, n_jobs)
             tk["tsfm"], tk["placebo_tsfm"] = policy(test, tl, ts_, tau), policy(test, nl, ns, tau)
+        if "tirex2" in arms and tirex_x is not None:
+            xtr, xte = tirex_x[train.index.to_numpy()], tirex_x[test.index.to_numpy()]
+            rng_x = np.random.default_rng(SEED + 1130 + int(a.timestamp()) % 9973)
+            ptr_, pte_ = permute_within(xtr, rng_x), permute_within(xte, rng_x)
+            tr3 = train.assign(**{c: xtr[:, k] for k, c in enumerate(TIREX_FEATURES)}, **{c: ptr_[:, k] for k, c in enumerate(TIREX_PERM)})
+            te3 = test.assign(**{c: xte[:, k] for k, c in enumerate(TIREX_FEATURES)}, **{c: pte_[:, k] for k, c in enumerate(TIREX_PERM)})
+            xl, xs = fit_predict(tr3, te3, FEATURES + TIREX_FEATURES, n_jobs)
+            ql_, qs_ = fit_predict(tr3, te3, FEATURES + TIREX_PERM, n_jobs)
+            tk["tirex2"], tk["placebo_tirex2"] = policy(test, xl, xs, tau), policy(test, ql_, qs_, tau)
         if any(x in CAL_ARMS for x in arms):
             cp = calibrated_preds(train, pl, ps, n_jobs, np.random.default_rng(SEED + 1129 + int(a.timestamp()) % 9973))
             for arm in (x for x in arms if x in CAL_ARMS):
@@ -1662,7 +1763,8 @@ def lever_arms(tab: pd.DataFrame, tau: float, arms: list[str], n_jobs: int | Non
     cat = {k: pd.concat(v, ignore_index=True) for k, v in pooled.items() if v}
     res = {"folds": folds, "pooled": {k: split_by_side(v) | {"bar_risk": bar_risk(v)} for k, v in cat.items()}, "arms": {}}
     pairs = {"regime": {"vs_base": "base", "vs_placebo": "placebo"}, "top1": {"vs_base": "base", "vs_random1": "random1"},
-             "tsfm": {"vs_base": "base", "vs_placebo": "placebo_tsfm"}}
+             "tsfm": {"vs_base": "base", "vs_placebo": "placebo_tsfm"},
+             "tirex2": {"vs_base": "base", "vs_placebo": "placebo_tirex2"}}
     for arm in (x for x in arms if x in CAP_ARMS):
         pairs[arm] = {"vs_base": "base", "vs_random": f"random_{arm}"}
     pairs["cal_iso"] = {"vs_base": "base"}
@@ -1738,13 +1840,42 @@ def lever_arms_cmd(args) -> int:
         tsfm_info |= {"elapsed_s": round(time.time() - t_e), "dim": int(tsfm_emb.shape[1]), "model": "amazon/chronos-t5-small",
                       "k": TSFM_K, "rows_with_embedding": int(np.isfinite(tsfm_emb).all(axis=1).sum()), "rows": len(tab)}
         print(json.dumps({"tsfm_embeddings": tsfm_info}), flush=True)
+    tirex_x, tirex_info = None, None
+    if "tirex2" in arms:
+        def _unavailable(why: str) -> int:
+            (out / "verdict.json").write_text(json.dumps({"verdict": "indeterminate", "read_state": "could_not_look", "n": 0,
+                                                          "note": why, "rule": rule, "arm": "tirex2"}, indent=1) + "\n")
+            print(why, flush=True)
+            return 0
+        mdir = tirex2_model_dir()
+        try:
+            import torch
+            dev = "cuda" if torch.cuda.is_available() else None
+        except Exception:  # noqa: BLE001  # allow-silent: no torch = the arm is unavailable; recorded as verdict could_not_look below, never a FAIL
+            dev = None
+        if mdir is None or dev is None:
+            return _unavailable(f"tirex2 arm unavailable: model_dir={mdir} cuda={dev} (the TiRex-2 weights / GPU did not reach this run)")
+        t_e = time.time()
+        budget = getattr(args, "tsfm_budget_min", None)
+        try:
+            tirex_x, tirex_info = tirex2_features(cache, tab, mdir, device=dev,
+                                                  deadline=(t_e + 60 * float(budget)) if budget else None)
+        except Exception as exc:  # noqa: BLE001  # allow-silent: the model failure is written to verdict.json (could_not_look, with the exception) and printed
+            return _unavailable(f"tirex2 arm unavailable: TiRex-2 failed to load or run ({type(exc).__name__}: {str(exc)[:300]})")
+        tirex_info |= {"elapsed_s": round(time.time() - t_e), "model": "NX-AI/TiRex-2", "k": len(TIREX_FEATURES),
+                       "rows_with_features": int(np.isfinite(tirex_x).all(axis=1).sum()), "rows": len(tab)}
+        print(json.dumps({"tirex2_features": tirex_info}), flush=True)
+        if tirex_info["budget_cut"]:
+            return _unavailable(f"tirex2 arm budget-cut: features for {tirex_info['rows_with_features']}/{len(tab)} rows after "
+                                f"{tirex_info['elapsed_s']} s (--tsfm-budget-min {budget}); a partial table is never graded")
     if "regime" in arms:
         tab = pd.concat([tab.reset_index(drop=True), regime_columns(cache, universe(), tab)], axis=1)
         tab = tab.dropna(subset=REGIME_FEATURES).reset_index(drop=True)
     tau = float(args.tau) if args.tau is not None else 0.10
-    res = lever_arms(tab, tau, arms, getattr(args, "n_jobs", None), rule=rule, xgb_device=xgb_device, tsfm_emb=tsfm_emb)
+    res = lever_arms(tab, tau, arms, getattr(args, "n_jobs", None), rule=rule, xgb_device=xgb_device, tsfm_emb=tsfm_emb,
+                     tirex_x=tirex_x)
     res |= {"schema": "ml_decision_entry_lever_arms/1", "unit": args.unit, "tau": tau, "git_sha": _git_sha(), "rule": rule,
-            "xgb_device": xgb_device, "tsfm": tsfm_info, "cache_source": getattr(args, "cache_source", "fetch"), "cache_report": cache_report,
+            "xgb_device": xgb_device, "tsfm": tsfm_info, "tirex2": tirex_info, "cache_source": getattr(args, "cache_source", "fetch"), "cache_report": cache_report,
             "arm_specs": {k: ARM_SPECS[k] for k in arms if k in ARM_SPECS},
             "table_rows": len(tab), "table_min_ts": str(tab.ts.min()), "table_max_ts": str(tab.ts.max()), "n_symbols": int(tab.symbol.nunique()),
             "regime_features": REGIME_FEATURES, "cost_stack": f"fee {FEE_BPS} bps rt + slippage 3.0 bps + funding 1.0 bps/8h (label_symbol net R)",
@@ -1802,6 +1933,21 @@ def _self_test_tsfm() -> None:
     a, b = pca_fit_project(tr, te, k=3)
     assert a.shape == (500, 3) and b.shape == (20, 3) and np.isnan(b[3]).all() and np.isfinite(b[[0, 1, 2, 4]]).all()
     assert abs(a[:, 0].var() - tr[:, 0].var()) / tr[:, 0].var() < 0.05      # PC1 is the inflated column
+
+
+def _self_test_tirex2() -> None:
+    last = np.array([100.0, 50.0])
+    lv = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    q = np.zeros((2, 9, 24))
+    q[0] = (100 * np.exp(0.01 + 0.02 * (lv - 0.5)))[:, None]             # median +1%, symmetric spread 0.016
+    q[1] = 50.0
+    f = tirex2_quantile_features(q, last)
+    assert f.shape == (2, len(TIREX_FEATURES))
+    assert abs(f[0, 1] - 0.01) < 1e-6 and abs(f[0, 3] - 0.016) < 1e-6 and abs(f[0, 4]) < 1e-5 and abs(f[0, 5] - 0.625) < 1e-4, f[0]
+    assert f[1, 3] == 0 and np.isnan(f[1, 4]) and np.isnan(f[1, 5]), f[1]   # zero spread: skew / snr undefined, never inf
+    x = np.arange(20, dtype=float).reshape(10, 2)
+    p = permute_within(x, np.random.default_rng(3))
+    assert sorted(p[:, 0].tolist()) == x[:, 0].tolist() and not np.array_equal(p, x) and np.array_equal(p[:, 1] - p[:, 0], np.ones(10))
 
 
 def _self_test_lever_arms() -> None:
@@ -1895,6 +2041,7 @@ def _self_test() -> None:
     _self_test_lever_arms()
     _self_test_staleness_capacity()
     _self_test_tsfm()
+    _self_test_tirex2()
     print("self-test ok")
 
 
@@ -1981,11 +2128,13 @@ def main(argv=None) -> int:
     ap.add_argument("--tau", type=float, default=None, help="side-by-fold: tau (default: the first --frozen model's)")
     ap.add_argument("--gate", action="append", default=[], choices=["trend", "short_only"], help="side-by-fold: also run this side gate vs both sides on the dev folds")
     ap.add_argument("--ext-folds", action="store_true", help="side-by-fold: also refit-score the post-dev quarters (claims a holdout read)")
-    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", "tsfm", *ARM_SPECS, *CAP_ARMS, *CAL_ARMS],
+    ap.add_argument("--arm", action="append", default=[], choices=["regime", "top1", "tsfm", "tirex2", *ARM_SPECS, *CAP_ARMS, *CAL_ARMS],
                     help="lever-arms: which arm(s); default regime + top1")
     ap.add_argument("--cache-source", dest="cache_source", choices=("fetch", "published"), default="fetch",
                     help="lever-arms: published = $ML_DATA_ROOT metis-market-bp2 market_raw (Kaggle, no internet)")
     ap.add_argument("--xgb-device", dest="xgb_device", choices=("cpu", "cuda"), default="cpu", help="lever-arms: xgb_* arms device")
+    ap.add_argument("--tsfm-budget-min", dest="tsfm_budget_min", type=float, default=None,
+                    help="lever-arms tirex2: stop the forecast pass after this many minutes and record INDETERMINATE (budget-cut)")
     ap.add_argument("--n-jobs", dest="n_jobs", type=int, default=None, help="lever-arms: threads per fit (default LGB_PARAMS n_jobs)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)

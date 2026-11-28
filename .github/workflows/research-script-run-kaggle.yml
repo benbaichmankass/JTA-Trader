@@ -142,6 +142,17 @@ jobs:
             done
             ls -l /tmp/kb/wheels/chronos-* || true
           fi
+          # FRONTIER-TSFM (RQ-20261128-e2c0-01): a unit running the tirex2 arm needs the frozen TiRex-2 forecaster offline
+          # (NX-AI/TiRex-2, Apache-2.0, ~330 MB safetensors) plus the tirex-2 wheel and narwhals (imported at load); only such units
+          # pay for the download. A failed download leaves the arm unavailable -> INDETERMINATE (could_not_look), never FAIL.
+          if grep -q -- "--arm$" "research/queue/${UNIT}.yaml" 2>/dev/null && grep -q -- "- tirex2$" "research/queue/${UNIT}.yaml" 2>/dev/null; then
+            pip download --no-deps --only-binary=:all: -d /tmp/kb/wheels "tirex-2==0.5.0" "narwhals>=2.0" || echo "tirex-2 wheel download failed (the arm will report unavailable)"
+            for f in config.json model.safetensors; do
+              curl -sSfL --retry 3 -o "/tmp/kb/wheels/tirex-2__${f}" \
+                "https://huggingface.co/NX-AI/TiRex-2/resolve/main/${f}" || echo "tirex-2 ${f} download failed (the arm will report unavailable)"
+            done
+            ls -l /tmp/kb/wheels/tirex-2__* || true
+          fi
           python3 scripts/research/kaggle_run.py bundle --unit "$UNIT" --run-id "$GITHUB_RUN_ID" \
               --username "$USERNAME" --out /tmp/kb/bundle --sha "$GITHUB_SHA" --wheels /tmp/kb/wheels | tee /tmp/kb/info.json | tee -a "$OUT/kaggle-session.log"
           # dataset: create the first time, new version afterwards. The CLI can exit non-zero while the dataset

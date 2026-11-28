@@ -106,6 +106,10 @@ if glob.glob(os.path.join(bundle_dir, "*.ckpt")):
 if glob.glob(os.path.join(bundle_dir, "chronos-*__*")):
     env["CHRONOS_BUNDLE_DIR"] = bundle_dir
     print("== CHRONOS_BUNDLE_DIR:", bundle_dir, [os.path.basename(c) for c in glob.glob(os.path.join(bundle_dir, "chronos-*__*"))])
+# FRONTIER-TSFM: shipped frozen forecaster files (TiRex-2) -> read offline from the bundle, never downloaded.
+if glob.glob(os.path.join(bundle_dir, "tirex-2__*")):
+    env["TIREX2_BUNDLE_DIR"] = bundle_dir
+    print("== TIREX2_BUNDLE_DIR:", bundle_dir, [os.path.basename(c) for c in glob.glob(os.path.join(bundle_dir, "tirex-2__*"))])
 if os.path.exists(os.path.join(repo, "scripts", "research", "probe_learners.py")):
     subprocess.run([sys.executable, "scripts/research/probe_learners.py", "--backend", "kaggle"], cwd=repo, env=env, check=False)
 rc = subprocess.run([sys.executable, "scripts/research/script_run.py", "--unit", unit, "--run-id", run_id, "--run"],

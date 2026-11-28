@@ -1,0 +1,160 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV) on Manager 2026-11-28b's queue ("frontier reopen:
+# ... plan one TSFM unit (TiRex-2 / Toto 2.0), licence read first"; operator frontier choice "Measurement tools, then new families
+# (Recommended)"). Licence read 2026-11-28 on the Hub: NX-AI/TiRex-2 LICENSE file = Apache License 2.0, NOTICE "Copyright 2026 NXAI GmbH,
+# Licensed under the Apache License, Version 2.0" (TiRex v1 is licence "other" and is NOT used). Toto 2.0 (Datadog) is apache-2.0 by card
+# metadata only (no LICENSE file in the repo) and is not an arm here. Gates this adds or changes: none.
+id: RQ-20261128-e2c0-01
+title: 'ml_entry ZERO-SHOT TSFM FORECAST lever: on the registered dev folds, do 6 scale-free columns from a FROZEN TiRex-2 quantile forecast
+  of each decision row''s next 24 hourly closes (from its trailing 512), added to the 20 registered features, beat the recipe and a
+  row-permuted copy of the same columns, net of cost?'
+status: queued
+cadence: once
+theme: ml_health
+priority: 1
+roadmap:
+- L-ML-LIVE
+kind: experiment
+origin: follow_up
+practice_precedent: 'M3, M10, T2 (docs/reference/trading-and-model-practice-principles.md): one lever per arm against the registered recipe and a
+  same-shape placebo on the same folds; model-family diversity (frontier-research; ts_foundation_model has 0 manifests and 2 graded reads).
+  Paper: Podest et al., TiRex-2: Generalizing TiRex to Multivariate Data and Streaming, arXiv 2607.01204 (NeurIPS 2026 oral; zero-shot
+  GIFT-Eval / fev-bench results are author-reported, not replicated by us).'
+question: On the registered ml_entry dev folds (8 half-year folds 2022-01-01..2025-10-01, purge + embargo, tau 0.10, the harness cost stack),
+  is mean net R per decision higher when the two LightGBM regressors also see TiRex-2's zero-shot forecast of the next 24 hourly closes
+  (median log return at h 4 / 24, q90-q10 log spread at h 4 / 24, Bowley skew at h 24, median / spread at h 24), than with the registered
+  20 features, and higher than the same recipe plus the same 6 columns permuted across rows within each fold's train and test?
+why_this_matters: 'RQ-20261127-c4e2-04 (frozen Chronos-small encoder, 8 PCs) came back INDETERMINATE at delta +0.0097 R/decision, t 1.27, vs
+  placebo +0.0132 (t 1.66), 4/8 folds: the only ml_entry input lever with a positive point estimate on both contrasts this month. The learner
+  bake-off on the money label is exhausted (cb/ens3 dbf8-01, ridge 4654-09, FT-Transformer f7c1-06 / fc31-01, TabICL capped 7ab1-02 all
+  FAIL), so the open input family is pretrained time-series models. TiRex-2 differs from the Chronos arm in two ways that matter: it gives a
+  FORECAST (direction, spread and skew of the next 24 h, the decision horizon) instead of an unsupervised embedding that PCA must compress,
+  and it is a newer, stronger zero-shot model. A PASS makes these columns a challenger input; serving would mirror-publish scores from the
+  trainer, zero torch on the money box.'
+evidence_class:
+  holdout: dev_folds
+  claim: edge
+power:
+  expected_n: 65000
+  min_detectable_effect: 0.0068
+  effect_units: R
+  sd: 1.2
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: 'alpha is the tabulated power-floor level (as f1a0-01 / c4e2-04); one graded arm, so the LEVER_RULE bar t >= 2.0 applies unchanged
+    (no Sidak inflation). n MEASURED on the same folds: c4e2-04 tsfm arm n 68,883, base n 71,412 (run 46002684114). HONEST POWER: that run''s
+    realised week-clustered se of the delta was 0.0077 R, so only an effect of about +0.015 R or more can clear t 2.0 here; an effect the
+    size of the registered 0.0068 floor will read INDETERMINATE. That is stated now and is not a reason to change the rule after a result.'
+  feasibility:
+    source: none
+    accrual_basis: Replays the published Binance klines (metis-market-bp2); nothing accrues.
+decision_rule:
+  id: RULE-RQ20261128-e2c0-01-TIREX2-FORECAST
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  baseline: the registered recipe refit per dev fold (arm "base"), same rows, tau 0.10, policy and cost stack
+  statistic: 'ml_decision_entry.py lever-arms --arm tirex2 (lever_verdict / LEVER_RULE): delta = pooled mean net R per decision (tirex2) -
+    (base), week-clustered se (arm_diff); delta vs placebo_tirex2 (the recipe + the same 6 columns row-permuted within each fold''s train and
+    test, seeded); folds where tirex2 beats base; years with a positive yearly delta.'
+  rule: 'PASS iff n >= 3000 AND delta(tirex2 - base) >= 0.0068 R AND week-clustered t >= 2.0 AND delta(tirex2 - placebo_tirex2) >= 0.0068 AND
+    tirex2 beats base in >= 6 of 8 folds AND the yearly delta is positive in >= 3 years (RULE-ML-ENTRY-LEVER-ARMS-20261124, as c4e2-04). FAIL iff
+    n ok and delta + 2.0 se < 0.0068. INDETERMINATE otherwise, AND whenever the forecaster did not reach the run or did not finish (weights,
+    wheel or GPU missing, or the --tsfm-budget-min cut: read_state could_not_look; a partial table is never graded). Model NX-AI/TiRex-2
+    (tirex-2 0.5.0), context 512, horizon 24, the 6 columns, the checkpoint''s default inference settings and the permutation seed are fixed
+    now and never changed after a result.'
+  pass_action: 'ONE confirming read on disjoint out-of-time data (2025-10-01..2026-11-20, claimed in the holdout ledger) in its own unit, at
+    holdout_lock.bar_for(N) with N the overlapping read count at claim time (read_ledger.py shows 32 graded reads there on 2026-11-28, so
+    N >= 33). A pass there makes the forecast columns a challenger input for a data-backed Tier-3 packet against the live incumbent (serving =
+    trainer-side TiRex-2 + mirror-published columns, its own Tier-2 build), applied by the manager or a mandate, never by a lane.'
+  fail_action: Close frozen-TSFM covariates for crypto ENTRY on research/levers/ml-entry.yaml (encoder form via c4e2-04 if it is read as a null,
+    forecast form via this unit); no re-run with another context, horizon or column set. The ts_foundation_model family stays open for other
+    decisions (exit timing, volatility), which this unit does not test.
+  proposal_mapping: pass -> confirming out-of-time read -> Tier-2/3 packet; fail -> lever closed; indeterminate -> report the realised se (or the
+    missing / cut forecaster), stop.
+  what_it_does_not_do: Promotes nothing; reads no held-out window (dev folds only); fine-tunes nothing; uses no covariates in TiRex-2 (univariate
+    close only); changes no served model, config or order path; adds no gate.
+  min_n: 3000
+compute: gpu
+baseline:
+  definition: The registered recipe (20 FEATURES, LGB_PARAMS) refit per dev fold, better predicted side if > tau 0.10, one open position per
+    symbol, SL 2 / TP 3 ATR14, 24 h time stop, full cost stack (fee 11 bps rt + slippage 3 bps + funding 1 bps/8h).
+  net_of_cost: true
+value:
+  bucket: ai_trader
+  usd_at_stake_per_month: 300
+  confidence: 0.08
+  basis: 'stand-in, as c4e2-04: ml_entry trades real money on bybit_2 + bybit_portfolio; not a P&L measurement.'
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: true
+  published_data: metis-market-bp2
+  published_paths:
+  - datasets-out/market_raw/*/1h/v102/data.jsonl
+  peak_memory_gb: 12.0
+  est_minutes: 150
+  why_runner: 'Kaggle GPU (free): the forecaster forward pass needs the T4; the kernel has no internet, so the klines come from the published
+    metis-market-bp2 and the TiRex-2 files + the tirex-2 and narwhals wheels travel in the bundle (research-script-run-kaggle.yml, only for
+    units with the tirex2 arm).'
+  basis: 'ESTIMATE: ~0.79M decision rows (c4e2-04 MEASURED 792,116) x one TiRex-2 forecast at context 512, horizon 24. MEASURED on the lane
+    sandbox CPU (4 threads, tirex-2 0.5.0, real weights): 21-37 rows/s warm; a T4 is assumed 10-40x faster -> 20-120 min, hence the
+    200-min --tsfm-budget-min cut (a cut is INDETERMINATE, never a partial grade); then 8 folds x 3 LightGBM pair fits (~10-15 min as
+    c4e2-04). Chronos-small took 2,827 s for the same rows (MEASURED, run 46002684114).'
+run:
+  workflow: research-script-run-kaggle.yml
+  command:
+  - python3
+  - scripts/research/ml_decision_entry.py
+  - lever-arms
+  - --cache-source
+  - published
+  - --cache
+  - /tmp/ml_entry_klines
+  - --tau
+  - '0.10'
+  - --arm
+  - tirex2
+  - --tsfm-budget-min
+  - '200'
+  - --unit
+  - '{unit}'
+  - --out
+  - '{out_dir}'
+  bundle_paths:
+  - comms/research/broad_paths/bp2-f4271084b120
+  timeout_minutes: 300
+  inputs:
+    research_unit: RQ-20261128-e2c0-01
+intervention_controls:
+  hold_to_bracket: true
+  hold_to_bracket_note: every arm holds the same 2/3 ATR bracket and 24 h stop; only the model inputs differ
+  matched_random:
+    draws: 100
+    note: 'declared, NOT computed by this unit (each draw would be a full refit, as c4e2-04): the control that is computed and graded is
+      ONE seeded permutation placebo, the SAME 6 columns permuted across rows within each fold''s train and test. It keeps each column''s
+      marginal distribution and breaks its link to the row, so it prices the recipe''s overfit to 6 extra realistic columns (a stricter
+      control than c4e2-04''s N(0,1) columns)'
+  best_static:
+    grid:
+    - recipe (20 features, live)
+    - recipe + 6 row-permuted forecast columns (placebo_tirex2)
+    excludes_test_folds: true
+    note: the model is refit per fold on rows before the fold minus the registered embargo; the forecaster is frozen and sees only closes up to
+      bar t; nothing is tuned on a fold
+  bootstrap_group: week
+ml_consumer:
+  consumer: scripts/research/ml_entry_retrain.py
+  decision: whether frozen-forecaster columns enter the next ml_entry challenger; no change from this unit
+  legs:
+  - ml_entry
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261127-c4e2-04
+- RQ-20261127-c4e2-03
+- RQ-20261127-7ab1-02
+- RQ-20261126-dbf8-03
+- docs/research/ml-entry-redesign-2026-11-28.md
+population: The registered ml_entry recipe refit per dev fold (8 half-year folds 2022-01-01..2025-10-01) over the frozen 60-perp universe, tau 0.10,
+  net R after fee 11 bps rt + slippage 3 bps + funding 1 bps/8h.

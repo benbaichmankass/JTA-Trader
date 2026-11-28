@@ -110,6 +110,10 @@ def bundle(unit: str, run_id: str, username: str, out: Path, *, repo: Path = _RE
         # exports CHRONOS_BUNDLE_DIR and ml_decision_entry.chronos_model_dir() re-assembles them as a model dir.
         for w in sorted(Path(wheels).glob("chronos-*__*")):
             shutil.copy2(w, out / w.name)
+        # FRONTIER-TSFM: a frozen TiRex-2 forecaster's files, flat and prefixed `tirex-2__`; kernel_main.py exports TIREX2_BUNDLE_DIR
+        # and ml_decision_entry.tirex2_model_dir() re-assembles them as a model dir.
+        for w in sorted(Path(wheels).glob("tirex-2__*")):
+            shutil.copy2(w, out / w.name)
     (out / "spec.json").write_text(json.dumps({"unit": unit, "run_id": run_id, "commit_sha": sha}) + "\n")
     (out / "dataset-metadata.json").write_text(json.dumps({
         "title": dataset_slug, "id": f"{username}/{dataset_slug}", "licenses": [{"name": "CC0-1.0"}],
