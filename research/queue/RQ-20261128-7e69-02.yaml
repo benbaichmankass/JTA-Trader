@@ -93,3 +93,8 @@ related:
 - RQ-20261015-8b93-02
 - scripts/research/train_parity.py
 - docs/plans/compute-topology-design-2026-11-28.md
+practice_precedent: 'M4 (docs/reference/trading-and-model-practice-principles.md): the parity decision rule and its tolerances are registered
+  before the run; design in docs/plans/KAGGLE-TRAINING-PIPELINE-DESIGN-2026-10-13.md § 4 step 4 and § 10'
+ml_consumer:
+  not_applicable: training-infrastructure parity measurement for the RegimeClassifier trainer class; it changes where a manifest trains, not a
+    live or demo decision (the baseline manifest is research_only and its dataset is BTCUSDT market_features, no rostered leg consumes it)
