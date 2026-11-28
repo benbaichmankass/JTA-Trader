@@ -446,11 +446,23 @@ _POLICY = ("operator 2026-10-16 (popup, 'Yes, adopt'): a single-window PASS on a
            "discovery; it opens exactly one fresh-window confirmation unit before it can feed any Tier-3 proposal")
 
 
+#: Template families whose PASS is a PRODUCER-HEALTH check, not an edge claim: a fresh-window confirmation of such a
+#: PASS confirms nothing, so none is opened and an unfired one is retired (RESEARCH-NO-WAIT-FOR-DATA, operator
+#: 2026-11-28, relayed by Manager 2026-11-28b: 5 leg-corpus-s1 confirmations sat blocked to 2027-01).
+_NO_CONFIRM_FAMILIES: Dict[str, str] = {
+    "leg-corpus-s1": ("a producer-health check (coverage / fidelity / cost completeness of the family's money-leg "
+                      "corpora; the template's own power basis: 'no edge claim is made'), so a fresh-window "
+                      "confirmation confirms nothing"),
+}
+
+
 def template_cell(unit: Dict[str, Any]) -> bool:
     """A cell generated from a research/templates family. Programme nodes (`programme:*`) are not:
-    their DAG registers its own confirmation nodes (P3's best-of-3 -> one fresh window)."""
+    their DAG registers its own confirmation nodes (P3's best-of-3 -> one fresh window). Nor are
+    `_NO_CONFIRM_FAMILIES` (producer-health checks: nothing to confirm)."""
     gen = unit.get("generated")
-    return isinstance(gen, dict) and not str(gen.get("family") or "").startswith("programme:")
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    return isinstance(gen, dict) and not fam.startswith("programme:") and fam not in _NO_CONFIRM_FAMILIES
 
 
 def confirmation_of(unit: Dict[str, Any]) -> Optional[str]:
@@ -903,12 +915,39 @@ def _rearm_forward_wait(root: Path, unit: Dict[str, Any], text: str,
     return new, (cid, child)
 
 
+def _retire_no_confirm(root: Path, unit: Dict[str, Any], text: str, graded_at: str) -> Optional[str]:
+    """An unfired forward-wait confirmation whose parent is a `_NO_CONFIRM_FAMILIES` cell: retired (new text), else None."""
+    pid = confirmation_of(unit)
+    if not pid or confirmation_mode(unit) != "forward_wait" or unit.get("status") not in ("queued", "blocked") \
+            or unit.get("last_dispatched_at"):
+        return None
+    ppath = root / QUEUE / f"{pid}.yaml"
+    if not ppath.is_file():
+        return None
+    yaml = _yaml()
+    try:
+        parent = yaml.safe_load(ppath.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None
+    gen = parent.get("generated") if isinstance(parent, dict) else None
+    fam = str(gen.get("family") or "") if isinstance(gen, dict) else ""
+    if fam not in _NO_CONFIRM_FAMILIES:
+        return None
+    new = apply_text(text, {"status": "retired", "reset_stamp": False, "grading": {
+        "auto": True, "graded_at": graded_at, "grader": "scripts/research/queue_grade.py", "verdict": None,
+        "note": (f"retired, never dispatched: {pid} is a {fam} cell, {_NO_CONFIRM_FAMILIES[fam]} "
+                 "(RESEARCH-NO-WAIT-FOR-DATA, operator 2026-11-28)")}})
+    return new if new != text else None
+
+
 def grade_unit_full(root: Path, unit_id: str, text: str,
                     graded_at: str) -> Optional[Tuple[str, Optional[Tuple[str, str]]]]:
     """(new unit text, (child id, child text) | None), or None when nothing is to be written. The
     child is the fresh-window confirmation unit a template-cell PASS opens (`confirmation_unit`)."""
     yaml = _yaml()
     unit = yaml.safe_load(text)
+    if isinstance(unit, dict) and (nc := _retire_no_confirm(root, unit, text, graded_at)):
+        return nc, None
     if isinstance(unit, dict) and (re_ := _rearm_forward_wait(root, unit, text, graded_at)):
         return re_
     if isinstance(unit, dict) and (sup := _superseded_by(root, unit)):

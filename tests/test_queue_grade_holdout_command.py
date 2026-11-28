@@ -201,3 +201,16 @@ def test_blocked_stage0_forward_wait_is_rearmed(tmp_path):
     cu = yaml.safe_load(ctext)
     assert yaml.safe_load(new)["status"] == "retired" and cu["confirmation"]["mode"] == "holdout_rerun"
     assert "--stage0-holdout-start" in cu["run"]["command"] and "not_before" not in cu
+
+
+def test_producer_health_family_opens_no_confirmation_and_retires_a_blocked_one(tmp_path):
+    r = _repo(tmp_path)
+    p = yaml.safe_load(_parent(verdict="pass"))
+    p["generated"] = {"family": "leg-corpus-s1", "key": "leg-corpus-s1:family=trend_4h"}
+    ptext = yaml.safe_dump(p, sort_keys=False)
+    assert not qg.template_cell(p)                                         # no confirmation is ever opened
+    (r / "research" / "queue" / f"{PID}.yaml").write_text(ptext)
+    fid, ftext = _blocked_forward(r, ptext)                                # one authored before the exemption
+    new, child = qg.grade_unit_full(r, fid, ftext, "2030-02-01")
+    u = yaml.safe_load(new)
+    assert child is None and u["status"] == "retired" and "producer-health" in u["grading"]["note"]
