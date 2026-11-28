@@ -563,6 +563,13 @@ mandates:
       # dispatch. Nothing else in this entry changed; MD-DEMOTE-S2-S1 is untouched.
       holdout_required: true
       holdout_min_n: 25
+      # OPERATOR GRANT 2026-11-28 ~09:00Z: popup "Grant it (Recommended)" to Manager Session 2026-11-28b
+      # (session_01AFoLuKWYdjMNUwCApgKHmo) -- grants MD-PROMOTE-S1-S2-LIVE-BAR-AMEND (PR #27086 / #29709):
+      # the live-bar path of OPERATING-PLAN s2 "Live-performance promotion path" may FIRE S1 -> S2 when the
+      # Stage-0 path refuses or needs data. Feed <= 26 h; the venue-measured subset must pass on its own count;
+      # affordability, the 25% cap and never: still bind; a fidelity-check unit rides in the same PR as the roster
+      # edit. Resolver: scripts/ops/mandate_resolver.py LIVE-BAR PATH (#29708). Revert = delete this line.
+      live_bar_path: true
     cap:
       basis: uniform_account_risk_pct_share_of_roster
       max_auto_share: 0.25

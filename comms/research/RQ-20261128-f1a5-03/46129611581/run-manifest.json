@@ -1,0 +1,110 @@
+{
+  "unit": "RQ-20261128-f1a5-03",
+  "run_id": "46129611581",
+  "commit_sha": "944b9bfe1d2e1a5f90f0e0ae3ed9ee26b2539128",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/46129611581",
+  "timeout_minutes": 180,
+  "runner": {
+    "cpu_model": "AMD EPYC 9V45 96-Core Processor",
+    "cpu_simd": [
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1020-azure",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261122.9.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "7e434c4c74a8",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/edge_movement_capture.py",
+        "--build-data",
+        "--data-root",
+        "comms/research/_scratch_edge_data",
+        "--rt-bps",
+        "14",
+        "--dsr-trials",
+        "22",
+        "--out",
+        "comms/research/RQ-20261128-f1a5-03/46129611581/ctl.json"
+      ],
+      "log": "comms/research/RQ-20261128-f1a5-03/46129611581/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 189.9,
+      "seconds": 42.6
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/edge_movement_capture.py",
+        "--data-root",
+        "comms/research/_scratch_edge_data",
+        "--grid",
+        "session",
+        "--rt-bps",
+        "14",
+        "--dsr-trials",
+        "22",
+        "--out",
+        "comms/research/RQ-20261128-f1a5-03/46129611581/arm_session.json"
+      ],
+      "log": "comms/research/RQ-20261128-f1a5-03/46129611581/logs/cmd-1.log",
+      "exit_code": 0,
+      "peak_rss_mb": 136.0,
+      "seconds": 9.9
+    },
+    {
+      "index": 2,
+      "argv": [
+        "python3",
+        "scripts/research/edge_iteration_verdict.py",
+        "--control",
+        "comms/research/RQ-20261128-f1a5-03/46129611581/ctl.json",
+        "--arm",
+        "comms/research/RQ-20261128-f1a5-03/46129611581/arm_session.json",
+        "--factor",
+        "session anchor 13:00 UTC (time exit, no TP/SL) on BO1/FD1 entries",
+        "--expect-control-sharpe",
+        "-0.72",
+        "--out",
+        "comms/research/RQ-20261128-f1a5-03/46129611581"
+      ],
+      "log": "comms/research/RQ-20261128-f1a5-03/46129611581/logs/cmd-2.log",
+      "exit_code": 0,
+      "peak_rss_mb": 18.2,
+      "seconds": 0.1
+    }
+  ],
+  "all_ok": true,
+  "holdout_claims": 0
+}

@@ -662,6 +662,66 @@ class _MlVolResolver:
             return self._skip(f"exc:{type(exc).__name__}:{exc}"[:160])
 
 
+class _LabelsVolResolver:
+    """``--vol-verdict labels``: stamp ``vol_regime`` from a precomputed labels JSONL ({ts, vol_regime} rows, e.g. a
+    ``ml_vol_label_replay.py replay-refit`` output) instead of scoring a registry head (RESEARCH-NO-WAIT-FOR-DATA,
+    2026-11-28; unit RQ-20261128-rc4e-01: labels from a head refit on a span DISJOINT from the graded one).
+
+    As-of and past-only: a clock bar uses the newest label whose bar has CLOSED by the clock bar's close
+    (label_ts + label_bar <= clock_ts + clock_bar), so no label built from a later close is read. A bar with no such
+    label returns None and the caller falls back to frozen and counts it (``ml_vol_fallback``), never a silent label."""
+
+    def __init__(self, path: str) -> None:
+        import bisect  # noqa: F401  (used in vol_regime_for_window)
+        self.available = False
+        self.reason = "unresolved"
+        self.skips: Dict[str, int] = {}
+        self._t: List[float] = []
+        self._lab: List[str] = []
+        self._bar = 0.0
+        self.model_id = f"labels:{path}"
+        try:
+            rows = []
+            with open(path, encoding="utf-8") as fh:
+                for line in fh:
+                    try:
+                        r = json.loads(line)
+                    except ValueError:
+                        continue
+                    lab = r.get("vol_regime")
+                    ts = pd.to_datetime(r.get("ts"), utc=True, errors="coerce")
+                    if lab in ("calm", "volatile") and ts is not pd.NaT and not pd.isna(ts):
+                        rows.append((ts.timestamp(), str(lab)))
+            rows.sort()
+            self._t = [t for t, _ in rows]
+            self._lab = [lab for _, lab in rows]
+            gaps = sorted(b - a for a, b in zip(self._t, self._t[1:]) if b > a)
+            self._bar = gaps[(len(gaps) - 1) // 2] if gaps else 0.0   # lower median: dropped rows widen some gaps
+            self.available = bool(self._t)
+            self.reason = "ok" if self.available else "no_calm_or_volatile_rows"
+        except OSError as exc:
+            self.reason = f"labels_unreadable:{exc}"[:200]
+
+    def _skip(self, why: str) -> None:
+        self.skips[why] = self.skips.get(why, 0) + 1
+        return None
+
+    def vol_regime_for_window(self, window: pd.DataFrame, *, symbol: str, timeframe: str) -> Optional[str]:
+        import bisect
+        if not self.available or window is None or len(window) == 0 or "timestamp" not in window:
+            return self._skip("empty_window")
+        ts = window["timestamp"]
+        last = pd.Timestamp(ts.iloc[-1]).timestamp()
+        clock_bar = float(pd.Timestamp(ts.iloc[-1]).timestamp() - pd.Timestamp(ts.iloc[-2]).timestamp()) if len(ts) > 1 else 0.0
+        cutoff = last + clock_bar - self._bar          # newest label bar OPEN whose close <= the clock bar's close
+        j = bisect.bisect_right(self._t, cutoff) - 1
+        if j < 0:
+            return self._skip("before_first_label")
+        if cutoff - self._t[j] > 4 * max(self._bar, clock_bar, 1.0):
+            return self._skip("label_gap")             # outside the labelled span: never carry a stale label forward
+        return self._lab[j]
+
+
 # --------------------------------------------------------------------------
 # Portfolio engine — ONE shared netted BTCUSDT position
 # --------------------------------------------------------------------------
@@ -980,6 +1040,7 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
                         ml_vol_threshold: float = 0.5,
                         ml_stage: str = "advisory",
                         ml_model_id: Optional[str] = None,
+                        vol_labels_path: Optional[str] = None,
                         regime_router: str = "off",
                         regime_policy_path: Optional[str] = None,
                         conviction_sizing: bool = False,
@@ -1174,7 +1235,8 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
     ml_resolver = (
         _MlVolResolver(threshold=ml_vol_threshold, stage=ml_stage,
                        model_id=ml_model_id, prefer_timeframe=clock_tf)
-        if vol_verdict == "ml" else None
+        if vol_verdict == "ml" else
+        _LabelsVolResolver(vol_labels_path) if vol_verdict == "labels" and vol_labels_path else None
     )
     ev_counts = {
         "intents_stamped": 0,            # intents that received a vol_regime
@@ -1644,6 +1706,7 @@ def _run_system_backtest_core(base5m: pd.DataFrame, *, roster: List[str], start,
         "ml_vol_scored_bars": ev_counts["ml_vol_scored"],
         "ml_vol_fallback_bars": ev_counts["ml_vol_fallback"],
         "ml_vol_skips": (dict(ml_resolver.skips) if ml_resolver is not None else None),
+        "vol_labels_path": vol_labels_path if vol_verdict == "labels" else None,
         "intents_stamped_with_vol": ev_counts["intents_stamped"],
         "regime_router": regime_router,
         "regime_policy_path": regime_policy_path,
@@ -2029,7 +2092,10 @@ def main(argv: List[str]) -> int:
     p.add_argument("--refresh-signals", action="store_true", help="Ignore the signal cache.")
     # --- Evidence layer (Designs A/B; Tier-1 research). Default-off so a run
     # with none of these is byte-for-byte unchanged. ---
-    p.add_argument("--vol-verdict", default="frozen", choices=["frozen", "ml"],
+    p.add_argument("--vol-labels", dest="vol_labels", default=None,
+                   help="labels JSONL ({ts, vol_regime}) for --vol-verdict=labels, read as-of and past-only "
+                        "(e.g. ml_vol_label_replay.py replay-refit output)")
+    p.add_argument("--vol-verdict", default="frozen", choices=["frozen", "ml", "labels"],
                    help="vol_regime source stamped on intents (Design A): frozen "
                         "(replay vol_detector's frozen-edge label, default) or ml "
                         "(threshold the advisory regime head's P(volatile)). Offline "
@@ -2175,7 +2241,7 @@ def main(argv: List[str]) -> int:
         flip_confgap_tf_classes=_parse_tf_classes(args.flip_confgap_tf_classes),
         reentry_policy=args.reentry_policy,
         vol_verdict=args.vol_verdict, ml_vol_threshold=args.ml_vol_threshold,
-        ml_stage=args.ml_stage, ml_model_id=args.ml_model_id,
+        ml_stage=args.ml_stage, ml_model_id=args.ml_model_id, vol_labels_path=args.vol_labels,
         regime_router=args.regime_router, regime_policy_path=args.regime_policy,
             conviction_sizing=args.conviction_sizing, allocator=args.allocator,
             symbol=args.symbol)

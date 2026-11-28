@@ -444,8 +444,8 @@ def test_due_since_is_the_oldest_record_of_the_unbroken_due_run(tmp_path):
     for rid, ago, due in ((1, 400, 0), (2, 300, 0), (3, 230, 4), (4, 120, 4), (5, 20, 4)):
         _util(tmp_path, rid, ago, due)
     assert w.due_since(tmp_path, "trainer") == NOW - timedelta(minutes=230)
-    _util(tmp_path, 6, 5, 0)                                  # newest says nothing due -> no due clock
-    assert w.due_since(tmp_path, "trainer") is None
+    _util(tmp_path, 6, 5, 0)                                  # newest says nothing due -> work became due AFTER it
+    assert w.due_since(tmp_path, "trainer") == NOW - timedelta(minutes=5)
     assert w.due_since(tmp_path / "absent", "trainer") is None
     (tmp_path / "bad.json").write_text("{")
     assert w.due_since(tmp_path, "trainer") is None          # unreadable -> behave as before, never guess
@@ -461,6 +461,20 @@ def test_backend_idle_clock_is_capped_by_minutes_since_due():
     far = (NOW - timedelta(minutes=lim + 100)).isoformat()
     v = w.check_backend("trainer", 4, old_start, NOW, TH, due_since=far)
     assert v["state"] == w.BAD and f"{lim + 100:.0f} min" in v["detail"]                # reports time since due, not 462
+
+
+def test_newly_due_work_is_not_idle_since_the_last_start(tmp_path):
+    # 2026-11-28 false alarm: 7 units due now, newest dispatcher record due_waiting 0 (4 min old), last start 354 min ago.
+    _util(tmp_path, 1, 4, 0, backend="github_runner")
+    ds = w.due_since(tmp_path, "github_runner")
+    v = w.check_backend("github_runner", 7, [run(1, 354)], NOW, TH, due_since=ds)
+    assert v["state"] == w.OK and "due here only since" in v["detail"]
+    # control: the same shape with the newest record 90 min old and still no start is a real fault
+    d2 = tmp_path / "ctl"
+    d2.mkdir()
+    _util(d2, 1, 90, 0, backend="github_runner")
+    v = w.check_backend("github_runner", 7, [run(1, 354)], NOW, TH, due_since=w.due_since(d2, "github_runner"))
+    assert v["state"] == w.BAD
 
 
 # ── the idle clock starts when the slot became FREE, not when the last run started (kaggle_cpu false alarm 2026-11-19) ──

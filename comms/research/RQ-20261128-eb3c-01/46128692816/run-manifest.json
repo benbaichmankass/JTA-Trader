@@ -1,0 +1,85 @@
+{
+  "unit": "RQ-20261128-eb3c-01",
+  "run_id": "46128692816",
+  "commit_sha": "bfb09327c2008916fe5ce17c5ab8b1d652a70c91",
+  "run_url": "https://github.com/benbaichmankass/JTA-Trader/actions/runs/46128692816",
+  "timeout_minutes": 330,
+  "runner": {
+    "cpu_model": "Intel(R) Xeon(R) 6975P-C",
+    "cpu_simd": [
+      "amx_tile",
+      "avx",
+      "avx2",
+      "avx512_vnni",
+      "avx512bw",
+      "avx512f",
+      "avx512vl",
+      "fma",
+      "sse4_2"
+    ],
+    "cores_logical": 4,
+    "cores_usable": 4,
+    "machine": "x86_64",
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "7.0.0-1018-aws",
+    "image": {
+      "ImageOS": "ubuntu26",
+      "ImageVersion": "20261122.9.1",
+      "RUNNER_OS": "Linux",
+      "RUNNER_ARCH": "X64",
+      "RUNNER_ENVIRONMENT": "github-hosted"
+    },
+    "python": "3.11.18",
+    "libs": {
+      "lightgbm": "4.6.0",
+      "numpy": "2.4.6",
+      "pandas": "3.1.1",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.7.2"
+    },
+    "blas": "blas=scipy-openblas 0.3.31.188.0; lapack=scipy-openblas 0.3.31.188.0",
+    "unread": [],
+    "class_id": "526b395f4fe0",
+    "read_state": "read"
+  },
+  "commands": [
+    {
+      "index": 0,
+      "argv": [
+        "python3",
+        "scripts/research/desk_lifecycle_driver.py",
+        "action-grid",
+        "--corpus",
+        "stage0",
+        "--stage0",
+        "v1",
+        "--legs",
+        "trend_donchian_sol_4h,trend_donchian_ada_4h,trend_donchian_avax_4h,sol_pullback_2h,avax_pullback_2h,eth_pullback_2h",
+        "--out",
+        "comms/research/RQ-20261128-eb3c-01/46128692816/twin_grid"
+      ],
+      "log": "comms/research/RQ-20261128-eb3c-01/46128692816/logs/cmd-0.log",
+      "exit_code": 0,
+      "peak_rss_mb": 205.9,
+      "seconds": 180.7
+    },
+    {
+      "index": 1,
+      "argv": [
+        "python3",
+        "scripts/research/exit_holdbias.py",
+        "--labels",
+        "comms/research/RQ-20261128-eb3c-01/46128692816/twin_grid/grid_labels.jsonl.gz",
+        "--shrink",
+        "--out",
+        "comms/research/RQ-20261128-eb3c-01/46128692816"
+      ],
+      "log": "comms/research/RQ-20261128-eb3c-01/46128692816/logs/cmd-1.log",
+      "exit_code": 1,
+      "peak_rss_mb": 42.3,
+      "seconds": 0.1
+    }
+  ],
+  "all_ok": false,
+  "holdout_claims": 0
+}

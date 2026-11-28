@@ -25,10 +25,12 @@ A model whose committed backtest evidence clears the offline gates
 directly — from `candidate` or `shadow`. That move is a data-backed Tier-3
 decision (canonical § "Data-backed Tier-2/3 decisions": ship on the record,
 then notify the operator); a real-money promotion on a fee-only corpus stays
-blocked. A model demoted from `advisory` goes to `shadow`, where it soaks to
-keep generating data while it is iterated on. Live-row gates (`shadow_soak`,
+blocked. A model replaced in `advisory` by a passed challenger goes to `shadow`, where it
+soaks to keep generating data while it is iterated on; with no passed replacement
+the live model stays (no demotion into an empty slot, operator 2026-11-28;
+[`drift-remediation`](../drift-remediation/SKILL.md)). Live-row gates (`shadow_soak`,
 `live_parity`, `labels_accruing`, `drift_clean`, live AUC/brier) are
-monitoring and demote triggers, never a step before real money.
+monitoring and replacement-search triggers, never a step before real money.
 
 **The training run happens on the trainer VM, never in this session.** The
 sandbox has no SSH and no GPU; it drives the trainer through the
@@ -112,7 +114,7 @@ Routed through `ml/__main__.py` → `ml/cli.py`. Subcommands (verified):
 | `backfill-shadow-predictions --db <path> [--registry-root --output --limit]` | Retroactive-decision replay scoring every historical trade |
 | `model-attribution --db <path> [--shadow-log --backfill-log --model-id]` | Per-model live attribution: joins shadow scores to realized trade outcomes (AUC + brier vs base-rate). Go-live decision-support; read-only |
 | `gate-check <model_id> [--target-stage --db --shadow-log]` | Computed promotion gates into `advisory` — offline evidence decides; live gates reported, not required (no shadow step). Reports only; never promotes |
-| `stage-guard [--db --shadow-log --registry-root]` | Proposes promote (candidate/shadow → advisory on offline evidence) / demote (advisory → shadow) / hold for every model. Read-only — `promote-stage` acts, under the data-backed Tier-3 rule |
+| `stage-guard [--db --shadow-log --registry-root]` | Proposes promote (candidate/shadow → advisory on offline evidence) / demote (advisory → shadow; read as a replacement-search trigger unless a passed alternative exists, operator 2026-11-28) / hold for every model. Read-only — `promote-stage` acts, under the data-backed Tier-3 rule |
 | `build-dataset …` / `validate-dataset <path>` | Passthrough to `ml.datasets` |
 
 > **There is no `python -m ml.registry list`.** `ml/registry/` has no
@@ -168,8 +170,8 @@ the full cost stack plus an enforced cost gate on model promotion; revert is one
 ## The registry stage labels (housekeeping, not a ladder to real money)
 
 `candidate` · `shadow` · `advisory` — three labels, no ladder: `candidate → advisory` is
-one move on offline evidence; `advisory → shadow` is a demotion (soak for data while
-iterating).
+one move on offline evidence; `advisory → shadow` happens when a passed challenger takes the slot (soak for data while
+iterating); never into an empty slot (operator 2026-11-28).
 
 (Stage ladder collapsed 7→3 on 2026-06-16; legacy names alias via
 `ml.manifest.canonical_stage`: `research_only`/`backtest_approved` →

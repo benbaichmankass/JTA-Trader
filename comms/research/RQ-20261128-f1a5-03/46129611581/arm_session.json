@@ -1,0 +1,178 @@
+{
+ "universe": [
+  "BTCUSDT",
+  "ETHUSDT",
+  "BNBUSDT",
+  "XRPUSDT",
+  "ADAUSDT",
+  "DOGEUSDT",
+  "LTCUSDT",
+  "LINKUSDT",
+  "BCHUSDT",
+  "SOLUSDT"
+ ],
+ "configs": {
+  "BO1s": {
+   "primary": {
+    "state": "computed",
+    "n_days": 1491,
+    "first": "2020-06-01",
+    "last": "2024-06-30",
+    "ann_return_net": -0.5868,
+    "ann_vol": 0.3925,
+    "sharpe_net": -1.495,
+    "max_drawdown": -0.9411,
+    "worst_month": -0.2593,
+    "sharpe_h1": -1.291,
+    "sharpe_h2": -1.86,
+    "ann_return_h1": -0.5931,
+    "ann_return_h2": -0.5804,
+    "boot_ann_mean_p05": -0.911,
+    "turnover_per_year": 284.61,
+    "dsr": 0.0,
+    "psr_n1": 0.00106,
+    "dsr_state": "computed",
+    "n_trials": 22
+   },
+   "outcomes": {
+    "tp": 0,
+    "sl": 0,
+    "time": 11505,
+    "amb": 121
+   },
+   "stress": {
+    "state": "computed",
+    "n_days": 1491,
+    "first": "2020-06-01",
+    "last": "2024-06-30",
+    "ann_return_net": -0.9852,
+    "ann_vol": 0.3922,
+    "sharpe_net": -2.512,
+    "max_drawdown": -0.9877,
+    "worst_month": -0.2791,
+    "sharpe_h1": -2.145,
+    "sharpe_h2": -3.162,
+    "ann_return_h1": -0.9845,
+    "ann_return_h2": -0.9859,
+    "boot_ann_mean_p05": -1.3082,
+    "turnover_per_year": 284.61,
+    "dsr": 0.0,
+    "psr_n1": 0.0,
+    "dsr_state": "computed",
+    "n_trials": 22
+   }
+  },
+  "FD1s": {
+   "primary": {
+    "state": "computed",
+    "n_days": 1491,
+    "first": "2020-06-01",
+    "last": "2024-06-30",
+    "ann_return_net": -0.3827,
+    "ann_vol": 0.3538,
+    "sharpe_net": -1.082,
+    "max_drawdown": -0.8499,
+    "worst_month": -0.2395,
+    "sharpe_h1": -0.939,
+    "sharpe_h2": -1.324,
+    "ann_return_h1": -0.3848,
+    "ann_return_h2": -0.3806,
+    "boot_ann_mean_p05": -0.6717,
+    "turnover_per_year": 238.88,
+    "dsr": 1.2e-05,
+    "psr_n1": 0.012826,
+    "dsr_state": "computed",
+    "n_trials": 22
+   },
+   "outcomes": {
+    "tp": 0,
+    "sl": 0,
+    "time": 9698,
+    "amb": 60
+   },
+   "stress": {
+    "state": "computed",
+    "n_days": 1491,
+    "first": "2020-06-01",
+    "last": "2024-06-30",
+    "ann_return_net": -0.7171,
+    "ann_vol": 0.3547,
+    "sharpe_net": -2.022,
+    "max_drawdown": -0.9586,
+    "worst_month": -0.2606,
+    "sharpe_h1": -1.738,
+    "sharpe_h2": -2.496,
+    "ann_return_h1": -0.7135,
+    "ann_return_h2": -0.7207,
+    "boot_ann_mean_p05": -1.008,
+    "turnover_per_year": 238.88,
+    "dsr": 0.0,
+    "psr_n1": 1.3e-05,
+    "dsr_state": "computed",
+    "n_trials": 22
+   }
+  }
+ },
+ "n_trials": 22,
+ "grid": "session",
+ "vol_predictability_spearman_by_year": {
+  "2020": 0.575,
+  "2021": 0.541,
+  "2022": 0.478,
+  "2023": 0.502,
+  "2024": 0.509
+ },
+ "corr_ewma_vs_trailing22_mean": 0.977,
+ "selected": "FD1s",
+ "clause": {
+  "per_year": {
+   "2020": {
+    "net": -0.2968,
+    "counted": true
+   },
+   "2021": {
+    "net": -0.2186,
+    "counted": true
+   },
+   "2022": {
+    "net": -0.5838,
+    "counted": true
+   },
+   "2023": {
+    "net": -0.3078,
+    "counted": true
+   },
+   "2024": {
+    "net": 0.0193,
+    "counted": false
+   }
+  },
+  "years_positive": "0 of 4 (need 3)",
+  "years_ok": false,
+  "top_year_share_of_total": null,
+  "concentration_ok": false,
+  "long_net_sum": 0.9813,
+  "short_net_sum": -2.5445,
+  "sides_ok": false,
+  "subperiod_sums": [
+   -0.7854,
+   -0.7778
+  ],
+  "subperiods_ok": false,
+  "clause_pass": false
+ },
+ "verdict": {
+  "verdict": "fail",
+  "checks": {
+   "sharpe>=0.5": false,
+   "stress_sharpe>0": false,
+   "both_halves>0": false,
+   "boot_p05>0": false,
+   "dsr>0.95": false,
+   "clause:years": false,
+   "clause:concentration": false,
+   "clause:sides": false,
+   "clause:subperiods": false
+  }
+ }
+}

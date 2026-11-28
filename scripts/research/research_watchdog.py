@@ -238,8 +238,9 @@ def window_position(windows: Optional[list], now: datetime) -> Optional[Dict[str
 def due_since(util_dir: Path, backend: str) -> Optional[datetime]:
     """When work became due for `backend`, read from the dispatcher's own per-cycle utilization records
     (comms/research/utilization/<run_id>.json, written by dispatch_queue --utilization-dir): walking back from the newest
-    record, the generated_at of the OLDEST record in the unbroken run with backends.<b>.due_waiting > 0. None when the
-    newest record shows nothing due, a record is unreadable, or there are none -- then check_backend behaves as before.
+    record, the generated_at of the OLDEST record in the unbroken run with backends.<b>.due_waiting > 0. When the newest
+    record shows nothing due, the newest record's own generated_at (work became due after it). None when a record is
+    unreadable or there are none -- then check_backend behaves as before.
     WHY (AM-ML 2026-11-12, lane ML overnight item 2b): the 22:54Z escalation read 'trainer idle 462 min' though nothing
     was due for it until 18:11Z; the backend was blocked ~4.5 h, not 7.7 h. The idle clock must start when work is due."""
     try:
@@ -253,8 +254,17 @@ def due_since(util_dir: Path, backend: str) -> Optional[datetime]:
             recs.append((ts, int(b["due_waiting"])))
     except (OSError, ValueError, TypeError):
         return None
+    recs.sort(reverse=True)
+    if not recs:
+        return None
+    if recs[0][1] <= 0:
+        # The newest dispatcher cycle saw NOTHING due, yet the caller only asks because queue_facts counts runnable units
+        # now: that work became due AFTER this record, so this record's time is the earliest the idle clock can start.
+        # (Returning None here sent check_backend back to 'minutes since the last start' -- the 2026-11-28 false
+        # 'github_runner idle 354 min' alarm with 7 units that had only just become due.)
+        return recs[0][0]
     since = None
-    for ts, due in sorted(recs, reverse=True):
+    for ts, due in recs:
         if due <= 0:
             break
         since = ts
