@@ -50,7 +50,7 @@ Tenancy: Limits API read 2026-10-13: 250 cores / 1,666 GB limit, 4 / 24 used. **
 
 Reading: (a) the trader and its API are 54 % of the box; (b) **the 5-minute timers add up to 12.2 % of the whole VM** (git-sync, prop feed/executor, work-digest, work-store-import); (c) **twelve trader restarts a day** are auto-deploys from `main` (`ict-git-sync`); each restart pays import warm-up and, because the merge rate is high, the trader spends part of every day cold. Not measured: the share of the trader's CPU that is per-tick work versus start-up (`/api/diag/tick_cost` has the hooks; am:OPS owns the bounded quick-wins read on the row and this section should be reconciled with it before the operator page).
 
-`ict-prop-feed@velotrade_1` shows 0 runs in the same window; whether its journal line is named differently or the unit is not firing was **not checked** (listed as an open item, § 11).
+`ict-prop-feed@velotrade_1` shows 0 in the table above because its journal does not print the `Consumed … CPU time` line (it does run: the journal shows it finishing at 09:51:07Z, per the manager's check). **The method undercounts any unit whose runs do not log that line, so the timer total is a lower bound**; the velotrade feed's CPU is unmeasured, not zero.
 
 ## 3. The trainer VM, per workload: what it does now and where each piece goes
 
@@ -136,6 +136,8 @@ At no point is there a night with zero trainers: until step 3 completes the trai
 
 ## 8. Decisions for the operator
 
+**Decided 2026-11-28 ~10:00Z (verbatim, relayed by the manager):** "Prep now, cutover after reset (Recommended)" (§ 10); "Stay free tier (Recommended)" (D1: no paid OCPU, so S8 waits for the trainer retirement); "Keep Bybit, from an always-on EU host (Recommended)" (D3). D2 and D4 remain open. The list below is the original ask.
+
 - **D1. Is the tenancy upgraded, and is paying for +1 OCPU on live acceptable?** If yes, S8 does not wait for the trainer, and the whole retirement becomes optional rather than urgent. Evidence needed: the billing console (not readable from here). The Limits API says 250 cores are available.
 - **D2. May the `fc_*` forecast producer pause if only research heads read it?** (Needs the consumer check in § 11.)
 - **D3. The dataset-build feed**: keep fetching Bybit klines from an EU always-on host (recommended), or accept Binance-vision after a feed-equivalence unit.
@@ -165,7 +167,7 @@ P0 (A, B, C) is ≈ 17 h (55 %); the rest needs the dual-run to have passed firs
 
 - Trainer per-unit CPU hours: not measured (§ 3.1 has run counts only); the October table (`docs/research/trainer-workload-2026-10-13.md`) is the older reference.
 - Whether any LIVE decision reads `fc_*` (D2).
-- Why `ict-prop-feed@velotrade_1` logged 0 completed runs.
+- The CPU of `ict-prop-feed@velotrade_1` (it runs but logs no `Consumed` line, so § 2 excludes it).
 - The gateway's 99 % CPU p95 against a low load average.
 - Billing and the current Limits API values (D1).
 - Network utilisation: `could_not_look` on all hosts.
