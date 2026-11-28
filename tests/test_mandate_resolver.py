@@ -1589,3 +1589,162 @@ def test_soak_step_retired_still_needs_the_stage0_record(repo):
     _w(root, mr.MANDATES_REL, RETIRED, as_yaml=True)
     (root / mr.EVIDENCE_DIR_REL / f"{LEG}.json").unlink()
     _needs_data(_s1s2(root), "R-RECORD-MISSING")
+
+
+# ── LIVE-BAR PATH (OPERATING-PLAN § 2 "Live-performance promotion path", LIVE-BAR-LADDER-FEED part 2) ────────
+# Decisive only when the GRANTED entry's bar states `live_bar_path: true`; otherwise REPORTED as evidence only.
+
+def _live_feed(root, leg=LEG, *, verdict="pass", n=45, sum_r=41.4, lcb80=0.31, age_h=1.0, measured="pass", schema=1,
+               measured_n=None, excluded=(), drop_exclusions_key=False):
+    from datetime import datetime, timedelta, timezone
+    row = {"verdict": verdict, "n": n, "sum_r": sum_r, "mean_r": round(sum_r / n, 4), "lcb80": lcb80,
+           "pooled": {"accounts": ["bybit_1"], "paper": n, "real_money": 0},
+           "pnl_measured_subset": {"verdict": measured, "n": measured_n if measured_n is not None else n}}
+    doc = {"schema": schema, "rule": {"min_n": 20},
+           "generated_at": (datetime.now(timezone.utc) - timedelta(hours=age_h)).isoformat(),
+           "excluded_from_promotion_read": list(excluded), "legs": {leg: row}}
+    if drop_exclusions_key:
+        del doc["excluded_from_promotion_read"]
+    _w(root, mr.LIVE_BAR_REL, doc)
+    return root
+
+
+def _with_live_bar_path(on=True):
+    md = copy.deepcopy(MANDATES)
+    for m in md["mandates"]:
+        if m["id"] == "MD-PROMOTE-S1-S2":
+            m["bar"]["live_bar_path"] = on
+    return md
+
+
+def _fee_only():
+    rec = _record(LEG, LEG_CFG)
+    del rec["cost_stack"]  # B1 C3 refuses this record
+    return rec
+
+
+def test_live_bar_is_reported_but_never_decisive_without_the_grant(repo):
+    root = _live_feed(repo(records={LEG: _fee_only()}))
+    res = _s1s2(root)
+    _refused(res, "R-B1-C3")  # unchanged Stage-0 answer
+    lb = res["evidence"]["live_bar"]
+    assert lb["read_state"] == "read" and lb["verdict"] == "pass" and lb["n"] == 45
+    assert "promotion_path" not in res["evidence"]
+
+
+def test_live_bar_path_fires_when_stage0_refuses_and_the_bar_passes(repo):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}))
+    res = _s1s2(root)
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["promotion_path"] == "live_bar"
+    assert res["evidence"]["stage0_path"]["verdict"] == mr.REFUSE
+    assert res["evidence"]["stage0_path"]["clause"] == "R-B1-C3"
+    assert res["proposal"]["roster_add"] == {"bybit_2": [LEG], "bybit_portfolio": [LEG]}
+    assert "fidelity-check unit" in res["proposal"]["fidelity_unit_required"]
+    assert any(c.startswith("LIVE-BAR PATH") for c in res["caveats"])
+    assert res["evidence"]["affordability"]["setups_sized"] > 0  # affordability still ran
+    assert "cap" in res["evidence"]  # and the cap
+
+
+def test_live_bar_path_is_not_used_when_stage0_already_fires(repo):
+    res = _s1s2(_live_feed(repo(mandates=_with_live_bar_path())))
+    assert res["verdict"] == "FIRE", res
+    assert "promotion_path" not in res["evidence"] and "fidelity_unit_required" not in res["proposal"]
+
+
+def test_live_bar_path_with_no_record_is_needs_data_on_affordability(repo):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={EQ_LEG: _record(EQ_LEG, EQ_CFG)}))
+    res = _s1s2(root)
+    _needs_data(res, "R-AFFORD")
+    assert res["evidence"]["stage0_path"]["clause"] == "R-RECORD-MISSING"
+
+
+@pytest.mark.parametrize("feed_kw", [
+    {"age_h": 30.0},                 # stale feed
+    {"verdict": "fail"},             # the leg fails the bar
+    {"verdict": "n_short", "n": 12},
+    {"lcb80": -0.01},                # labelled pass, numbers disagree: the cross-check refuses the label
+    {"n": 19},                       # labelled pass under the 20-trade floor
+    {"schema": 2},                   # a feed this resolver cannot read
+    {"measured": "n_short", "measured_n": 11},   # declared R passes, the venue-measured subset is short
+    {"measured": "fail"},                        # the venue-measured subset fails
+    {"measured": "pass", "measured_n": 19},      # labelled pass under the floor
+])
+def test_live_bar_path_does_not_carry_a_non_pass(repo, feed_kw):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), **feed_kw)
+    _refused(_s1s2(root), "R-B1-C3")
+
+
+def test_live_bar_path_never_carries_a_decisive_affordability_refusal(repo):
+    md = _with_live_bar_path()
+    root = repo(mandates=md, setups=GLD_LIKE, r3=_r3(EQ_R3),
+                snapshots={"bybit_2": 100_000.0, "alpaca_live": 123.45})
+    _live_feed(root, leg=EQ_LEG)
+    _refused(_s1s2(root, leg=EQ_LEG, account="alpaca_live"), "R-AFFORD")
+
+
+def test_live_bar_states_the_measured_subset_n(repo):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), measured_n=30)
+    res = _s1s2(root)
+    assert res["verdict"] == "FIRE", res
+    assert res["evidence"]["live_bar"]["measured_subset_n"] == 30
+    assert any("venue-measured subset pass at n=30" in c for c in res["caveats"])
+
+
+def test_live_bar_absent_feed_reads_could_not_look(repo):
+    res = _s1s2(repo())
+    assert res["evidence"]["live_bar"]["read_state"] == "could_not_look"
+    assert res["evidence"]["live_bar"]["n"] is None  # never a collapsed 0
+
+
+# ── PER-LEG DECISION (resolver half of LIVE-BAR-LADDER-FEED, 2026-11-28): FIRE / REFUSE / NEEDS_DATA, always reported ──
+
+def _decision(res):
+    return res["evidence"]["live_bar"]["decision"]
+
+
+def test_live_bar_decision_fire_is_reported_without_the_grant(repo):
+    res = _s1s2(_live_feed(repo(records={LEG: _fee_only()})))
+    _refused(res, "R-B1-C3")                       # not decisive: the grant is absent
+    assert _decision(res)["verdict"] == mr.FIRE and _decision(res)["clause"] == "R-LIVE-BAR-PASS"
+
+
+def test_live_bar_decision_needs_data_under_twenty_trades(repo):
+    # claude_desk on 2026-11-28: n 13, sum R +7.68, lcb80 +0.31, n_short -> NEEDS_DATA, never a FIRE, even with the grant
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}),
+                      verdict="n_short", n=13, sum_r=7.68, lcb80=0.31, measured="n_short", measured_n=12)
+    res = _s1s2(root)
+    _refused(res, "R-B1-C3")                       # Stage 0's answer stands
+    d = _decision(res)
+    assert d["verdict"] == mr.NEEDS_DATA and d["clause"] == "R-LIVE-BAR-N" and "13" in d["why"]
+
+
+def test_live_bar_decision_needs_data_when_only_the_measured_subset_is_short(repo):
+    res = _s1s2(_live_feed(repo(records={LEG: _fee_only()}), measured="n_short", measured_n=11))
+    assert _decision(res)["verdict"] == mr.NEEDS_DATA and _decision(res)["clause"] == "R-LIVE-BAR-MEASURED-N"
+
+
+def test_live_bar_decision_refuses_a_failing_bar_at_twenty_or_more(repo):
+    res = _s1s2(_live_feed(repo(records={LEG: _fee_only()}), verdict="fail", n=25, sum_r=-3.0, lcb80=-0.4,
+                           measured="fail"))
+    assert _decision(res)["verdict"] == mr.REFUSE and _decision(res)["clause"] == "R-LIVE-BAR-FAIL"
+
+
+def test_live_bar_decision_on_a_stale_feed_is_needs_data(repo):
+    res = _s1s2(_live_feed(repo(records={LEG: _fee_only()}), age_h=30.0))
+    assert _decision(res)["verdict"] == mr.NEEDS_DATA and _decision(res)["clause"] == "R-LIVE-BAR-STALE"
+
+
+def test_a_feed_without_the_exclusions_list_is_unreadable_and_never_carried(repo):
+    root = _live_feed(repo(mandates=_with_live_bar_path(), records={LEG: _fee_only()}), drop_exclusions_key=True)
+    res = _s1s2(root)
+    _refused(res, "R-B1-C3")                       # a passing row on that feed is NOT carried
+    assert res["evidence"]["live_bar"]["read_state"] == "unreadable"
+    assert _decision(res)["verdict"] == mr.NEEDS_DATA
+
+
+def test_the_legs_promotion_exclusions_are_reported_beside_the_verdict(repo):
+    ex = [{"strategy": LEG, "trade_id": 4773, "account_id": "bybit_1", "decided": "2026-11-25", "reason": "r"},
+          {"strategy": "other_leg", "trade_id": 1, "account_id": "x", "decided": "2026-11-25", "reason": "r"}]
+    res = _s1s2(_live_feed(repo(records={LEG: _fee_only()}), excluded=ex))
+    assert [x["trade_id"] for x in res["evidence"]["live_bar"]["excluded_for_leg"]] == [4773]

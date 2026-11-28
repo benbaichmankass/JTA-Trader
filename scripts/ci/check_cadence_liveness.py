@@ -534,6 +534,10 @@ REGISTERED_AFTER_BASELINE: frozenset[str] = frozenset({
     "broker-truth-freshness.yml",    # LEDGER-REFRESH, 2026-10-10
     "oi-feed-freshness.yml",         # E4-DEMO-LEG, 2026-10-30
     "soak-book-grade-weekly.yml",    # SOAK-WATCH, 2026-10-04 (was receipt: None)
+    # LIVE-BAR-LADDER-FEED, registered 2026-11-19 but never named here, so it was silently BASELINED: when the job died
+    # 11-25..11-27 (ModuleNotFoundError yaml, fixed #29689) its receipt went 86 h stale and this guard stayed green,
+    # because a baselined stale receipt fails only under --strict. Named 2026-11-28 (Manager 2026-11-28b).
+    "live-bar.yml",
 })
 
 BASELINE_2026_09_22: dict[str, str] = {
