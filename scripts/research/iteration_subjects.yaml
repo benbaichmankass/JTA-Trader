@@ -260,9 +260,8 @@ candidate:
   - id: xsec-crypto
     verdict: fail
     basis: 'RQ-20261101-58e4-02: shorts -0.21 vs longs +1.86; 2021 is 68% of net. Untested: regime gate, universe/liquidity, short-leg treatment, residual momentum.'
-  - id: cost-levers-live-legs
-    verdict: fail
-    basis: 'RQ-20261101-58e4-04: costs ~7% of the loss; legs gross-negative (xrp_pullback_2h -35.9, ada_pullback_2h -15.9). Untested: signal-strength threshold, hold length, symbol pruning, measured costs. Needs signal-level data.'
+  # cost-levers-live-legs RETIRED 2026-11-28 (family_review: cost-levers-live-legs, research/family_reviews/cost-levers-live-legs.yaml;
+  # Manager 2026-11-28b option (a)): a cost overlay whose open levers are per-leg edge levers, each named with its owning unit there.
   - id: tsmom-etf
     verdict: indeterminate
     basis: 'RQ-20261101-58e4-05: stable but small (Sharpe 0.42), shorts hurt, whipsaw years. Untested: dividend-adjusted series, asset-class gating, regime gate, breadth.'
