@@ -233,6 +233,8 @@ EXPECTED_ACTIONS = {
     # install_systemd_units.sh is install-only, so an already-installed
     # ict-cloudflared-tunnel.service kept running). Idempotent no-op if absent.
     "purge-cloudflared": "purge_cloudflared.sh",
+    # 2026-11-28 — remove the unused lxd snap (operator-approved, Tier 2); refuses if any container/VM exists.
+    "remove-lxd-snap": "remove_lxd_snap.sh",
     "purge-vm-runner": "purge_vm_runner.sh",
     # 2026-06-19 — one-shot guarded flatten of a single IB exchange position
     # (BL-20260618-RECONCILE-DUP residual: the stranded ib_paper MGC short).
@@ -498,6 +500,7 @@ TIER_2_ACTIONS = {
     "resume-autoheal",
     "sync-clock",
     "purge-cloudflared",
+    "remove-lxd-snap",
     "purge-vm-runner",
     "flatten-ib-position",
     "cancel-ib-order",

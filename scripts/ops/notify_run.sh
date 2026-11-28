@@ -370,6 +370,14 @@ case "${action}" in
             *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
         esac
         ;;
+    remove-lxd-snap)
+        # 2026-11-28: remove the unused lxd snap from the VM (operator-approved).
+        tier=2
+        case "${exit_code}" in
+            0) result="ok"; priority="normal" ;;
+            *) result="FAILED (exit ${exit_code})"; priority="urgent" ;;
+        esac
+        ;;
     purge-vm-runner)
         # 2026-08-13 (BL-20260813-VM-RUNNER-ZOMBIE-SUDOERS-ROOT-GRANT): remove
         # the dead claude-vm-dispatch passwordless-root sudoers grant from the
