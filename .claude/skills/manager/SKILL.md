@@ -88,9 +88,9 @@ How the manager orders work, whatever the lane count:
    throttle only, but that's only when we're like really at the bare minimum. We need to keep the research queue going. At this point,
    we're not there yet, and we do need to still keep pushing the general work plan forward, not just the bare minimum of keeping things
    running until the reset."*
-   - **Throttle** (the default under reduced capacity): fewer lanes, but the FULL mixed plan advances by rank (rules 1-5).
-   - **Bare minimum** (only when the capacity reading says the remaining weekly budget covers little more than keeping things running):
-     the one ML lane keeps the research queue moving, plus live-money incidents and the standing reviews. Nothing else runs.
+   - **Throttle** = the STEADY stage of rule 8: fewer lanes, but the FULL mixed plan advances by rank (rules 1-5).
+   - **Bare minimum** = the RESERVE stage of rule 8: the one ML lane keeps the research queue moving, plus live-money incidents and the
+     standing reviews. Nothing else runs.
    - The manager names the mode from the `spend_meter.py --capacity` reading, states it in the REPORT line, and never drops into bare
      minimum just because a lane count is low. If the operator's word is ambiguous, read it as throttle, not bare minimum.
 8. **Capacity modes are defined by headroom per day, not by feel** (operator, 2026-11-28 ~10:30Z, verbatim: *"we should be working with
@@ -100,17 +100,22 @@ How the manager orders work, whatever the lane count:
    getting to 99 or 100% by the reset ... look at the history of the workflows and the usage updates and what's worked best ... come up
    with some data-driven rules"*). Headroom per day = `(100 - weekly %) / days to reset`, from the latest reading.
 
-   Operator, 2026-11-28 ~10:40Z, verbatim: *"85-90% is the full throttle down, not the partial throttle down ... we're in a medium
-   throttle, just not a bare minimum throttle. The first throttle kicks in at about 50%, or basically whenever we finish the surge ...
-   at 40%, we should start thinking about it ... Let's make that the rule. But if we can try and get the surge at the beginning of the
-   week over with less, then we can have more going on during the throttle afterwards, and that's better."*
+   Operator, 2026-11-28 ~10:45Z, verbatim: *"The full throttle down and the bare minimum are the same thing. That is one stage. We have
+   the surge at the beginning of the week, which is kicking off the work queue, kicking off the reviews, doing the planning, and getting
+   the big work items done. Then once we finish that, or once we hit 40%, we go to medium throttle, which is when we start limiting
+   ourselves to between 1 and 3 lanes, depending on how much capacity we have left per day. And only once we get down to 85 or 90%, which
+   again, we're talking about 5% per day, that's the rule ... if we hit, say, 70% on Saturday and the reset is on Wednesday, then ... we
+   need to start doing a throttle down to the bare minimum ... the rules for those are we surge until 40% maximum, if not less. The full
+   throttle runs until we have 5% headroom left per day ... And then after we hit that, we go down to the bare minimum, which is just
+   keeping things operational and keeping the research queue flowing."*
 
-   | mode | when (PROVISIONAL, operator's numbers) | what runs |
+   THREE stages. Headroom per day = `(100 - weekly %) / days to reset`.
+
+   | stage | enters when | what runs |
    |---|---|---|
-   | **surge** | start of the week until the surge rows land; the manager starts planning the step down at **40%** weekly | surge rows first, as wide as the work allows; keep the surge SHORT so more lanes stay available in the throttle |
-   | **medium throttle** | from **~50%**, or as soon as the surge finishes if that is earlier | fewer lanes than the surge but as many as the headroom allows, the FULL mixed plan by rank (rules 1-5) |
-   | **full throttle-down** | **85-90%** weekly (usually 2-3 days before the reset) | fewer lanes again, still the full mixed plan by rank |
-   | **bare minimum** | headroom per day below **~5%** (often the day before or the morning of the reset) | one ML lane keeps the research queue moving, plus live-money incidents and standing reviews |
+   | **SURGE** | the weekly reset | kick off the work queue and the reviews, do the planning, get the big work items done; as wide as the work allows. Ends when that work is done or at **40% weekly at the latest**; shorter is better, so more lanes stay available afterwards |
+   | **STEADY** (medium throttle) | the surge ends (done, or 40%) | **1-3 lanes**, sized by headroom per day, running the FULL mixed plan by rank (rules 1-5) |
+   | **RESERVE** (bare minimum) | headroom per day **below 5%**, whatever the date (usually 85-90% near the end of the week, but e.g. 70% on a Saturday before a Wednesday reset already qualifies) | keep things operational and keep the research queue flowing: one ML lane, live-money incidents, standing reviews; nothing else |
 
    The aim is to finish the week at 99-100%, not to stop early: under-spending is a failure, as overshooting is. The thresholds above are
    provisional until row `CAPACITY-MODES-CALIBRATE` fits them to the reading history (`docs/claude/work/USAGE-READINGS.jsonl`) and lane
