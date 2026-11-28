@@ -31,7 +31,7 @@ iteration:
   - research/levers/ml-btc-router-cells.yaml
 blocked_on:
 - kind: build
-  ref: scripts/research/ml_vol_label_replay.py replay-refit (branch lane/ml-primary-replay-refit, ML-PRIMARY, 2026-11-28)
+  ref: scripts/research/ml_vol_label_replay.py replay-refit + scripts/research/build_market_features_span.py (branch lane/ml-primary-replay-refit, ML-PRIMARY, 2026-11-28)
   what: 'The refit labeller mode this unit runs. It is a Tier-1 tooling PR opened the same day; nothing here waits on data.'
   clears_when: 'replay-refit is on main (ml_vol_label_replay.py --help lists replay-refit); then git-mv this file to research/queue/ with status queued.'
 baseline:
@@ -49,7 +49,7 @@ power:
   basis: 'INFERRED: the rule''s floor is n >= 25 vetoed trades (fa22-04 MIN_N). At n 25 and per-trade sd ~1.5 R (d7c2-01 power basis), a one-sample test at alpha 0.05 detects |mean| ~0.84 R/trade at power 0.8; smaller effects read INDETERMINATE, said so. The run is a confirmation of an existing FAIL, so a FAIL here needs only added_r <= 0 at the floor (the fa22-04 rule).'
   feasibility:
     source: none
-    accrual_basis: 'Nothing accrues: BTC 15m history from 2020-03 is built in the run (Bybit linear-perp klines, the adapter clamps to listing); trend_donchian made ~60 BTC harness trades a year (34 in 2026-06-01..11-19), so ~160 trades in 2.7 years; the cell''s share is unknown until the run.'
+    accrual_basis: 'Nothing accrues: BTC 15m history from 2020-03 is built in the run by build_market_features_span.py (Bybit linear-perp klines, the adapter clamps to listing); trend_donchian made ~60 BTC harness trades a year (34 in 2026-06-01..11-19), so ~160 trades in 2.7 years; the cell''s share is unknown until the run.'
 decision_rule:
   id: RULE-RQ-20261128-f1a5-05
   registered_at: '2026-11-28'
@@ -78,13 +78,8 @@ ml_consumer:
 run:
   workflow: research-script-run-trainer.yml
   commands:
-  - [python, -m, ml, build-dataset, market_raw, --output-dir, '{out_dir}/ds', --version, v901, --source, bybit_v5_offvm,
-     --symbol-scope, BTCUSDT, --timeframe, 15m, --overwrite, adapter=bybit_v5_offvm, symbol=BTCUSDT, timeframe=15m,
-     start=2020-03-01, end=2026-11-27]
-  - [python, -m, ml, build-dataset, market_features, --output-dir, '{out_dir}/ds', --version, v901, --source,
-     '{out_dir}/ds/market_raw/BTCUSDT/15m/v901', --symbol-scope, BTCUSDT, --timeframe, 15m, --overwrite,
-     'market_raw_path={out_dir}/ds/market_raw/BTCUSDT/15m/v901', vol_window_n=20, forward_window_m=5, vol_threshold=0.005,
-     trend_threshold=0.005, n_vol_buckets=3]
+  - [python3, scripts/research/build_market_features_span.py, --symbol, BTCUSDT, --timeframe, 15m, --start, '2020-03-01',
+     --end, '2026-11-27', --out, '{out_dir}/ds', --version, v901]
   - [python3, scripts/research/ml_vol_label_replay.py, replay, --symbol, BTCUSDT, --dataset,
      datasets-out/market_features/BTCUSDT/15m/v002/data.jsonl, --model-id, btc-regime-15m-lgbm-fc-pcv-v2, --out,
      '{out_dir}/BTCUSDT_live_labels.jsonl', --json]
