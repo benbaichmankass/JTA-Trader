@@ -409,6 +409,81 @@ def measured_reserve_pp(days_left: float, runs_per_day: float,
     return RESERVE_FLOOR_PP + days_left * (RESERVE_GATE_PP_DAY + runs_per_day * pp_per_run)
 
 
+# ── capacity MODE: full / throttle / bare minimum, by headroom per day (CAPACITY-MODES-CALIBRATE) ─────────────
+#
+# Operator, 2026-11-28 ~10:30Z: modes are defined by "usage left per day until the reset", under 5%/day is the bare
+# minimum, throttle down around 85-90%, and still reach 99-100% by the reset. FIT, 2026-11-28 (am:OPS), to
+# docs/claude/work/USAGE-READINGS.jsonl: population = 67 `weekly` readings, 2026-10-18..11-27, 6 closed weeks plus the
+# current one; read_state: PARTIAL. No closed week has a reading inside its last 24 h, so "hit 99-100 / ran out early /
+# ended low" is NOT observable per week; the only outcome signal is the app's own run-out warning copied into a
+# reading's note (recorder-dependent: absence of a warning is not a finding). What the readings DO show, over the
+# readings that have a same-week reading 3-30 h earlier (59 of 67 weekly readings): the run-out warning is recorded on 18 of 38 readings
+# whose headroom/day is below 0.9 x the trailing burn/day against 5 of 21 at or above it (a MODEST separation, and the
+# warning is recorder-dependent); the two readings under 5 pp/day (10-18 18:20 at 90%, 10-19 06:35 at 96%, headroom 3.3
+# and 1.6 pp/day against a trailing burn of 66 and 39) could not reach the reset at the week's own burn by arithmetic.
+# The cut points are therefore a reading of that table, not a fitted optimum; pp per lane-hour is NOT fitted here (no lane
+# history was joined; the 1.0 constant is one 2026-10-18 window).
+RESERVE_HEADROOM_PP_DAY = 5.0       # operator's number (RESERVE / bare minimum): matches the 10-18..19 readings (1.6, 3.3 pp/day)
+SURGE_END_PCT = 40.0                # operator 2026-11-28: SURGE runs until the big work is done, or 40% at the latest
+# STEADY lane count by headroom per day. PROVISIONAL, NOT FITTED: no lane-hours were joined to the readings (only two
+# lane-counted windows exist, 2026-10-18, both bursts: ~18-24 pp per lane-day), so these cut points are a reading of the
+# weeks that did not warn in their first days at 10-15 pp/day of headroom and of the warning zone below ~9 pp/day.
+STEADY_LANES_3_HEADROOM = 12.0
+STEADY_LANES_2_HEADROOM = 8.0
+FULL_RATIO = 0.9                    # headroom/day >= 0.9 x trailing burn/day: on pace to reach the reset (information only)
+UNDERSPEND_RATIO = 1.5              # above this the week is on course to finish well under 100%: say so
+BURN_WINDOW_H = 30.0
+BURN_MIN_SPAN_H = 3.0
+
+
+def trailing_burn_pp_day(records: Iterable[dict], latest: dict) -> float | None:
+    """pp/day between the earliest `weekly` reading 3-30 h before ``latest`` and ``latest``; None when there is none or
+    the percentage fell (a reset between them). Never a guess."""
+    t1 = _parse_ts(latest["read_at"], "read_at")
+    best = None
+    for r in records:
+        if r.get("window") != "weekly" or r is latest:
+            continue
+        try:
+            t0 = _parse_ts(r["read_at"], "read_at")
+        except (KeyError, ValueError):
+            continue
+        h = (t1 - t0).total_seconds() / 3600
+        if BURN_MIN_SPAN_H <= h <= BURN_WINDOW_H and (best is None or t0 < best[0]):
+            best = (t0, float(r["percent"]))
+    if best is None:
+        return None
+    pp = float(latest["percent"]) - best[1]
+    days = (t1 - best[0]).total_seconds() / 86400
+    return pp / days if pp >= 0 and days > 0 else None
+
+
+def capacity_stage(weekly_pct: float, headroom_pp_day: float, burn_pp_day: float | None) -> dict:
+    """surge / steady / reserve (operator 2026-11-28). RESERVE wins whatever the date; SURGE below 40% (it ends sooner
+    when the big work is done, which is the manager's call, not computable here); STEADY otherwise, 1-3 lanes."""
+    out: dict = {}
+    if headroom_pp_day < RESERVE_HEADROOM_PP_DAY:
+        out.update(stage="reserve", lanes_cap=1,
+                   basis=f"headroom {headroom_pp_day:.1f} pp/day < {RESERVE_HEADROOM_PP_DAY:g}")
+    elif weekly_pct < SURGE_END_PCT:
+        out.update(stage="surge", lanes_cap=None,
+                   basis=f"weekly {weekly_pct:.0f}% < {SURGE_END_PCT:g}% (ends earlier when the big work is done)")
+    else:
+        n = 3 if headroom_pp_day >= STEADY_LANES_3_HEADROOM else 2 if headroom_pp_day >= STEADY_LANES_2_HEADROOM else 1
+        out.update(stage="steady", lanes_cap=n,
+                   basis=f"headroom {headroom_pp_day:.1f} pp/day -> {n} lane(s) "
+                         f"(3 at >= {STEADY_LANES_3_HEADROOM:g}, 2 at >= {STEADY_LANES_2_HEADROOM:g}; PROVISIONAL, not fitted)")
+    if burn_pp_day is not None and burn_pp_day > 0:
+        ratio = headroom_pp_day / burn_pp_day
+        out["ratio"] = round(ratio, 2)
+        out["pace"] = "on pace" if ratio >= FULL_RATIO else "burning faster than the headroom"
+        if ratio > UNDERSPEND_RATIO:
+            out["underspending"] = True
+    else:
+        out["pace"] = "burn unknown (no weekly reading 3-30 h earlier)"
+    return out
+
+
 def capacity(log: LoadResult, *, reset_at: str | None = None,
              pp_per_lane_hour: float = PP_PER_LANE_HOUR,
              live_open: int | None = None,
@@ -454,7 +529,16 @@ def capacity(log: LoadResult, *, reset_at: str | None = None,
     rate_gross = remaining / days_left
     rate_day = max(remaining - reserve, 0.0) / days_left
     raw_lanes = rate_day / 24 / pp_per_lane_hour
-    return {**out, "state": "ok", "reset_at": raw_reset, "days_to_reset": round(days_left, 2),
+    burn = trailing_burn_pp_day(log.records, rec)
+    mode = capacity_stage(out["weekly_pct"], rate_gross, burn)
+    lanes = min(max(round(raw_lanes), LANES_MIN), LANES_MAX)
+    if mode["lanes_cap"] is not None:
+        # STEADY and RESERVE state the lane count outright (operator 2026-11-28: 1/2/3 from headroom per day); only SURGE
+        # keeps the pp-per-lane-hour advice, which is itself unfitted (see PP_PER_LANE_HOUR).
+        lanes = mode["lanes_cap"]
+    return {**out, "state": "ok", "stage": mode["stage"], "stage_basis": mode["basis"], "pace": mode["pace"],
+            "trailing_burn_pp_per_day": None if burn is None else round(burn, 2),
+            "underspending": bool(mode.get("underspending")), "reset_at": raw_reset, "days_to_reset": round(days_left, 2),
             "rate_gross_pp_per_day": round(rate_gross, 2),
             "reserve_pp": round(reserve, 2), "reserve_bound_pp": round(bound, 2),
             "reserve_source": reserve_src, "review_runs_per_day": review_runs_day,
@@ -464,7 +548,7 @@ def capacity(log: LoadResult, *, reset_at: str | None = None,
             "reserve_breached": remaining < reserve,
             "rate_pp_per_day": round(rate_day, 2), "pp_per_lane_hour": pp_per_lane_hour,
             "lanes_raw": round(raw_lanes, 2),
-            "lanes": min(max(round(raw_lanes), LANES_MIN), LANES_MAX),
+            "lanes": lanes,
             "stale": out["reading_age_h"] > READING_STALE_H}
 
 
@@ -491,6 +575,8 @@ def render_capacity(c: dict) -> list[str]:
             if c['reserve_source'] == 'measured' else "") + ")",
          f"  net rate = (100 - {c['weekly_pct']:.0f} - {c['reserve_pp']:.1f}) / {c['days_to_reset']:.2f}d = "
          f"{c['rate_pp_per_day']:.1f} pp/day",
+         f"  STAGE: {c['stage'].upper()} ({c['stage_basis']}); {c['pace']}"
+         + (" -- on course to finish UNDER 100%: add lanes" if c["underspending"] else ""),
          f"  at {c['pp_per_lane_hour']:.2f} pp per lane-hour that is {c['lanes_raw']:.2f} lanes "
          f"continuous -> KEEP {c['lanes']} LANES RUNNING (a target, not a cap; floor {LANES_MIN}, "
          f"judgment up to {LANES_MAX}). Below target with queued rows = dispatch now, don't ask."]
@@ -955,7 +1041,8 @@ def _selftest() -> int:
           c["state"] == "ok" and c["reset_at"] == "2026-10-21T18:00:00Z")
     check("gross rate = (100 - weekly%) / days to reset",
           abs(c["rate_gross_pp_per_day"] - 27 / 3.375) < 0.01)
-    check("a low rate still suggests the one-lane floor, never zero", c["lanes"] == 1)
+    check("a low rate still suggests the one-lane floor, never zero",
+          capacity(LoadResult(records=[dict(wk, percent=90.0)]), now=cap_now)["lanes"] == 1)
     c2 = capacity(LoadResult(records=[dict(wk, percent=10.0)]), now=cap_now, pp_per_lane_hour=0.2,
                   live_open=0)
     check("a high rate suggests at most 5 lanes (advice for judgment, not a cap)", c2["lanes"] == 5)
@@ -995,6 +1082,35 @@ def _selftest() -> int:
           live_open=7)["reserve_source"] == "bound")
     check("unreadable log -> None, not 0", review_runs_per_day(Path("/nonexistent/x")) is None)
     check("render says KEEP N LANES", "KEEP " in "\n".join(render_capacity(cmr)))
+    print("— capacity stage: surge / steady (1-3 lanes) / reserve —")
+    check("headroom under 5 pp/day is RESERVE whatever the date or %", capacity_stage(20.0, 4.9, 1.0)["stage"] == "reserve"
+          and capacity_stage(20.0, 4.9, 1.0)["lanes_cap"] == 1)
+    check("below 40% with headroom is SURGE, no lane cap", capacity_stage(30.0, 14.0, 12.0)["stage"] == "surge"
+          and capacity_stage(30.0, 14.0, 12.0)["lanes_cap"] is None)
+    check("40% or more is STEADY: 3 lanes at >= 12 pp/day", capacity_stage(45.0, 12.0, None)["lanes_cap"] == 3)
+    check("STEADY: 2 lanes at 8-12 pp/day", capacity_stage(60.0, 9.0, None)["lanes_cap"] == 2)
+    check("STEADY: 1 lane at 5-8 pp/day", capacity_stage(80.0, 6.0, None)["lanes_cap"] == 1)
+    check("exactly 5 pp/day is STEADY, not RESERVE", capacity_stage(80.0, 5.0, None)["stage"] == "steady")
+    check("burn unknown is named, never read as 0", "burn unknown" in capacity_stage(60.0, 9.0, None)["pace"])
+    check("far above the burn flags underspending", capacity_stage(60.0, 20.0, 8.0).get("underspending") is True)
+    def rd(pct, ts):
+        return base(window="weekly", percent=pct, read_at=ts, note="reset Wed 2026-10-21 18:00Z")
+
+    r_new, r_old = rd(73.0, "2026-10-18T08:40:00Z"), rd(55.0, "2026-10-18T05:39:00Z")
+    check("trailing burn = pp between the readings over their span in days",
+          abs(trailing_burn_pp_day([r_old, r_new], r_new) - 18 / (3.0167 / 24)) < 0.5)
+    check("a reading under 3 h earlier gives no burn, never 0",
+          trailing_burn_pp_day([rd(70.0, "2026-10-18T07:40:00Z"), r_new], r_new) is None)
+    check("a percentage that fell (a reset between) gives no burn",
+          trailing_burn_pp_day([rd(90.0, "2026-10-18T05:00:00Z"), r_new], r_new) is None)
+    cmode = capacity(LoadResult(records=[r_old, r_new]), now=cap_now, live_open=0)
+    check("73% with 8.0 pp/day headroom is STEADY with 2 lanes, burn carried",
+          cmode["stage"] == "steady" and cmode["lanes"] == 2 and cmode["trailing_burn_pp_per_day"] > 100)
+    cres = capacity(LoadResult(records=[dict(r_new, percent=96.0)]), now=cap_now, live_open=0)
+    check("96% with ~3 days left is RESERVE: exactly one lane", cres["stage"] == "reserve" and cres["lanes"] == 1)
+    csur = capacity(LoadResult(records=[dict(r_new, percent=10.0)]), now=cap_now, live_open=0)
+    check("10% is SURGE and keeps the unclamped lane advice", csur["stage"] == "surge" and csur["lanes"] >= 1)
+    check("render prints the stage line", "STAGE: STEADY" in "\n".join(render_capacity(cmode)))
     print("— reserve: headroom for the live-trade-review routine (design § 6.4) —")
     check("design worked value: D=3.19, n=2 -> 15.4 pp", abs(reserve_pp(3.19, 2) - 15.4) < 0.05)
     check("design worked value: last 24h, n=2 -> ~11 pp", abs(reserve_pp(1.0, 2) - 11.0) < 0.05)

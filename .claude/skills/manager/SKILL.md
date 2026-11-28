@@ -115,11 +115,26 @@ How the manager orders work, whatever the lane count:
    |---|---|---|
    | **SURGE** | the weekly reset | kick off the work queue and the reviews, do the planning, get the big work items done; as wide as the work allows. Ends when that work is done or at **40% weekly at the latest**; shorter is better, so more lanes stay available afterwards |
    | **STEADY** (medium throttle) | the surge ends (done, or 40%) | **1-3 lanes**, sized by headroom per day, running the FULL mixed plan by rank (rules 1-5) |
-   | **RESERVE** (bare minimum) | headroom per day **below 5%**, whatever the date (usually 85-90% near the end of the week, but e.g. 70% on a Saturday before a Wednesday reset already qualifies) | keep things operational and keep the research queue flowing: one ML lane, live-money incidents, standing reviews; nothing else |
+   | **RESERVE** (bare minimum) | headroom per day **below 5%**, whatever the date (near the end of the week this is usually 85-90%; the date never decides it) | keep things operational and keep the research queue flowing: one ML lane, live-money incidents, standing reviews; nothing else |
 
-   The aim is to finish the week at 99-100%, not to stop early: under-spending is a failure, as overshooting is. The thresholds above are
-   provisional until row `CAPACITY-MODES-CALIBRATE` fits them to the reading history (`docs/claude/work/USAGE-READINGS.jsonl`) and lane
-   history, and makes `spend_meter.py --capacity` print the mode. The calibrated numbers then replace this table.
+   The aim is to finish the week at 99-100%, not to stop early: under-spending is a failure, as overshooting is.
+
+   **Calibration (am:OPS 2026-11-28, row `CAPACITY-MODES-CALIBRATE`; `spend_meter.py --capacity` prints the stage and the lane count).**
+   Population: the 67 `weekly` rows of `docs/claude/work/USAGE-READINGS.jsonl`, 2026-10-18..11-27; read_state PARTIAL.
+   - **What the data cannot say.** No closed week has a reading in its last 24 h, so "hit 99-100%, ran out early, ended low" is not
+     observable per week. The only outcome signal is the app's own run-out warning copied into a note (recorder-dependent, so a missing
+     warning is not a finding). Lane-hours were not joined to the readings; only two lane-counted windows exist (2026-10-18, both bursts,
+     about 18-24 pp per lane-day), so the lane cut points below are NOT fitted.
+   - **RESERVE below 5 pp/day (operator's number) is consistent with the data.** The two readings under 5 pp/day (10-18 18:20 at 90% and
+     10-19 06:35 at 96%, headroom 3.3 and 1.6 pp/day) had a trailing burn of 66 and 39 pp/day: they could not reach the reset at the
+     week's own burn. Arithmetic check of the example above: 70% on a Saturday with a Wednesday 18:00Z reset (4.75 d left at 00:00Z, 4.0 d at 18:00Z) is
+     30 / 4.75..4.0 = 6.3-7.5 pp/day, which is STEADY with 1 lane, not RESERVE; it is a reason to stop widening, not yet the bare minimum.
+   - **STEADY lanes by headroom per day (PROVISIONAL):** 3 lanes at 12 pp/day or more, 2 at 8 or more, 1 below 8 (down to 5). The cut
+     points are a reading of the weeks: sustained 10-15 pp/day of headroom ran without early run-out in their first days, and the
+     run-out warnings cluster below about 9 pp/day. Across the 59 readings that have a same-week reading 3-30 h earlier, the warning is
+     recorded on 18 of 38 readings whose headroom is below 0.9 x the trailing burn against 5 of 21 at or above it: a modest separation.
+   - **SURGE is below 40% weekly** and ends sooner when the big work is done (the manager's call; the meter cannot see it).
+   - Refit these numbers as soon as lane-hours per day are recorded beside the readings (the meter prints its own basis each time).
 
 ### Toolbox
 
