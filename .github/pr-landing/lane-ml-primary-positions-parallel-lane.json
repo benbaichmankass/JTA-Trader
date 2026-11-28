@@ -1,0 +1,7 @@
+{
+  "tier": 1,
+  "landing": "hold",
+  "hold_reason": "unvouchable_paths",
+  "hold_text": "Web-api read path (src/web/api/routers/dashboard.py; R5 names it Tier-2 by path, manager merges; 27a classed web-api read-path changes Tier 1). After #29599 the VM has CPU headroom (PSI some avg10 79 -> 9.8) but /positions?include_paper=true still read 16-18/20 rows as timed_out (MEASURED 23:52-23:54Z, 4 reads): py-spy showed the single-worker account lane inside a Bybit get_positions, the rows queued behind each other. Bybit and Alpaca rows now use the existing 8-worker account lane (their broker read is HTTP and their local mark fallback prices crypto/equity, so no IB socket); IB, prop and unknown accounts stay on the single lane (BL-20260706-IBCONCURRENCY). All rows start at once inside the same 6 s budget. 43 tests pass. Deploy: pull-and-deploy restarts ict-web-api. Revert: git revert.",
+  "why": "Get broker uPnL back on the Overview's open positions."
+}
