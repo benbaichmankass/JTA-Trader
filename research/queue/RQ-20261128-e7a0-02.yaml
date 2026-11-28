@@ -1,0 +1,132 @@
+id: RQ-20261128-e7a0-02
+title: 'ITERATION 2 of ltr-tp-pull-in (action_bounds): does pulling the TP to a QUARTER (not half) of the remaining distance at the first stall / giveback trigger
+  cut maxDD or weekly CVaR5 by >= 15% under RULE-AM-RISK-ADJUSTED-V1, at <= 0.05 R/trade, beating matched random-time pull-ins?'
+status: queued
+cadence: once
+theme: live_strategy
+priority: 2
+roadmap:
+- L-ATM
+programme: P1
+kind: experiment
+question: On the committed LTR Stage-0 corpora (6 calendar folds), does tp_pull_in with --tp-keep 0.25 at the stall or giveback trigger pass RULE-AM-RISK-ADJUSTED-V1
+  (R1 cost <= 0.05 R/trade, R2 maxDD or weekly CVaR5 cut >= 15%, R3 >= 4/6 folds, R4 beats >= 97.5% of 200 matched random-time books, L1 leg-drop)?
+why_this_matters: 'ltr-tp-pull-in is an ORPHAN (Manager 2026-11-28a drain). ed2b-05 (keep 0.5) FAILED on R2/R3 at stall and giveback: cost was small (giveback +0.0085
+  R/trade) but the risk cut was tiny (maxDD -2.9%, CVaR5 -6.0%, 0/6 folds); momentum_flip failed R4. A tighter pull-in at the cheap triggers is the lever on the failed
+  clause.'
+iteration:
+  subject: ltr-tp-pull-in
+  subject_kind: ltr_class
+  from_result: RQ-20261113-ed2b-05
+  verdict_read: fail
+  diagnosis: 'ed2b-05: tp_pull_in@giveback cost 0.0085 R/trade (R1 ok) but cut maxDD 2.9% and CVaR5 6.0% (R2 needs 15%), 0 of 6 folds; stall the same; momentum_flip
+    failed only R4 (no better than random timing). Keeping half the distance leaves the TP too far to change outcomes.'
+  hypothesis: a TP pulled to a quarter of the remaining distance converts more giveback into banked R, cutting the tails enough for R2 at a cost R1 still allows
+  levers:
+  - action_bounds
+  attempt: 2
+  due_by: '2026-12-05'
+baseline:
+  arm: hold
+  definition: 'each corpus row''s recorded net_r: the leg''s own declared exit, untouched, net of the full cost stack (fee 11 bps round trip + slippage + funding
+    per window, as recorded per row by the corpus harness)'
+  source: comms/strategy_evidence/ltr_corpus/<leg>__trades.jsonl
+power:
+  expected_n: 3630
+  min_detectable_effect: 0.05
+  effect_units: metric
+  sd: 0.5
+  design: paired
+  alpha: 0.05
+  power: 0.8
+  basis: INFERRED as ed2b-05 (4,076 committed corpus trades counted 2026-11-13; hold net_r sd 1.47 R measured; paired action - hold difference assumed ~0.5 R). At
+    alpha 0.025 (Bonferroni over 2) and power 0.8 a paired mean difference of ~0.023 R/trade is detectable, below the 0.05 R R1 bar. POWER-BLOCK ALPHA 0.05 is declared
+    because research_queue tabulates only 0.10 / 0.05 / 0.01; the RULE grades at the Bonferroni bar 0.975, unchanged.
+  feasibility:
+    source: none
+    accrual_basis: Replays committed corpora and candles; nothing accrues.
+decision_rule:
+  id: RULE-RQ20261128-e7a0-02-LTR-TPPULL-025
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'Over the pooled committed Stage-0 per-trade corpora in comms/strategy_evidence/ltr_corpus (8 legs, 4,076 trades; each row''s net_r already net of fee
+    + slippage + funding) minus corpora whose tp_r >= 10 (fictional TP; 3,630 trades remain), per pre-registered trigger T in {stall, giveback, momentum_flip}: the
+    book with the TP replaced at the bar after T fires by open + 0.5 x (tp_r - open), filled when a later bar reaches it before the recorded exit (SL-first on a recorded
+    stop bar), vs the HOLD book, against 200 matched random-time pull-ins on the same trades.'
+  rule: 'RULE-AM-RISK-ADJUSTED-V1 (am_risk_adjusted.grade_risk_adjusted, V1 parameters: R1 r_cost <= 0.05 R per baseline trade; R2 maxDD cut >= 15% OR weekly-CVaR5
+    cut >= 15%; R3 >= 4 of 6 calendar folds hold; n_floor 39) with R4 vs 200 matched random-time books, plus L1: a pass must keep r_cost <= 0.05 R/trade after dropping
+    the leg with the largest favourable contribution. Multiple comparisons: this unit grades 2 pre-registered trigger candidates, so R4 uses min_control_beat_frac
+    0.975 (1 - 0.05/2, Bonferroni) and the reported edge CI is at 1 - 0.05/2. PASS: at least one candidate clears R1-R4 and L1 (a SCREEN pass, graduation_eligible
+    false until BOOK-SIM-REAL-SIZER; a Tier-3 proposal input, never an apply). FAIL: every candidate fails a necessary clause (R1, R2 or R3) or is beaten by its random
+    control (R4). INDETERMINATE: anything else (under the n floor, never fired, carried by one leg, or no_data). Fixed now; not changed after a run. Same harness
+    and corpora as ed2b-05; only the action bound and the trigger subset change.'
+  what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+  fail_action: 'Record tp_keep 0.25 as tested (action_bounds) on research/levers/ltr-tp-pull-in.yaml; next: timing, never this setting again.'
+  pass_action: ONE confirmation on a disjoint corpus (twin legs) before any advice-standing proposal; no apply authority follows.
+practice_precedent: 'T1 (docs/reference/trading-and-model-practice-principles.md): an intervention is graded against a matched random-intervention control in the
+  same trade, net of the full cost stack, per class (RULE-AM-RISK-ADJUSTED-V1); the design copies LTR-TRIGGER-CLOSE-S0 (comms/research/ltr_trigger_close_s0/PREREGISTRATION.md).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 4.0
+  est_minutes: 60
+  basis: 'Estimate: 4,076 trades x 3 triggers x 200 random books on CPU; the first run replaces it.'
+  why_runner: Replays committed corpora and candles on CPU.
+value:
+  usd_at_stake_per_month: 150
+  confidence: 0.1
+  bucket: own_losses
+  basis: planning weight by money rank; an estimate, not a measurement
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- RQ-20261113-ed2b-05
+stated_biases:
+- the hold arm is the corpus harness's recorded exit; the action arms replay on committed candles from the action bar, so a leg's own trail path after the action
+  is not modelled except through its recorded exit
+- a replayed stop fills at its level (a gap fills at the open), which flatters stop-based actions
+- triggers are evaluated on bar closes, live on telemetry passes
+- 8 legs; trend_donchian_eth_prop is 1,182 of 4,076 trades, so L1 (drop the best leg) is a pass condition
+what_it_does_not_do: 'Advice-only research: serves, promotes or applies nothing; adds no gate; changes no config, mandate or roster; places no order.'
+run:
+  workflow: research-script-run.yml
+  command:
+  - python3
+  - scripts/research/ltr_action_trigger_s0.py
+  - --action
+  - tp_pull_in
+  - --triggers
+  - stall,giveback
+  - --draws
+  - '200'
+  - --min-control-beat-frac
+  - '0.975'
+  - --n-comparisons
+  - '2'
+  - --tp-keep
+  - '0.25'
+  - --max-real-tp-r
+  - '10'
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-e7a0-02
+  timeout_minutes: 120
+intervention_controls:
+  hold_to_bracket: true
+  matched_random:
+    draws: 200
+    same_cell: true
+  best_static:
+    grid:
+    - hold
+    - tp_pull_in@stall
+    - tp_pull_in@giveback
+    - tp_pull_in@momentum_flip
+    excludes_test_folds: true
+    how: leave-one-calendar-fold-out over V1's 6 folds (intervention_controls.best_static_rule); REPORTED, never a pass clause
+  bootstrap_group: trade
+origin: follow_up

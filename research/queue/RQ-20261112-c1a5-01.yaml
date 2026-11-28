@@ -121,3 +121,15 @@ grading:
   auto: false
 related:
 - RQ-20261029-1f39-01
+iteration:
+  subject: ltr-close
+  subject_kind: ltr_class
+  from_result: RQ-20261101-78fc-10
+  verdict_read: indeterminate
+  diagnosis: 'The close class''s only positive signal (docs/audits/2026-11-01-from-scratch/AUDIT.md section 8) was found on ONE window (W44, ending 2026-11-01T11:46:42Z);
+    78fc-10 was retired without a disjoint read. A finding chosen on its grading window cannot promote, so the next read is the same class on reviews written after that window.'
+  hypothesis: the first close call per order package beats holding (and a random-bar close) on a window disjoint from the one that found it
+  levers:
+  - timing
+  attempt: 2
+  due_by: '2026-12-08'
