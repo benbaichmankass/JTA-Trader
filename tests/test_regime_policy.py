@@ -311,8 +311,10 @@ def test_shipped_policy_has_schema_2_and_wellformed_trend_vol():
                     assert side in valid_sides, (trend, vol, strat, side)
                     assert val in valid_vals, (trend, vol, strat, side, val)
 
-    # The four authored evidence OFF-cells (off == False after YAML parse).
+    # The authored evidence OFF-cells (off == False after YAML parse). chop/calm/trend_donchian long was REMOVED
+    # (RQ-20261122-fa22-04 per-cell marginal FAIL: n 101, the veto lost 1.72 R vs a matched-drop control) and must stay
+    # absent unless a new record re-authors it.
     assert trend_vol["trending"]["volatile"]["trend_donchian"]["long"] is False
     assert trend_vol["trending"]["calm"]["squeeze_breakout_4h"]["short"] is False
     assert trend_vol["transitional"]["calm"]["trend_donchian"]["long"] is False
-    assert trend_vol["chop"]["calm"]["trend_donchian"]["long"] is False
+    assert "trend_donchian" not in ((trend_vol.get("chop") or {}).get("calm") or {})
