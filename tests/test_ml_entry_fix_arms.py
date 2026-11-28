@@ -176,3 +176,30 @@ def test_weekly_series_matrix():
     assert s["matrix"]["base"] == [0.5, 2.0]
     assert s["matrix"]["arm"] == [0.25, 0.0]
     assert s["n_trades"] == {"arm": 1, "base": 3}
+
+
+def _meta_frames(n=4000, seed=7):
+    import numpy as np
+    import pandas as pd
+
+    import ml_decision_entry as M
+    rng = np.random.default_rng(seed)
+    df = pd.DataFrame({f: rng.normal(size=n) for f in M.FEATURES})
+    df["ts"] = pd.date_range("2022-01-01", periods=n, freq="h", tz="UTC")
+    # planted: the rule side's net R is positive iff the first feature is high (a learnable take/skip signal)
+    edge = np.where(df[M.FEATURES[0]] > 0, 0.5, -0.5) + rng.normal(scale=0.5, size=n)
+    df["net_long"], df["net_short"] = edge, edge
+    return df.iloc[: n // 2].reset_index(drop=True), df.iloc[n // 2:].reset_index(drop=True)
+
+
+def test_meta_take_proba_learns_a_planted_take_signal_linear_and_gbdt():
+    """ML-ENTRY-REDESIGN R1: the model decides take/skip on the RULE side; a planted signal must be found by both families."""
+    import ml_decision_entry as M
+    import ml_entry_fix_arms as A
+    tr, te = _meta_frames()
+    want = te[M.FEATURES[0]].to_numpy() > 0
+    for linear in (True, False):
+        p = A.meta_take_proba(tr, te, linear=linear)
+        assert p.shape == (len(te),) and ((p > A.META_P) == want).mean() > 0.8, linear
+    assert {"meta_rule_linear", "meta_rule_gbdt"} <= set(A.ARMS)
+    assert A.META_RULE["min_delta_r"] == 0.010 and A.META_RULE["min_t"] == 2.24
