@@ -136,8 +136,11 @@ trend_vol:
     calm:
       trend_donchian:      { long: off }    # −$356 / 43t (Donchian long without a real trend)
   chop:
-    calm:
-      trend_donchian:      { long: off }    # −$218 / 11t (trend strat long in chop = no trend to ride)
+    # calm/trend_donchian long OFF REMOVED (Tier-3 PROPOSAL, held; the registered fail_action of RQ-20261122-fa22-04,
+    #   rule RULE-RQ20261122-fa22-04-BTC-CELL-MARGINAL). Authored 2026-06-27 on 11 trades (-$218). The per-cell
+    #   marginal grade on committed d7c2-01 trades net of the full cost stack (run 45015566879): n 101 vetoed trades,
+    #   added R -1.7178 (the veto LOST R), matched-drop control p 0.41, 3 of 6 folds, yearly 2023 +4.14 / 2024 -0.92 /
+    #   2025 -8.92 / 2026 +12.13 -> FAIL. Rollback: restore `calm: { trend_donchian: { long: off } }` here.
     volatile:
       # ict_scalp_5m Phase-4 gate (2026-07-20, same packet as the trending/
       # volatile cell above). The WORST net-of-fee cell: expR −0.104 (n=155,
