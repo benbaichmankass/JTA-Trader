@@ -619,6 +619,7 @@ real top-level `docs/*.md` and fails if the population builder cannot see it.
 | `docs/pitch/jta-trader-pitch-deck.md` | unknown | live | — | 2026-11-04 | `not-assessed / read:PITCH-DECK-lane-authored-it-2026-11-04-generated-from-files` | JTA Trader pitch deck: markdown source and speaker notes (generated) |
 | `docs/plans/1h-survivor-promotion-proposals-2026-11-12.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/COMPUTE-ALLOCATION-2026-11-03.md` | plan | unknown | — | never | `read:compute-allocation-design-forward-build-plan / not-assessed` | — |
+| `docs/plans/compute-topology-design-2026-11-28.md` | plan | unknown | — | never | `read:compute-topology-design-retire-trainer-relieve-live / not-assessed` | — |
 | `docs/plans/COMPUTE-ARCH-REVIEW-2026-10-13.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/COMPUTE-KAGGLE-GPU-PILOT-2026-10-13.md` | unknown | unknown | — | never | `not-assessed / not-assessed` | — |
 | `docs/plans/DATA-EXPLORER-SPA-HANDOFF.md` | history | historical | — | 2026-10-13 | `name:record-of-a-past-state / dir:record-of-a-completed-session` | — |
