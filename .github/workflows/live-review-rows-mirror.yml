@@ -129,7 +129,9 @@ jobs:
           set -o pipefail
           pip install --quiet pandas
           python3 scripts/ops/live_review_grade.py --live --write-outcomes > /dev/null \
-            || { echo "::warning::live_review_grade failed; the mirror still lands"; exit 0; }
+            || echo "::warning::live_review_grade failed; the mirror and any outcomes it appended still land"
+          # no early exit: outcomes are appended BEFORE the grade report, so a report failure (the 11-28 KeyError,
+          # LTR-MIRROR-SKIPPED-ROWS-1128) must still reach the records check and changed=, or they never land.
           python3 scripts/ci/check_live_review_records.py
           if [ -n "$(git status --porcelain comms/live_review)" ]; then echo "changed=1" >> "$GITHUB_OUTPUT"; else echo "changed=0" >> "$GITHUB_OUTPUT"; fi
 
