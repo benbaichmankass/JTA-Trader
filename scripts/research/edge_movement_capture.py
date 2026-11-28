@@ -62,11 +62,25 @@ CFG_TIME = {
     "BO1gt": dict(mode="bo", a=0.4, exit="time", gate=True),
     "FD1gt": dict(mode="fd", a=0.5, exit="time", gate=True),
 }
-GRIDS = {"base": CFG, "time_exit": CFG_TIME}
+#: ATTEMPT-4 grid (lane ML-PRIMARY 2026-11-28, unit RQ-20261128-f1a5-03), picked by --grid session. ONE factor vs CFG_TIME: the
+#: ANCHOR. The bracket is set at the open of the 13:00 UTC bar (the US-open window where crypto volume and volatility peak and
+#: intraday momentum is reported) instead of 00:00 UTC, scanned over bars 13..23, with the predicted daily range scaled to the
+#: 11 remaining hours (rh * sqrt(11/24)) so `a` keeps the same meaning. Exit, entries, cost and gate as CFG_TIME.
+CFG_SESSION = {
+    "BO1s": dict(mode="bo", a=0.4, exit="time", anchor_hour=13),
+    "FD1s": dict(mode="fd", a=0.5, exit="time", anchor_hour=13),
+}
+GRIDS = {"base": CFG, "time_exit": CFG_TIME, "session": CFG_SESSION}
 LAM, RT_BPS = 0.94, 14.0
 
 
 def sim_day(o, h, lo, c, rh, cfg):
+    k = cfg.get("anchor_hour")
+    if k:  # attempt-4 opt-in: start the day at bar k (hourly bars, index = UTC hour); range scaled to the hours left
+        o, h, lo, c = o[k:], h[k:], lo[k:], c[k:]
+        if not len(o):
+            return None
+        rh = rh * float(np.sqrt(len(o) / 24.0))
     px0 = o[0]
     U, Lv = px0 * (1 + cfg["a"] * rh), px0 * (1 - cfg["a"] * rh)
     for i in range(len(o)):
@@ -305,6 +319,16 @@ def _self_test() -> int:
     chk("time exit: an ambiguous bar takes the WORSE direction", whya == "amb" and da == 0
         and abs(ra - min(101.5 / 102.0 - 1, -(101.5 / 98.0 - 1))) < 1e-12)
     chk("no touch: no trade", sim_day(o, np.full(4, 101.0), np.full(4, 99.0), c, rh, CFG_TIME["FD1t"]) is None)
+    # attempt-4 session anchor: a touch before 13:00 is ignored; the anchor price is bar 13's open; range scaled by sqrt(11/24)
+    o24, c24 = np.full(24, 100.0), np.full(24, 100.0)
+    h24, l24 = np.full(24, 100.5), np.full(24, 99.5)
+    h24[2] = 120.0                                    # a big up-touch at 02:00 must not count for the anchored arm
+    chk("session: a pre-anchor touch is ignored", sim_day(o24, h24, l24, c24, 0.05, CFG_SESSION["BO1s"]) is None)
+    chk("session: the same day trades on the unanchored arm", sim_day(o24, h24, l24, c24, 0.05, CFG_TIME["BO1t"]) is not None)
+    h24b = h24.copy()
+    h24b[15] = 100.0 * (1 + 0.4 * 0.05 * np.sqrt(11 / 24)) + 1e-6   # just above the SCALED level (below the unscaled one)
+    rs = sim_day(o24, h24b, l24, c24, 0.05, CFG_SESSION["BO1s"])
+    chk("session: the level uses rh*sqrt(11/24) from bar 13's open", rs is not None and rs[1] == 1)
     chk("grids: default is the committed CFG; the time grid re-uses BO1/FD1 entry distances",
         GRIDS["base"] is CFG and CFG_TIME["BO1t"]["a"] == CFG["BO1"]["a"] and CFG_TIME["FD1t"]["a"] == CFG["FD1"]["a"])
     return 0 if ok else 1

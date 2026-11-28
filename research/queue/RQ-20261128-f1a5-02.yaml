@@ -1,0 +1,100 @@
+# Hand-authored 2026-11-28 by lane ML-PRIMARY (session_01AFoLuLpCY5gABbqk3EBUeV, Tier 1), at manager 28a's direction (drain the strategy-leg
+# orphans). ITERATION unit (attempt 5) for orphan subject xsec-crypto, authored from a written diagnosis of its results. Decision rule registered
+# BEFORE any run (the harness ran on its SYNTHETIC self-test panel only; no real-data arm number was seen). Gates this adds or changes: none.
+id: RQ-20261128-f1a5-02
+title: 'ITERATION 5 of xsec-crypto (fail): does replacing the losing ALT SHORT leg with a BTC hedge (notional 1:1, or the long basket''s trailing beta) keep X1''s long selection and clear the discovery rule, net of fee + slippage + signed funding?'
+status: queued
+cadence: once
+theme: new_strategy_prop
+priority: 2
+roadmap:
+- L-PROGRAMMES
+programme: P6
+kind: experiment
+question: On 2020-06-01..2024-06-30 (Binance USD-M archive, point-in-time top-20, weekly), does the X1 long selection hedged with a BTC short (HN notional 1:1; HB the long basket's trailing-90d beta to BTC, clipped 0..3) clear the unchanged discovery rule at the cumulative trial count, against the X1 long-short control?
+why_this_matters: 'xsec-crypto is an orphan (scripts/research/iteration_orphans.py 2026-11-28). The short leg lost in EVERY arm measured: X1 -0.23, RM1 -0.40, RM2 -0.69 (62e3-02), while the long leg earned +1.84..+1.99. Long-only X6 is no answer (Sharpe 1.01, halves 1.64 / 0.20): it is alt beta. Shorting individual alts carries squeeze and funding risk in a rising market; shorting BTC against the long basket removes the market leg without shorting the names most likely to squeeze. If the long selection has skill beyond beta, the hedged book shows it in both halves; if it is pure alt-beta (alts outrunning BTC in 2021), the hedged book collapses to the 2021 episode and fails, which says so too.'
+iteration:
+  subject: xsec-crypto
+  subject_kind: strategy_leg
+  from_result: research/results/RQ-20261122-0104-06/45041685829.jsonl
+  verdict_read: fail
+  diagnosis: 'Attempts 2-4 tested regime gates (d1f3 R1/R2; fa22-05 SMA20..200 and VOL30_P70, where SMA100 passed in-window; 0104-06 SMA100 FAILED its pre-dev confirmation 2019-11..2022-11), rebalance (F1/F2), universe (U1/U2) and residual ranking (62e3 RM1/RM2): all FAIL. The one constant across every arm is the side split: long +1.84 / short -0.23 (A0), +1.96 / -0.40 (RM1), +1.99 / -0.69 (RM2). The short leg is a structural cost; the short-leg TREATMENT (direction family, map state underpowered) is the untested lever. COMPETING reading: the long leg is alt beta, so any market hedge removes the return; HN vs HB separates a notional from a beta-matched hedge.'
+  hypothesis: replacing the alt shorts with a BTC short removes the structural short-leg loss while keeping the market-neutral property, so if the long selection carries skill beyond beta it shows in both halves
+  search: 'direction / short-leg treatment: BTC hedge in place of alt shorts, notional (HN) and trailing-90d beta (HB); X1 entry, quantiles, weights, rebalance, universe and cost stack unchanged'
+  levers:
+  - direction
+  attempt: 5
+  due_by: '2026-12-05'
+  map_entries:
+  - research/levers/xsec-crypto.yaml
+baseline:
+  what: control A0 = discovery primary X1 (raw 28d return, top/bottom 30%, long-short, equal weight, weekly, top-20), re-run in the same invocation
+  net_of: fee 11.0 bps round trip charged per side + slippage 3 bps round trip + SIGNED settled funding (long pays, short receives, BTC short included); stress arm = 2x fee+slippage
+  committed_value: net Sharpe 1.325, halves 2.132 / 0.259, side net sums long +1.843 / short -0.230 (RQ-20261101-d1f3-02 A0, reproduced in RQ-20261113-62e3-02)
+power:
+  expected_n: 1491
+  min_detectable_effect: 1.4
+  effect_units: annualised_sharpe
+  sd: 19.105
+  design: one_sample
+  alpha: 0.05
+  power: 0.8
+  basis: 'n=1491 daily net returns; harness annualises with 365 days so sd=sqrt(365)=19.105. One-sample, alpha 0.05, power 0.8: required n = 7.84*365/S^2, so at n=1491 the smallest annualised Sharpe separable from zero is ~1.4. The pass bar is the absolute registered rule with a cumulative-N DSR, not an arm-vs-control delta.'
+  feasibility:
+    source: none
+    accrual_basis: Fixed historical archive (data.binance.vision, capped at 2024-06); nothing accrues.
+decision_rule:
+  id: RULE-RQ-20261128-f1a5-02
+  registered_at: '2026-11-28'
+  registered_before_run: true
+  statistic: 'ARMS (3 incl. control, all counted; grid fixed in scripts/research/edge_portfolio_discovery.py ITER_GRIDS["f1a5"]["xsec"]): A0 = X1 control; HN = X1 long top 30% at +0.5 gross with a -0.5 BTCUSDT short (mode lh, hedge notional); HB = the same with the BTC short scaled by the long basket''s beta to BTC over the trailing 90 daily returns through the decision row, clipped to [0, 3], reading 1.0 when history is short (btc_hedge_ratio). Same quantiles, weights, rebalance, universe and cost stack. Per arm: net Sharpe, stress Sharpe, half Sharpes, bootstrap p05, DSR at N_cum = 30 (10 discovery + 7 d1f3 + 3 62e3 + 5 fa22-05 + 2 0104-06 + these 3).'
+  rule: 'PASS iff at least one NON-control arm clears the UNCHANGED discovery rule: net Sharpe >= 0.5 AND stress (2x fee+slippage) Sharpe > 0 AND Sharpe > 0 in BOTH halves AND bootstrap p05 of annualised mean net > 0 AND DSR > 0.95 at N_cum = 30, on 2020-06-01..2024-06-30. FAIL iff the control computed and reproduced and no arm clears it. INDETERMINATE iff the control series is insufficient OR the control A0 net Sharpe misses the committed 1.325 by more than 0.01 (--expect-control-sharpe). By-year sums and side split are REPORTED (the 2021 share is the diagnostic read), not graded. Holdout not read; a PASS earns ONE holdout read, never a book.'
+  what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no data after 2024-06-30. A FAIL says only that HN and HB on X1 did not clear the rule.
+intervention_controls:
+  not_applicable: an offline portfolio research ablation, not an in-trade action
+practice_precedent: 'M4, M5 (docs/reference/trading-and-model-practice-principles.md): pre-registered arm grid with control, every arm counted, DSR at the cumulative trial count. Market-hedged crypto momentum: Liu, Tsyvinski & Wu 2022 J. Finance "Common risk factors in cryptocurrency" (the market factor is the dominant crypto factor, so a selection claim must survive removing it).'
+compute: cpu_light
+routing:
+  needs_trainer_resident_data: false
+  needs_gpu: false
+  peak_memory_gb: 6.0
+  est_minutes: 90
+  why_runner: Public keyless archive; CPU only; same data path as RQ-20261113-62e3-02.
+  basis: Estimate from RQ-20261113-62e3-02; the first run replaces it.
+value:
+  usd_at_stake_per_month: 100
+  confidence: 0.08
+  bucket: structural
+  basis: 'stand-in: a documented-payer family; an estimate, not a measurement'
+run:
+  command:
+  - python3
+  - scripts/research/edge_portfolio_discovery.py
+  - --family
+  - xsec
+  - --iteration
+  - --grid
+  - f1a5
+  - --expect-control-sharpe
+  - '1.325'
+  - --build-data
+  - --data-root
+  - comms/research/_scratch_edge_data
+  - --out
+  - '{out_dir}'
+  inputs:
+    research_unit: RQ-20261128-f1a5-02
+  timeout_minutes: 150
+  workflow: research-script-run.yml
+lands:
+  store: research/results/
+  assert_field: read_state
+  min_rows: 1
+related:
+- research/levers/xsec-crypto.yaml
+- RQ-20261113-62e3-02
+- RQ-20261122-fa22-05
+- RQ-20261122-0104-06
+- HOLDOUT-LOCK
+- scripts/research/edge_portfolio_discovery.py
+what_it_does_not_do: Edits no config and no roster, places no order, proposes no live leg, reads no holdout data.
