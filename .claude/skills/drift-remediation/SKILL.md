@@ -1,6 +1,6 @@
 ---
 name: drift-remediation
-description: The standing process for FIXING a drifted / degrading ML model instead of reflexively demoting it. Use when the daily promotion-readiness report proposes a DEMOTE for a live (advisory) model, when shadow-drift or gate-check flags drift, or when the operator asks "how do we fix this model / get it back to where it needs to be" rather than just turning it off. Distinguishes transient drift (self-corrects on the daily retrain → no action) from persistent capability failure (needs a feature/label fix shipped as a new version → the validated replacement is promoted on its offline evidence, no shadow step). Demote is interim safety only, never the endpoint; a demoted head soaks in shadow to keep generating data while it is iterated on. Composes with model-training, ml-review, diag-data. NOT for routine training (model-training).
+description: The standing process for FIXING a drifted / degrading ML model instead of reflexively demoting it. Use when the daily promotion-readiness report proposes a DEMOTE for a live (advisory) model, when shadow-drift or gate-check flags drift, or when the operator asks "how do we fix this model / get it back to where it needs to be" rather than just turning it off. Distinguishes transient drift (self-corrects on the daily retrain → no action) from persistent capability failure (needs a feature/label fix shipped as a new version → the validated replacement is promoted on its offline evidence, no shadow step). No demotion into an empty slot: a live head stays until a tested replacement beats it (operator 2026-11-28); a head replaced that way soaks in shadow to keep generating data while it is iterated on. Composes with model-training, ml-review, diag-data. NOT for routine training (model-training).
 ---
 
 > **Doc status:** `live` · category `instruction` · last verified `2026-09-07` · registered in [`docs/DOCUMENT-INDEX.md`](../../../docs/DOCUMENT-INDEX.md)
@@ -30,8 +30,13 @@ focusing on the iterative process."* This section is the canonical home of that 
   holdouts, paired against the live model. The swap is the operator's question (data-backed Tier 3).
 - **A holdout or replay FAIL on a live model is an ITERATION INPUT (a diagnosis), never a demotion proposal.** A registered
   consequence on a live model reads "FAIL -> iteration input", never "demotion input". Write the next challenger from it.
-- **The operator is asked only about** a challenger swap that passed, or genuine money-at-risk safety (step 5 below: actively
-  harmful now, with no replacement ready).
+- **The operator is asked only about** a challenger swap that passed, or genuine money-at-risk safety (step 5 below).
+- **No demotion into an empty slot (operator, 2026-11-28 ~09:50Z, relayed by Manager 2026-11-28b; OPERATING-PLAN § 2 "Each
+  decision keeps its tested incumbent until a better one passes").** Verbatim: *"we go live with something that's passed in
+  testing, and then we have to have something live for each decision. So if there's not a better option yet, then we don't
+  demote ... We find one thing that passes test for each decision, and that basically runs until we can switch it out for
+  something better."* A weak live read or a drift flag starts a REPLACEMENT SEARCH (step 4); a demotion is proposed only
+  when a passed alternative exists to take the slot. A session may redesign rather than add levers without asking.
 
 ## The one rule
 
@@ -67,10 +72,11 @@ self-heals; and a capability gap never heals from a retrain. So:
    advisory` under the data-backed Tier-3 rule (notify the operator), and retire the
    old one.
 
-5. **Interim demote — only if the live head is actively harmful now and no
-   replacement is ready.** `promote-stage <id> --new-stage shadow` is
-   fail-permissive (reverts to the frozen label, strands nothing). A stopgap
-   while the fix trains, never the endpoint. Still Tier-3.
+5. **No interim demote by a session.** With no passed replacement, the live head
+   stays (operator 2026-11-28). If it looks actively harmful now, that is a
+   money-at-risk question for the OPERATOR (one red flag with the evidence), never a
+   session's `promote-stage <id> --new-stage shadow`. When a passed replacement exists,
+   the swap (replacement in, incumbent to shadow) is the data-backed Tier-3 move.
 
 ## A replay or retrain grade says "negative" while the live book is positive (operator, 2026-11-08, binding)
 
