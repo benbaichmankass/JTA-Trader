@@ -609,3 +609,85 @@ def _is_invalid_json(s: str) -> bool:
         return False
     except ValueError:
         return True
+
+
+# ---------------------------------------------------------------------------
+# CFI-NET-OPEN-TRADES (2026-11-28): an OPEN DB trade covering the venue size is not a contradiction
+# ---------------------------------------------------------------------------
+
+
+def _open_and_closed(db: Path, *, account: str, symbol: str, direction: str, closed_size: float,
+                     open_size: float) -> int:
+    from tests.fixtures.real_schema_db import insert_trade
+    closed_id = insert_trade(db, timestamp="2026-11-27T14:00:00+00:00", symbol=symbol, direction=direction,
+                             entry_price=100.0, position_size=closed_size, status="open", is_backtest=0,
+                             account_id=account, created_at="2026-11-27T14:00:00+00:00")
+    _close_trade(db, closed_id, closed_at="2026-11-28T02:00:00+00:00")
+    insert_trade(db, timestamp="2026-11-27T14:48:00+00:00", symbol=symbol, direction=direction, entry_price=100.0,
+                 position_size=open_size, status="open", is_backtest=0, account_id=account,
+                 created_at="2026-11-27T14:48:00+00:00")
+    return closed_id
+
+
+_NOW_1128 = datetime(2026, 11, 28, 2, 0, 30, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize("account,symbol,direction,venue_side,venue_size,closed_size", [
+    ("ib_paper", "MGC", "long", "BUY", 35.0, 35.0),          # MEASURED 11-27: +35 = open #8655, alert named closed #8634
+    ("bybit_1", "ETHUSDT", "short", "Sell", 16.1, 8.0),      # MEASURED 11-28: -16.1 = open #8641, alert named closed #8642
+])
+def test_venue_size_covered_by_an_open_trade_does_not_alert(trades_db, tmp_path, account, symbol, direction,
+                                                           venue_side, venue_size, closed_size):
+    _open_and_closed(trades_db, account=account, symbol=symbol, direction=direction, closed_size=closed_size,
+                     open_size=venue_size)
+    captured, alerter = _alerter_capture()
+    violations = inv.check(sqlite3.connect(str(trades_db)),
+                           _resolver({account: _StubAccount([{"symbol": symbol, "side": venue_side,
+                                                               "size": venue_size}])}),
+                           window_seconds=60, now=_NOW_1128, violations_log=tmp_path / "v.jsonl", alerter=alerter)
+    assert violations == [] and captured == []
+
+
+def test_a_residual_beyond_the_open_trades_still_alerts(trades_db, tmp_path):
+    closed_id = _open_and_closed(trades_db, account="bybit_1", symbol="ETHUSDT", direction="short", closed_size=8.0,
+                                 open_size=16.1)
+    captured, alerter = _alerter_capture()
+    violations = inv.check(sqlite3.connect(str(trades_db)),
+                           _resolver({"bybit_1": _StubAccount([{"symbol": "ETHUSDT", "side": "Sell", "size": 24.1}])}),
+                           window_seconds=60, now=_NOW_1128, violations_log=tmp_path / "v.jsonl", alerter=alerter)
+    assert [v.trade_id for v in violations] == [closed_id] and len(captured) == 1
+
+
+def test_an_open_trade_on_the_other_side_does_not_cover(trades_db, tmp_path):
+    from tests.fixtures.real_schema_db import insert_trade
+    closed_id = _open_and_closed(trades_db, account="bybit_1", symbol="ETHUSDT", direction="short", closed_size=8.0,
+                                 open_size=0.0)
+    insert_trade(trades_db, timestamp="2026-11-27T15:00:00+00:00", symbol="ETHUSDT", direction="long",
+                 entry_price=100.0, position_size=8.0, status="open", is_backtest=0, account_id="bybit_1",
+                 created_at="2026-11-27T15:00:00+00:00")
+    violations = inv.check(sqlite3.connect(str(trades_db)),
+                           _resolver({"bybit_1": _StubAccount([{"symbol": "ETHUSDT", "side": "Sell", "size": 8.0}])}),
+                           window_seconds=60, now=_NOW_1128, violations_log=tmp_path / "v.jsonl",
+                           alerter=_alerter_capture()[1])
+    assert [v.trade_id for v in violations] == [closed_id]
+
+
+def test_window_anchors_on_the_trades_own_close_time_not_a_retouched_package(trades_db, tmp_path):
+    """#8634 closed 15:54Z; its package updated_at read 21:55Z, which put it back in the 19:56-21:56Z window."""
+    from tests.fixtures.real_schema_db import insert_trade
+    tid = insert_trade(trades_db, timestamp="2026-11-27T10:00:00+00:00", symbol="MGC", direction="long",
+                       entry_price=100.0, position_size=35.0, status="open", is_backtest=0, account_id="ib_paper",
+                       created_at="2026-11-27T10:00:00+00:00")
+    _close_trade(trades_db, tid, closed_at="2026-11-27T15:54:00+00:00")
+    conn = sqlite3.connect(str(trades_db))
+    conn.execute("UPDATE trades SET closed_at=? WHERE id=?", ("2026-11-27T15:54:00+00:00", tid))
+    info = conn.execute("PRAGMA table_info(order_packages)").fetchall()
+    vals = {"linked_trade_id": tid, "updated_at": "2026-11-27T21:55:42+00:00"}
+    for _cid, name, typ, notnull, default, pk in info:  # fill the schema's other NOT NULL columns with placeholders
+        if notnull and default is None and not pk and name not in vals:
+            vals[name] = 0 if any(t in (typ or "").upper() for t in ("INT", "REAL", "NUM")) else "x"
+    conn.execute(f"INSERT INTO order_packages ({', '.join(vals)}) VALUES ({', '.join('?' * len(vals))})",
+                 tuple(vals.values()))
+    conn.commit()
+    rows = inv._fetch_recently_closed(conn, cutoff_iso="2026-11-27T19:56:00+00:00")
+    assert [r["id"] for r in rows] == []
